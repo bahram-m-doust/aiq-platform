@@ -62,6 +62,9 @@ export default async function AdminPage() {
               <Button asChild variant="outline">
                 <Link href="/admin/audit">Audit logs</Link>
               </Button>
+              <Button asChild variant="outline">
+                <Link href="/admin/intake-builder">Intake Builder</Link>
+              </Button>
               <form action={logout}>
                 <Button type="submit" variant="outline">
                   Sign out

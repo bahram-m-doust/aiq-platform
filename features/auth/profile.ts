@@ -131,7 +131,41 @@ export function describeProfileProvisioningError(error: unknown): string {
   if (code === "42501" || code === "PGRST301") {
     return "Service role key is invalid or missing — check SUPABASE_SERVICE_ROLE_KEY.";
   }
+  if (code === "PGRST002") {
+    return "Supabase PostgREST schema cache is stale. Run `NOTIFY pgrst, 'reload schema';` in the SQL editor, or restart the project under Settings → General.";
+  }
   return code ? `${message} (code ${code})` : message;
+}
+
+function getErrorCode(error: unknown): string | null {
+  if (typeof error === "object" && error !== null) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === "string") return code;
+  }
+  return null;
+}
+
+const PGRST_SCHEMA_CACHE_CODE = "PGRST002";
+
+type SupabaseQueryResult<T> = { data: T; error: unknown };
+
+async function withSchemaCacheRetry<T>(
+  operation: () => PromiseLike<SupabaseQueryResult<T>>,
+): Promise<SupabaseQueryResult<T>> {
+  const delaysMs = [200, 800, 2400];
+
+  for (let attempt = 0; attempt <= delaysMs.length; attempt += 1) {
+    const result = await operation();
+    if (getErrorCode(result.error) !== PGRST_SCHEMA_CACHE_CODE) {
+      return result;
+    }
+    if (attempt === delaysMs.length) {
+      return result;
+    }
+    await new Promise((resolve) => setTimeout(resolve, delaysMs[attempt]));
+  }
+
+  return operation();
 }
 
 export function normalizeUserProfile(row: UserProfileRow): UserProfile {
@@ -154,11 +188,13 @@ export async function loadUserProfileByAuthUserId({
   emailPresent?: boolean;
 }) {
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("users_profile")
-    .select(profileColumns)
-    .eq("auth_user_id", authUserId)
-    .maybeSingle();
+  const { data, error } = await withSchemaCacheRetry(() =>
+    admin
+      .from("users_profile")
+      .select(profileColumns)
+      .eq("auth_user_id", authUserId)
+      .maybeSingle(),
+  );
 
   if (error) {
     logProfileQueryError({
@@ -199,12 +235,14 @@ async function updateExistingProfile({
   }
 
   try {
-    const { data, error } = await admin
-      .from("users_profile")
-      .update(update)
-      .eq("auth_user_id", authUserId)
-      .select(profileColumns)
-      .single();
+    const { data, error } = await withSchemaCacheRetry(() =>
+      admin
+        .from("users_profile")
+        .update(update)
+        .eq("auth_user_id", authUserId)
+        .select(profileColumns)
+        .single(),
+    );
 
     if (error) {
       throw error;
@@ -233,12 +271,14 @@ async function updateExistingProfile({
       return profile;
     }
 
-    const { data, error: retryError } = await admin
-      .from("users_profile")
-      .update(retryUpdate)
-      .eq("auth_user_id", authUserId)
-      .select(profileColumns)
-      .single();
+    const { data, error: retryError } = await withSchemaCacheRetry(() =>
+      admin
+        .from("users_profile")
+        .update(retryUpdate)
+        .eq("auth_user_id", authUserId)
+        .select(profileColumns)
+        .single(),
+    );
 
     if (retryError) {
       throw retryError;
@@ -286,13 +326,15 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
 
   const insert = toUserProfileInsert(user);
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("users_profile")
-    .upsert(insert, {
-      onConflict: "auth_user_id",
-    })
-    .select(profileColumns)
-    .single();
+  const { data, error } = await withSchemaCacheRetry(() =>
+    admin
+      .from("users_profile")
+      .upsert(insert, {
+        onConflict: "auth_user_id",
+      })
+      .select(profileColumns)
+      .single(),
+  );
 
   if (error) {
     logProfileQueryError({

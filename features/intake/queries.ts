@@ -81,6 +81,17 @@ type AnswerRow = {
   updated_by: string | null;
 };
 
+function isMissingIntakeActiveColumnError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const record = error as { code?: unknown; message?: unknown };
+  const message = typeof record.message === "string" ? record.message : "";
+
+  return record.code === "42703" && message.includes("is_active");
+}
+
 function firstRelated<T>(record: RelatedRecord<T>) {
   return Array.isArray(record) ? (record[0] ?? null) : record;
 }
@@ -230,18 +241,38 @@ export async function getLatestIntakeSessionForBrand(brandId: string) {
 
 export async function getIntakeSectionsWithQuestions() {
   const admin = createAdminClient();
-  const [sectionsResult, questionsResult] = await Promise.all([
-    admin
+  const loadSectionsAndQuestions = (activeOnly: boolean) => {
+    let sectionsQuery = admin
       .from("question_sections")
-      .select("id, key, title, description, order_index, is_required")
-      .order("order_index", { ascending: true }),
-    admin
+      .select("id, key, title, description, order_index, is_required");
+    let questionsQuery = admin
       .from("questions")
       .select(
         "id, section_id, key, question_text, help_text, input_type, is_required, order_index, validation_schema",
-      )
-      .order("order_index", { ascending: true }),
-  ]);
+      );
+
+    if (activeOnly) {
+      sectionsQuery = sectionsQuery.eq("is_active", true);
+      questionsQuery = questionsQuery.eq("is_active", true);
+    }
+
+    return Promise.all([
+      sectionsQuery.order("order_index", { ascending: true }),
+      questionsQuery
+        .order("section_id", { ascending: true })
+        .order("order_index", { ascending: true }),
+    ]);
+  };
+
+  let [sectionsResult, questionsResult] =
+    await loadSectionsAndQuestions(true);
+
+  if (
+    isMissingIntakeActiveColumnError(sectionsResult.error) ||
+    isMissingIntakeActiveColumnError(questionsResult.error)
+  ) {
+    [sectionsResult, questionsResult] = await loadSectionsAndQuestions(false);
+  }
 
   if (sectionsResult.error) {
     throw sectionsResult.error;

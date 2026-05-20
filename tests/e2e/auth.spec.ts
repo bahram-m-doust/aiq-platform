@@ -201,6 +201,19 @@ test("admin audit logs redirects unauthenticated users to admin login", async ({
   ).toBeVisible();
 });
 
+test("admin intake builder redirects unauthenticated users to admin login", async ({
+  page,
+}) => {
+  await page.goto("/admin/intake-builder");
+
+  await expect(page).toHaveURL(
+    /\/admin\/login\?next=%2Fadmin%2Fintake-builder$/,
+  );
+  await expect(
+    page.getByRole("heading", { name: "Admin sign in" }),
+  ).toBeVisible();
+});
+
 test("login page shows Google sign-in option", async ({ page }) => {
   await page.goto("/login");
 

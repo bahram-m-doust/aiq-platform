@@ -24,6 +24,23 @@ If you see `ERROR: 42P07: relation "users_profile" already exists`, your project
 
 Or re-run `setup-all.sql` after pulling the latest changes — it is now idempotent.
 
+## After running migrations: reload the PostgREST schema cache
+
+Supabase serves the REST API through PostgREST, which caches the database
+schema. After applying any DDL change (including `setup-all.sql`), tell
+PostgREST to reload the cache, otherwise the first sign-in attempt may
+fail with `PGRST002 — Could not query the database for the schema cache`.
+
+Run this in the SQL editor right after the migrations:
+
+```sql
+NOTIFY pgrst, 'reload schema';
+```
+
+The application code retries this specific error a few times automatically,
+but a manual reload eliminates the wait. Restarting the project from
+Settings → General has the same effect.
+
 ## Diagnosing the "We could not prepare your profile" error
 
 The redirect now appends the underlying cause to the message, for example:

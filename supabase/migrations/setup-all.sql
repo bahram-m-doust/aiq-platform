@@ -50,6 +50,8 @@ create table if not exists public.question_sections (
   description text,
   order_index int not null,
   is_required boolean default true,
+  is_active boolean not null default true,
+  updated_at timestamptz default now(),
   created_at timestamptz default now()
 );
 
@@ -63,8 +65,19 @@ create table if not exists public.questions (
   is_required boolean default true,
   order_index int not null,
   validation_schema jsonb,
+  is_active boolean not null default true,
+  updated_at timestamptz default now(),
   created_at timestamptz default now()
 );
+
+alter table public.question_sections
+  add column if not exists is_active boolean not null default true;
+alter table public.question_sections
+  add column if not exists updated_at timestamptz default now();
+alter table public.questions
+  add column if not exists is_active boolean not null default true;
+alter table public.questions
+  add column if not exists updated_at timestamptz default now();
 
 create table if not exists public.brand_memberships (
   id uuid primary key default gen_random_uuid(),
@@ -301,6 +314,10 @@ create index if not exists idx_brand_entitlements_source on public.brand_entitle
 create index if not exists idx_brand_entitlements_granted_by on public.brand_entitlements(granted_by);
 
 create index if not exists idx_questions_section on public.questions(section_id);
+create index if not exists idx_question_sections_active_order
+  on public.question_sections(is_active, order_index);
+create index if not exists idx_questions_section_active_order
+  on public.questions(section_id, is_active, order_index);
 
 create index if not exists idx_intake_sessions_brand on public.intake_sessions(brand_id);
 create index if not exists idx_intake_sessions_status on public.intake_sessions(status);
