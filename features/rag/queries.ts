@@ -18,6 +18,7 @@ import type {
   RagStatus,
 } from "@/features/rag/types";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { rowOrNull, rowsOrEmpty } from "@/lib/supabase/rows";
 
 type ModuleRow = {
   id: string;
@@ -206,10 +207,7 @@ async function fetchBrands(brandIds: string[]) {
   }
 
   return new Map(
-    ((data ?? []) as unknown as BrandRow[]).map((brand) => [
-      brand.id,
-      brand,
-    ]),
+    rowsOrEmpty<BrandRow>(data).map((brand) => [brand.id, brand]),
   );
 }
 
@@ -229,7 +227,7 @@ async function fetchFiles(fileIds: string[]) {
   }
 
   return new Map(
-    ((data ?? []) as unknown as FileRow[]).map((file) => [file.id, file]),
+    rowsOrEmpty<FileRow>(data).map((file) => [file.id, file]),
   );
 }
 
@@ -249,7 +247,7 @@ async function fetchModules(moduleIds: string[]) {
   }
 
   return new Map(
-    ((data ?? []) as unknown as ModuleRow[]).map((row) => [row.id, row]),
+    rowsOrEmpty<ModuleRow>(data).map((row) => [row.id, row]),
   );
 }
 
@@ -269,7 +267,7 @@ async function fetchKnowledgeFiles(fileIds: string[]) {
   }
 
   return new Map(
-    ((data ?? []) as unknown as KnowledgeFileRow[])
+    rowsOrEmpty<KnowledgeFileRow>(data)
       .filter((row) => row.file_id)
       .map((row) => [`${row.brand_id}:${row.file_id}`, row]),
   );
@@ -292,10 +290,7 @@ async function fetchKnowledgeBases(brandIds: string[]) {
   }
 
   return new Map(
-    ((data ?? []) as unknown as KnowledgeBaseRow[]).map((row) => [
-      row.brand_id,
-      row,
-    ]),
+    rowsOrEmpty<KnowledgeBaseRow>(data).map((row) => [row.brand_id, row]),
   );
 }
 
@@ -323,8 +318,8 @@ async function buildQueueItemsForModules(moduleRows: ModuleRow[]) {
     throw artifactError;
   }
 
-  const artifactsByModuleId = (
-    (artifactData ?? []) as unknown as ArtifactRow[]
+  const artifactsByModuleId = rowsOrEmpty<ArtifactRow>(
+    artifactData,
   ).reduce<Map<string, ArtifactRow[]>>((artifacts, artifact) => {
     if (!artifact.file_id || artifact.artifact_type !== "PDF") {
       return artifacts;
@@ -398,7 +393,7 @@ export async function getRagApprovalQueueItems() {
     throw error;
   }
 
-  return buildQueueItemsForModules((data ?? []) as unknown as ModuleRow[]);
+  return buildQueueItemsForModules(rowsOrEmpty<ModuleRow>(data));
 }
 
 export async function getEligibleRagApprovalItemByArtifactId(
@@ -416,7 +411,7 @@ export async function getEligibleRagApprovalItemByArtifactId(
     throw artifactError;
   }
 
-  const artifact = artifactData as unknown as ArtifactRow | null;
+  const artifact = rowOrNull<ArtifactRow>(artifactData);
 
   if (!artifact?.module_id || !artifact.file_id) {
     return null;
@@ -432,7 +427,7 @@ export async function getEligibleRagApprovalItemByArtifactId(
     throw moduleError;
   }
 
-  const brandModule = moduleData as unknown as ModuleRow | null;
+  const brandModule = rowOrNull<ModuleRow>(moduleData);
 
   if (!brandModule?.brand_id) {
     return null;
@@ -487,9 +482,7 @@ async function fetchApprovedPdfArtifacts({
     throw error;
   }
 
-  return ((data ?? []) as unknown as ArtifactRow[]).reduce<
-    Map<string, ArtifactRow>
-  >((artifacts, artifact) => {
+  return rowsOrEmpty<ArtifactRow>(data).reduce<Map<string, ArtifactRow>>((artifacts, artifact) => {
     if (!artifact.file_id) {
       return artifacts;
     }
@@ -592,10 +585,9 @@ export async function getRagApprovedFilesForSync({
     throw error;
   }
 
-  const items = await buildRagSyncFileItems(
-    (data ?? []) as unknown as KnowledgeFileRow[],
-    { approvedOnly: true },
-  );
+  const items = await buildRagSyncFileItems(rowsOrEmpty<KnowledgeFileRow>(data), {
+    approvedOnly: true,
+  });
 
   return items.map(
     ({
@@ -640,7 +632,7 @@ export async function getRagSyncDashboard(): Promise<RagSyncBrandGroup[]> {
     throw error;
   }
 
-  const knowledgeRows = (data ?? []) as unknown as KnowledgeFileRow[];
+  const knowledgeRows = rowsOrEmpty<KnowledgeFileRow>(data);
   const brandIds = Array.from(new Set(knowledgeRows.map((row) => row.brand_id)));
   const [brandsById, knowledgeBasesByBrandId] = await Promise.all([
     fetchBrands(brandIds),

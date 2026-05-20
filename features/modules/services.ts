@@ -14,8 +14,6 @@ import {
   canSendArtifactToClientReview,
   canSendModuleToClientRole,
   canUploadModuleDraftRole,
-  canViewAdminModulesRole,
-  isCanonicalModuleType,
   latestArtifactIsClientReviewPdf,
   toArtifactAuditMetadata,
   toModuleAuditMetadata,
@@ -24,7 +22,6 @@ import {
   validateModuleUploadFormData,
 } from "@/features/modules/schema";
 import {
-  getAdminModuleDetail,
   getClientModuleDetail,
   getLatestModuleArtifact,
   getModuleById,
@@ -33,188 +30,28 @@ import type {
   ClientModuleReviewPageData,
   ModuleArtifactRecord,
   ModuleRecord,
-  ModuleReviewRecord,
   ModuleUploadInput,
 } from "@/features/modules/types";
-import { logAudit } from "@/lib/audit/logAudit";
+import { insertModuleAuditLog } from "@/features/modules/service-audit";
+import {
+  assertModuleTypeIsCanonical,
+  requireAdminModuleDetail,
+  requireClientModuleDetail,
+} from "@/features/modules/service-guards";
+import {
+  artifactColumns,
+  type ArtifactRow,
+  reviewColumns,
+  type ReviewRow,
+  toTemporaryArtifactRecord,
+  toTemporaryReviewRecord,
+} from "@/features/modules/service-records";
+import { moduleServiceError } from "@/features/modules/service-errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { UserProfile } from "@/features/auth/types";
 
-type ArtifactRow = {
-  id: string;
-  module_id: string;
-  artifact_type: string;
-  file_id: string | null;
-  version: number | null;
-  status: string | null;
-  uploaded_by: string | null;
-  created_at: string | null;
-};
-
-type ReviewRow = {
-  id: string;
-  module_id: string;
-  reviewer_id: string;
-  review_type: string;
-  decision: string;
-  comment: string | null;
-  created_at: string | null;
-};
-
-const artifactColumns = [
-  "id",
-  "module_id",
-  "artifact_type",
-  "file_id",
-  "version",
-  "status",
-  "uploaded_by",
-  "created_at",
-].join(", ");
-
-const reviewColumns = [
-  "id",
-  "module_id",
-  "reviewer_id",
-  "review_type",
-  "decision",
-  "comment",
-  "created_at",
-].join(", ");
-
-class ModuleServiceError extends Error {
-  name = "ModuleServiceError";
-}
-
-function moduleServiceError(message: string): never {
-  throw new ModuleServiceError(message);
-}
-
-export function isModuleServiceError(
-  error: unknown,
-): error is ModuleServiceError {
-  return error instanceof ModuleServiceError;
-}
-
-async function insertModuleAuditLog({
-  actorUserId,
-  actorRole,
-  brandId,
-  action,
-  entityType,
-  entityId,
-  beforeJson = null,
-  afterJson,
-}: {
-  actorUserId: string;
-  actorRole: string | null;
-  brandId: string;
-  action:
-    | "module_uploaded"
-    | "module_sent_to_client"
-    | "module_client_approved"
-    | "module_change_requested"
-    | "file_downloaded";
-  entityType: "module" | "file";
-  entityId: string;
-  beforeJson?: Record<string, unknown> | null;
-  afterJson: Record<string, unknown>;
-}) {
-  await logAudit({
-    actorUserId,
-    actorRole,
-    brandId,
-    action,
-    entityType,
-    entityId,
-    before: beforeJson,
-    after: afterJson,
-  });
-}
-
-function toTemporaryArtifactRecord({
-  row,
-  brandModule,
-  file,
-}: {
-  row: ArtifactRow;
-  brandModule: ModuleRecord;
-  file: ModuleArtifactRecord["file"];
-}): ModuleArtifactRecord {
-  return {
-    id: row.id,
-    moduleId: row.module_id,
-    artifactType: row.artifact_type === "DOCX" ? "DOCX" : "PDF",
-    fileId: row.file_id,
-    version: row.version ?? 1,
-    status: row.status ?? "INTERNAL_DRAFT",
-    uploadedBy: row.uploaded_by,
-    uploadedByEmail: null,
-    createdAt: row.created_at,
-    file: file
-      ? {
-          ...file,
-          brandId: brandModule.brandId,
-        }
-      : null,
-  };
-}
-
-function toTemporaryReviewRecord(row: ReviewRow): ModuleReviewRecord {
-  return {
-    id: row.id,
-    moduleId: row.module_id,
-    reviewerId: row.reviewer_id,
-    reviewerEmail: null,
-    reviewType: row.review_type === "SUPERVISOR" ? "SUPERVISOR" : "CLIENT",
-    decision:
-      row.decision === "APPROVED_FOR_CLIENT_REVIEW" ||
-      row.decision === "APPROVED" ||
-      row.decision === "CHANGE_REQUESTED"
-        ? row.decision
-        : "COMMENT",
-    comment: row.comment,
-    createdAt: row.created_at,
-  };
-}
-
-async function requireAdminModuleDetail({
-  moduleId,
-  profile,
-}: {
-  moduleId: string;
-  profile: UserProfile;
-}) {
-  const detail = await getAdminModuleDetail({ moduleId, profile });
-
-  if (!detail) {
-    moduleServiceError("Module could not be found.");
-  }
-
-  return detail;
-}
-
-async function requireClientModuleDetail({
-  moduleId,
-  profileId,
-}: {
-  moduleId: string;
-  profileId: string;
-}) {
-  const detail = await getClientModuleDetail({ moduleId, profileId });
-
-  if (!detail) {
-    moduleServiceError("Module could not be found.");
-  }
-
-  return detail;
-}
-
-function assertModuleTypeIsCanonical(brandModule: ModuleRecord) {
-  if (!isCanonicalModuleType(brandModule.moduleType)) {
-    moduleServiceError("This module type is not configured for the MVP workflow.");
-  }
-}
+export { assertAdminModuleRole } from "@/features/modules/service-guards";
+export { isModuleServiceError } from "@/features/modules/service-errors";
 
 async function uploadModuleArtifact({
   input,
@@ -745,10 +582,4 @@ export async function ensureModuleExistsForService(moduleId: string) {
   }
 
   return brandModule;
-}
-
-export function assertAdminModuleRole(role: string | null | undefined) {
-  if (!canViewAdminModulesRole(role)) {
-    moduleServiceError("You do not have permission to manage modules.");
-  }
 }

@@ -26,16 +26,7 @@ import type {
   ChangeRequestReviewItem,
 } from "@/features/change-requests/types";
 import type { IntakeQuestion, IntakeSectionWithQuestions } from "@/features/intake/types";
-
-function formData(values: Record<string, string>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
+import { formData } from "@/tests/helpers/formData";
 
 const question: IntakeQuestion = {
   id: "question-1",

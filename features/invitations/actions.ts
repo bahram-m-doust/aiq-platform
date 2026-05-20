@@ -1,10 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { redeemAccessKey } from "@/features/access/services";
+import { getTrustedRequestOrigin } from "@/features/auth/origins";
 import { requireUserProfile } from "@/features/auth/queries";
 import {
   validateAcceptInvitationFormData,
@@ -29,15 +29,6 @@ function acceptErrorState(message: string): AcceptInvitationFormState {
   return { status: "error", message };
 }
 
-async function getAppOrigin() {
-  const headerStore = await headers();
-  return (
-    headerStore.get("origin") ??
-    process.env.APP_BASE_URL ??
-    "http://localhost:3000"
-  );
-}
-
 export async function createSpecialistInvitationAction(
   _previousState: SpecialistInvitationFormState,
   formData: FormData,
@@ -56,7 +47,7 @@ export async function createSpecialistInvitationAction(
       input: validation.data,
       inviterProfileId: profile.id,
       inviterEmail: user.email ?? profile.email,
-      appOrigin: await getAppOrigin(),
+      appOrigin: await getTrustedRequestOrigin(),
     });
 
     revalidatePath("/dashboard/invitations");

@@ -59,21 +59,12 @@ import {
 import type { AgentRunHistoryItem } from "@/features/agents/runs/types";
 import type { UserProfile } from "@/features/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { formData } from "@/tests/helpers/formData";
 
 const mockedGetBrandBrainWorkspace = vi.mocked(getBrandBrainWorkspace);
 const mockedCreateAgentRunResponse = vi.mocked(createAgentRunResponse);
 const mockedGetAgentRunModel = vi.mocked(getAgentRunModel);
 const mockedCreateAdminClient = vi.mocked(createAdminClient);
-
-function formData(values: Record<string, string>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
 
 function profile(): UserProfile {
   return {

@@ -41,21 +41,12 @@ import type {
   BrandBrainAccess,
   BrandBrainWorkspace,
 } from "@/features/agents/brain/types";
+import { formData } from "@/tests/helpers/formData";
 
 const mockedCreateBrandBrainResponse = vi.mocked(createBrandBrainResponse);
 const mockedGetBrandBrainModel = vi.mocked(getBrandBrainModel);
 const mockedGetBrandBrainWorkspace = vi.mocked(getBrandBrainWorkspace);
 const mockedCreateAdminClient = vi.mocked(createAdminClient);
-
-function formData(values: Record<string, string>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
 
 function profile(): UserProfile {
   return {

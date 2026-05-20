@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import {
@@ -8,6 +7,7 @@ import {
   ensureUserProfile,
   logProfileProvisioningError,
 } from "@/features/auth/profile";
+import { getTrustedRequestOrigin } from "@/features/auth/origins";
 import { sanitizeRedirectPath } from "@/features/auth/redirects";
 import {
   validateLoginFormData,
@@ -18,11 +18,6 @@ import { createClient } from "@/lib/supabase/server";
 
 function errorState(message: string): AuthFormState {
   return { status: "error", message };
-}
-
-async function getRequestOrigin() {
-  const headerStore = await headers();
-  return headerStore.get("origin") ?? process.env.APP_BASE_URL ?? "http://localhost:3000";
 }
 
 export async function login(
@@ -73,7 +68,7 @@ export async function register(
   }
 
   const nextPath = sanitizeRedirectPath(formData.get("next"));
-  const origin = await getRequestOrigin();
+  const origin = await getTrustedRequestOrigin();
   const callbackUrl = new URL("/callback", origin);
   callbackUrl.searchParams.set("next", nextPath);
 
@@ -118,7 +113,7 @@ export async function register(
 
 export async function signInWithGoogle(formData: FormData) {
   const nextPath = sanitizeRedirectPath(formData.get("next"));
-  const origin = await getRequestOrigin();
+  const origin = await getTrustedRequestOrigin();
   const callbackUrl = new URL("/callback", origin);
   callbackUrl.searchParams.set("next", nextPath);
 

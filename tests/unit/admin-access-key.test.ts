@@ -8,27 +8,10 @@ import {
 import type { AccessKeySafeRecord } from "@/features/access/types";
 import { getResendEmailConfig } from "@/lib/email/sendEmail";
 import { buildAccessKeyEmail } from "@/lib/email/templates";
+import { formData } from "@/tests/helpers/formData";
 
 const originalResendApiKey = process.env.RESEND_API_KEY;
 const originalEmailFrom = process.env.EMAIL_FROM;
-
-function formData(values: Record<string, string | boolean>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    if (typeof value === "boolean") {
-      if (value) {
-        data.set(key, "true");
-      }
-
-      return;
-    }
-
-    data.set(key, value);
-  });
-
-  return data;
-}
 
 function safeAccessKey(): AccessKeySafeRecord {
   return {

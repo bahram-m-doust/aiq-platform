@@ -9,16 +9,7 @@ import {
   validateCreateBrandFormData,
 } from "@/features/brands/create-brand/schema";
 import type { CreateBrandAccessKeyRecord } from "@/features/brands/create-brand/types";
-
-function formData(values: Record<string, string>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
+import { formData } from "@/tests/helpers/formData";
 
 function accessKey(
   overrides: Partial<CreateBrandAccessKeyRecord> = {},

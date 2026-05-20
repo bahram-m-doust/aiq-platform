@@ -35,16 +35,7 @@ import type {
   ModuleArtifactRecord,
   ModuleRecord,
 } from "@/features/modules/types";
-
-function formData(values: Record<string, string | File>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
+import { formData } from "@/tests/helpers/formData";
 
 function brandModule(overrides: Partial<ModuleRecord> = {}): ModuleRecord {
   return {

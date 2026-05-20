@@ -69,6 +69,7 @@ import type {
   RagApprovedSyncFile,
   RagSyncBrandGroup,
 } from "@/features/rag/types";
+import { formData } from "@/tests/helpers/formData";
 
 const mockedGetEligibleItem = vi.mocked(getEligibleRagApprovalItemByArtifactId);
 const mockedGetApprovedFilesForSync = vi.mocked(getRagApprovedFilesForSync);
@@ -77,16 +78,6 @@ const mockedDownloadPrivateFile = vi.mocked(downloadPrivateFile);
 const mockedCreateVectorStore = vi.mocked(createOpenAIFileSearchVectorStore);
 const mockedHasOpenAIEnv = vi.mocked(hasOpenAIFileSearchEnv);
 const mockedUploadToVectorStore = vi.mocked(uploadOpenAIFileToVectorStore);
-
-function formData(values: Record<string, string>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
 
 function profile(role: UserProfile["global_role"]): UserProfile {
   return {

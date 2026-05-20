@@ -24,20 +24,7 @@ import type {
   BrandFileRecord,
   FileAccessContext,
 } from "@/features/files/types";
-
-function formData(values: { file?: File; visibility?: string }) {
-  const data = new FormData();
-
-  if (values.file) {
-    data.set("file", values.file);
-  }
-
-  if (values.visibility) {
-    data.set("visibility", values.visibility);
-  }
-
-  return data;
-}
+import { formData } from "@/tests/helpers/formData";
 
 const ownerAccess: FileAccessContext = {
   brandId: "brand-1",

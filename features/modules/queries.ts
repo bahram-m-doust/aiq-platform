@@ -24,6 +24,7 @@ import type {
 } from "@/features/modules/types";
 import { isFileStatus, isFileVisibility } from "@/features/files/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { rowAsArray, rowsOrEmpty } from "@/lib/supabase/rows";
 import type { UserProfile } from "@/features/auth/types";
 
 type ModuleRow = {
@@ -284,7 +285,7 @@ async function fetchBrandsById(brandIds: string[]) {
   }
 
   return new Map(
-    ((data ?? []) as BrandRow[]).map((brand) => [brand.id, brand.name]),
+    rowsOrEmpty<BrandRow>(data).map((brand) => [brand.id, brand.name]),
   );
 }
 
@@ -304,7 +305,7 @@ async function fetchProfilesById(profileIds: string[]) {
   }
 
   return new Map(
-    ((data ?? []) as ProfileRow[]).map((profile) => [
+    rowsOrEmpty<ProfileRow>(data).map((profile) => [
       profile.id,
       profile.email,
     ]),
@@ -334,7 +335,7 @@ async function fetchFilesForArtifacts(artifactRows: ArtifactRow[]) {
     throw error;
   }
 
-  const fileRows = (data ?? []) as unknown as FileRow[];
+  const fileRows = rowsOrEmpty<FileRow>(data);
   const uploaderIds = Array.from(
     new Set(
       fileRows
@@ -404,7 +405,7 @@ async function fetchArtifactsForModules(moduleIds: string[]) {
     throw error;
   }
 
-  const rows = (data ?? []) as unknown as ArtifactRow[];
+  const rows = rowsOrEmpty<ArtifactRow>(data);
   const filesById = await fetchFilesForArtifacts(rows);
   const uploaderIds = Array.from(
     new Set(
@@ -447,7 +448,7 @@ async function fetchReviewsForModules(moduleIds: string[]) {
     throw error;
   }
 
-  const rows = (data ?? []) as unknown as ReviewRow[];
+  const rows = rowsOrEmpty<ReviewRow>(data);
   const reviewerIds = Array.from(
     new Set(rows.map((review) => review.reviewer_id)),
   );
@@ -488,7 +489,7 @@ export async function getAdminModuleBoard(
     throw error;
   }
 
-  const modules = await mapModuleRows((data ?? []) as unknown as ModuleRow[]);
+  const modules = await mapModuleRows(rowsOrEmpty<ModuleRow>(data));
   const artifactsByModuleId = await fetchArtifactsForModules(
     modules.map((brandModule) => brandModule.id),
   );
@@ -518,9 +519,7 @@ export async function getModuleById(moduleId: string) {
     throw error;
   }
 
-  const modules = await mapModuleRows(
-    data ? ([data] as unknown as ModuleRow[]) : [],
-  );
+  const modules = await mapModuleRows(rowAsArray<ModuleRow>(data));
   return modules[0] ?? null;
 }
 
@@ -606,7 +605,7 @@ export async function getClientModulesWorkspace(
     throw error;
   }
 
-  const modules = await mapModuleRows((data ?? []) as unknown as ModuleRow[]);
+  const modules = await mapModuleRows(rowsOrEmpty<ModuleRow>(data));
   const artifactsByModuleId = await fetchArtifactsForModules(
     modules.map((brandModule) => brandModule.id),
   );

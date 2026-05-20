@@ -45,19 +45,10 @@ import type {
   AgentCatalogItem,
   AgentCatalogWorkspace,
 } from "@/features/agents/catalog/types";
+import { formData } from "@/tests/helpers/formData";
 
 const mockedGetAgentCatalogWorkspace = vi.mocked(getAgentCatalogWorkspace);
 const mockedCreateAdminClient = vi.mocked(createAdminClient);
-
-function formData(values: Record<string, string>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
 
 function profile(): UserProfile {
   return {

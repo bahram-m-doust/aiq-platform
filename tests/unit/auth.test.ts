@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { resolveTrustedAppOrigin } from "@/features/auth/origins";
 import {
   isAdminPath,
   resolveLoginPathForNext,
@@ -10,16 +11,8 @@ import {
   validateLoginFormData,
   validateRegistrationFormData,
 } from "@/features/auth/schemas";
-
-function formData(values: Record<string, string>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
+import { withOriginEnv } from "@/tests/helpers/env";
+import { formData } from "@/tests/helpers/formData";
 
 describe("auth validation", () => {
   it("accepts valid email addresses", () => {
@@ -57,9 +50,34 @@ describe("auth validation", () => {
   it("prevents external redirect targets", () => {
     expect(sanitizeRedirectPath("https://example.com")).toBe("/dashboard");
     expect(sanitizeRedirectPath("//example.com")).toBe("/dashboard");
+    expect(sanitizeRedirectPath("/\\evil.example")).toBe("/dashboard");
+    expect(sanitizeRedirectPath("/dashboard\n/admin")).toBe("/dashboard");
+    expect(sanitizeRedirectPath(" /dashboard")).toBe("/dashboard");
     expect(sanitizeRedirectPath("/dashboard")).toBe("/dashboard");
     expect(sanitizeRedirectPath("/invite/accept?key=bext_example")).toBe(
       "/invite/accept?key=bext_example",
+    );
+  });
+
+  it("allows only configured origins for auth callback URLs", () => {
+    withOriginEnv(
+      {
+        appBaseUrl: "https://app.bextudio.test",
+        adminBaseUrl: "https://admin.bextudio.test",
+      },
+      () => {
+        const maliciousOrigin = "https://evil.example";
+        const resolvedOrigin = resolveTrustedAppOrigin(maliciousOrigin);
+        const callbackUrl = new URL("/callback", resolvedOrigin);
+
+        expect(resolvedOrigin).toBe("https://app.bextudio.test");
+        expect(callbackUrl.toString()).toBe(
+          "https://app.bextudio.test/callback",
+        );
+        expect(resolveTrustedAppOrigin("https://admin.bextudio.test")).toBe(
+          "https://admin.bextudio.test",
+        );
+      },
     );
   });
 

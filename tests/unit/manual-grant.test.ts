@@ -10,16 +10,7 @@ import {
   toStartOfDayUtcIso,
   validateManualGrantFormData,
 } from "@/features/admin/manual-grant/schema";
-
-function formData(values: Record<string, string>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
+import { formData } from "@/tests/helpers/formData";
 
 describe("manual grant validation", () => {
   it("accepts valid manual grant input and normalizes dates/text", () => {

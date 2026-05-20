@@ -35,6 +35,7 @@ import type { IntakeBuilderSection } from "@/features/admin/intake-builder/types
 import { getIntakeSectionsWithQuestions } from "@/features/intake/queries";
 import { auditActions } from "@/lib/audit/logAudit";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { formData } from "@/tests/helpers/formData";
 
 const mockedCreateAdminClient = vi.mocked(createAdminClient);
 
@@ -46,16 +47,6 @@ class ResizeObserverMock {
 
 globalThis.ResizeObserver =
   globalThis.ResizeObserver ?? (ResizeObserverMock as typeof ResizeObserver);
-
-function formData(entries: Record<string, string>) {
-  const data = new FormData();
-
-  Object.entries(entries).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
 
 function section(overrides: Partial<IntakeBuilderSection> = {}): IntakeBuilderSection {
   return {

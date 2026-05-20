@@ -17,6 +17,7 @@ vi.mock("@/features/auth/actions", () => ({
 
 import type { AccessKeySafeRecord } from "@/features/access/types";
 import { RegisterForm } from "@/features/auth/components/RegisterForm";
+import { resolveTrustedAppOrigin } from "@/features/auth/origins";
 import { buildSpecialistInvitationEmail } from "@/lib/email/templates";
 import { AcceptInvitationForm } from "@/features/invitations/components/AcceptInvitationForm";
 import { AcceptInvitationPrompt } from "@/features/invitations/components/AcceptInvitationPrompt";
@@ -32,16 +33,8 @@ import {
   validateSpecialistInvitationFormData,
 } from "@/features/invitations/schema";
 import type { SpecialistMembershipRecord } from "@/features/invitations/types";
-
-function formData(values: Record<string, string>) {
-  const data = new FormData();
-
-  Object.entries(values).forEach(([key, value]) => {
-    data.set(key, value);
-  });
-
-  return data;
-}
+import { withOriginEnv } from "@/tests/helpers/env";
+import { formData } from "@/tests/helpers/formData";
 
 const joinAccessKey: AccessKeySafeRecord = {
   id: "access-key-1",
@@ -182,6 +175,27 @@ describe("invitation safe metadata and email", () => {
     expect(email.subject).not.toContain(rawKey);
     expect(email.text).toContain(acceptUrl);
     expect(email.html).toContain("Accept the invitation");
+  });
+
+  it("builds invitation URLs from trusted origins only", () => {
+    withOriginEnv(
+      {
+        appBaseUrl: "https://app.bextudio.test",
+        adminBaseUrl: "https://admin.bextudio.test",
+      },
+      () => {
+        const origin = resolveTrustedAppOrigin("https://attacker.example");
+        const acceptUrl = buildInvitationAcceptUrl({
+          origin,
+          rawKey: "bext_raw_secret_key",
+        });
+
+        expect(origin).toBe("https://app.bextudio.test");
+        expect(acceptUrl).toBe(
+          "https://app.bextudio.test/invite/accept?key=bext_raw_secret_key",
+        );
+      },
+    );
   });
 });
 
