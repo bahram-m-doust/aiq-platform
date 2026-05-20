@@ -1,0 +1,344 @@
+import "server-only";
+
+import { isActiveBrandEntitlement } from "@/features/access/access-summary";
+import type { BrandAccessEntitlement } from "@/features/access/types";
+import {
+  canAnswerIntakeRole,
+  calculateIntakeCompletion,
+  extractStoredAnswerValue,
+} from "@/features/intake/schemas";
+import type {
+  IntakeAccessContext,
+  IntakeAnswerMap,
+  IntakePageData,
+  IntakeQuestion,
+  IntakeSection,
+  IntakeSectionWithQuestions,
+  IntakeSession,
+} from "@/features/intake/types";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+type RelatedRecord<T> = T | T[] | null;
+
+type BrandRow = {
+  id: string;
+  name: string;
+};
+
+type PlanRow = {
+  name: string | null;
+};
+
+type MembershipRow = {
+  brand_id: string;
+  role: string;
+  brands: RelatedRecord<BrandRow>;
+};
+
+type EntitlementRow = {
+  brand_id: string;
+  status: string;
+  starts_at: string | null;
+  expires_at: string | null;
+  plans: RelatedRecord<PlanRow>;
+};
+
+type IntakeSessionRow = {
+  id: string;
+  brand_id: string;
+  status: string;
+  completion_percent: number | null;
+  locked_at: string | null;
+  locked_by: string | null;
+};
+
+type SectionRow = {
+  id: string;
+  key: string;
+  title: string;
+  description: string | null;
+  order_index: number;
+  is_required: boolean | null;
+};
+
+type QuestionRow = {
+  id: string;
+  section_id: string;
+  key: string;
+  question_text: string;
+  help_text: string | null;
+  input_type: string;
+  is_required: boolean | null;
+  order_index: number;
+  validation_schema: unknown;
+};
+
+type AnswerRow = {
+  id: string;
+  session_id: string;
+  question_id: string;
+  value: unknown;
+  updated_by: string | null;
+};
+
+function firstRelated<T>(record: RelatedRecord<T>) {
+  return Array.isArray(record) ? (record[0] ?? null) : record;
+}
+
+function toIntakeSession(row: IntakeSessionRow): IntakeSession {
+  return {
+    id: row.id,
+    brandId: row.brand_id,
+    status: row.status,
+    completionPercent: row.completion_percent ?? 0,
+    lockedAt: row.locked_at,
+    lockedBy: row.locked_by,
+  };
+}
+
+function toIntakeSection(row: SectionRow): IntakeSection {
+  return {
+    id: row.id,
+    key: row.key,
+    title: row.title,
+    description: row.description,
+    orderIndex: row.order_index,
+    isRequired: row.is_required ?? true,
+  };
+}
+
+function toIntakeQuestion(row: QuestionRow): IntakeQuestion {
+  return {
+    id: row.id,
+    sectionId: row.section_id,
+    key: row.key,
+    questionText: row.question_text,
+    helpText: row.help_text,
+    inputType: row.input_type,
+    isRequired: row.is_required ?? true,
+    orderIndex: row.order_index,
+    validationSchema: row.validation_schema,
+  };
+}
+
+export async function getIntakeAccessForProfile({
+  profileId,
+  brandId,
+}: {
+  profileId: string;
+  brandId?: string;
+}) {
+  const admin = createAdminClient();
+  let membershipQuery = admin
+    .from("brand_memberships")
+    .select("brand_id, role, brands(id, name)")
+    .eq("user_id", profileId)
+    .eq("status", "ACTIVE")
+    .in("role", ["OWNER", "EXECUTIVE_MANAGER"]);
+
+  if (brandId) {
+    membershipQuery = membershipQuery.eq("brand_id", brandId);
+  }
+
+  const { data: membershipData, error: membershipError } =
+    await membershipQuery;
+
+  if (membershipError) {
+    throw membershipError;
+  }
+
+  const memberships = ((membershipData ?? []) as MembershipRow[])
+    .map((membership) => {
+      const brand = firstRelated(membership.brands);
+
+      if (!brand || !canAnswerIntakeRole(membership.role)) {
+        return null;
+      }
+
+      return {
+        brandId: membership.brand_id,
+        brandName: brand.name,
+        membershipRole: membership.role,
+      };
+    })
+    .filter((membership): membership is IntakeAccessContext =>
+      Boolean(membership),
+    );
+
+  if (memberships.length === 0) {
+    return null;
+  }
+
+  const brandIds = memberships.map((membership) => membership.brandId);
+  const { data: entitlementData, error: entitlementError } = await admin
+    .from("brand_entitlements")
+    .select("brand_id, status, starts_at, expires_at, plans(name)")
+    .in("brand_id", brandIds)
+    .eq("status", "ACTIVE");
+
+  if (entitlementError) {
+    throw entitlementError;
+  }
+
+  const entitlements = ((entitlementData ?? []) as EntitlementRow[]).map(
+    (entitlement): BrandAccessEntitlement => {
+      const plan = firstRelated(entitlement.plans);
+
+      return {
+        brandId: entitlement.brand_id,
+        status: entitlement.status,
+        startsAt: entitlement.starts_at,
+        expiresAt: entitlement.expires_at,
+        planName: plan?.name ?? null,
+      };
+    },
+  );
+
+  for (const membership of memberships) {
+    const entitlement = entitlements.find(
+      (item) =>
+        item.brandId === membership.brandId && isActiveBrandEntitlement(item),
+    );
+
+    if (entitlement) {
+      return {
+        ...membership,
+        planName: entitlement.planName,
+      };
+    }
+  }
+
+  return null;
+}
+
+export async function getLatestIntakeSessionForBrand(brandId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("intake_sessions")
+    .select("id, brand_id, status, completion_percent, locked_at, locked_by")
+    .eq("brand_id", brandId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? toIntakeSession(data as unknown as IntakeSessionRow) : null;
+}
+
+export async function getIntakeSectionsWithQuestions() {
+  const admin = createAdminClient();
+  const [sectionsResult, questionsResult] = await Promise.all([
+    admin
+      .from("question_sections")
+      .select("id, key, title, description, order_index, is_required")
+      .order("order_index", { ascending: true }),
+    admin
+      .from("questions")
+      .select(
+        "id, section_id, key, question_text, help_text, input_type, is_required, order_index, validation_schema",
+      )
+      .order("order_index", { ascending: true }),
+  ]);
+
+  if (sectionsResult.error) {
+    throw sectionsResult.error;
+  }
+
+  if (questionsResult.error) {
+    throw questionsResult.error;
+  }
+
+  const questions = ((questionsResult.data ?? []) as QuestionRow[]).map(
+    toIntakeQuestion,
+  );
+
+  return ((sectionsResult.data ?? []) as SectionRow[]).map(
+    (section): IntakeSectionWithQuestions => {
+      const intakeSection = toIntakeSection(section);
+
+      return {
+        ...intakeSection,
+        questions: questions.filter(
+          (question) => question.sectionId === intakeSection.id,
+        ),
+      };
+    },
+  );
+}
+
+export async function getIntakeAnswersForSession({
+  sessionId,
+  questions,
+}: {
+  sessionId: string;
+  questions: IntakeQuestion[];
+}) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("intake_answers")
+    .select("id, session_id, question_id, value, updated_by")
+    .eq("session_id", sessionId);
+
+  if (error) {
+    throw error;
+  }
+
+  const questionById = new Map(
+    questions.map((question) => [question.id, question]),
+  );
+
+  return ((data ?? []) as AnswerRow[]).reduce<IntakeAnswerMap>(
+    (answers, answer) => {
+      const question = questionById.get(answer.question_id);
+
+      if (!question) {
+        return answers;
+      }
+
+      return {
+        ...answers,
+        [answer.question_id]: extractStoredAnswerValue({
+          inputType: question.inputType,
+          storedValue: answer.value,
+        }),
+      };
+    },
+    {},
+  );
+}
+
+export async function getIntakePageData({
+  profileId,
+}: {
+  profileId: string;
+}): Promise<IntakePageData | null> {
+  const access = await getIntakeAccessForProfile({ profileId });
+
+  if (!access) {
+    return null;
+  }
+
+  const { ensureIntakeSessionForBrand } = await import(
+    "@/features/intake/services"
+  );
+  const [session, sections] = await Promise.all([
+    ensureIntakeSessionForBrand(access.brandId),
+    getIntakeSectionsWithQuestions(),
+  ]);
+  const questions = sections.flatMap((section) => section.questions);
+  const answers = await getIntakeAnswersForSession({
+    sessionId: session.id,
+    questions,
+  });
+
+  return {
+    access,
+    session,
+    sections,
+    answers,
+    completion: calculateIntakeCompletion({ sections, answers }),
+  };
+}
