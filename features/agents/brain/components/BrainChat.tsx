@@ -17,9 +17,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   askBrandBrainAction,
-  initialBrandBrainChatFormState,
 } from "@/features/agents/brain/actions";
-import { brandBrainPromptMaxLength } from "@/features/agents/brain/schema";
+import {
+  brandBrainPromptMaxLength,
+  initialBrandBrainChatFormState,
+} from "@/features/agents/brain/schema";
 import type { BrandBrainAccess } from "@/features/agents/brain/types";
 
 function SubmitButton() {

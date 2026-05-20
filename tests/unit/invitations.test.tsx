@@ -12,6 +12,7 @@ vi.mock("@/features/auth/actions", () => ({
   register: vi.fn(),
   login: vi.fn(),
   logout: vi.fn(),
+  signInWithGoogle: vi.fn(),
 }));
 
 import type { AccessKeySafeRecord } from "@/features/access/types";
@@ -242,8 +243,9 @@ describe("invitation components", () => {
   it("preserves invitation redirects from registration", () => {
     render(<RegisterForm nextPath="/invite/accept?key=bext_raw_secret_key" />);
 
-    expect(screen.getByDisplayValue("/invite/accept?key=bext_raw_secret_key"))
-      .toBeInTheDocument();
+    expect(
+      screen.getAllByDisplayValue("/invite/accept?key=bext_raw_secret_key"),
+    ).not.toHaveLength(0);
     expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute(
       "href",
       "/login?next=%2Finvite%2Faccept%3Fkey%3Dbext_raw_secret_key",

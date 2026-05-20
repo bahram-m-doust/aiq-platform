@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 
 import {
   catalogAgentSlugForKey,
-  initialAgentActivationFormState,
   validateAgentActivationFormData,
 } from "@/features/agents/catalog/schema";
 import {
@@ -13,8 +12,6 @@ import {
 } from "@/features/agents/catalog/services";
 import type { AgentActivationFormState } from "@/features/agents/catalog/types";
 import { requireUserProfile } from "@/features/auth/queries";
-
-export { initialAgentActivationFormState };
 
 function errorState(message: string): AgentActivationFormState {
   return { status: "error", message };

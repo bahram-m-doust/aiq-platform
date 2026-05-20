@@ -8,7 +8,6 @@ import {
   isOpenAIAgentRunConfigError,
 } from "@/features/agents/runs/openai";
 import {
-  initialAgentRunFormState,
   validateAgentRunFormData,
 } from "@/features/agents/runs/schema";
 import {
@@ -16,8 +15,6 @@ import {
   runCatalogAgent,
 } from "@/features/agents/runs/services";
 import type { AgentRunFormState } from "@/features/agents/runs/types";
-
-export { initialAgentRunFormState };
 
 function errorState(message: string): AgentRunFormState {
   return { status: "error", message };
@@ -68,4 +65,3 @@ export async function runAgentAction(
     return errorState("The agent could not complete this request.");
   }
 }
-

@@ -8,7 +8,9 @@ import type {
   ChangeRequestStatus,
   ChangeRequestTargetContext,
   ChangeRequestTargetType,
+  CreateChangeRequestFormState,
   CreateChangeRequestInput,
+  ReviewChangeRequestFormState,
   ReviewChangeRequestInput,
 } from "@/features/change-requests/types";
 import {
@@ -19,6 +21,18 @@ import {
 const maxReasonLength = 240;
 const maxCommentLength = 4000;
 const maxResolutionNoteLength = 2000;
+
+export const initialCreateChangeRequestFormState: CreateChangeRequestFormState =
+  {
+    status: "idle",
+    message: "",
+  };
+
+export const initialReviewChangeRequestFormState: ReviewChangeRequestFormState =
+  {
+    status: "idle",
+    message: "",
+  };
 
 function formString(formData: FormData, key: string) {
   const value = formData.get(key);

@@ -21,17 +21,6 @@ import type {
   SpecialistInvitationFormState,
 } from "@/features/invitations/types";
 
-export const initialSpecialistInvitationFormState: SpecialistInvitationFormState =
-  {
-    status: "idle",
-    message: "",
-  };
-
-export const initialAcceptInvitationFormState: AcceptInvitationFormState = {
-  status: "idle",
-  message: "",
-};
-
 function invitationErrorState(message: string): SpecialistInvitationFormState {
   return { status: "error", message };
 }

@@ -7,8 +7,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   activateAgentAction,
-  initialAgentActivationFormState,
 } from "@/features/agents/catalog/actions";
+import { initialAgentActivationFormState } from "@/features/agents/catalog/schema";
 import type { AgentCatalogItem } from "@/features/agents/catalog/types";
 
 export function AgentActivationForm({
@@ -41,4 +41,3 @@ export function AgentActivationForm({
     </form>
   );
 }
-

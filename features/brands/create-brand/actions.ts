@@ -3,10 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import {
-  initialCreateBrandFormState,
-  validateCreateBrandFormData,
-} from "@/features/brands/create-brand/schema";
+import { validateCreateBrandFormData } from "@/features/brands/create-brand/schema";
 import { createBrandFromCreateBrandAccessKey } from "@/features/brands/create-brand/services";
 import type { CreateBrandFormState } from "@/features/brands/create-brand/types";
 import { requireUserProfile } from "@/features/auth/queries";
@@ -14,8 +11,6 @@ import { requireUserProfile } from "@/features/auth/queries";
 function errorState(message: string): CreateBrandFormState {
   return { status: "error", message };
 }
-
-export { initialCreateBrandFormState };
 
 export async function createBrandFromAccessKeyAction(
   _previousState: CreateBrandFormState,

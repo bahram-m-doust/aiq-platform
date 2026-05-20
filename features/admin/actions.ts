@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 
 import {
   buildAdminAccessKeySuccessState,
-  initialAdminAccessKeyFormState,
   validateAdminAccessKeyFormData,
 } from "@/features/admin/access-key-schema";
 import { verifyAdminAccessKeyReferences } from "@/features/admin/queries";
@@ -20,8 +19,6 @@ import { buildAccessKeyEmail } from "@/lib/email/templates";
 function errorState(message: string): AdminAccessKeyFormState {
   return { status: "error", message };
 }
-
-export { initialAdminAccessKeyFormState };
 
 export async function createAdminAccessKeyAction(
   _previousState: AdminAccessKeyFormState,

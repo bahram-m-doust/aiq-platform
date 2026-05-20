@@ -11,10 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
-import {
-  acceptSpecialistInvitationAction,
-  initialAcceptInvitationFormState,
-} from "@/features/invitations/actions";
+import { acceptSpecialistInvitationAction } from "@/features/invitations/actions";
+import { initialAcceptInvitationFormState } from "@/features/invitations/schema";
 
 export function AcceptInvitationForm({
   rawKey,

@@ -6,28 +6,55 @@ import {
   hasPublicSupabaseEnv,
 } from "@/lib/supabase/env";
 
-const protectedPathPrefixes = ["/dashboard", "/admin"];
-const authPathPrefixes = ["/login", "/register"];
+const adminPathPrefix = "/admin";
+const adminLoginPath = "/admin/login";
+const dashboardPathPrefix = "/dashboard";
+const userLoginPath = "/login";
+const userAuthPathPrefixes = ["/login", "/register"];
 
-function isPrefixedPath(pathname: string, prefixes: string[]) {
-  return prefixes.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+function isPrefixedPath(pathname: string, prefix: string) {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isAdminArea(pathname: string) {
+  return isPrefixedPath(pathname, adminPathPrefix);
+}
+
+function isAdminLogin(pathname: string) {
+  return pathname === adminLoginPath;
+}
+
+function isProtectedPath(pathname: string) {
+  if (isPrefixedPath(pathname, dashboardPathPrefix)) {
+    return true;
+  }
+  return isAdminArea(pathname) && !isAdminLogin(pathname);
+}
+
+function isAuthPath(pathname: string) {
+  if (isAdminLogin(pathname)) {
+    return true;
+  }
+  return userAuthPathPrefixes.some((prefix) => isPrefixedPath(pathname, prefix));
 }
 
 function redirectToLogin(request: NextRequest) {
   const redirectUrl = request.nextUrl.clone();
-  redirectUrl.pathname = "/login";
+  const target = isAdminArea(request.nextUrl.pathname)
+    ? adminLoginPath
+    : userLoginPath;
+  redirectUrl.pathname = target;
+  redirectUrl.search = "";
   redirectUrl.searchParams.set("next", request.nextUrl.pathname);
   return NextResponse.redirect(redirectUrl);
 }
 
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const isProtectedPath = isPrefixedPath(pathname, protectedPathPrefixes);
+  const protectedPath = isProtectedPath(pathname);
 
   if (!hasPublicSupabaseEnv()) {
-    return isProtectedPath ? redirectToLogin(request) : NextResponse.next();
+    return protectedPath ? redirectToLogin(request) : NextResponse.next();
   }
 
   const { supabaseUrl, supabaseAnonKey } = getPublicSupabaseEnv();
@@ -56,13 +83,13 @@ export async function updateSession(request: NextRequest) {
     await supabase.auth.getClaims();
   const hasUser = !claimsError && Boolean(claimsData?.claims?.sub);
 
-  if (isProtectedPath && !hasUser) {
+  if (protectedPath && !hasUser) {
     return redirectToLogin(request);
   }
 
-  if (hasUser && isPrefixedPath(pathname, authPathPrefixes)) {
+  if (hasUser && isAuthPath(pathname)) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
+    redirectUrl.pathname = isAdminLogin(pathname) ? "/admin" : "/dashboard";
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }

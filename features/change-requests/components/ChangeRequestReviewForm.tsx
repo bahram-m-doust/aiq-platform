@@ -13,9 +13,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  initialReviewChangeRequestFormState,
   reviewChangeRequestAction,
 } from "@/features/change-requests/actions";
+import { initialReviewChangeRequestFormState } from "@/features/change-requests/schema";
 import {
   changeRequestStatuses,
   type ChangeRequestReviewItem,

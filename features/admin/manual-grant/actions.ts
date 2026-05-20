@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { grantBrandAccess } from "@/features/access/grant-brand-access";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import {
-  initialManualGrantFormState,
   validateManualGrantFormData,
 } from "@/features/admin/manual-grant/schema";
 import type { ManualGrantFormState } from "@/features/admin/manual-grant/types";
@@ -31,8 +30,6 @@ function successWarning({
 
   return undefined;
 }
-
-export { initialManualGrantFormState };
 
 export async function createManualPlanGrantAction(
   _previousState: ManualGrantFormState,

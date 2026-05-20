@@ -5,10 +5,8 @@ import { useActionState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  initialAccessKeyRedemptionFormState,
-  redeemDashboardAccessKeyAction,
-} from "@/features/access/actions";
+import { redeemDashboardAccessKeyAction } from "@/features/access/actions";
+import { initialAccessKeyRedemptionFormState } from "@/features/access/types";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
 
 export function AccessKeyRedemptionForm() {

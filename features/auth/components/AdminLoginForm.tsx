@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,7 +17,7 @@ import { initialAuthFormState } from "@/features/auth/schemas";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
 
-export function LoginForm({
+export function AdminLoginForm({
   nextPath,
   message,
 }: {
@@ -26,19 +25,15 @@ export function LoginForm({
   message?: string;
 }) {
   const [state, formAction] = useActionState(login, initialAuthFormState);
-  const registerHref =
-    nextPath === "/dashboard"
-      ? "/register"
-      : `/register?next=${encodeURIComponent(nextPath)}`;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>
-          <h1>Sign in</h1>
+          <h1>Admin sign in</h1>
         </CardTitle>
         <CardDescription>
-          Enter your Bextudio account details to continue.
+          Platform Owner access only. Accounts are provisioned by invitation.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -65,21 +60,21 @@ export function LoginForm({
           <form action={formAction} className="space-y-4">
             <input name="next" type="hidden" value={nextPath} />
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="admin-email">Email</Label>
               <Input
                 autoComplete="email"
-                id="email"
+                id="admin-email"
                 name="email"
-                placeholder="you@example.com"
+                placeholder="admin@example.com"
                 required
                 type="email"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="admin-password">Password</Label>
               <Input
                 autoComplete="current-password"
-                id="password"
+                id="admin-password"
                 name="password"
                 required
                 type="password"
@@ -88,12 +83,6 @@ export function LoginForm({
             <SubmitButton idleLabel="Sign in" pendingLabel="Signing in" />
           </form>
         </div>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          New to Bextudio?{" "}
-          <Link className="text-foreground underline" href={registerHref}>
-            Create an account
-          </Link>
-        </p>
       </CardContent>
     </Card>
   );

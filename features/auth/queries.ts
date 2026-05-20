@@ -8,7 +8,10 @@ import {
   loadUserProfileByAuthUserId,
   logProfileProvisioningError,
 } from "@/features/auth/profile";
-import { sanitizeRedirectPath } from "@/features/auth/redirects";
+import {
+  resolveLoginPathForNext,
+  sanitizeRedirectPath,
+} from "@/features/auth/redirects";
 import { isPlatformOwnerProfile } from "@/features/auth/roles";
 import { hasPublicSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -49,7 +52,9 @@ export async function requireUser(nextPath = "/dashboard") {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect(`/login?next=${encodeURIComponent(sanitizeRedirectPath(nextPath))}`);
+    const sanitized = sanitizeRedirectPath(nextPath);
+    const loginPath = resolveLoginPathForNext(sanitized);
+    redirect(`${loginPath}?next=${encodeURIComponent(sanitized)}`);
   }
 
   return user;

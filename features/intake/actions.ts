@@ -14,10 +14,6 @@ import type {
   FinalSubmitIntakeFormState,
 } from "@/features/intake/types";
 
-export const initialFinalSubmitIntakeFormState: FinalSubmitIntakeFormState = {
-  status: "idle",
-};
-
 export async function autosaveIntakeAnswerAction(
   input: AutosaveIntakeAnswerInput,
 ): Promise<AutosaveIntakeAnswerResult> {

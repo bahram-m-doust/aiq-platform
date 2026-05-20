@@ -19,18 +19,6 @@ import type {
   ReviewChangeRequestFormState,
 } from "@/features/change-requests/types";
 
-export const initialCreateChangeRequestFormState: CreateChangeRequestFormState =
-  {
-    status: "idle",
-    message: "",
-  };
-
-export const initialReviewChangeRequestFormState: ReviewChangeRequestFormState =
-  {
-    status: "idle",
-    message: "",
-  };
-
 function createErrorState(message: string): CreateChangeRequestFormState {
   return { status: "error", message };
 }

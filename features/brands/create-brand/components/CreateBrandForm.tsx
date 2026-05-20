@@ -12,10 +12,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  createBrandFromAccessKeyAction,
-  initialCreateBrandFormState,
-} from "@/features/brands/create-brand/actions";
+import { createBrandFromAccessKeyAction } from "@/features/brands/create-brand/actions";
+import { initialCreateBrandFormState } from "@/features/brands/create-brand/schema";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
 
 export function CreateBrandForm({

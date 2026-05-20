@@ -23,8 +23,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   createManualPlanGrantAction,
-  initialManualGrantFormState,
 } from "@/features/admin/manual-grant/actions";
+import { initialManualGrantFormState } from "@/features/admin/manual-grant/schema";
 import type {
   ManualGrantFormOptions,
   ManualGrantSource,

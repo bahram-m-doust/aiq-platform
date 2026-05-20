@@ -14,10 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
-import {
-  initialModuleUploadFormState,
-  uploadModuleArtifactAction,
-} from "@/features/modules/actions";
+import { uploadModuleArtifactAction } from "@/features/modules/actions";
+import { initialModuleUploadFormState } from "@/features/modules/schema";
 import type { ModuleRecord } from "@/features/modules/types";
 
 export function ModuleArtifactUploadForm({

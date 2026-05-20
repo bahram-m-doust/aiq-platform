@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { register } from "@/features/auth/actions";
 import { initialAuthFormState } from "@/features/auth/schemas";
+import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
 
 export function RegisterForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
@@ -35,8 +36,7 @@ export function RegisterForm({ nextPath = "/dashboard" }: { nextPath?: string })
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={formAction} className="space-y-4">
-          <input name="next" type="hidden" value={nextPath} />
+        <div className="space-y-4">
           {state.status === "error" ? (
             <Alert variant="destructive">
               <AlertDescription>{state.message}</AlertDescription>
@@ -47,40 +47,52 @@ export function RegisterForm({ nextPath = "/dashboard" }: { nextPath?: string })
               <AlertDescription>{state.message}</AlertDescription>
             </Alert>
           ) : null}
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Full name</Label>
-            <Input
-              autoComplete="name"
-              id="fullName"
-              name="fullName"
-              placeholder="Your name"
-              type="text"
-            />
+          <GoogleSignInButton nextPath={nextPath} />
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">or</span>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              autoComplete="email"
-              id="email"
-              name="email"
-              placeholder="you@example.com"
-              required
-              type="email"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              autoComplete="new-password"
-              id="password"
-              minLength={8}
-              name="password"
-              required
-              type="password"
-            />
-          </div>
-          <SubmitButton idleLabel="Create account" pendingLabel="Creating" />
-        </form>
+          <form action={formAction} className="space-y-4">
+            <input name="next" type="hidden" value={nextPath} />
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full name</Label>
+              <Input
+                autoComplete="name"
+                id="fullName"
+                name="fullName"
+                placeholder="Your name"
+                type="text"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                autoComplete="email"
+                id="email"
+                name="email"
+                placeholder="you@example.com"
+                required
+                type="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                autoComplete="new-password"
+                id="password"
+                minLength={8}
+                name="password"
+                required
+                type="password"
+              />
+            </div>
+            <SubmitButton idleLabel="Create account" pendingLabel="Creating" />
+          </form>
+        </div>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           Already registered?{" "}
           <Link className="text-foreground underline" href={loginHref}>

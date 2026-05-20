@@ -2,7 +2,10 @@ import "server-only";
 
 import type { User } from "@supabase/supabase-js";
 
-import { toUserProfileInsert } from "@/features/auth/profile-mapping";
+import {
+  extractFullName,
+  toUserProfileInsert,
+} from "@/features/auth/profile-mapping";
 import type { GlobalRole, UserProfile } from "@/features/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -20,14 +23,6 @@ type ProfileQueryContext = {
   authUserId: string | null;
   emailPresent: boolean;
 };
-
-function getMetadataFullName(user: User) {
-  const metadataFullName = user.user_metadata?.full_name;
-
-  return typeof metadataFullName === "string" && metadataFullName.trim()
-    ? metadataFullName.trim()
-    : null;
-}
 
 function getNormalizedEmail(user: User) {
   const email = user.email?.trim().toLowerCase();
@@ -112,6 +107,31 @@ export function logProfileProvisioningError({
     email_present: Boolean(user?.email),
     error: errorSummary(error),
   });
+}
+
+export function describeProfileProvisioningError(error: unknown): string {
+  const summary = errorSummary(error);
+  const code =
+    "code" in summary && typeof summary.code === "string" ? summary.code : null;
+  const message =
+    typeof summary.message === "string" ? summary.message : "Unknown error.";
+
+  if (code === "42P01") {
+    return "Database is not set up: the users_profile table is missing. Apply Supabase migrations 0001–0006.";
+  }
+  if (code === "42703") {
+    return `Database schema is out of date (missing column). ${message}`;
+  }
+  if (code === "23514") {
+    return `users_profile constraint failed (role check). ${message}`;
+  }
+  if (code === "23505") {
+    return `Duplicate users_profile record. ${message}`;
+  }
+  if (code === "42501" || code === "PGRST301") {
+    return "Service role key is invalid or missing — check SUPABASE_SERVICE_ROLE_KEY.";
+  }
+  return code ? `${message} (code ${code})` : message;
 }
 
 export function normalizeUserProfile(row: UserProfileRow): UserProfile {
@@ -241,7 +261,7 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
     context: "ensureUserProfile.initialSelect",
     emailPresent: Boolean(email),
   });
-  const fullName = getMetadataFullName(user);
+  const fullName = extractFullName(user);
 
   if (existingProfile) {
     try {

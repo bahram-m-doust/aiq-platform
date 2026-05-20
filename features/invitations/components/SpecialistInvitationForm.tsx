@@ -16,10 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
-import {
-  createSpecialistInvitationAction,
-  initialSpecialistInvitationFormState,
-} from "@/features/invitations/actions";
+import { createSpecialistInvitationAction } from "@/features/invitations/actions";
+import { initialSpecialistInvitationFormState } from "@/features/invitations/schema";
 import type { SpecialistInvitationContext } from "@/features/invitations/types";
 
 export function SpecialistInvitationForm({

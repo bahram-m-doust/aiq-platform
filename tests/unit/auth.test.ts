@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { sanitizeRedirectPath } from "@/features/auth/redirects";
+import {
+  isAdminPath,
+  resolveLoginPathForNext,
+  sanitizeRedirectPath,
+} from "@/features/auth/redirects";
 import {
   validateEmail,
   validateLoginFormData,
@@ -57,5 +61,20 @@ describe("auth validation", () => {
     expect(sanitizeRedirectPath("/invite/accept?key=bext_example")).toBe(
       "/invite/accept?key=bext_example",
     );
+  });
+
+  it("identifies admin paths", () => {
+    expect(isAdminPath("/admin")).toBe(true);
+    expect(isAdminPath("/admin/audit")).toBe(true);
+    expect(isAdminPath("/admins")).toBe(false);
+    expect(isAdminPath("/dashboard")).toBe(false);
+  });
+
+  it("routes admin destinations to the admin login page", () => {
+    expect(resolveLoginPathForNext("/admin")).toBe("/admin/login");
+    expect(resolveLoginPathForNext("/admin/audit")).toBe("/admin/login");
+    expect(resolveLoginPathForNext("/admin/login")).toBe("/login");
+    expect(resolveLoginPathForNext("/dashboard")).toBe("/login");
+    expect(resolveLoginPathForNext("/dashboard/intake")).toBe("/login");
   });
 });

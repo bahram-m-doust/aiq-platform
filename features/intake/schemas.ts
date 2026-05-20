@@ -2,6 +2,7 @@ import type {
   IntakeAnswerMap,
   IntakeAnswerValue,
   IntakeCompletion,
+  FinalSubmitIntakeFormState,
   IntakeInputKind,
   IntakeInternalNotificationPlaceholder,
   IntakeQuestion,
@@ -29,6 +30,10 @@ const multiSelectInputTypes = new Set([
 
 export const finalSubmitConfirmationCopy =
   "Final submission will lock your answers and initiate the strategic development process. After this point, direct editing will be disabled. Any required correction must be submitted as a Change Request.";
+
+export const initialFinalSubmitIntakeFormState: FinalSubmitIntakeFormState = {
+  status: "idle",
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

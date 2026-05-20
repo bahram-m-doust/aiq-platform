@@ -3,7 +3,6 @@
 import { requireUserProfile } from "@/features/auth/queries";
 import { isOpenAIBrainConfigError } from "@/features/agents/brain/openai";
 import {
-  initialBrandBrainChatFormState,
   validateBrandBrainPromptFormData,
 } from "@/features/agents/brain/schema";
 import {
@@ -11,8 +10,6 @@ import {
   runBrandBrain,
 } from "@/features/agents/brain/services";
 import type { BrandBrainChatFormState } from "@/features/agents/brain/types";
-
-export { initialBrandBrainChatFormState };
 
 function errorState(message: string): BrandBrainChatFormState {
   return { status: "error", message };

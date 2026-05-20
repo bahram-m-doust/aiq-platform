@@ -8,6 +8,17 @@ export type BrandAccessSummary = {
   planName: string | null;
 };
 
+export type AccessKeyRedemptionFormState = {
+  status: "idle" | "error";
+  message: string;
+};
+
+export const initialAccessKeyRedemptionFormState: AccessKeyRedemptionFormState =
+  {
+    status: "idle",
+    message: "",
+  };
+
 export type BrandAccessMembership = {
   brandId: string;
   brandName: string;

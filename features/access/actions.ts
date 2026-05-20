@@ -5,22 +5,14 @@ import { redirect } from "next/navigation";
 
 import { requireUserProfile } from "@/features/auth/queries";
 import { redeemAccessKey } from "@/features/access/services";
-import type { RedeemAccessKeyResult } from "@/features/access/types";
+import type {
+  AccessKeyRedemptionFormState,
+  RedeemAccessKeyResult,
+} from "@/features/access/types";
 import {
   claimBrandForRedeemedAccessKey,
   validateClaimBrandBeforeRedeem,
 } from "@/features/brands/claim-brand/services";
-
-export type AccessKeyRedemptionFormState = {
-  status: "idle" | "error";
-  message: string;
-};
-
-export const initialAccessKeyRedemptionFormState: AccessKeyRedemptionFormState =
-  {
-    status: "idle",
-    message: "",
-  };
 
 function readAccessKey(formData: FormData) {
   const value =

@@ -18,10 +18,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { AgentCatalogItem } from "@/features/agents/catalog/types";
 import {
-  initialAgentRunFormState,
   runAgentAction,
 } from "@/features/agents/runs/actions";
-import { agentRunPromptMaxLength } from "@/features/agents/runs/schema";
+import {
+  agentRunPromptMaxLength,
+  initialAgentRunFormState,
+} from "@/features/agents/runs/schema";
 
 function RunSubmitButton() {
   const { pending } = useFormStatus();
@@ -107,4 +109,3 @@ export function AgentRunPanel({ agent }: { agent: AgentCatalogItem }) {
     </Card>
   );
 }
-

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import {
+  describeProfileProvisioningError,
   ensureUserProfile,
   logProfileProvisioningError,
 } from "@/features/auth/profile";
@@ -53,7 +54,9 @@ export async function login(
       user: data.user,
     });
     await supabase.auth.signOut();
-    return errorState("We could not prepare your profile. Contact support.");
+    return errorState(
+      `We could not prepare your profile — ${describeProfileProvisioningError(error)}`,
+    );
   }
 
   redirect(nextPath);
@@ -98,7 +101,9 @@ export async function register(
       error,
       user: data.user,
     });
-    return errorState("Your account was created, but profile setup failed.");
+    return errorState(
+      `Your account was created, but profile setup failed — ${describeProfileProvisioningError(error)}`,
+    );
   }
 
   if (data.session) {
@@ -109,6 +114,32 @@ export async function register(
     status: "success",
     message: "Account created. Check your email to confirm your sign in.",
   };
+}
+
+export async function signInWithGoogle(formData: FormData) {
+  const nextPath = sanitizeRedirectPath(formData.get("next"));
+  const origin = await getRequestOrigin();
+  const callbackUrl = new URL("/callback", origin);
+  callbackUrl.searchParams.set("next", nextPath);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: callbackUrl.toString(),
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
+    },
+  });
+
+  if (error || !data?.url) {
+    const message = encodeURIComponent("Could not start Google sign-in.");
+    redirect(`/login?message=${message}&next=${encodeURIComponent(nextPath)}`);
+  }
+
+  redirect(data.url);
 }
 
 export async function logout() {

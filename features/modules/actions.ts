@@ -5,8 +5,6 @@ import { redirect } from "next/navigation";
 
 import { requireUserProfile } from "@/features/auth/queries";
 import {
-  initialModuleActionFormState,
-  initialModuleUploadFormState,
   validateClientModuleCommentFormData,
   validateClientModuleDecisionFormData,
 } from "@/features/modules/schema";
@@ -34,8 +32,6 @@ function readModuleId(formData: FormData) {
   const value = formData.get("module_id");
   return typeof value === "string" ? value.trim() : "";
 }
-
-export { initialModuleActionFormState, initialModuleUploadFormState };
 
 export async function uploadModuleArtifactAction(
   _previousState: ModuleUploadFormState,

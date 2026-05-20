@@ -19,9 +19,11 @@ import {
 } from "@/components/ui/dialog";
 import {
   finalSubmitIntakeAction,
-  initialFinalSubmitIntakeFormState,
 } from "@/features/intake/actions";
-import { finalSubmitConfirmationCopy } from "@/features/intake/schemas";
+import {
+  finalSubmitConfirmationCopy,
+  initialFinalSubmitIntakeFormState,
+} from "@/features/intake/schemas";
 import type { IntakeCompletion } from "@/features/intake/types";
 
 function ConfirmSubmitButton() {

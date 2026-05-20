@@ -2,7 +2,9 @@ import { failure } from "@/features/access/access-key-rules";
 import type { AccessKeySafeRecord } from "@/features/access/types";
 import { validateEmail } from "@/features/auth/schemas";
 import type {
+  AcceptInvitationFormState,
   InvitationManagerRole,
+  SpecialistInvitationFormState,
   SpecialistInvitationInput,
   SpecialistMembershipRecord,
   SpecialistMembershipUpsert,
@@ -12,6 +14,17 @@ function readString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
 }
+
+export const initialSpecialistInvitationFormState: SpecialistInvitationFormState =
+  {
+    status: "idle",
+    message: "",
+  };
+
+export const initialAcceptInvitationFormState: AcceptInvitationFormState = {
+  status: "idle",
+  message: "",
+};
 
 function endOfUtcDay(dateValue: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);

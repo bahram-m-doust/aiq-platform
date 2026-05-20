@@ -21,9 +21,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   addClientModuleCommentAction,
   approveClientModuleAction,
-  initialModuleActionFormState,
   requestClientModuleChangeAction,
 } from "@/features/modules/actions";
+import { initialModuleActionFormState } from "@/features/modules/schema";
 import type {
   ClientModuleReviewPageData,
   ModuleActionFormState,
