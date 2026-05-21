@@ -7,6 +7,7 @@ import {
   toUserProfileInsert,
 } from "@/features/auth/profile-mapping";
 import type { GlobalRole, UserProfile } from "@/features/auth/types";
+import { logServerError, summarizeServerError } from "@/lib/logging/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const profileColumns = "id, auth_user_id, email, full_name, global_role";
@@ -31,33 +32,7 @@ function getNormalizedEmail(user: User) {
 }
 
 function errorSummary(error: unknown) {
-  if (error instanceof Error) {
-    return {
-      name: error.name,
-      message: error.message,
-    };
-  }
-
-  if (typeof error === "object" && error !== null) {
-    const record = error as Record<string, unknown>;
-
-    return {
-      name: typeof record.name === "string" ? record.name : "UnknownError",
-      message:
-        typeof record.message === "string"
-          ? record.message
-          : "Unknown profile provisioning error.",
-      code: typeof record.code === "string" ? record.code : undefined,
-      details:
-        typeof record.details === "string" ? record.details : undefined,
-      hint: typeof record.hint === "string" ? record.hint : undefined,
-    };
-  }
-
-  return {
-    name: "UnknownError",
-    message: "Unknown profile provisioning error.",
-  };
+  return summarizeServerError(error);
 }
 
 export function logProfileQueryError({
@@ -71,14 +46,17 @@ export function logProfileQueryError({
 }: ProfileQueryContext & {
   error: unknown;
 }) {
-  console.error("[auth.profile] profile query failed", {
-    context,
-    table,
-    action,
-    query,
-    auth_user_id: authUserId,
-    email_present: emailPresent,
-    error: errorSummary(error),
+  logServerError({
+    label: "[auth.profile] profile query failed",
+    error,
+    metadata: {
+      context,
+      table,
+      action,
+      query,
+      auth_user_id: authUserId,
+      email_present: emailPresent,
+    },
   });
 }
 
@@ -101,11 +79,14 @@ export function logProfileProvisioningError({
   error: unknown;
   user: Pick<User, "id" | "email"> | null;
 }) {
-  console.error("[auth.profile] profile provisioning failed", {
-    context,
-    auth_user_id: user?.id ?? null,
-    email_present: Boolean(user?.email),
-    error: errorSummary(error),
+  logServerError({
+    label: "[auth.profile] profile provisioning failed",
+    error,
+    metadata: {
+      context,
+      auth_user_id: user?.id ?? null,
+      email_present: Boolean(user?.email),
+    },
   });
 }
 

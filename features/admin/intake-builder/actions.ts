@@ -21,6 +21,7 @@ import {
 import type { IntakeBuilderFormState } from "@/features/admin/intake-builder/types";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import { CACHE_TAGS } from "@/lib/cache/tags";
+import { logServerError } from "@/lib/logging/server";
 
 function errorState(message: string): IntakeBuilderFormState {
   return { status: "error", message };
@@ -37,30 +38,10 @@ function logIntakeBuilderActionError({
   action: string;
   error: unknown;
 }) {
-  const safeError =
-    typeof error === "object" && error !== null
-      ? (error as {
-          code?: unknown;
-          message?: unknown;
-          details?: unknown;
-          hint?: unknown;
-        })
-      : null;
-
-  console.error("[intake-builder]", {
-    action,
-    error: {
-      code: typeof safeError?.code === "string" ? safeError.code : undefined,
-      message:
-        typeof safeError?.message === "string"
-          ? safeError.message
-          : error instanceof Error
-            ? error.message
-            : "Unknown intake builder action error.",
-      details:
-        typeof safeError?.details === "string" ? safeError.details : undefined,
-      hint: typeof safeError?.hint === "string" ? safeError.hint : undefined,
-    },
+  logServerError({
+    label: "[intake-builder]",
+    error,
+    metadata: { action },
   });
 }
 

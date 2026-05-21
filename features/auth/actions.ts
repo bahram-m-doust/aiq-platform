@@ -14,6 +14,10 @@ import {
   validateRegistrationFormData,
 } from "@/features/auth/schemas";
 import type { AuthFormState } from "@/features/auth/types";
+import {
+  checkRequestRateLimit,
+  RATE_LIMITED_MESSAGE,
+} from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 function errorState(message: string): AuthFormState {
@@ -28,6 +32,17 @@ export async function login(
 
   if (validation.error || !validation.data) {
     return errorState(validation.error ?? "Invalid login details.");
+  }
+
+  const rateLimit = await checkRequestRateLimit({
+    bucket: "auth.login",
+    identifiers: [validation.data.email],
+    limit: 10,
+    windowSeconds: 60,
+  });
+
+  if (!rateLimit.allowed) {
+    return errorState(RATE_LIMITED_MESSAGE);
   }
 
   const nextPath = sanitizeRedirectPath(formData.get("next"));
@@ -65,6 +80,17 @@ export async function register(
 
   if (validation.error || !validation.data) {
     return errorState(validation.error ?? "Invalid registration details.");
+  }
+
+  const rateLimit = await checkRequestRateLimit({
+    bucket: "auth.register",
+    identifiers: [validation.data.email],
+    limit: 5,
+    windowSeconds: 15 * 60,
+  });
+
+  if (!rateLimit.allowed) {
+    return errorState(RATE_LIMITED_MESSAGE);
   }
 
   const nextPath = sanitizeRedirectPath(formData.get("next"));
@@ -113,6 +139,17 @@ export async function register(
 
 export async function signInWithGoogle(formData: FormData) {
   const nextPath = sanitizeRedirectPath(formData.get("next"));
+  const rateLimit = await checkRequestRateLimit({
+    bucket: "auth.oauth",
+    limit: 10,
+    windowSeconds: 60,
+  });
+
+  if (!rateLimit.allowed) {
+    const message = encodeURIComponent(RATE_LIMITED_MESSAGE);
+    redirect(`/login?message=${message}&next=${encodeURIComponent(nextPath)}`);
+  }
+
   const origin = await getTrustedRequestOrigin();
   const callbackUrl = new URL("/callback", origin);
   callbackUrl.searchParams.set("next", nextPath);

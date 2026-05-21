@@ -12,6 +12,11 @@ import {
 } from "@/features/agents/catalog/services";
 import type { AgentActivationFormState } from "@/features/agents/catalog/types";
 import { requireUserProfile } from "@/features/auth/queries";
+import { logServerError } from "@/lib/logging/server";
+import {
+  checkRequestRateLimit,
+  RATE_LIMITED_MESSAGE,
+} from "@/lib/rate-limit";
 
 function errorState(message: string): AgentActivationFormState {
   return { status: "error", message };
@@ -26,6 +31,17 @@ export async function activateAgentAction(
 
   if (validation.error || !validation.agentKey) {
     return errorState(validation.error ?? "Agent activation request is invalid.");
+  }
+
+  const rateLimit = await checkRequestRateLimit({
+    bucket: "agent.activate",
+    identifiers: [profile.id, validation.agentKey],
+    limit: 20,
+    windowSeconds: 60 * 60,
+  });
+
+  if (!rateLimit.allowed) {
+    return errorState(RATE_LIMITED_MESSAGE);
   }
 
   try {
@@ -50,10 +66,13 @@ export async function activateAgentAction(
       return errorState(error.message);
     }
 
-    console.error("[agent-catalog] activation failed", {
-      agentKey: validation.agentKey,
-      profileId: profile.id,
-      errorName: error instanceof Error ? error.name : "UnknownError",
+    logServerError({
+      label: "[agent-catalog] activation failed",
+      error,
+      metadata: {
+        agentKey: validation.agentKey,
+        profileId: profile.id,
+      },
     });
 
     return errorState("Agent activation could not be completed.");

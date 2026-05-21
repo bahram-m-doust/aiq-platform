@@ -15,6 +15,11 @@ import {
   runCatalogAgent,
 } from "@/features/agents/runs/services";
 import type { AgentRunFormState } from "@/features/agents/runs/types";
+import { logServerError } from "@/lib/logging/server";
+import {
+  checkRequestRateLimit,
+  RATE_LIMITED_MESSAGE,
+} from "@/lib/rate-limit";
 
 function errorState(message: string): AgentRunFormState {
   return { status: "error", message };
@@ -29,6 +34,17 @@ export async function runAgentAction(
 
   if (validation.error || !validation.agentKey || !validation.prompt) {
     return errorState(validation.error ?? "Agent run request is invalid.");
+  }
+
+  const rateLimit = await checkRequestRateLimit({
+    bucket: "agent.run",
+    identifiers: [profile.id, validation.agentKey],
+    limit: 20,
+    windowSeconds: 60 * 60,
+  });
+
+  if (!rateLimit.allowed) {
+    return errorState(RATE_LIMITED_MESSAGE);
   }
 
   try {
@@ -56,10 +72,13 @@ export async function runAgentAction(
       return errorState(error.message);
     }
 
-    console.error("[agent-runs] run failed", {
-      agentKey: validation.agentKey,
-      profileId: profile.id,
-      errorName: error instanceof Error ? error.name : "UnknownError",
+    logServerError({
+      label: "[agent-runs] run failed",
+      error,
+      metadata: {
+        agentKey: validation.agentKey,
+        profileId: profile.id,
+      },
     });
 
     return errorState("The agent could not complete this request.");

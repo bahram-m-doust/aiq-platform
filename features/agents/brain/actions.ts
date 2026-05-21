@@ -10,6 +10,11 @@ import {
   runBrandBrain,
 } from "@/features/agents/brain/services";
 import type { BrandBrainChatFormState } from "@/features/agents/brain/types";
+import { logServerError } from "@/lib/logging/server";
+import {
+  checkRequestRateLimit,
+  RATE_LIMITED_MESSAGE,
+} from "@/lib/rate-limit";
 
 function errorState(message: string): BrandBrainChatFormState {
   return { status: "error", message };
@@ -24,6 +29,17 @@ export async function askBrandBrainAction(
 
   if (validation.error || !validation.prompt) {
     return errorState(validation.error ?? "Brand Brain prompt is invalid.");
+  }
+
+  const rateLimit = await checkRequestRateLimit({
+    bucket: "brain.run",
+    identifiers: [profile.id],
+    limit: 20,
+    windowSeconds: 60 * 60,
+  });
+
+  if (!rateLimit.allowed) {
+    return errorState(RATE_LIMITED_MESSAGE);
   }
 
   try {
@@ -44,9 +60,12 @@ export async function askBrandBrainAction(
       return errorState(error.message);
     }
 
-    console.error("[brand-brain] run failed", {
-      profileId: profile.id,
-      errorName: error instanceof Error ? error.name : "UnknownError",
+    logServerError({
+      label: "[brand-brain] run failed",
+      error,
+      metadata: {
+        profileId: profile.id,
+      },
     });
 
     return errorState("Brand Brain could not complete this request.");

@@ -20,6 +20,11 @@ import type {
   AcceptInvitationFormState,
   SpecialistInvitationFormState,
 } from "@/features/invitations/types";
+import { logServerError } from "@/lib/logging/server";
+import {
+  checkRequestRateLimit,
+  RATE_LIMITED_MESSAGE,
+} from "@/lib/rate-limit";
 
 function invitationErrorState(message: string): SpecialistInvitationFormState {
   return { status: "error", message };
@@ -40,6 +45,17 @@ export async function createSpecialistInvitationAction(
     return invitationErrorState(
       validation.error ?? "Invitation details are invalid.",
     );
+  }
+
+  const rateLimit = await checkRequestRateLimit({
+    bucket: "invitation.create",
+    identifiers: [profile.id, validation.data.targetEmail],
+    limit: 10,
+    windowSeconds: 60 * 60,
+  });
+
+  if (!rateLimit.allowed) {
+    return invitationErrorState(RATE_LIMITED_MESSAGE);
   }
 
   try {
@@ -64,6 +80,15 @@ export async function createSpecialistInvitationAction(
       return invitationErrorState(error.message);
     }
 
+    logServerError({
+      label: "[invitations] create failed",
+      error,
+      metadata: {
+        inviterProfileId: profile.id,
+        targetEmail: validation.data.targetEmail,
+      },
+    });
+
     return invitationErrorState("Invitation could not be created.");
   }
 }
@@ -82,6 +107,17 @@ export async function acceptSpecialistInvitationAction(
     validation.data.rawKey,
   )}`;
   const { profile } = await requireUserProfile(nextPath);
+  const rateLimit = await checkRequestRateLimit({
+    bucket: "invitation.accept",
+    identifiers: [profile.id, validation.data.rawKey],
+    limit: 5,
+    windowSeconds: 10 * 60,
+  });
+
+  if (!rateLimit.allowed) {
+    return acceptErrorState(RATE_LIMITED_MESSAGE);
+  }
+
   const result = await redeemAccessKey({
     rawKey: validation.data.rawKey,
     userId: profile.id,
@@ -105,7 +141,15 @@ export async function acceptSpecialistInvitationAction(
       accessKey: result.accessKey,
       userId: profile.id,
     });
-  } catch {
+  } catch (error) {
+    logServerError({
+      label: "[invitations] accept failed",
+      error,
+      metadata: {
+        profileId: profile.id,
+      },
+    });
+
     return acceptErrorState("Invitation could not be accepted.");
   }
 

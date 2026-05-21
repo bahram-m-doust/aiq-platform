@@ -1,4 +1,28 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function expectNoConsoleErrorsOn(page: Page, path: string) {
+  const consoleErrors: string[] = [];
+  const pageErrors: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    pageErrors.push(error.message);
+  });
+
+  await page.goto(path);
+
+  await expect(
+    page.locator(
+      "[data-nextjs-dialog], .vite-error-overlay, #webpack-dev-server-client-overlay",
+    ),
+  ).toHaveCount(0);
+  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
+}
 
 test("login page renders", async ({ page }) => {
   await page.goto("/login");
@@ -126,6 +150,17 @@ test("dashboard modules redirects unauthenticated users to login", async ({
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
+test("dashboard module detail redirects unauthenticated users to login", async ({
+  page,
+}) => {
+  await page.goto("/dashboard/modules/module-1");
+
+  await expect(page).toHaveURL(
+    /\/login\?next=%2Fdashboard%2Fmodules%2Fmodule-1$/,
+  );
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+});
+
 test("dashboard brain redirects unauthenticated users to login", async ({
   page,
 }) => {
@@ -174,6 +209,19 @@ test("admin modules redirects unauthenticated users to admin login", async ({
   await page.goto("/admin/modules");
 
   await expect(page).toHaveURL(/\/admin\/login\?next=%2Fadmin%2Fmodules$/);
+  await expect(
+    page.getByRole("heading", { name: "Admin sign in" }),
+  ).toBeVisible();
+});
+
+test("admin module detail redirects unauthenticated users to admin login", async ({
+  page,
+}) => {
+  await page.goto("/admin/modules/module-1");
+
+  await expect(page).toHaveURL(
+    /\/admin\/login\?next=%2Fadmin%2Fmodules%2Fmodule-1$/,
+  );
   await expect(
     page.getByRole("heading", { name: "Admin sign in" }),
   ).toBeVisible();
@@ -238,4 +286,13 @@ test("public invitation accept prompt renders when logged out", async ({
   await expect(page.getByText("Accept invitation")).toBeVisible();
   await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Create account" })).toBeVisible();
+});
+
+test("public auth and invitation pages do not emit browser errors", async ({
+  page,
+}) => {
+  await expectNoConsoleErrorsOn(page, "/login");
+  await expectNoConsoleErrorsOn(page, "/register");
+  await expectNoConsoleErrorsOn(page, "/admin/login");
+  await expectNoConsoleErrorsOn(page, "/invite/accept?key=bext_example");
 });

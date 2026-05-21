@@ -11,6 +11,11 @@ import {
   uploadBrandFileFromFormData,
 } from "@/features/files/services";
 import type { FileUploadFormState } from "@/features/files/types";
+import { logServerError } from "@/lib/logging/server";
+import {
+  checkRequestRateLimit,
+  RATE_LIMITED_MESSAGE,
+} from "@/lib/rate-limit";
 
 function uploadErrorState(message: string): FileUploadFormState {
   return { status: "error", message };
@@ -26,6 +31,16 @@ export async function uploadFileAction(
   formData: FormData,
 ): Promise<FileUploadFormState> {
   const { profile } = await requireUserProfile("/dashboard/files");
+  const rateLimit = await checkRequestRateLimit({
+    bucket: "file.upload",
+    identifiers: [profile.id],
+    limit: 20,
+    windowSeconds: 60 * 60,
+  });
+
+  if (!rateLimit.allowed) {
+    return uploadErrorState(RATE_LIMITED_MESSAGE);
+  }
 
   try {
     const file = await uploadBrandFileFromFormData({
@@ -47,6 +62,14 @@ export async function uploadFileAction(
     if (isFileServiceError(error)) {
       return uploadErrorState(error.message);
     }
+
+    logServerError({
+      label: "[files] upload failed",
+      error,
+      metadata: {
+        profileId: profile.id,
+      },
+    });
 
     return uploadErrorState("File could not be uploaded.");
   }

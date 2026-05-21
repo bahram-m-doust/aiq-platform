@@ -15,7 +15,9 @@ function currentPublicTables() {
     .readdirSync(migrationsDir)
     .filter(
       (name) =>
-        /^\d+_.*\.sql$/.test(name) && name !== hardeningMigrationName,
+        /^\d+_.*\.sql$/.test(name) &&
+        name < hardeningMigrationName &&
+        name !== hardeningMigrationName,
     )
     .map(readMigration)
     .join("\n");
