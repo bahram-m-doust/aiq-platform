@@ -1,3 +1,5 @@
+import type { PaginationState } from "@/lib/pagination";
+
 export type AuditLogRecord = {
   id: string;
   actorUserId: string | null;
@@ -11,4 +13,9 @@ export type AuditLogRecord = {
   ipAddress: string | null;
   userAgent: string | null;
   createdAt: string | null;
+};
+
+export type AuditLogPage = {
+  logs: AuditLogRecord[];
+  pagination: PaginationState;
 };

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { PaginationControls } from "@/components/PaginationControls";
 import { Button } from "@/components/ui/button";
 import { AuditLogList } from "@/features/audit/components/AuditLogList";
 import { getLatestAuditLogs } from "@/features/audit/queries";
 import { requirePlatformOwner } from "@/features/auth/queries";
+import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
   title: "Audit Logs | Bextudio Platform",
@@ -12,9 +14,15 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminAuditPage() {
+export default async function AdminAuditPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { user, profile } = await requirePlatformOwner("/admin/audit");
-  const logs = await getLatestAuditLogs();
+  const { logs, pagination } = await getLatestAuditLogs(
+    paginationInputFromSearchParams((await searchParams) ?? {}),
+  );
   const email = user.email ?? profile.email;
 
   return (
@@ -33,6 +41,7 @@ export default async function AdminAuditPage() {
         </div>
 
         <AuditLogList logs={logs} />
+        <PaginationControls basePath="/admin/audit" pagination={pagination} />
 
         <Button asChild variant="outline">
           <Link href="/admin">Return to Admin</Link>

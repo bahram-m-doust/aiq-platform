@@ -5,6 +5,8 @@ import type {
   AdminBrandOption,
   AdminPlanOption,
 } from "@/features/admin/types";
+import { cacheSharedConfig } from "@/lib/cache/shared";
+import { CACHE_TAGS } from "@/lib/cache/tags";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type PlanRow = {
@@ -18,35 +20,47 @@ type BrandRow = {
   status: string;
 };
 
-export async function getAdminAccessKeyFormOptions(): Promise<AdminAccessKeyFormOptions> {
-  const admin = createAdminClient();
-  const [plansResult, brandsResult] = await Promise.all([
-    admin
+const getActivePlanOptions = cacheSharedConfig(
+  async (): Promise<AdminPlanOption[]> => {
+    const admin = createAdminClient();
+    const { data, error } = await admin
       .from("plans")
       .select("id, name")
       .eq("is_active", true)
-      .order("name", { ascending: true }),
+      .order("name", { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return ((data ?? []) as PlanRow[]).map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+    }));
+  },
+  ["active-plan-options"],
+  {
+    revalidate: 3600,
+    tags: [CACHE_TAGS.activePlans],
+  },
+);
+
+export async function getAdminAccessKeyFormOptions(): Promise<AdminAccessKeyFormOptions> {
+  const admin = createAdminClient();
+  const [plans, brandsResult] = await Promise.all([
+    getActivePlanOptions(),
     admin
       .from("brands")
       .select("id, name, status")
       .order("name", { ascending: true }),
   ]);
 
-  if (plansResult.error) {
-    throw plansResult.error;
-  }
-
   if (brandsResult.error) {
     throw brandsResult.error;
   }
 
   return {
-    plans: ((plansResult.data ?? []) as PlanRow[]).map(
-      (plan): AdminPlanOption => ({
-        id: plan.id,
-        name: plan.name,
-      }),
-    ),
+    plans,
     brands: ((brandsResult.data ?? []) as BrandRow[]).map(
       (brand): AdminBrandOption => ({
         id: brand.id,

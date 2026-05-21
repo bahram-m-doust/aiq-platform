@@ -24,6 +24,11 @@ import type {
 } from "@/features/modules/types";
 import { isFileStatus, isFileVisibility } from "@/features/files/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  type PaginationInput,
+  paginatedRows,
+  toSupabaseRange,
+} from "@/lib/pagination";
 import { rowAsArray, rowsOrEmpty } from "@/lib/supabase/rows";
 import type { UserProfile } from "@/features/auth/types";
 
@@ -468,16 +473,19 @@ async function fetchReviewsForModules(moduleIds: string[]) {
 
 export async function getAdminModuleBoard(
   profile: UserProfile,
+  paginationInput?: PaginationInput,
 ): Promise<AdminModuleBoardData | null> {
   if (!canViewAdminModulesRole(profile.global_role)) {
     return null;
   }
 
   const admin = createAdminClient();
+  const range = toSupabaseRange(paginationInput);
   let query = admin
     .from("brand_modules")
     .select(moduleColumns)
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false })
+    .range(range.from, range.to + 1);
 
   if (profile.global_role === "INTERNAL_SPECIALIST") {
     query = query.eq("assigned_to", profile.id);
@@ -489,7 +497,8 @@ export async function getAdminModuleBoard(
     throw error;
   }
 
-  const modules = await mapModuleRows(rowsOrEmpty<ModuleRow>(data));
+  const paginated = paginatedRows(rowsOrEmpty<ModuleRow>(data), range);
+  const modules = await mapModuleRows(paginated.rows);
   const artifactsByModuleId = await fetchArtifactsForModules(
     modules.map((brandModule) => brandModule.id),
   );
@@ -504,6 +513,7 @@ export async function getAdminModuleBoard(
         latestArtifact: getLatestModuleArtifact(artifacts),
       };
     }),
+    pagination: paginated.pagination,
   };
 }
 
@@ -586,6 +596,7 @@ function toClientAccessFromSummary(profileId: string) {
 
 export async function getClientModulesWorkspace(
   profileId: string,
+  paginationInput?: PaginationInput,
 ): Promise<ClientModuleWorkspace | null> {
   const access = await toClientAccessFromSummary(profileId);
 
@@ -594,18 +605,21 @@ export async function getClientModulesWorkspace(
   }
 
   const admin = createAdminClient();
+  const range = toSupabaseRange(paginationInput);
   const { data, error } = await admin
     .from("brand_modules")
     .select(moduleColumns)
     .eq("brand_id", access.brandId)
     .in("status", [...clientVisibleModuleStatuses])
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false })
+    .range(range.from, range.to + 1);
 
   if (error) {
     throw error;
   }
 
-  const modules = await mapModuleRows(rowsOrEmpty<ModuleRow>(data));
+  const paginated = paginatedRows(rowsOrEmpty<ModuleRow>(data), range);
+  const modules = await mapModuleRows(paginated.rows);
   const artifactsByModuleId = await fetchArtifactsForModules(
     modules.map((brandModule) => brandModule.id),
   );
@@ -620,6 +634,7 @@ export async function getClientModulesWorkspace(
         latestArtifact: getLatestModuleArtifact(artifacts),
       };
     }),
+    pagination: paginated.pagination,
   };
 }
 

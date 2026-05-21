@@ -16,6 +16,8 @@ import type {
   IntakeSectionWithQuestions,
   IntakeSession,
 } from "@/features/intake/types";
+import { cacheSharedConfig } from "@/lib/cache/shared";
+import { CACHE_TAGS } from "@/lib/cache/tags";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type RelatedRecord<T> = T | T[] | null;
@@ -239,7 +241,7 @@ export async function getLatestIntakeSessionForBrand(brandId: string) {
   return data ? toIntakeSession(data as unknown as IntakeSessionRow) : null;
 }
 
-export async function getIntakeSectionsWithQuestions() {
+async function loadIntakeSectionsWithQuestions() {
   const admin = createAdminClient();
   const loadSectionsAndQuestions = (activeOnly: boolean) => {
     let sectionsQuery = admin
@@ -298,6 +300,19 @@ export async function getIntakeSectionsWithQuestions() {
       };
     },
   );
+}
+
+const getCachedIntakeSectionsWithQuestions = cacheSharedConfig(
+  loadIntakeSectionsWithQuestions,
+  ["intake-sections-with-questions"],
+  {
+    revalidate: 3600,
+    tags: [CACHE_TAGS.intakeConfig],
+  },
+);
+
+export async function getIntakeSectionsWithQuestions() {
+  return getCachedIntakeSectionsWithQuestions();
 }
 
 export async function getIntakeAnswersForSession({

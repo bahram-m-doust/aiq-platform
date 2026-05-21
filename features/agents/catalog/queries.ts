@@ -12,6 +12,8 @@ import type {
   AgentCatalogWorkspace,
   CatalogAgentKey,
 } from "@/features/agents/catalog/types";
+import { cacheSharedConfig } from "@/lib/cache/shared";
+import { CACHE_TAGS } from "@/lib/cache/tags";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type AgentRow = {
@@ -28,20 +30,33 @@ type AgentEntitlementRow = {
   activated_at: string | null;
 };
 
-async function getCatalogAgentsByKey() {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("agents")
-    .select("id, key, name, description")
-    .in("key", [...catalogAgentKeys])
-    .eq("is_active", true);
+const getActiveCatalogAgentRows = cacheSharedConfig(
+  async (): Promise<AgentRow[]> => {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("agents")
+      .select("id, key, name, description")
+      .in("key", [...catalogAgentKeys])
+      .eq("is_active", true);
 
-  if (error) {
-    throw error;
-  }
+    if (error) {
+      throw error;
+    }
+
+    return (data ?? []) as AgentRow[];
+  },
+  ["active-catalog-agent-rows"],
+  {
+    revalidate: 300,
+    tags: [CACHE_TAGS.activeAgentCatalog],
+  },
+);
+
+async function getCatalogAgentsByKey() {
+  const agents = await getActiveCatalogAgentRows();
 
   return new Map(
-    ((data ?? []) as AgentRow[]).map((agent) => [
+    agents.map((agent) => [
       agent.key as CatalogAgentKey,
       agent,
     ]),

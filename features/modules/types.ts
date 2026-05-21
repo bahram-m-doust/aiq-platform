@@ -1,4 +1,5 @@
 import type { FileStatus, FileVisibility } from "@/features/files/types";
+import type { PaginationState } from "@/lib/pagination";
 
 export const canonicalModuleTypes = [
   "Brand Knowledge",
@@ -130,6 +131,7 @@ export type AdminModuleBoardItem = ModuleRecord & {
 export type AdminModuleBoardData = {
   actorRole: AdminModuleRole;
   modules: AdminModuleBoardItem[];
+  pagination: PaginationState;
 };
 
 export type AdminModuleDetail = {
@@ -148,6 +150,7 @@ export type ClientModuleWorkspace = {
     planName: string | null;
   };
   modules: AdminModuleBoardItem[];
+  pagination: PaginationState;
 };
 
 export type ClientModuleDetail = {

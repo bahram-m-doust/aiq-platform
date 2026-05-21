@@ -1,4 +1,5 @@
 import type { IntakeQuestion, IntakeSectionWithQuestions } from "@/features/intake/types";
+import type { PaginationState } from "@/lib/pagination";
 
 export const changeRequestStatuses = [
   "REQUESTED",
@@ -86,6 +87,11 @@ export type ChangeRequestReviewItem = ChangeRequestRecord & {
   requesterEmail: string | null;
   reviewerEmail: string | null;
   targetLabel: string;
+};
+
+export type ChangeRequestReviewPage = {
+  requests: ChangeRequestReviewItem[];
+  pagination: PaginationState;
 };
 
 export type ReviewChangeRequestInput = {

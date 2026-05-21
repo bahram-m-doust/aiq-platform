@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import {
   validateIdFormData,
@@ -20,6 +20,7 @@ import {
 } from "@/features/admin/intake-builder/services";
 import type { IntakeBuilderFormState } from "@/features/admin/intake-builder/types";
 import { requirePlatformOwner } from "@/features/auth/queries";
+import { CACHE_TAGS } from "@/lib/cache/tags";
 
 function errorState(message: string): IntakeBuilderFormState {
   return { status: "error", message };
@@ -64,6 +65,7 @@ function logIntakeBuilderActionError({
 }
 
 function revalidateIntakeBuilderPaths() {
+  revalidateTag(CACHE_TAGS.intakeConfig, "max");
   revalidatePath("/admin/intake-builder");
   revalidatePath("/dashboard/intake");
 }

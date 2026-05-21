@@ -38,7 +38,7 @@ function setupQueryClient() {
   const queryBuilder = {
     select: vi.fn(() => queryBuilder),
     order: vi.fn(() => queryBuilder),
-    limit: vi.fn(() =>
+    range: vi.fn(() =>
       Promise.resolve({
         data: [
           {
@@ -217,8 +217,8 @@ describe("audit log queries and UI", () => {
     expect(queryBuilder.order).toHaveBeenCalledWith("created_at", {
       ascending: false,
     });
-    expect(queryBuilder.limit).toHaveBeenCalledWith(100);
-    expect(logs).toEqual([
+    expect(queryBuilder.range).toHaveBeenCalledWith(0, 100);
+    expect(logs.logs).toEqual([
       {
         id: "audit-1",
         actorUserId: "profile-1",
@@ -234,6 +234,12 @@ describe("audit log queries and UI", () => {
         createdAt: "2026-05-18T08:00:00.000Z",
       },
     ]);
+    expect(logs.pagination).toMatchObject({
+      page: 1,
+      pageSize: 100,
+      hasPreviousPage: false,
+      hasNextPage: false,
+    });
   });
 
   it("renders audit logs as read-only operational records", () => {

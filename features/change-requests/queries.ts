@@ -15,10 +15,15 @@ import type {
   ChangeRequestCreateOptions,
   ChangeRequestModuleOption,
   ChangeRequestRecord,
-  ChangeRequestReviewItem,
+  ChangeRequestReviewPage,
   ChangeRequestStatus,
   ChangeRequestTargetType,
 } from "@/features/change-requests/types";
+import {
+  type PaginationInput,
+  paginatedRows,
+  toSupabaseRange,
+} from "@/lib/pagination";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type ModuleRow = {
@@ -150,28 +155,33 @@ export async function getChangeRequestById(requestId: string) {
   return data ? toChangeRequestRecord(data as unknown as ChangeRequestRow) : null;
 }
 
-export async function getAdminChangeRequests(): Promise<
-  ChangeRequestReviewItem[]
-> {
+export async function getAdminChangeRequests(
+  paginationInput?: PaginationInput,
+): Promise<ChangeRequestReviewPage> {
   const admin = createAdminClient();
+  const range = toSupabaseRange(paginationInput);
   const { data, error } = await admin
     .from("change_requests")
     .select(
       "id, brand_id, target_type, target_id, section_key, question_id, requested_by, reason, comment, status, reviewed_by, resolution_note, created_at, updated_at",
     )
     .order("created_at", { ascending: false })
-    .limit(100);
+    .range(range.from, range.to + 1);
 
   if (error) {
     throw error;
   }
 
-  const requests = ((data ?? []) as ChangeRequestRow[]).map(
+  const paginated = paginatedRows((data ?? []) as ChangeRequestRow[], range);
+  const requests = paginated.rows.map(
     toChangeRequestRecord,
   );
 
   if (requests.length === 0) {
-    return [];
+    return {
+      requests: [],
+      pagination: paginated.pagination,
+    };
   }
 
   const brandIds = Array.from(new Set(requests.map((request) => request.brandId)));
@@ -223,21 +233,24 @@ export async function getAdminChangeRequests(): Promise<
     }),
   );
 
-  return sortChangeRequestsByCreatedAt(
-    requests.map((request) => ({
-      ...request,
-      brandName: brands.get(request.brandId) ?? "Unknown brand",
-      requesterEmail: request.requestedBy
-        ? profiles.get(request.requestedBy) ?? null
-        : null,
-      reviewerEmail: request.reviewedBy
-        ? profiles.get(request.reviewedBy) ?? null
-        : null,
-      targetLabel: targetLabelForRequest({
-        request,
-        sections,
-        modules: modulesByBrand.get(request.brandId) ?? [],
-      }),
-    })),
-  );
+  return {
+    requests: sortChangeRequestsByCreatedAt(
+      requests.map((request) => ({
+        ...request,
+        brandName: brands.get(request.brandId) ?? "Unknown brand",
+        requesterEmail: request.requestedBy
+          ? profiles.get(request.requestedBy) ?? null
+          : null,
+        reviewerEmail: request.reviewedBy
+          ? profiles.get(request.reviewedBy) ?? null
+          : null,
+        targetLabel: targetLabelForRequest({
+          request,
+          sections,
+          modules: modulesByBrand.get(request.brandId) ?? [],
+        }),
+      })),
+    ),
+    pagination: paginated.pagination,
+  };
 }

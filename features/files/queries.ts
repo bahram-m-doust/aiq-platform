@@ -14,6 +14,11 @@ import type {
   FileStatus,
   FileVisibility,
 } from "@/features/files/types";
+import {
+  type PaginationInput,
+  paginatedRows,
+  toSupabaseRange,
+} from "@/lib/pagination";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type FileRow = {
@@ -120,6 +125,7 @@ export async function getBrandFileById(fileId: string) {
 
 export async function getBrandFilesWorkspace(
   profileId: string,
+  paginationInput?: PaginationInput,
 ): Promise<BrandFilesWorkspace | null> {
   const access = await getFileAccessContextForProfile(profileId);
 
@@ -128,19 +134,22 @@ export async function getBrandFilesWorkspace(
   }
 
   const admin = createAdminClient();
+  const range = toSupabaseRange(paginationInput);
   const { data, error } = await admin
     .from("files")
     .select(
       "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at",
     )
     .eq("brand_id", access.brandId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(range.from, range.to + 1);
 
   if (error) {
     throw error;
   }
 
-  const rows = (data ?? []) as FileRow[];
+  const paginated = paginatedRows((data ?? []) as FileRow[], range);
+  const rows = paginated.rows;
   const uploaderIds = Array.from(
     new Set(rows.map((row) => row.uploaded_by).filter(Boolean) as string[]),
   );
@@ -182,5 +191,6 @@ export async function getBrandFilesWorkspace(
   return {
     access,
     files,
+    pagination: paginated.pagination,
   };
 }

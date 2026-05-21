@@ -3,10 +3,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { PaginationControls } from "@/components/PaginationControls";
 import { requireUserProfile } from "@/features/auth/queries";
 import { FileList } from "@/features/files/components/FileList";
 import { FileUploader } from "@/features/files/components/FileUploader";
 import { getBrandFilesWorkspace } from "@/features/files/queries";
+import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
   title: "Files | Bextudio Platform",
@@ -14,9 +16,16 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardFilesPage() {
+export default async function DashboardFilesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { user, profile } = await requireUserProfile("/dashboard/files");
-  const workspace = await getBrandFilesWorkspace(profile.id);
+  const workspace = await getBrandFilesWorkspace(
+    profile.id,
+    paginationInputFromSearchParams((await searchParams) ?? {}),
+  );
 
   if (!workspace) {
     redirect("/dashboard");
@@ -44,6 +53,10 @@ export default async function DashboardFilesPage() {
           access={workspace.access}
           files={workspace.files}
           profileId={profile.id}
+        />
+        <PaginationControls
+          basePath="/dashboard/files"
+          pagination={workspace.pagination}
         />
 
         <Button asChild variant="outline">

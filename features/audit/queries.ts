@@ -1,6 +1,11 @@
 import "server-only";
 
-import type { AuditLogRecord } from "@/features/audit/types";
+import type { AuditLogPage, AuditLogRecord } from "@/features/audit/types";
+import {
+  type PaginationInput,
+  paginatedRows,
+  toSupabaseRange,
+} from "@/lib/pagination";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type AuditLogRow = {
@@ -33,14 +38,6 @@ const auditLogColumns = [
   "created_at",
 ].join(", ");
 
-function clampLimit(limit: number) {
-  if (!Number.isFinite(limit)) {
-    return 100;
-  }
-
-  return Math.min(100, Math.max(1, Math.floor(limit)));
-}
-
 function toAuditLogRecord(row: AuditLogRow): AuditLogRecord {
   return {
     id: row.id,
@@ -58,17 +55,34 @@ function toAuditLogRecord(row: AuditLogRow): AuditLogRecord {
   };
 }
 
-export async function getLatestAuditLogs(limit = 100) {
+function paginationInputFromLimit(
+  input: PaginationInput | number | undefined,
+): PaginationInput {
+  return typeof input === "number" ? { pageSize: input } : (input ?? {});
+}
+
+export async function getLatestAuditLogs(
+  input?: PaginationInput | number,
+): Promise<AuditLogPage> {
   const admin = createAdminClient();
+  const range = toSupabaseRange(paginationInputFromLimit(input));
   const { data, error } = await admin
     .from("audit_logs")
     .select(auditLogColumns)
     .order("created_at", { ascending: false })
-    .limit(clampLimit(limit));
+    .range(range.from, range.to + 1);
 
   if (error) {
     throw error;
   }
 
-  return ((data ?? []) as unknown as AuditLogRow[]).map(toAuditLogRecord);
+  const paginated = paginatedRows(
+    (data ?? []) as unknown as AuditLogRow[],
+    range,
+  );
+
+  return {
+    logs: paginated.rows.map(toAuditLogRecord),
+    pagination: paginated.pagination,
+  };
 }

@@ -1,3 +1,5 @@
+import type { PaginationState } from "@/lib/pagination";
+
 export const fileVisibilities = [
   "OWNER_ONLY",
   "BRAND_TEAM",
@@ -52,6 +54,7 @@ export type BrandFileRecord = {
 export type BrandFilesWorkspace = {
   access: FileAccessContext;
   files: BrandFileRecord[];
+  pagination: PaginationState;
 };
 
 export type FileUploadInput = {

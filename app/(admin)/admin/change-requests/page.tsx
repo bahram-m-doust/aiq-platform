@@ -5,6 +5,8 @@ import { AdminChangeRequestsList } from "@/features/change-requests/components/A
 import { canReviewChangeRequestRole } from "@/features/change-requests/schema";
 import { getAdminChangeRequests } from "@/features/change-requests/queries";
 import { requireUserProfile } from "@/features/auth/queries";
+import { PaginationControls } from "@/components/PaginationControls";
+import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
   title: "Change Request Review | Bextudio Platform",
@@ -12,14 +14,20 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminChangeRequestsPage() {
+export default async function AdminChangeRequestsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { user, profile } = await requireUserProfile("/admin/change-requests");
 
   if (!canReviewChangeRequestRole(profile.global_role)) {
     redirect("/dashboard");
   }
 
-  const requests = await getAdminChangeRequests();
+  const { requests, pagination } = await getAdminChangeRequests(
+    paginationInputFromSearchParams((await searchParams) ?? {}),
+  );
   const email = user.email ?? profile.email;
 
   return (
@@ -37,6 +45,10 @@ export default async function AdminChangeRequestsPage() {
           </p>
         </div>
         <AdminChangeRequestsList requests={requests} />
+        <PaginationControls
+          basePath="/admin/change-requests"
+          pagination={pagination}
+        />
       </section>
     </main>
   );
