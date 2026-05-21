@@ -8,7 +8,7 @@ Bextudio Platform is a private Next.js application for managing brand strategy w
 - React and TypeScript
 - Supabase Auth, Postgres, and private Storage
 - OpenAI integrations for Brand Brain, agents, and RAG sync
-- Vitest unit tests and Playwright E2E tests
+- Vitest unit tests and Playwright E2E/smoke tests
 - ESLint and TypeScript checks
 
 ## Main Areas
@@ -17,7 +17,7 @@ Bextudio Platform is a private Next.js application for managing brand strategy w
 - `features/` - Product workflows grouped by domain: auth, access keys, brands, intake, files, modules, change requests, invitations, RAG, agents, and admin.
 - `lib/` - Shared platform utilities for Supabase, audit logging, email, security helpers, and common utilities.
 - `supabase/` - Database migrations, seed data, and Supabase setup notes.
-- `tests/` - Unit, integration placeholders, fixtures, mocks, and E2E tests.
+- `tests/` - Unit tests, test helpers, mocks, and Playwright E2E tests.
 - `docs/` - Product, security, data model, setup, and planning documentation.
 
 ## Local Development
@@ -32,19 +32,18 @@ The app expects local environment variables based on `.env.example`. Production 
 ## Verification
 
 ```bash
-npm run lint
-npm run typecheck
-npm run test:unit
-npm run test:e2e
+npm run verify
+npm run build
+npm run test:smoke
 npm audit --omit=dev
 ```
 
-If Playwright cannot download its browser binary, run E2E tests with an installed Chrome executable:
+If Playwright cannot download its browser binary, run smoke/E2E tests with an installed Chrome executable:
 
 ```powershell
 $env:PLAYWRIGHT_BASE_URL='http://127.0.0.1:3001'
 $env:PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH='C:\Program Files\Google\Chrome\Application\chrome.exe'
-npm run test:e2e
+npm run test:smoke
 ```
 
 ## Security Notes
@@ -64,3 +63,5 @@ Start with:
 - `docs/Bextudio_Roles_Permissions.md`
 - `docs/Bextudio_Security_Rules.md`
 - `docs/Bextudio_Database_Schema.md`
+- `docs/MVP_RELEASE_RUNBOOK.md`
+- `docs/MVP_QA_CHECKLIST.md`

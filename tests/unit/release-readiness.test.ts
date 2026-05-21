@@ -1,0 +1,79 @@
+import fs from "node:fs";
+import path from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+function readRepoFile(...parts: string[]) {
+  return fs.readFileSync(path.join(process.cwd(), ...parts), "utf8");
+}
+
+function envExampleKeys() {
+  return readRepoFile(".env.example")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"))
+    .map((line) => line.split("=")[0])
+    .sort();
+}
+
+describe("release readiness docs", () => {
+  it("documents the latest Supabase migration and seed order", () => {
+    const setup = readRepoFile("supabase", "migrations", "SETUP.md");
+    const runbook = readRepoFile("docs", "MVP_RELEASE_RUNBOOK.md");
+
+    expect(setup).toContain("0010_rate_limits.sql");
+    expect(setup).toContain("supabase/seeds/plans.sql");
+    expect(setup).toContain("supabase/seeds/agents.sql");
+    expect(setup).toContain("supabase/seeds/questions_sections.sql");
+    expect(setup).toContain("NOTIFY pgrst, 'reload schema';");
+    expect(runbook).toContain("npm run test:smoke");
+    expect(runbook).toContain("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH");
+  });
+
+  it("keeps .env.example limited to currently used runtime keys", () => {
+    expect(envExampleKeys()).toEqual([
+      "ADMIN_BASE_URL",
+      "APP_BASE_URL",
+      "EMAIL_FROM",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "OPENAI_AGENT_MODEL",
+      "OPENAI_API_KEY",
+      "OPENAI_BRAIN_MODEL",
+      "RESEND_API_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY",
+    ]);
+
+    const envExample = readRepoFile(".env.example");
+    expect(envExample).not.toMatch(/DATABASE_URL|STRIPE|SMTP_/);
+  });
+
+  it("keeps the consolidated setup script aligned with private MVP hardening", () => {
+    const setupAll = readRepoFile("supabase", "migrations", "setup-all.sql");
+
+    expect(setupAll).toContain(
+      "alter table public.rate_limits enable row level security;",
+    );
+    expect(setupAll).toContain(
+      "alter table public.audit_logs force row level security;",
+    );
+    expect(setupAll).toContain(
+      "revoke all on all tables in schema public from anon, authenticated;",
+    );
+    expect(setupAll).toContain(
+      "alter table storage.objects force row level security;",
+    );
+  });
+
+  it("adds private-app robots and low-risk security headers", () => {
+    const robots = readRepoFile("app", "robots.ts");
+    const nextConfig = readRepoFile("next.config.ts");
+
+    expect(robots).toContain('disallow: "/"');
+    expect(nextConfig).toContain("X-Content-Type-Options");
+    expect(nextConfig).toContain("X-Frame-Options");
+    expect(nextConfig).toContain("Referrer-Policy");
+    expect(nextConfig).toContain("Permissions-Policy");
+    expect(nextConfig).not.toContain("Content-Security-Policy");
+  });
+});

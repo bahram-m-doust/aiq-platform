@@ -1,79 +1,91 @@
 # Supabase Database Setup
 
-Run the migrations **in order** against your Supabase project. The fastest path is the SQL Editor in the Supabase Dashboard.
+Run migrations in order against your Supabase project. For manual setup, the
+fastest path is the Supabase Dashboard SQL Editor.
 
-1. Open **Supabase Dashboard → SQL Editor**.
-2. Paste the contents of **`setup-all.sql`** (consolidated, idempotent) into a new query and run.
-   - Safe to run on a fresh project **or** an existing project — uses `create table if not exists` and `create index if not exists` throughout.
-   - If you prefer step-by-step migrations, paste each file in order:
-     - `0001_initial_schema.sql`
-     - `0002_add_access_key_resend_email_id.sql`
-     - `0003_add_change_request_reason.sql`
-     - `0004_create_private_file_bucket.sql`
-     - `0005_unique_knowledge_files_brand_file.sql`
-     - `0006_tighten_users_profile_role.sql`
-3. Verify by going to **Database → Tables** and confirming `public.users_profile` exists with columns `id, auth_user_id, email, full_name, global_role, created_at, updated_at`.
+## Fresh Project
 
-### Already-set-up project that only needs the latest migration
-
-If you see `ERROR: 42P07: relation "users_profile" already exists`, your project already has the base schema. Run only the newest migration:
-
-```sql
--- Paste only the contents of 0006_tighten_users_profile_role.sql
-```
-
-Or re-run `setup-all.sql` after pulling the latest changes — it is now idempotent.
-
-## After running migrations: reload the PostgREST schema cache
-
-Supabase serves the REST API through PostgREST, which caches the database
-schema. After applying any DDL change (including `setup-all.sql`), tell
-PostgREST to reload the cache, otherwise the first sign-in attempt may
-fail with `PGRST002 — Could not query the database for the schema cache`.
-
-Run this in the SQL editor right after the migrations:
+1. Open Supabase Dashboard -> SQL Editor.
+2. Paste and run `supabase/migrations/setup-all.sql`.
+   - This consolidated script is intended for fresh projects and is
+     idempotent for the current MVP schema.
+   - It includes migrations through `0010_rate_limits.sql`.
+3. Paste and run seed files in this order:
+   - `supabase/seeds/plans.sql`
+   - `supabase/seeds/agents.sql`
+   - `supabase/seeds/questions_sections.sql`
+4. Reload the PostgREST schema cache:
 
 ```sql
 NOTIFY pgrst, 'reload schema';
 ```
 
-The application code retries this specific error a few times automatically,
-but a manual reload eliminates the wait. Restarting the project from
-Settings → General has the same effect.
+5. Verify these tables exist: `users_profile`, `brands`, `plans`,
+   `question_sections`, `questions`, `agent_runs`, `audit_logs`,
+   `rate_limits`.
 
-## Diagnosing the "We could not prepare your profile" error
+## Existing Project
 
-The redirect now appends the underlying cause to the message, for example:
+If the base schema already exists, do not skip ahead. Run only the missing
+migrations in numeric order:
 
-- `Database is not set up: the users_profile table is missing. Apply Supabase migrations 0001–0006.`
-  → Migrations have not been applied. Follow the steps above.
-- `Database schema is out of date (missing column).`
-  → A migration is missing or an older version of the schema is in place.
-- `Service role key is invalid or missing — check SUPABASE_SERVICE_ROLE_KEY.`
-  → Re-copy the service role key from the Supabase Dashboard into `.env.local`.
+- `0001_initial_schema.sql`
+- `0002_add_access_key_resend_email_id.sql`
+- `0003_add_change_request_reason.sql`
+- `0004_create_private_file_bucket.sql`
+- `0005_unique_knowledge_files_brand_file.sql`
+- `0006_tighten_users_profile_role.sql`
+- `0007_intake_builder_status.sql`
+- `0008_enable_rls_deny_by_default.sql`
+- `0009_performance_indexes.sql`
+- `0010_rate_limits.sql`
 
-## Required Supabase Dashboard configuration
+If the project is already at `0009_performance_indexes.sql`, run only
+`0010_rate_limits.sql`, then reload PostgREST:
 
-1. **Authentication → Providers → Google**: enable, paste Google OAuth Client ID + Secret.
-2. **Authentication → URL Configuration**:
-   - Site URL: `http://localhost:3000` for development, your production domain otherwise.
-   - Additional Redirect URLs: include `http://localhost:3000/callback` and `https://<your-domain>/callback`.
-3. **Authentication → Sign-In Providers → Email**: keep enabled.
-4. **Authentication → Sign-In Providers → "Allow linking of identities with the same email"**: ON, so email/password and Google sign-ins for the same address resolve to a single account.
-
-## Google Cloud OAuth client
-
-1. Google Cloud Console → APIs & Services → Credentials → Create OAuth client (Web).
-2. Authorized JavaScript origins: `http://localhost:3000` and the production origin.
-3. Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback` (Supabase shows this string on the Google provider page).
-4. Copy Client ID + Secret into the Supabase Google provider config.
-
-## Creating the first Platform Owner
-
-```bash
-set -a && . ./.env.local && set +a
-npx tsx scripts/invite-admin.ts owner@example.com
-# Owner receives an invite email; after they accept and sign in once, run:
-npx tsx scripts/invite-admin.ts owner@example.com
-# The second run promotes their profile to PLATFORM_OWNER.
+```sql
+NOTIFY pgrst, 'reload schema';
 ```
+
+## Required Supabase Dashboard Configuration
+
+1. Authentication -> Providers -> Google: enable and paste Google OAuth Client
+   ID and Secret if Google sign-in is used.
+2. Authentication -> URL Configuration:
+   - Site URL: `http://localhost:3000` for development, production origin for
+     production.
+   - Additional Redirect URLs: include `http://localhost:3000/callback` and
+     `https://<your-domain>/callback`.
+3. Authentication -> Sign-In Providers -> Email: keep enabled.
+4. Authentication -> Sign-In Providers -> Allow linking of identities with the
+   same email: ON.
+5. Storage: confirm bucket `bextudio-files` is private.
+
+## Security Expectations
+
+- RLS is enabled and forced with deny-by-default policies for public app
+  tables.
+- Browser clients must not query business tables directly with anon/auth keys.
+- The app uses the Supabase service role only from server-side code.
+- `rate_limits` is private and written through the service-role RPC
+  `increment_rate_limit`.
+
+## Creating The First Platform Owner
+
+Load local env values first, then run:
+
+```powershell
+npx tsx scripts/invite-admin.ts owner@example.com
+```
+
+After the user accepts the invite and signs in once, run the same command again
+to promote the profile to `PLATFORM_OWNER`.
+
+## Common Setup Errors
+
+- Missing `users_profile`: migrations were not applied.
+- Missing `rate_limits`: `0010_rate_limits.sql` was not applied.
+- `PGRST002`: run `NOTIFY pgrst, 'reload schema';` or restart the Supabase
+  project.
+- Service role failures: re-copy `SUPABASE_SERVICE_ROLE_KEY` into the server
+  environment.
