@@ -46,3 +46,25 @@ test("renders the generic not found page", async ({ page }) => {
     ),
   ).toEqual([]);
 });
+
+test("health endpoint returns a non-sensitive readiness payload", async ({
+  request,
+}) => {
+  const response = await request.get("/api/health");
+  const body = await response.json();
+
+  expect([200, 503]).toContain(response.status());
+  expect(body).toMatchObject({
+    service: "bextudio-platform",
+    status: expect.stringMatching(/^(ok|error)$/),
+    checks: {
+      env: expect.stringMatching(/^(ok|error)$/),
+      supabase: expect.stringMatching(/^(ok|error)$/),
+    },
+  });
+  expect(body.timestamp).toEqual(expect.any(String));
+  expect(JSON.stringify(body)).not.toMatch(
+    /SUPABASE_SERVICE_ROLE_KEY|service-role|anon-key|access_token|refresh_token/i,
+  );
+  expect(response.headers()["cache-control"]).toContain("no-store");
+});

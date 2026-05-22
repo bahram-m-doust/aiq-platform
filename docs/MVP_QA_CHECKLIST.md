@@ -9,6 +9,7 @@ out of screenshots, logs, tickets, and chat messages.
 - `npm run build`
 - `npm audit --omit=dev`
 - `npm run test:smoke`
+- `Invoke-WebRequest http://127.0.0.1:3001/api/health`
 - If Playwright cannot download Chromium, run:
   `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe" npm run test:smoke`
 

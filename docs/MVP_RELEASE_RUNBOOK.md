@@ -57,6 +57,12 @@ npm run build
 npm audit --omit=dev
 ```
 
+Health check:
+
+```powershell
+Invoke-WebRequest http://127.0.0.1:3001/api/health
+```
+
 Smoke with local Chrome:
 
 ```powershell

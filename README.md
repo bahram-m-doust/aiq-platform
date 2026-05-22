@@ -38,6 +38,8 @@ npm run test:smoke
 npm audit --omit=dev
 ```
 
+The app also exposes a non-sensitive readiness endpoint at `/api/health`.
+
 If Playwright cannot download its browser binary, run smoke/E2E tests with an installed Chrome executable:
 
 ```powershell
@@ -65,3 +67,4 @@ Start with:
 - `docs/Bextudio_Database_Schema.md`
 - `docs/MVP_RELEASE_RUNBOOK.md`
 - `docs/MVP_QA_CHECKLIST.md`
+- `docs/MONITORING.md`

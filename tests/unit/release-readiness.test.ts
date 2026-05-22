@@ -28,6 +28,7 @@ describe("release readiness docs", () => {
     expect(setup).toContain("NOTIFY pgrst, 'reload schema';");
     expect(runbook).toContain("npm run test:smoke");
     expect(runbook).toContain("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH");
+    expect(readRepoFile("docs", "MONITORING.md")).toContain("/api/health");
   });
 
   it("keeps .env.example limited to currently used runtime keys", () => {
@@ -68,8 +69,10 @@ describe("release readiness docs", () => {
   it("adds private-app robots and low-risk security headers", () => {
     const robots = readRepoFile("app", "robots.ts");
     const nextConfig = readRepoFile("next.config.ts");
+    const healthRoute = readRepoFile("app", "api", "health", "route.ts");
 
     expect(robots).toContain('disallow: "/"');
+    expect(healthRoute).toContain("getHealthStatus");
     expect(nextConfig).toContain("X-Content-Type-Options");
     expect(nextConfig).toContain("X-Frame-Options");
     expect(nextConfig).toContain("Referrer-Policy");
