@@ -68,3 +68,4 @@ Start with:
 - `docs/MVP_RELEASE_RUNBOOK.md`
 - `docs/MVP_QA_CHECKLIST.md`
 - `docs/MONITORING.md`
+- `docs/NETLIFY_READINESS.md`
