@@ -2,6 +2,8 @@ import "server-only";
 
 import OpenAI, { toFile } from "openai";
 
+import { readTrimmedRuntimeEnv } from "@/lib/env/runtime";
+
 let openaiClient: OpenAI | null = null;
 
 export class OpenAIFileSearchConfigError extends Error {
@@ -15,7 +17,7 @@ export function isOpenAIFileSearchConfigError(
 }
 
 export function hasOpenAIFileSearchEnv() {
-  return Boolean(process.env.OPENAI_API_KEY?.trim());
+  return Boolean(readTrimmedRuntimeEnv("OPENAI_API_KEY"));
 }
 
 function getOpenAIClient() {
@@ -23,7 +25,7 @@ function getOpenAIClient() {
     return openaiClient;
   }
 
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = readTrimmedRuntimeEnv("OPENAI_API_KEY");
 
   if (!apiKey) {
     throw new OpenAIFileSearchConfigError(

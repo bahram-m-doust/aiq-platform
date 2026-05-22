@@ -1,5 +1,7 @@
 import "server-only";
 
+import { readRuntimeEnv } from "@/lib/env/runtime";
+
 type SendEmailInput = {
   to: string;
   subject: string;
@@ -33,7 +35,7 @@ type ResendResponse = {
 };
 
 export function getResendEmailConfig(): ResendEmailConfigResult {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = readRuntimeEnv("RESEND_API_KEY");
   const from = process.env.EMAIL_FROM;
 
   if (!apiKey) {

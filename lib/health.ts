@@ -1,6 +1,7 @@
 import "server-only";
 
 import { logServerError } from "@/lib/logging/server";
+import { readTrimmedRuntimeEnv } from "@/lib/env/runtime";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hasPublicSupabaseEnv } from "@/lib/supabase/env";
 
@@ -19,7 +20,7 @@ export type HealthStatus = {
 function hasRequiredServerEnv() {
   return Boolean(
     hasPublicSupabaseEnv() &&
-      process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() &&
+      readTrimmedRuntimeEnv("SUPABASE_SERVICE_ROLE_KEY") &&
       process.env.APP_BASE_URL?.trim() &&
       process.env.ADMIN_BASE_URL?.trim(),
   );

@@ -9,6 +9,7 @@ import {
 } from "@/features/agents/runs/schema";
 import type { AgentKnowledgeModuleScope } from "@/features/agents/runs/types";
 import type { CatalogAgentKey } from "@/features/agents/catalog/types";
+import { readTrimmedRuntimeEnv } from "@/lib/env/runtime";
 
 let openaiClient: OpenAI | null = null;
 
@@ -35,7 +36,7 @@ function getOpenAIClient() {
     return openaiClient;
   }
 
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = readTrimmedRuntimeEnv("OPENAI_API_KEY");
 
   if (!apiKey) {
     throw new OpenAIAgentRunConfigError(

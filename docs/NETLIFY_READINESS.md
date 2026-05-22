@@ -15,29 +15,53 @@ secrets to `netlify.toml`.
 
 ## Environment Variables
 
-Set these in the Netlify dashboard for both build-time and runtime functions.
-Use deployment-specific values for each Netlify site.
+Set these in the Netlify dashboard with the narrowest scope that still supports
+the app. Use deployment-specific values for each Netlify site.
 
-Required:
+Required public/config values:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
 - `APP_BASE_URL`
 - `ADMIN_BASE_URL`
 
-Optional for enabled features:
+Required server-only secret:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Optional server-only secrets for enabled features:
 
 - `OPENAI_API_KEY`
+- `RESEND_API_KEY`
+
+Optional non-secret config:
+
 - `OPENAI_BRAIN_MODEL`
 - `OPENAI_AGENT_MODEL`
-- `RESEND_API_KEY`
 - `EMAIL_FROM`
 
+Remove unused future envs from Netlify for this MVP. The current runtime does
+not read `DATABASE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, or `SMTP_PASS`.
+
 `NEXT_PUBLIC_SUPABASE_URL` must remain the Supabase Project URL from Project
-Settings > API. It is not the Netlify app URL. Keep `SUPABASE_SERVICE_ROLE_KEY`
-server-only and never expose it in client code, docs, screenshots, or support
+Settings > API. It is not the Netlify app URL. `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+is intentionally public and must not be treated like a private secret. Keep
+`SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, and `RESEND_API_KEY`
+server-only and never expose them in client code, docs, screenshots, or support
 messages.
+
+## Secret Scanning
+
+If Netlify fails with "Secrets scanning found secrets in build", first remove
+unused env vars and make sure public config values are not marked as private
+secrets. Do not disable scanning with `SECRETS_SCAN_ENABLED=false`.
+
+The code reads server-only secrets through runtime env helpers to avoid baking
+secret values into `.next` artifacts. If Netlify still reports a known
+server-only key after this cleanup, use `SECRETS_SCAN_OMIT_KEYS` only for the
+specific required server key that Netlify reports, and only after confirming
+the value is not in static HTML or client JavaScript.
 
 ## Supabase Auth URLs
 

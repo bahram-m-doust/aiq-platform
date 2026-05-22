@@ -1,3 +1,5 @@
+import { readRuntimeEnv } from "@/lib/env/runtime";
+
 export function hasPublicSupabaseEnv() {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -18,7 +20,7 @@ export function getPublicSupabaseEnv() {
 
 export function getSupabaseAdminEnv() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRoleKey = readRuntimeEnv("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error("Missing Supabase admin environment variables.");

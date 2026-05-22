@@ -7,6 +7,18 @@ function readRepoFile(...parts: string[]) {
   return fs.readFileSync(path.join(process.cwd(), ...parts), "utf8");
 }
 
+function listFiles(dir: string): string[] {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      return listFiles(fullPath);
+    }
+
+    return /\.(ts|tsx)$/.test(entry.name) ? [fullPath] : [];
+  });
+}
+
 describe("Netlify readiness", () => {
   it("keeps Netlify build settings compatible with server-rendered Next.js", () => {
     const netlifyConfig = readRepoFile("netlify.toml");
@@ -35,6 +47,29 @@ describe("Netlify readiness", () => {
     expect(doc).toContain(
       "https://<project-ref>.supabase.co/auth/v1/callback",
     );
+    expect(doc).toContain("DATABASE_URL");
+    expect(doc).toContain("SECRETS_SCAN_OMIT_KEYS");
+    expect(doc).toContain("SECRETS_SCAN_ENABLED=false");
     expect(doc).toContain("/api/health");
+  });
+
+  it("does not directly dot-access server-only env keys in bundled app code", () => {
+    const bundledDirs = ["app", "features", "lib"];
+    const secretEnvPattern =
+      /process\.env\.(SUPABASE_SERVICE_ROLE_KEY|OPENAI_API_KEY|RESEND_API_KEY)/;
+    const matches = bundledDirs.flatMap((dir) =>
+      listFiles(path.join(process.cwd(), dir))
+        .filter(
+          (filePath) =>
+            filePath !==
+            path.join(process.cwd(), "lib", "env", "runtime.ts"),
+        )
+        .filter((filePath) =>
+          secretEnvPattern.test(fs.readFileSync(filePath, "utf8")),
+        )
+        .map((filePath) => path.relative(process.cwd(), filePath)),
+    );
+
+    expect(matches).toEqual([]);
   });
 });

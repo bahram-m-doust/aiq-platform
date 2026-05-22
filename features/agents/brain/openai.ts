@@ -6,6 +6,7 @@ import {
   extractBrandBrainSources,
   toBrandBrainDisplaySources,
 } from "@/features/agents/brain/schema";
+import { readTrimmedRuntimeEnv } from "@/lib/env/runtime";
 
 let openaiClient: OpenAI | null = null;
 
@@ -28,7 +29,7 @@ function getOpenAIClient() {
     return openaiClient;
   }
 
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = readTrimmedRuntimeEnv("OPENAI_API_KEY");
 
   if (!apiKey) {
     throw new OpenAIBrainConfigError(
