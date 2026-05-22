@@ -2,6 +2,7 @@
 
 Use this checklist before a manual upload or production handoff. Keep secrets
 out of screenshots, logs, tickets, and chat messages.
+Record pass/fail results in `docs/MVP_QA_RESULTS.md`.
 
 ## Automated Checks
 
