@@ -14,6 +14,7 @@ fastest path is the Supabase Dashboard SQL Editor.
    - `supabase/seeds/plans.sql`
    - `supabase/seeds/agents.sql`
    - `supabase/seeds/questions_sections.sql`
+   - `supabase/seeds/questions.sql`
 4. Reload the PostgREST schema cache:
 
 ```sql
