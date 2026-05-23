@@ -13,10 +13,12 @@ import {
   validateChangeRequestTargetContext,
 } from "@/features/change-requests/schema";
 import {
+  changeRequestColumns,
   getBrandModulesForChangeRequests,
   getChangeRequestById,
   getChangeRequestCreateOptions,
   toChangeRequestRecord,
+  type ChangeRequestRow,
 } from "@/features/change-requests/queries";
 import type {
   ChangeRequestRecord,
@@ -27,40 +29,6 @@ import type {
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-type ChangeRequestRow = {
-  id: string;
-  brand_id: string;
-  target_type: string;
-  target_id: string | null;
-  section_key: string | null;
-  question_id: string | null;
-  requested_by: string | null;
-  reason: string | null;
-  comment: string;
-  status: string;
-  reviewed_by: string | null;
-  resolution_note: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-};
-
-const changeRequestColumns = [
-  "id",
-  "brand_id",
-  "target_type",
-  "target_id",
-  "section_key",
-  "question_id",
-  "requested_by",
-  "reason",
-  "comment",
-  "status",
-  "reviewed_by",
-  "resolution_note",
-  "created_at",
-  "updated_at",
-].join(", ");
 
 const CODE = "change_request";
 

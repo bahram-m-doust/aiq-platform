@@ -45,7 +45,7 @@ type ModuleRow = {
   updated_at: string | null;
 };
 
-type ArtifactRow = {
+export type ArtifactRow = {
   id: string;
   module_id: string;
   artifact_type: string;
@@ -69,7 +69,7 @@ type FileRow = {
   created_at: string | null;
 };
 
-type ReviewRow = {
+export type ReviewRow = {
   id: string;
   module_id: string;
   reviewer_id: string;
@@ -102,7 +102,7 @@ const moduleColumns = [
   "updated_at",
 ].join(", ");
 
-const artifactColumns = [
+export const artifactColumns = [
   "id",
   "module_id",
   "artifact_type",
@@ -126,7 +126,7 @@ const fileColumns = [
   "created_at",
 ].join(", ");
 
-const reviewColumns = [
+export const reviewColumns = [
   "id",
   "module_id",
   "reviewer_id",

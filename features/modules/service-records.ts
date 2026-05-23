@@ -1,52 +1,19 @@
 import "server-only";
 
+import {
+  artifactColumns,
+  reviewColumns,
+  type ArtifactRow,
+  type ReviewRow,
+} from "@/features/modules/queries";
 import type {
   ModuleArtifactRecord,
   ModuleRecord,
   ModuleReviewRecord,
 } from "@/features/modules/types";
 
-export type ArtifactRow = {
-  id: string;
-  module_id: string;
-  artifact_type: string;
-  file_id: string | null;
-  version: number | null;
-  status: string | null;
-  uploaded_by: string | null;
-  created_at: string | null;
-};
-
-export type ReviewRow = {
-  id: string;
-  module_id: string;
-  reviewer_id: string;
-  review_type: string;
-  decision: string;
-  comment: string | null;
-  created_at: string | null;
-};
-
-export const artifactColumns = [
-  "id",
-  "module_id",
-  "artifact_type",
-  "file_id",
-  "version",
-  "status",
-  "uploaded_by",
-  "created_at",
-].join(", ");
-
-export const reviewColumns = [
-  "id",
-  "module_id",
-  "reviewer_id",
-  "review_type",
-  "decision",
-  "comment",
-  "created_at",
-].join(", ");
+export { artifactColumns, reviewColumns };
+export type { ArtifactRow, ReviewRow };
 
 export function toTemporaryArtifactRecord({
   row,

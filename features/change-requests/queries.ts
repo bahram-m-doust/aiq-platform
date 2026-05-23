@@ -33,7 +33,7 @@ type ModuleRow = {
   status: string;
 };
 
-type ChangeRequestRow = {
+export type ChangeRequestRow = {
   id: string;
   brand_id: string;
   target_type: string;
@@ -49,6 +49,23 @@ type ChangeRequestRow = {
   created_at: string | null;
   updated_at: string | null;
 };
+
+export const changeRequestColumns = [
+  "id",
+  "brand_id",
+  "target_type",
+  "target_id",
+  "section_key",
+  "question_id",
+  "requested_by",
+  "reason",
+  "comment",
+  "status",
+  "reviewed_by",
+  "resolution_note",
+  "created_at",
+  "updated_at",
+].join(", ");
 
 type BrandRow = {
   id: string;
@@ -142,9 +159,7 @@ export async function getChangeRequestById(requestId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("change_requests")
-    .select(
-      "id, brand_id, target_type, target_id, section_key, question_id, requested_by, reason, comment, status, reviewed_by, resolution_note, created_at, updated_at",
-    )
+    .select(changeRequestColumns)
     .eq("id", requestId)
     .maybeSingle();
 
@@ -162,9 +177,7 @@ export async function getAdminChangeRequests(
   const range = toSupabaseRange(paginationInput);
   const { data, error } = await admin
     .from("change_requests")
-    .select(
-      "id, brand_id, target_type, target_id, section_key, question_id, requested_by, reason, comment, status, reviewed_by, resolution_note, created_at, updated_at",
-    )
+    .select(changeRequestColumns)
     .order("created_at", { ascending: false })
     .range(range.from, range.to + 1);
 
@@ -172,7 +185,10 @@ export async function getAdminChangeRequests(
     throw error;
   }
 
-  const paginated = paginatedRows((data ?? []) as ChangeRequestRow[], range);
+  const paginated = paginatedRows(
+    (data ?? []) as unknown as ChangeRequestRow[],
+    range,
+  );
   const requests = paginated.rows.map(
     toChangeRequestRecord,
   );
