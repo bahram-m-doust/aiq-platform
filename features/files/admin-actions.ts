@@ -11,27 +11,15 @@ import {
   adminUploadFileForBrand,
   isAdminFileError,
 } from "@/features/files/admin-services";
+import type {
+  AdminFileReviewState,
+} from "@/features/files/admin-types";
 import type { FileUploadFormState } from "@/features/files/types";
 import { logServerError } from "@/lib/logging/server";
 import {
   checkRequestRateLimit,
   RATE_LIMITED_MESSAGE,
 } from "@/lib/rate-limit";
-
-type ReviewState =
-  | { status: "idle"; message: string }
-  | { status: "error"; message: string }
-  | { status: "success"; message: string };
-
-export const initialAdminFileUploadState: FileUploadFormState = {
-  status: "idle",
-  message: "",
-};
-
-export const initialAdminFileReviewState: ReviewState = {
-  status: "idle",
-  message: "",
-};
 
 function readString(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -90,9 +78,9 @@ export async function adminUploadFileAction(
 }
 
 export async function adminArchiveFileAction(
-  _prev: ReviewState,
+  _prev: AdminFileReviewState,
   formData: FormData,
-): Promise<ReviewState> {
+): Promise<AdminFileReviewState> {
   const { profile } = await requirePlatformOwner("/admin/files");
   const fileId = readString(formData, "file_id");
 
@@ -119,9 +107,9 @@ export async function adminArchiveFileAction(
 }
 
 export async function adminDeleteFileAction(
-  _prev: ReviewState,
+  _prev: AdminFileReviewState,
   formData: FormData,
-): Promise<ReviewState> {
+): Promise<AdminFileReviewState> {
   const { profile } = await requirePlatformOwner("/admin/files");
   const fileId = readString(formData, "file_id");
   const confirm = readString(formData, "confirm");

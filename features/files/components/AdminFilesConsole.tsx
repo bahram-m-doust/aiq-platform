@@ -26,10 +26,12 @@ import {
   adminDeleteFileAction,
   adminDownloadFileAction,
   adminUploadFileAction,
-  initialAdminFileReviewState,
-  initialAdminFileUploadState,
 } from "@/features/files/admin-actions";
 import type { AdminBrandOption } from "@/features/files/admin-queries";
+import {
+  initialAdminFileReviewState,
+  initialAdminFileUploadState,
+} from "@/features/files/admin-types";
 import { fileStatusLabels, fileVisibilityLabels } from "@/features/files/schema";
 import type { BrandFileRecord } from "@/features/files/types";
 import { fileVisibilities } from "@/features/files/types";
