@@ -3,7 +3,6 @@
 import { useActionState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createDemoRequestAction } from "@/features/demo-requests/actions";
 import { initialCreateDemoRequestFormState } from "@/features/demo-requests/types";
@@ -37,15 +36,10 @@ export function DashboardActivationCtas() {
         placeholder="Tell us briefly what you'd like to evaluate (optional)"
         rows={3}
       />
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <SubmitButton
-          idleLabel="Request Demo Access"
-          pendingLabel="Submitting"
-        />
-        <Button asChild type="button" variant="outline">
-          <a href="mailto:hello@bextudio.com">Contact Bextudio</a>
-        </Button>
-      </div>
+      <SubmitButton
+        idleLabel="Request Demo Access"
+        pendingLabel="Submitting"
+      />
     </form>
   );
 }

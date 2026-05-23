@@ -61,7 +61,10 @@ describe("release readiness docs", () => {
     expect(setupAll).toContain(
       "revoke all on all tables in schema public from anon, authenticated;",
     );
-    expect(setupAll).toContain(
+    // storage.objects RLS is owned by supabase_storage_admin on Supabase
+    // Cloud and is enabled by default — setup-all.sql intentionally does
+    // not toggle it (would fail with ERROR 42501 in the SQL Editor).
+    expect(setupAll).not.toContain(
       "alter table storage.objects force row level security;",
     );
   });

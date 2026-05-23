@@ -538,5 +538,6 @@ alter table public.rate_limits force row level security;
 revoke all on all tables in schema public from anon, authenticated;
 revoke all on all sequences in schema public from anon, authenticated;
 
-alter table storage.objects enable row level security;
-alter table storage.objects force row level security;
+-- Note: on Supabase Cloud, storage.objects is owned by supabase_storage_admin
+-- and RLS is already enabled by default, so we do not toggle it here. The
+-- bucket-policy block above already gates access via policies.

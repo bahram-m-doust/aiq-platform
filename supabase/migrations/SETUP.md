@@ -10,6 +10,10 @@ fastest path is the Supabase Dashboard SQL Editor.
    - This consolidated script is intended for fresh projects and is
      idempotent for the current MVP schema.
    - It includes migrations through `0010_rate_limits.sql`.
+   - On Supabase Cloud the script intentionally does **not** run
+     `alter table storage.objects enable/force row level security;` —
+     those statements require the `supabase_storage_admin` role and
+     RLS on `storage.objects` is already enabled by default.
 3. Paste and run seed files in this order:
    - `supabase/seeds/plans.sql`
    - `supabase/seeds/agents.sql`
@@ -91,3 +95,8 @@ to promote the profile to `PLATFORM_OWNER`.
   project.
 - Service role failures: re-copy `SUPABASE_SERVICE_ROLE_KEY` into the server
   environment.
+- `ERROR 42501: must be owner of table objects` when running
+  `0008_enable_rls_deny_by_default.sql` on Supabase Cloud: that file's
+  last two lines toggle RLS on `storage.objects`, which is owned by
+  `supabase_storage_admin`. Comment out those two lines for that one
+  execution; RLS on `storage.objects` is already enabled on Cloud.
