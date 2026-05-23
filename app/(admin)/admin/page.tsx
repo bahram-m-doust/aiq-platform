@@ -66,6 +66,9 @@ export default async function AdminPage() {
                 </Link>
               </Button>
               <Button asChild variant="outline">
+                <Link href="/admin/files">Manage Files</Link>
+              </Button>
+              <Button asChild variant="outline">
                 <Link href="/admin/modules">Module Board</Link>
               </Button>
               <Button asChild variant="outline">
