@@ -67,15 +67,21 @@ function buildRedeemUrl(rawKey: string, type: AccessKeyType) {
 
 export function AdminAccessKeyForm({
   options,
+  initialType = "CREATE_BRAND",
+  initialEmail = "",
 }: {
   options: AdminAccessKeyFormOptions;
+  initialType?: AdminAccessKeyType;
+  initialEmail?: string;
 }) {
   const [state, formAction] = useActionState(
     createAdminAccessKeyAction,
     initialAdminAccessKeyFormState,
   );
-  const [type, setType] = useState<AdminAccessKeyType>("CREATE_BRAND");
-  const [targetRole, setTargetRole] = useState<BrandRole>("OWNER");
+  const [type, setType] = useState<AdminAccessKeyType>(initialType);
+  const [targetRole, setTargetRole] = useState<BrandRole>(
+    defaultRoleForType(initialType),
+  );
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const needsBrand = type === "CLAIM_BRAND" || type === "JOIN_BRAND";
   const allowsBrand = needsBrand || type === "DEMO_ACCESS";
@@ -131,6 +137,7 @@ export function AdminAccessKeyForm({
                 <Label htmlFor="target_email">Target email</Label>
                 <Input
                   autoComplete="email"
+                  defaultValue={initialEmail}
                   id="target_email"
                   name="target_email"
                   placeholder="owner@example.com"

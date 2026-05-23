@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { logout } from "@/features/auth/actions";
 import { requirePlatformOwner } from "@/features/auth/queries";
+import { getPendingDemoRequestCount } from "@/features/demo-requests/queries";
 
 export const metadata: Metadata = {
   title: "Admin | Bextudio Platform",
@@ -21,6 +22,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const { user, profile } = await requirePlatformOwner("/admin");
   const email = user.email ?? profile.email;
+  const pendingDemoRequests = await getPendingDemoRequestCount();
 
   return (
     <main className="min-h-svh bg-background px-6 py-10 text-foreground">
@@ -52,6 +54,16 @@ export default async function AdminPage() {
               </Button>
               <Button asChild variant="outline">
                 <Link href="/admin/change-requests">Review Change Requests</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/admin/demo-requests">
+                  Demo Requests
+                  {pendingDemoRequests > 0 ? (
+                    <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive/15 px-1.5 text-xs font-semibold text-destructive">
+                      {pendingDemoRequests}
+                    </span>
+                  ) : null}
+                </Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href="/admin/modules">Module Board</Link>

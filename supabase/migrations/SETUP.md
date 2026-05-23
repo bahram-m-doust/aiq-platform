@@ -23,7 +23,7 @@ NOTIFY pgrst, 'reload schema';
 
 5. Verify these tables exist: `users_profile`, `brands`, `plans`,
    `question_sections`, `questions`, `agent_runs`, `audit_logs`,
-   `rate_limits`.
+   `rate_limits`, `demo_requests`.
 
 ## Existing Project
 
@@ -40,9 +40,10 @@ migrations in numeric order:
 - `0008_enable_rls_deny_by_default.sql`
 - `0009_performance_indexes.sql`
 - `0010_rate_limits.sql`
+- `0011_demo_requests.sql`
 
-If the project is already at `0009_performance_indexes.sql`, run only
-`0010_rate_limits.sql`, then reload PostgREST:
+If the project is already at `0010_rate_limits.sql`, run only
+`0011_demo_requests.sql`, then reload PostgREST:
 
 ```sql
 NOTIFY pgrst, 'reload schema';

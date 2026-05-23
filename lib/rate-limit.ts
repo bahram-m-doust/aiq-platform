@@ -15,6 +15,7 @@ export type RateLimitBucket =
   | "auth.register"
   | "auth.oauth"
   | "access.redeem"
+  | "demo-requests.create"
   | "invitation.create"
   | "invitation.accept"
   | "file.upload"

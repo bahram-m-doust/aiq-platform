@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { isAdminAccessKeyType } from "@/features/admin/access-key-schema";
 import { AdminAccessKeyForm } from "@/features/admin/components/AdminAccessKeyForm";
 import { getAdminAccessKeyFormOptions } from "@/features/admin/queries";
+import type { AdminAccessKeyType } from "@/features/admin/types";
 import { requirePlatformOwner } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
@@ -12,9 +14,28 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminAccessKeysPage() {
+function readSearchString(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+) {
+  const value = params[key];
+  if (typeof value === "string") return value.trim();
+  return "";
+}
+
+export default async function AdminAccessKeysPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { profile } = await requirePlatformOwner("/admin/access-keys");
   const options = await getAdminAccessKeyFormOptions();
+  const params = (await searchParams) ?? {};
+  const initialEmail = readSearchString(params, "email");
+  const typeParam = readSearchString(params, "type");
+  const initialType: AdminAccessKeyType = isAdminAccessKeyType(typeParam)
+    ? typeParam
+    : "CREATE_BRAND";
 
   return (
     <main className="min-h-svh bg-background px-6 py-10 text-foreground">
@@ -36,7 +57,11 @@ export default async function AdminAccessKeysPage() {
           </Button>
         </div>
 
-        <AdminAccessKeyForm options={options} />
+        <AdminAccessKeyForm
+          initialEmail={initialEmail}
+          initialType={initialType}
+          options={options}
+        />
       </section>
     </main>
   );
