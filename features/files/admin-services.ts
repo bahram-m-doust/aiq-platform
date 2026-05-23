@@ -188,6 +188,46 @@ export async function adminArchiveFile({
   return after;
 }
 
+export async function adminUnarchiveFile({
+  fileId,
+  actor,
+}: {
+  fileId: string;
+  actor: UserProfile;
+}): Promise<BrandFileRecord> {
+  const before = await getFileById(fileId);
+  if (!before) adminFileError("File could not be found.");
+
+  if (before.status !== "ARCHIVED") {
+    return before;
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("files")
+    .update({ status: "UPLOADED" })
+    .eq("id", fileId)
+    .select(fileColumns)
+    .single();
+
+  if (error) throw error;
+
+  const after = toBrandFileRecord({ row: data as unknown as FileRow });
+
+  await logAudit({
+    actorUserId: actor.id,
+    actorRole: actor.global_role,
+    brandId: after.brandId,
+    action: "admin_file_unarchived",
+    entityType: "file",
+    entityId: after.id,
+    before: { file: toFileAuditMetadata(before) },
+    after: { file: toFileAuditMetadata(after) },
+  });
+
+  return after;
+}
+
 export async function adminDeleteFile({
   fileId,
   actor,

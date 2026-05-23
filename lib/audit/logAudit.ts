@@ -33,6 +33,7 @@ export const auditActions = [
   "specialist_file_approved",
   "admin_file_uploaded",
   "admin_file_archived",
+  "admin_file_unarchived",
   "admin_file_deleted",
   "module_uploaded",
   "module_sent_to_client",

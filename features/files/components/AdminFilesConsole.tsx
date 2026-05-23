@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
+import {
+  ArchiveIcon,
+  ArchiveRestoreIcon,
+  DownloadIcon,
+  TrashIcon,
+} from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,6 +17,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,11 +34,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
 import {
   adminArchiveFileAction,
   adminDeleteFileAction,
   adminDownloadFileAction,
+  adminUnarchiveFileAction,
   adminUploadFileAction,
 } from "@/features/files/admin-actions";
 import type { AdminBrandOption } from "@/features/files/admin-queries";
@@ -33,7 +49,7 @@ import {
   initialAdminFileUploadState,
 } from "@/features/files/admin-types";
 import { fileStatusLabels, fileVisibilityLabels } from "@/features/files/schema";
-import type { BrandFileRecord } from "@/features/files/types";
+import type { BrandFileRecord, FileStatus } from "@/features/files/types";
 import { fileVisibilities } from "@/features/files/types";
 
 function formatSize(bytes: number | null) {
@@ -41,6 +57,47 @@ function formatSize(bytes: number | null) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function statusBadgeClass(status: FileStatus) {
+  switch (status) {
+    case "ARCHIVED":
+      return "bg-muted text-muted-foreground";
+    case "OWNER_REJECTED":
+      return "bg-destructive/15 text-destructive";
+    case "OWNER_APPROVED":
+    case "CLIENT_APPROVED":
+    case "RAG_APPROVED":
+      return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
+    case "PENDING_OWNER_APPROVAL":
+    case "CLIENT_REVIEW":
+      return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
+    default:
+      return "bg-primary/10 text-primary";
+  }
+}
+
+function StatusBadge({ status }: { status: FileStatus }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+        statusBadgeClass(status),
+      )}
+    >
+      {fileStatusLabels[status]}
+    </span>
+  );
 }
 
 function BrandPicker({
@@ -119,8 +176,8 @@ function UploadForm({ brandId }: { brandId: string }) {
   );
 }
 
-function ArchiveButton({ fileId }: { fileId: string }) {
-  const [state, formAction] = useActionState(
+function ArchiveActionButton({ fileId }: { fileId: string }) {
+  const [, formAction] = useActionState(
     adminArchiveFileAction,
     initialAdminFileReviewState,
   );
@@ -128,43 +185,155 @@ function ArchiveButton({ fileId }: { fileId: string }) {
   return (
     <form action={formAction} className="inline-flex">
       <input name="file_id" type="hidden" value={fileId} />
-      <Button size="sm" type="submit" variant="outline">
-        {state.status === "success" ? "Archived" : "Archive"}
+      <Button
+        aria-label="Archive file"
+        size="icon-sm"
+        title="Archive"
+        type="submit"
+        variant="ghost"
+      >
+        <ArchiveIcon className="size-4" />
       </Button>
     </form>
   );
 }
 
-function DeleteButton({ fileId }: { fileId: string }) {
-  const [state, formAction] = useActionState(
-    adminDeleteFileAction,
+function UnarchiveActionButton({ fileId }: { fileId: string }) {
+  const [, formAction] = useActionState(
+    adminUnarchiveFileAction,
     initialAdminFileReviewState,
   );
 
   return (
-    <form action={formAction} className="inline-flex items-center gap-2">
+    <form action={formAction} className="inline-flex">
       <input name="file_id" type="hidden" value={fileId} />
-      <Input
-        aria-label="Type DELETE to confirm"
-        className="h-7 w-24"
-        name="confirm"
-        placeholder="DELETE"
-      />
-      <Button size="sm" type="submit" variant="destructive">
-        {state.status === "success" ? "Deleted" : "Delete"}
+      <Button
+        aria-label="Restore archived file"
+        size="icon-sm"
+        title="Unarchive"
+        type="submit"
+        variant="ghost"
+      >
+        <ArchiveRestoreIcon className="size-4" />
       </Button>
     </form>
   );
 }
 
-function DownloadForm({ fileId }: { fileId: string }) {
+function DeleteActionButton({ file }: { file: BrandFileRecord }) {
+  const [open, setOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleConfirm() {
+    setErrorMessage(null);
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.append("file_id", file.id);
+      const result = await adminDeleteFileAction(
+        initialAdminFileReviewState,
+        formData,
+      );
+      if (result.status === "error") {
+        setErrorMessage(result.message);
+        return;
+      }
+      setOpen(false);
+    });
+  }
+
+  function handleOpenChange(next: boolean) {
+    if (!isPending) {
+      setOpen(next);
+      if (!next) setErrorMessage(null);
+    }
+  }
+
+  return (
+    <Dialog onOpenChange={handleOpenChange} open={open}>
+      <Button
+        aria-label="Delete file"
+        onClick={() => setOpen(true)}
+        size="icon-sm"
+        title="Delete"
+        type="button"
+        variant="ghost"
+      >
+        <TrashIcon className="size-4 text-destructive" />
+      </Button>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete this file?</DialogTitle>
+          <DialogDescription>
+            <span className="block">
+              You are about to permanently delete{" "}
+              <span className="font-medium text-foreground">
+                {file.originalName}
+              </span>
+              .
+            </span>
+            <span className="mt-1 block">
+              This removes both the database row and the storage object.
+              This action cannot be undone.
+            </span>
+          </DialogDescription>
+        </DialogHeader>
+        {errorMessage ? (
+          <Alert variant="destructive">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
+        <DialogFooter>
+          <Button
+            disabled={isPending}
+            onClick={() => handleOpenChange(false)}
+            type="button"
+            variant="outline"
+          >
+            Cancel
+          </Button>
+          <Button
+            disabled={isPending}
+            onClick={handleConfirm}
+            type="button"
+            variant="destructive"
+          >
+            {isPending ? "Deleting..." : "Delete permanently"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DownloadButton({ fileId }: { fileId: string }) {
   return (
     <form action={adminDownloadFileAction} className="inline-flex">
       <input name="file_id" type="hidden" value={fileId} />
-      <Button size="sm" type="submit" variant="outline">
-        Download
+      <Button
+        aria-label="Download file"
+        size="icon-sm"
+        title="Download"
+        type="submit"
+        variant="ghost"
+      >
+        <DownloadIcon className="size-4" />
       </Button>
     </form>
+  );
+}
+
+function FileRowActions({ file }: { file: BrandFileRecord }) {
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <DownloadButton fileId={file.id} />
+      {file.status === "ARCHIVED" ? (
+        <UnarchiveActionButton fileId={file.id} />
+      ) : (
+        <ArchiveActionButton fileId={file.id} />
+      )}
+      <DeleteActionButton file={file} />
+    </div>
   );
 }
 
@@ -178,47 +347,55 @@ function FilesTable({ files }: { files: BrandFileRecord[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+    <div className="overflow-hidden rounded-lg border border-border">
+      <table className="w-full table-fixed text-sm">
+        <colgroup>
+          <col />
+          <col className="w-32" />
+          <col className="w-36" />
+          <col className="w-20" />
+          <col className="w-28" />
+          <col className="w-32" />
+        </colgroup>
+        <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
-            <th className="py-2 pr-3">Name</th>
-            <th className="py-2 pr-3">Visibility</th>
-            <th className="py-2 pr-3">Status</th>
-            <th className="py-2 pr-3">Size</th>
-            <th className="py-2 pr-3">Uploaded</th>
-            <th className="py-2 pr-3">By</th>
-            <th className="py-2 pr-3">Actions</th>
+            <th className="px-3 py-2">Name</th>
+            <th className="px-3 py-2">Visibility</th>
+            <th className="px-3 py-2">Status</th>
+            <th className="px-3 py-2">Size</th>
+            <th className="px-3 py-2">Uploaded</th>
+            <th className="px-3 py-2 text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
           {files.map((file) => (
             <tr
               key={file.id}
-              className={
-                file.status === "ARCHIVED"
-                  ? "border-t border-border text-muted-foreground"
-                  : "border-t border-border"
-              }
+              className={cn(
+                "border-t border-border",
+                file.status === "ARCHIVED" && "text-muted-foreground",
+              )}
             >
-              <td className="py-2 pr-3 font-medium">{file.originalName}</td>
-              <td className="py-2 pr-3">{fileVisibilityLabels[file.visibility]}</td>
-              <td className="py-2 pr-3">{fileStatusLabels[file.status]}</td>
-              <td className="py-2 pr-3">{formatSize(file.sizeBytes)}</td>
-              <td className="py-2 pr-3">
-                {file.createdAt
-                  ? new Date(file.createdAt).toLocaleString()
-                  : "—"}
+              <td className="truncate px-3 py-2 font-medium" title={file.originalName}>
+                {file.originalName}
+                {file.uploadedByEmail ? (
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {file.uploadedByEmail}
+                  </span>
+                ) : null}
               </td>
-              <td className="py-2 pr-3">{file.uploadedByEmail ?? "—"}</td>
-              <td className="py-2 pr-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <DownloadForm fileId={file.id} />
-                  {file.status !== "ARCHIVED" ? (
-                    <ArchiveButton fileId={file.id} />
-                  ) : null}
-                  <DeleteButton fileId={file.id} />
-                </div>
+              <td className="px-3 py-2 text-xs">
+                {fileVisibilityLabels[file.visibility]}
+              </td>
+              <td className="px-3 py-2">
+                <StatusBadge status={file.status} />
+              </td>
+              <td className="px-3 py-2 text-xs tabular-nums">
+                {formatSize(file.sizeBytes)}
+              </td>
+              <td className="px-3 py-2 text-xs">{formatDate(file.createdAt)}</td>
+              <td className="px-3 py-2">
+                <FileRowActions file={file} />
               </td>
             </tr>
           ))}
@@ -243,7 +420,7 @@ export function AdminFilesConsole({
         <CardHeader>
           <CardTitle>Brand selector</CardTitle>
           <CardDescription>
-            Pick a brand to upload, download, archive, or delete files.
+            Pick a brand to upload, download, archive, restore, or delete files.
           </CardDescription>
         </CardHeader>
         <CardContent>

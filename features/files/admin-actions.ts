@@ -8,6 +8,7 @@ import {
   adminArchiveFile,
   adminCreateSignedDownloadUrl,
   adminDeleteFile,
+  adminUnarchiveFile,
   adminUploadFileForBrand,
   isAdminFileError,
 } from "@/features/files/admin-services";
@@ -106,23 +107,44 @@ export async function adminArchiveFileAction(
   }
 }
 
+export async function adminUnarchiveFileAction(
+  _prev: AdminFileReviewState,
+  formData: FormData,
+): Promise<AdminFileReviewState> {
+  const { profile } = await requirePlatformOwner("/admin/files");
+  const fileId = readString(formData, "file_id");
+
+  if (!fileId) {
+    return { status: "error", message: "Missing file identifier." };
+  }
+
+  try {
+    const after = await adminUnarchiveFile({ fileId, actor: profile });
+    revalidatePath("/admin/files");
+    revalidatePath(adminFilesPathFor(after.brandId));
+    return { status: "success", message: "File restored." };
+  } catch (error) {
+    if (isAdminFileError(error)) {
+      return { status: "error", message: error.message };
+    }
+    logServerError({
+      label: "[admin-files] unarchive failed",
+      error,
+      metadata: { profileId: profile.id, fileId },
+    });
+    return { status: "error", message: "File could not be restored." };
+  }
+}
+
 export async function adminDeleteFileAction(
   _prev: AdminFileReviewState,
   formData: FormData,
 ): Promise<AdminFileReviewState> {
   const { profile } = await requirePlatformOwner("/admin/files");
   const fileId = readString(formData, "file_id");
-  const confirm = readString(formData, "confirm");
 
   if (!fileId) {
     return { status: "error", message: "Missing file identifier." };
-  }
-
-  if (confirm !== "DELETE") {
-    return {
-      status: "error",
-      message: "Type DELETE in the confirmation field to permanently remove this file.",
-    };
   }
 
   try {
