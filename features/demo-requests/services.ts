@@ -1,6 +1,5 @@
 import "server-only";
 
-import { createAccessKey } from "@/features/access/services";
 import {
   getDemoRequestById,
   hasPendingDemoRequestForUser,
@@ -11,11 +10,6 @@ import { toDemoRequestAuditMetadata } from "@/features/demo-requests/schema";
 import type { DemoRequestRecord } from "@/features/demo-requests/types";
 import type { UserProfile } from "@/features/auth/types";
 import { logAudit } from "@/lib/audit/logAudit";
-import { getResendEmailConfig, sendEmailWithResend } from "@/lib/email/sendEmail";
-import {
-  buildAccessKeyEmail,
-  buildAccessKeyRedeemUrl,
-} from "@/lib/email/templates";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -27,15 +21,6 @@ function demoRequestError(message: string): never {
 
 export function isDemoRequestError(error: unknown): error is DomainError {
   return isDomainErrorWithCode(error, CODE);
-}
-
-const DEFAULT_DEMO_EXPIRY_DAYS = 14;
-
-function defaultDemoExpiryIso() {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() + DEFAULT_DEMO_EXPIRY_DAYS);
-  date.setUTCHours(23, 59, 59, 999);
-  return date.toISOString();
 }
 
 export async function createDemoRequest({
@@ -83,21 +68,15 @@ export async function createDemoRequest({
   return record;
 }
 
-export async function approveDemoRequest({
+export async function markDemoRequestApproved({
   demoRequestId,
   reviewer,
-  appOrigin,
-  planId = null,
-  expiresAt,
-  sendEmail = true,
+  accessKeyId,
 }: {
   demoRequestId: string;
   reviewer: UserProfile;
-  appOrigin: string;
-  planId?: string | null;
-  expiresAt?: string;
-  sendEmail?: boolean;
-}): Promise<{ request: DemoRequestRecord; rawKey: string }> {
+  accessKeyId: string;
+}): Promise<DemoRequestRecord> {
   const before = await getDemoRequestById(demoRequestId);
 
   if (!before) {
@@ -108,17 +87,6 @@ export async function approveDemoRequest({
     demoRequestError("This demo request has already been resolved.");
   }
 
-  const expiryIso = expiresAt ?? defaultDemoExpiryIso();
-
-  const created = await createAccessKey({
-    type: "DEMO_ACCESS",
-    targetEmail: before.email,
-    planId,
-    expiresAt: expiryIso,
-    createdByUserId: reviewer.id,
-    actorRole: reviewer.global_role,
-  });
-
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("demo_requests")
@@ -126,7 +94,7 @@ export async function approveDemoRequest({
       status: "APPROVED",
       reviewed_by: reviewer.id,
       reviewed_at: new Date().toISOString(),
-      approved_access_key_id: created.accessKey.id,
+      approved_access_key_id: accessKeyId,
       updated_at: new Date().toISOString(),
     })
     .eq("id", demoRequestId)
@@ -141,35 +109,6 @@ export async function approveDemoRequest({
 
   const after = toDemoRequestRecord(data as unknown as DemoRequestRow);
 
-  let warning: string | null = null;
-  if (sendEmail) {
-    const config = getResendEmailConfig();
-    if (config.ok) {
-      const redeemUrl = buildAccessKeyRedeemUrl({
-        origin: appOrigin,
-        rawKey: created.rawKey,
-        type: "DEMO_ACCESS",
-      });
-      const email = buildAccessKeyEmail({
-        rawKey: created.rawKey,
-        redeemUrl,
-        type: "DEMO_ACCESS",
-        expiresAt: expiryIso,
-      });
-      const result = await sendEmailWithResend({
-        to: before.email,
-        subject: email.subject,
-        text: email.text,
-        html: email.html,
-      });
-      if (!result.ok) {
-        warning = result.message;
-      }
-    } else {
-      warning = config.message;
-    }
-  }
-
   await logAudit({
     actorUserId: reviewer.id,
     actorRole: reviewer.global_role,
@@ -177,13 +116,10 @@ export async function approveDemoRequest({
     entityType: "demo_request",
     entityId: after.id,
     before: toDemoRequestAuditMetadata(before),
-    after: {
-      ...toDemoRequestAuditMetadata(after),
-      email_delivery_warning: warning,
-    },
+    after: toDemoRequestAuditMetadata(after),
   });
 
-  return { request: after, rawKey: created.rawKey };
+  return after;
 }
 
 export async function rejectDemoRequest({

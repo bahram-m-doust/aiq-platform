@@ -36,7 +36,9 @@ export function isBrandRole(value: string): value is BrandRole {
 }
 
 export function requiresTargetBrand(type: AdminAccessKeyType) {
-  return type === "CLAIM_BRAND" || type === "JOIN_BRAND";
+  return (
+    type === "CLAIM_BRAND" || type === "JOIN_BRAND" || type === "DEMO_ACCESS"
+  );
 }
 
 export function allowsTargetBrand(type: AdminAccessKeyType) {
@@ -44,7 +46,13 @@ export function allowsTargetBrand(type: AdminAccessKeyType) {
 }
 
 export function requiresTargetRole(type: AdminAccessKeyType) {
-  return type === "CLAIM_BRAND" || type === "JOIN_BRAND";
+  return (
+    type === "CLAIM_BRAND" || type === "JOIN_BRAND" || type === "DEMO_ACCESS"
+  );
+}
+
+export function requiresPlan(type: AdminAccessKeyType) {
+  return type === "DEMO_ACCESS";
 }
 
 export function allowsPlan(type: AdminAccessKeyType) {
@@ -97,6 +105,11 @@ export function validateAdminAccessKeyFormData(formData: FormData): {
   const planId = allowsPlan(typeValue)
     ? readOptionalId(formData, "plan_id")
     : null;
+
+  if (requiresPlan(typeValue) && !planId) {
+    return { data: null, error: "Choose a plan for this key type." };
+  }
+
   const expiresAt = toEndOfDayUtcIso(readString(formData, "expires_at"));
 
   if (!expiresAt) {

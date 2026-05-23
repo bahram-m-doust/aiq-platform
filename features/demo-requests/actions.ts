@@ -2,13 +2,11 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 
-import { getTrustedRequestOrigin } from "@/features/auth/origins";
 import {
   requirePlatformOwner,
   requireUserProfile,
 } from "@/features/auth/queries";
 import {
-  approveDemoRequest,
   createDemoRequest,
   isDemoRequestError,
   rejectDemoRequest,
@@ -85,34 +83,6 @@ export async function createDemoRequestAction(
     }
     logServerError({ label: "[demo-requests]", error, metadata: { action: "create" } });
     return createErrorState("Demo request could not be submitted.");
-  }
-}
-
-export async function approveDemoRequestAction(
-  _previousState: ReviewDemoRequestFormState,
-  formData: FormData,
-): Promise<ReviewDemoRequestFormState> {
-  const { profile } = await requirePlatformOwner("/admin/demo-requests");
-  const id = readDemoRequestId(formData);
-
-  if (id.error || !id.id) {
-    return reviewErrorState(id.error ?? "Missing demo request identifier.");
-  }
-
-  try {
-    await approveDemoRequest({
-      demoRequestId: id.id,
-      reviewer: profile,
-      appOrigin: await getTrustedRequestOrigin(),
-    });
-    revalidateDemoRequestSurfaces();
-    return reviewSuccessState("Demo access key created and emailed.");
-  } catch (error) {
-    if (isDemoRequestError(error)) {
-      return reviewErrorState(error.message);
-    }
-    logServerError({ label: "[demo-requests]", error, metadata: { action: "approve" } });
-    return reviewErrorState("Demo request could not be approved.");
   }
 }
 

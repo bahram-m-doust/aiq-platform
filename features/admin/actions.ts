@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import {
   buildAdminAccessKeySuccessState,
@@ -14,11 +14,14 @@ import {
   createAccessKey,
   updateAccessKeyEmailDelivery,
 } from "@/features/access/services";
+import { markDemoRequestApproved } from "@/features/demo-requests/services";
+import { CACHE_TAGS } from "@/lib/cache/tags";
 import { sendEmailWithResend, getResendEmailConfig } from "@/lib/email/sendEmail";
 import {
   buildAccessKeyEmail,
   buildAccessKeyRedeemUrl,
 } from "@/lib/email/templates";
+import { logServerError } from "@/lib/logging/server";
 
 function errorState(message: string): AdminAccessKeyFormState {
   return { status: "error", message };
@@ -108,6 +111,34 @@ export async function createAdminAccessKeyAction(
         }
       } else {
         warning = emailResult.message;
+      }
+    }
+
+    const demoRequestIdRaw = formData.get("demo_request_id");
+    const demoRequestId =
+      typeof demoRequestIdRaw === "string" && demoRequestIdRaw.trim().length > 0
+        ? demoRequestIdRaw.trim()
+        : null;
+
+    if (demoRequestId) {
+      try {
+        await markDemoRequestApproved({
+          demoRequestId,
+          reviewer: profile,
+          accessKeyId: accessKey.id,
+        });
+        revalidateTag(CACHE_TAGS.demoRequests, "max");
+        revalidatePath("/admin/demo-requests");
+        revalidatePath("/admin");
+      } catch (error) {
+        logServerError({
+          label: "[admin] demo request approval link failed",
+          error,
+          metadata: { demoRequestId, accessKeyId: accessKey.id },
+        });
+        warning = warning
+          ? `${warning} Demo request row could not be updated.`
+          : "Access key was created but the demo request row could not be updated.";
       }
     }
 

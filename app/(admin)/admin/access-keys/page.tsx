@@ -36,6 +36,7 @@ export default async function AdminAccessKeysPage({
   const initialType: AdminAccessKeyType = isAdminAccessKeyType(typeParam)
     ? typeParam
     : "CREATE_BRAND";
+  const demoRequestId = readSearchString(params, "demo_request_id");
 
   return (
     <main className="min-h-svh bg-background px-6 py-10 text-foreground">
@@ -58,6 +59,7 @@ export default async function AdminAccessKeysPage({
         </div>
 
         <AdminAccessKeyForm
+          demoRequestId={demoRequestId}
           initialEmail={initialEmail}
           initialType={initialType}
           options={options}

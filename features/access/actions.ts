@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUserProfile } from "@/features/auth/queries";
+import { activateDemoAccessForUser } from "@/features/access/demo-access-grant";
 import { redeemAccessKey } from "@/features/access/services";
 import type {
   AccessKeyRedemptionFormState,
@@ -81,7 +82,7 @@ export async function redeemDashboardAccessKeyAction(
     userId: profile.id,
     userEmail: profile.email,
     actorRole: profile.global_role,
-    allowedTypes: ["CREATE_BRAND", "CLAIM_BRAND"],
+    allowedTypes: ["CREATE_BRAND", "CLAIM_BRAND", "DEMO_ACCESS"],
     beforeRedeem: async ({ accessKey, userId, userEmail, now }) => {
       if (accessKey.type !== "CLAIM_BRAND") {
         return null;
@@ -129,6 +130,44 @@ export async function redeemDashboardAccessKeyAction(
       return {
         status: "error",
         message: "Brand could not be claimed.",
+      };
+    }
+
+    revalidatePath("/dashboard");
+    redirect("/dashboard");
+  } else if (result.nextAction.kind === "DEMO_ACCESS_CONTINUE") {
+    const { targetBrandId, planId } = result.nextAction;
+
+    if (!targetBrandId || !planId) {
+      return {
+        status: "error",
+        message:
+          "This demo access key is missing a target brand or plan and cannot be activated.",
+      };
+    }
+
+    try {
+      await activateDemoAccessForUser({
+        accessKey: result.accessKey,
+        brandId: targetBrandId,
+        planId,
+        userId: profile.id,
+        userEmail: profile.email,
+        actorRole: profile.global_role,
+      });
+    } catch (error) {
+      logServerError({
+        label: "[access] demo grant failed",
+        error,
+        metadata: {
+          profileId: profile.id,
+          accessKeyId: result.accessKey.id,
+        },
+      });
+
+      return {
+        status: "error",
+        message: "Demo access could not be activated.",
       };
     }
 

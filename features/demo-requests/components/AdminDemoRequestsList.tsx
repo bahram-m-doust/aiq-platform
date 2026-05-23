@@ -12,38 +12,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  approveDemoRequestAction,
-  rejectDemoRequestAction,
-} from "@/features/demo-requests/actions";
+import { rejectDemoRequestAction } from "@/features/demo-requests/actions";
 import type { DemoRequestRecord } from "@/features/demo-requests/types";
 import { initialReviewDemoRequestFormState } from "@/features/demo-requests/types";
 
-function ApproveButtons({ request }: { request: DemoRequestRecord }) {
-  const [approveState, approveAction] = useActionState(
-    approveDemoRequestAction,
-    initialReviewDemoRequestFormState,
-  );
+function ReviewActions({ request }: { request: DemoRequestRecord }) {
   const [rejectState, rejectAction] = useActionState(
     rejectDemoRequestAction,
     initialReviewDemoRequestFormState,
   );
-  const customizeHref = `/admin/access-keys?email=${encodeURIComponent(
+  const reviewHref = `/admin/access-keys?email=${encodeURIComponent(
     request.email,
   )}&type=DEMO_ACCESS&demo_request_id=${encodeURIComponent(request.id)}`;
 
   return (
     <div className="space-y-3">
-      {approveState.status === "error" ? (
-        <Alert variant="destructive">
-          <AlertDescription>{approveState.message}</AlertDescription>
-        </Alert>
-      ) : null}
-      {approveState.status === "success" ? (
-        <Alert>
-          <AlertDescription>{approveState.message}</AlertDescription>
-        </Alert>
-      ) : null}
       {rejectState.status === "error" ? (
         <Alert variant="destructive">
           <AlertDescription>{rejectState.message}</AlertDescription>
@@ -55,16 +38,8 @@ function ApproveButtons({ request }: { request: DemoRequestRecord }) {
         </Alert>
       ) : null}
       <div className="flex flex-wrap gap-2">
-        <form action={approveAction}>
-          <input
-            name="demo_request_id"
-            type="hidden"
-            value={request.id}
-          />
-          <Button type="submit">Approve & email key</Button>
-        </form>
-        <Button asChild type="button" variant="outline">
-          <a href={customizeHref}>Customize</a>
+        <Button asChild type="button">
+          <a href={reviewHref}>Review &amp; approve</a>
         </Button>
       </div>
       <form action={rejectAction} className="space-y-2">
@@ -125,7 +100,7 @@ export function AdminDemoRequestsList({
                 No message provided.
               </p>
             )}
-            <ApproveButtons request={request} />
+            <ReviewActions request={request} />
           </CardContent>
         </Card>
       ))}

@@ -24,6 +24,9 @@ import {
 } from "@/components/ui/select";
 import {
   initialAdminAccessKeyFormState,
+  allowsPlan as allowsPlanForType,
+  requiresPlan as requiresPlanForType,
+  requiresTargetBrand,
   requiresTargetRole,
 } from "@/features/admin/access-key-schema";
 import { createAdminAccessKeyAction } from "@/features/admin/actions";
@@ -69,10 +72,12 @@ export function AdminAccessKeyForm({
   options,
   initialType = "CREATE_BRAND",
   initialEmail = "",
+  demoRequestId = "",
 }: {
   options: AdminAccessKeyFormOptions;
   initialType?: AdminAccessKeyType;
   initialEmail?: string;
+  demoRequestId?: string;
 }) {
   const [state, formAction] = useActionState(
     createAdminAccessKeyAction,
@@ -83,9 +88,10 @@ export function AdminAccessKeyForm({
     defaultRoleForType(initialType),
   );
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const needsBrand = type === "CLAIM_BRAND" || type === "JOIN_BRAND";
-  const allowsBrand = needsBrand || type === "DEMO_ACCESS";
-  const allowsPlan = type === "CREATE_BRAND" || type === "DEMO_ACCESS";
+  const needsBrand = requiresTargetBrand(type);
+  const allowsBrand = needsBrand;
+  const allowsPlan = allowsPlanForType(type);
+  const needsPlan = requiresPlanForType(type);
   const needsRole = requiresTargetRole(type);
 
   function handleTypeChange(value: string) {
@@ -106,6 +112,13 @@ export function AdminAccessKeyForm({
         </CardHeader>
         <CardContent>
           <form action={formAction} className="grid gap-5">
+            {demoRequestId ? (
+              <input
+                name="demo_request_id"
+                type="hidden"
+                value={demoRequestId}
+              />
+            ) : null}
             {state.status === "error" ? (
               <Alert variant="destructive">
                 <AlertDescription>{state.message}</AlertDescription>
@@ -195,13 +208,20 @@ export function AdminAccessKeyForm({
 
               {allowsPlan ? (
                 <div className="space-y-2">
-                  <Label htmlFor="plan_id">Plan optional</Label>
-                  <Select defaultValue="none" name="plan_id">
+                  <Label htmlFor="plan_id">
+                    Plan{needsPlan ? "" : " optional"}
+                  </Label>
+                  <Select
+                    defaultValue={needsPlan ? undefined : "none"}
+                    name="plan_id"
+                  >
                     <SelectTrigger id="plan_id">
-                      <SelectValue />
+                      <SelectValue placeholder="Select plan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No plan</SelectItem>
+                      {!needsPlan ? (
+                        <SelectItem value="none">No plan</SelectItem>
+                      ) : null}
                       {options.plans.map((plan) => (
                         <SelectItem key={plan.id} value={plan.id}>
                           {plan.name}
