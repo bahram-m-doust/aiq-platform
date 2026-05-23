@@ -25,6 +25,7 @@ import type {
   ReviewChangeRequestInput,
 } from "@/features/change-requests/types";
 import { logAudit } from "@/lib/audit/logAudit";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type ChangeRequestRow = {
@@ -61,18 +62,14 @@ const changeRequestColumns = [
   "updated_at",
 ].join(", ");
 
-class ChangeRequestError extends Error {
-  name = "ChangeRequestError";
-}
+const CODE = "change_request";
 
 function changeRequestError(message: string): never {
-  throw new ChangeRequestError(message);
+  throw new DomainError(CODE, message);
 }
 
-export function isChangeRequestError(
-  error: unknown,
-): error is ChangeRequestError {
-  return error instanceof ChangeRequestError;
+export function isChangeRequestError(error: unknown): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 async function latestIntakeIsLocked(brandId: string) {

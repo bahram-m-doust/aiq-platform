@@ -27,6 +27,7 @@ import type {
   IntakeSession,
 } from "@/features/intake/types";
 import { logAudit } from "@/lib/audit/logAudit";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type IntakeSessionRow = {
@@ -52,18 +53,16 @@ type SnapshotRow = {
   id: string;
 };
 
-class FinalSubmitIntakeError extends Error {
-  name = "FinalSubmitIntakeError";
-}
+const CODE = "final_submit_intake";
 
 function finalSubmitError(message: string): never {
-  throw new FinalSubmitIntakeError(message);
+  throw new DomainError(CODE, message);
 }
 
 export function isFinalSubmitIntakeError(
   error: unknown,
-): error is FinalSubmitIntakeError {
-  return error instanceof FinalSubmitIntakeError;
+): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 function toIntakeSession(row: IntakeSessionRow): IntakeSession {

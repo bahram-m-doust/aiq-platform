@@ -1,15 +1,13 @@
 import "server-only";
 
-export class ModuleServiceError extends Error {
-  name = "ModuleServiceError";
-}
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
+
+const CODE = "module_service";
 
 export function moduleServiceError(message: string): never {
-  throw new ModuleServiceError(message);
+  throw new DomainError(CODE, message);
 }
 
-export function isModuleServiceError(
-  error: unknown,
-): error is ModuleServiceError {
-  return error instanceof ModuleServiceError;
+export function isModuleServiceError(error: unknown): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }

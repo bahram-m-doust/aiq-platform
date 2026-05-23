@@ -3,17 +3,16 @@ import "server-only";
 import OpenAI, { toFile } from "openai";
 
 import { readTrimmedRuntimeEnv } from "@/lib/env/runtime";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 
 let openaiClient: OpenAI | null = null;
 
-export class OpenAIFileSearchConfigError extends Error {
-  name = "OpenAIFileSearchConfigError";
-}
+const CODE = "openai_file_search_config";
 
 export function isOpenAIFileSearchConfigError(
   error: unknown,
-): error is OpenAIFileSearchConfigError {
-  return error instanceof OpenAIFileSearchConfigError;
+): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 export function hasOpenAIFileSearchEnv() {
@@ -28,7 +27,8 @@ function getOpenAIClient() {
   const apiKey = readTrimmedRuntimeEnv("OPENAI_API_KEY");
 
   if (!apiKey) {
-    throw new OpenAIFileSearchConfigError(
+    throw new DomainError(
+      CODE,
       "OPENAI_API_KEY is required before RAG sync can run.",
     );
   }

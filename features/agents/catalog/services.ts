@@ -8,20 +8,19 @@ import {
 import type { CatalogAgentKey } from "@/features/agents/catalog/types";
 import type { UserProfile } from "@/features/auth/types";
 import { logAudit } from "@/lib/audit/logAudit";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export class AgentActivationServiceError extends Error {
-  name = "AgentActivationServiceError";
-}
+const CODE = "agent_activation";
 
 export function isAgentActivationServiceError(
   error: unknown,
-): error is AgentActivationServiceError {
-  return error instanceof AgentActivationServiceError;
+): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 function activationError(message: string): never {
-  throw new AgentActivationServiceError(message);
+  throw new DomainError(CODE, message);
 }
 
 async function updateEntitlementToActive({

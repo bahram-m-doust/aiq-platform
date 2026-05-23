@@ -26,18 +26,17 @@ import type {
   FileReviewDecision,
 } from "@/features/files/types";
 import { logAudit } from "@/lib/audit/logAudit";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-class FileServiceError extends Error {
-  name = "FileServiceError";
-}
+const CODE = "file_service";
 
 function fileServiceError(message: string): never {
-  throw new FileServiceError(message);
+  throw new DomainError(CODE, message);
 }
 
-export function isFileServiceError(error: unknown): error is FileServiceError {
-  return error instanceof FileServiceError;
+export function isFileServiceError(error: unknown): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 async function insertFileAuditLog({

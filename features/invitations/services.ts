@@ -22,6 +22,7 @@ import type {
 import { sendEmailWithResend, getResendEmailConfig } from "@/lib/email/sendEmail";
 import { buildSpecialistInvitationEmail } from "@/lib/email/templates";
 import { logAudit } from "@/lib/audit/logAudit";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type BrandRow = {
@@ -47,16 +48,14 @@ type MembershipRow = {
   invited_by: string | null;
 };
 
-class InvitationError extends Error {
-  name = "InvitationError";
-}
+const CODE = "invitation";
 
 function invitationError(message: string): never {
-  throw new InvitationError(message);
+  throw new DomainError(CODE, message);
 }
 
-export function isInvitationError(error: unknown): error is InvitationError {
-  return error instanceof InvitationError;
+export function isInvitationError(error: unknown): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 function isActiveEntitlement(row: EntitlementRow, now = new Date()) {

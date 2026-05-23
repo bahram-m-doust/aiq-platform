@@ -19,6 +19,7 @@ import type {
 } from "@/features/agents/runs/types";
 import type { UserProfile } from "@/features/auth/types";
 import { logAudit } from "@/lib/audit/logAudit";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type AgentRunContextRow = {
@@ -45,18 +46,14 @@ type AgentRunRow = {
   id: string;
 };
 
-export class AgentRunServiceError extends Error {
-  name = "AgentRunServiceError";
-}
+const CODE = "agent_run_service";
 
-export function isAgentRunServiceError(
-  error: unknown,
-): error is AgentRunServiceError {
-  return error instanceof AgentRunServiceError;
+export function isAgentRunServiceError(error: unknown): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 function runError(message: string): never {
-  throw new AgentRunServiceError(message);
+  throw new DomainError(CODE, message);
 }
 
 async function getAgentRunContext(agentKey: CatalogAgentKey) {

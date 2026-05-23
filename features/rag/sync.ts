@@ -12,6 +12,7 @@ import { getRagApprovedFilesForSync } from "@/features/rag/queries";
 import { toRagSyncAuditMetadata } from "@/features/rag/schema";
 import type { RagApprovedSyncFile, RagSyncResult } from "@/features/rag/types";
 import { logAudit } from "@/lib/audit/logAudit";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type BrandRow = {
@@ -27,18 +28,14 @@ type KnowledgeBaseRow = {
   status: string | null;
 };
 
-class RagSyncServiceError extends Error {
-  name = "RagSyncServiceError";
-}
+const CODE = "rag_sync";
 
-export function isRagSyncServiceError(
-  error: unknown,
-): error is RagSyncServiceError {
-  return error instanceof RagSyncServiceError;
+export function isRagSyncServiceError(error: unknown): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 function ragSyncError(message: string): never {
-  throw new RagSyncServiceError(message);
+  throw new DomainError(CODE, message);
 }
 
 function knowledgeFileIds(files: Pick<RagApprovedSyncFile, "knowledgeFileId">[]) {

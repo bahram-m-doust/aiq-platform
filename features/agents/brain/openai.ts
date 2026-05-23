@@ -7,17 +7,14 @@ import {
   toBrandBrainDisplaySources,
 } from "@/features/agents/brain/schema";
 import { readTrimmedRuntimeEnv } from "@/lib/env/runtime";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 
 let openaiClient: OpenAI | null = null;
 
-export class OpenAIBrainConfigError extends Error {
-  name = "OpenAIBrainConfigError";
-}
+const CODE = "openai_brain_config";
 
-export function isOpenAIBrainConfigError(
-  error: unknown,
-): error is OpenAIBrainConfigError {
-  return error instanceof OpenAIBrainConfigError;
+export function isOpenAIBrainConfigError(error: unknown): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 export function getBrandBrainModel() {
@@ -32,7 +29,8 @@ function getOpenAIClient() {
   const apiKey = readTrimmedRuntimeEnv("OPENAI_API_KEY");
 
   if (!apiKey) {
-    throw new OpenAIBrainConfigError(
+    throw new DomainError(
+      CODE,
       "OPENAI_API_KEY is required before Brand Brain can run.",
     );
   }

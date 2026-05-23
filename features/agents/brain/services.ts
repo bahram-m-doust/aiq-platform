@@ -12,24 +12,21 @@ import {
 } from "@/features/agents/brain/schema";
 import type { BrandBrainRunResult } from "@/features/agents/brain/types";
 import { logAudit } from "@/lib/audit/logAudit";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type AgentRunRow = {
   id: string;
 };
 
-export class BrandBrainServiceError extends Error {
-  name = "BrandBrainServiceError";
-}
+const CODE = "brand_brain_service";
 
-export function isBrandBrainServiceError(
-  error: unknown,
-): error is BrandBrainServiceError {
-  return error instanceof BrandBrainServiceError;
+export function isBrandBrainServiceError(error: unknown): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 function brainError(message: string): never {
-  throw new BrandBrainServiceError(message);
+  throw new DomainError(CODE, message);
 }
 
 async function insertAgentRun({

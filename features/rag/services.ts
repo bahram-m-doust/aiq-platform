@@ -13,6 +13,7 @@ import type {
   RagStatus,
 } from "@/features/rag/types";
 import { logAudit } from "@/lib/audit/logAudit";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { UserProfile } from "@/features/auth/types";
 
@@ -38,18 +39,16 @@ const knowledgeFileColumns = [
   "created_at",
 ].join(", ");
 
-class RagApprovalServiceError extends Error {
-  name = "RagApprovalServiceError";
-}
+const CODE = "rag_approval";
 
 function ragApprovalError(message: string): never {
-  throw new RagApprovalServiceError(message);
+  throw new DomainError(CODE, message);
 }
 
 export function isRagApprovalServiceError(
   error: unknown,
-): error is RagApprovalServiceError {
-  return error instanceof RagApprovalServiceError;
+): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 async function requireQueueItem(artifactId: string) {

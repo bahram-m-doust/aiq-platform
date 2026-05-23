@@ -10,17 +10,16 @@ import {
 import type { AgentKnowledgeModuleScope } from "@/features/agents/runs/types";
 import type { CatalogAgentKey } from "@/features/agents/catalog/types";
 import { readTrimmedRuntimeEnv } from "@/lib/env/runtime";
+import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 
 let openaiClient: OpenAI | null = null;
 
-export class OpenAIAgentRunConfigError extends Error {
-  name = "OpenAIAgentRunConfigError";
-}
+const CODE = "openai_agent_run_config";
 
 export function isOpenAIAgentRunConfigError(
   error: unknown,
-): error is OpenAIAgentRunConfigError {
-  return error instanceof OpenAIAgentRunConfigError;
+): error is DomainError {
+  return isDomainErrorWithCode(error, CODE);
 }
 
 export function getAgentRunModel() {
@@ -39,7 +38,8 @@ function getOpenAIClient() {
   const apiKey = readTrimmedRuntimeEnv("OPENAI_API_KEY");
 
   if (!apiKey) {
-    throw new OpenAIAgentRunConfigError(
+    throw new DomainError(
+      CODE,
       "OPENAI_API_KEY is required before agents can run.",
     );
   }
