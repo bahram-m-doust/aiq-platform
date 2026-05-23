@@ -6,6 +6,9 @@ node_modules/
 .env.*
 !.env.example
 
+# Local deployment notes that may include copied secret values
+NETLIFY_ENV_SETUP.md
+
 # Next.js and deployment output
 .next/
 out/
