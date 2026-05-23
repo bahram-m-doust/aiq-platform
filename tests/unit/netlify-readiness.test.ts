@@ -26,6 +26,7 @@ describe("Netlify readiness", () => {
 
     expect(netlifyConfig).toContain('command = "npm run build"');
     expect(netlifyConfig).toContain('publish = ".next"');
+    expect(netlifyConfig).toContain('package = "@netlify/plugin-nextjs"');
     expect(nextConfig).not.toMatch(/output\s*:\s*["']export["']/);
   });
 
@@ -50,6 +51,7 @@ describe("Netlify readiness", () => {
     expect(doc).toContain("DATABASE_URL");
     expect(doc).toContain("SECRETS_SCAN_OMIT_KEYS");
     expect(doc).toContain("SECRETS_SCAN_ENABLED=false");
+    expect(doc).toContain("0 new function(s) to upload");
     expect(doc).toContain("/api/health");
   });
 

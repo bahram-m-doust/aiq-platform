@@ -13,6 +13,11 @@ Use these Netlify build settings:
 The repository also includes `netlify.toml` with the same values. Do not add
 secrets to `netlify.toml`.
 
+`@netlify/plugin-nextjs` is explicitly enabled because a raw `.next` publish
+uploads no Next.js functions. A healthy Netlify deploy should not say
+`0 new function(s) to upload` for this app; it should run the Next.js runtime
+adapter and create server functions for App Router dynamic routes.
+
 ## Environment Variables
 
 Set these in the Netlify dashboard with the narrowest scope that still supports
