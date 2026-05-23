@@ -16,6 +16,7 @@ import { initialIntakeBuilderFormState } from "@/features/admin/intake-builder/s
 import type { IntakeBuilderSection } from "@/features/admin/intake-builder/types";
 import {
   ArchiveSectionButton,
+  UnarchiveSectionButton,
   ReorderButton,
 } from "@/features/admin/intake-builder/components/IntakeBuilderControls";
 import { QuestionCreateForm } from "@/features/admin/intake-builder/components/IntakeBuilderCreateForms";
@@ -70,7 +71,9 @@ export function SectionEditor({ section }: { section: IntakeBuilderSection }) {
               />
               <ArchiveSectionButton sectionId={section.id} />
             </>
-          ) : null}
+          ) : (
+            <UnarchiveSectionButton sectionId={section.id} />
+          )}
         </div>
       </div>
 

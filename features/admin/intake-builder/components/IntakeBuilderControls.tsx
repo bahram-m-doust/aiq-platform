@@ -1,7 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
-import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon } from "lucide-react";
+import {
+  ArchiveIcon,
+  ArchiveRestoreIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +14,8 @@ import {
   archiveIntakeSectionAction,
   reorderIntakeQuestionAction,
   reorderIntakeSectionAction,
+  unarchiveIntakeQuestionAction,
+  unarchiveIntakeSectionAction,
 } from "@/features/admin/intake-builder/actions";
 import { initialIntakeBuilderFormState } from "@/features/admin/intake-builder/schema";
 import { StatusMessage } from "@/features/admin/intake-builder/components/IntakeBuilderShared";
@@ -78,6 +85,46 @@ export function ArchiveQuestionButton({ questionId }: { questionId: string }) {
         <Button size="sm" type="submit" variant="destructive">
           <ArchiveIcon className="size-4" />
           Archive
+        </Button>
+      </form>
+      <StatusMessage state={state} />
+    </div>
+  );
+}
+
+export function UnarchiveSectionButton({ sectionId }: { sectionId: string }) {
+  const [state, formAction] = useActionState(
+    unarchiveIntakeSectionAction,
+    initialIntakeBuilderFormState,
+  );
+
+  return (
+    <div className="space-y-2">
+      <form action={formAction}>
+        <input name="section_id" type="hidden" value={sectionId} />
+        <Button type="submit" variant="outline">
+          <ArchiveRestoreIcon className="size-4" />
+          Unarchive section
+        </Button>
+      </form>
+      <StatusMessage state={state} />
+    </div>
+  );
+}
+
+export function UnarchiveQuestionButton({ questionId }: { questionId: string }) {
+  const [state, formAction] = useActionState(
+    unarchiveIntakeQuestionAction,
+    initialIntakeBuilderFormState,
+  );
+
+  return (
+    <div className="space-y-2">
+      <form action={formAction}>
+        <input name="question_id" type="hidden" value={questionId} />
+        <Button size="sm" type="submit" variant="outline">
+          <ArchiveRestoreIcon className="size-4" />
+          Unarchive
         </Button>
       </form>
       <StatusMessage state={state} />

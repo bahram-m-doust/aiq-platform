@@ -391,6 +391,66 @@ export async function archiveIntakeQuestion({
   return after;
 }
 
+export async function unarchiveIntakeSection({
+  sectionId,
+  actor,
+}: {
+  sectionId: string;
+  actor: AuditActor;
+}) {
+  const admin = createAdminClient();
+  const before = await getIntakeBuilderSectionById(sectionId);
+
+  if (!before) {
+    throw new Error("Section could not be found.");
+  }
+
+  const { data: activeRows, error: activeError } = await admin
+    .from("question_sections")
+    .select("order_index")
+    .eq("is_active", true);
+
+  if (activeError) {
+    throw activeError;
+  }
+
+  const nextOrderIndex =
+    ((activeRows ?? []) as { order_index: number | null }[]).reduce(
+      (max, row) => Math.max(max, row.order_index ?? 0),
+      0,
+    ) + 1;
+
+  const { data, error } = await admin
+    .from("question_sections")
+    .update({
+      is_active: true,
+      order_index: nextOrderIndex,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", sectionId)
+    .select(
+      "id, key, title, description, order_index, is_required, is_active, created_at, updated_at",
+    )
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  const after = toIntakeBuilderSection(data as IntakeBuilderSectionRow);
+  await logAudit({
+    actorUserId: actor.id,
+    actorRole: actorRole(actor),
+    action: "intake_section_unarchived",
+    entityType: "question_section",
+    entityId: after.id,
+    before: sectionAuditShape(before),
+    after: sectionAuditShape(after),
+  });
+
+  return after;
+}
+
 export async function reorderIntakeSection({
   sectionId,
   direction,
@@ -466,6 +526,67 @@ export async function reorderIntakeSection({
   });
 
   return current;
+}
+
+export async function unarchiveIntakeQuestion({
+  questionId,
+  actor,
+}: {
+  questionId: string;
+  actor: AuditActor;
+}) {
+  const admin = createAdminClient();
+  const before = await getIntakeBuilderQuestionById(questionId);
+
+  if (!before) {
+    throw new Error("Question could not be found.");
+  }
+
+  const { data: activeRows, error: activeError } = await admin
+    .from("questions")
+    .select("order_index")
+    .eq("section_id", before.sectionId)
+    .eq("is_active", true);
+
+  if (activeError) {
+    throw activeError;
+  }
+
+  const nextOrderIndex =
+    ((activeRows ?? []) as { order_index: number | null }[]).reduce(
+      (max, row) => Math.max(max, row.order_index ?? 0),
+      0,
+    ) + 1;
+
+  const { data, error } = await admin
+    .from("questions")
+    .update({
+      is_active: true,
+      order_index: nextOrderIndex,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", questionId)
+    .select(
+      "id, section_id, key, question_text, help_text, input_type, is_required, is_active, order_index, validation_schema, created_at, updated_at",
+    )
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  const after = toIntakeBuilderQuestion(data as IntakeBuilderQuestionRow);
+  await logAudit({
+    actorUserId: actor.id,
+    actorRole: actorRole(actor),
+    action: "intake_question_unarchived",
+    entityType: "question",
+    entityId: after.id,
+    before: questionAuditShape(before),
+    after: questionAuditShape(after),
+  });
+
+  return after;
 }
 
 export async function reorderIntakeQuestion({

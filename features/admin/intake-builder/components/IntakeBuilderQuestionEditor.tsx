@@ -28,6 +28,7 @@ import { intakeBuilderQuestionInputTypes } from "@/features/admin/intake-builder
 import {
   ArchiveQuestionButton,
   ReorderButton,
+  UnarchiveQuestionButton,
 } from "@/features/admin/intake-builder/components/IntakeBuilderControls";
 import {
   ActivePill,
@@ -74,7 +75,9 @@ export function QuestionEditor({
               />
               <ArchiveQuestionButton questionId={question.id} />
             </>
-          ) : null}
+          ) : (
+            <UnarchiveQuestionButton questionId={question.id} />
+          )}
         </div>
       </div>
 

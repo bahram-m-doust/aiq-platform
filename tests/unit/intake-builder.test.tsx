@@ -8,6 +8,8 @@ vi.mock("@/features/admin/intake-builder/actions", () => ({
   createIntakeSectionAction: vi.fn(async () => ({ status: "success" })),
   reorderIntakeQuestionAction: vi.fn(async () => ({ status: "success" })),
   reorderIntakeSectionAction: vi.fn(async () => ({ status: "success" })),
+  unarchiveIntakeQuestionAction: vi.fn(async () => ({ status: "success" })),
+  unarchiveIntakeSectionAction: vi.fn(async () => ({ status: "success" })),
   updateIntakeQuestionAction: vi.fn(async () => ({ status: "success" })),
   updateIntakeSectionAction: vi.fn(async () => ({ status: "success" })),
 }));

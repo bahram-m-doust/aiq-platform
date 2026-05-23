@@ -15,6 +15,8 @@ import {
   createIntakeSection,
   reorderIntakeQuestion,
   reorderIntakeSection,
+  unarchiveIntakeQuestion,
+  unarchiveIntakeSection,
   updateIntakeQuestion,
   updateIntakeSection,
 } from "@/features/admin/intake-builder/services";
@@ -117,6 +119,27 @@ export async function archiveIntakeSectionAction(
   }
 }
 
+export async function unarchiveIntakeSectionAction(
+  _previousState: IntakeBuilderFormState,
+  formData: FormData,
+): Promise<IntakeBuilderFormState> {
+  const { profile } = await requirePlatformOwner("/admin/intake-builder");
+  const validation = validateIdFormData(formData, "section_id");
+
+  if (validation.error || !validation.id) {
+    return errorState(validation.error ?? "Missing section identifier.");
+  }
+
+  try {
+    await unarchiveIntakeSection({ sectionId: validation.id, actor: profile });
+    revalidateIntakeBuilderPaths();
+    return successState("Section restored.");
+  } catch (error) {
+    logIntakeBuilderActionError({ action: "unarchive_section", error });
+    return errorState("Section could not be restored.");
+  }
+}
+
 export async function reorderIntakeSectionAction(
   _previousState: IntakeBuilderFormState,
   formData: FormData,
@@ -205,6 +228,27 @@ export async function archiveIntakeQuestionAction(
   } catch (error) {
     logIntakeBuilderActionError({ action: "archive_question", error });
     return errorState("Question could not be archived.");
+  }
+}
+
+export async function unarchiveIntakeQuestionAction(
+  _previousState: IntakeBuilderFormState,
+  formData: FormData,
+): Promise<IntakeBuilderFormState> {
+  const { profile } = await requirePlatformOwner("/admin/intake-builder");
+  const validation = validateIdFormData(formData, "question_id");
+
+  if (validation.error || !validation.id) {
+    return errorState(validation.error ?? "Missing question identifier.");
+  }
+
+  try {
+    await unarchiveIntakeQuestion({ questionId: validation.id, actor: profile });
+    revalidateIntakeBuilderPaths();
+    return successState("Question restored.");
+  } catch (error) {
+    logIntakeBuilderActionError({ action: "unarchive_question", error });
+    return errorState("Question could not be restored.");
   }
 }
 
