@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  FileTextIcon,
+  KeyRoundIcon,
+  LayoutDashboardIcon,
+  ListChecksIcon,
+  LogOutIcon,
+  MailOpenIcon,
+  PencilRulerIcon,
+  ScrollTextIcon,
+  ShieldCheckIcon,
+  BrainIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +30,14 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {children}
+    </h2>
+  );
+}
 
 export default async function AdminPage() {
   const { user, profile } = await requirePlatformOwner("/admin");
@@ -40,48 +60,156 @@ export default async function AdminPage() {
             <CardTitle>Admin access verified</CardTitle>
             <CardDescription>Signed in as {email}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <p className="text-sm leading-6 text-muted-foreground">
               Platform Owner access is active. Use admin tools for scoped,
               audited operational actions.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild>
-                <Link href="/admin/entitlements">Manual plan grant</Link>
+          </CardContent>
+        </Card>
+
+        {/* Access & Activation */}
+        <Card>
+          <CardHeader className="pb-3">
+            <SectionLabel>Access &amp; Activation</SectionLabel>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              <Button asChild className="justify-start gap-2" size="lg">
+                <Link href="/admin/access-keys">
+                  <KeyRoundIcon className="size-4" />
+                  Create access key
+                </Link>
               </Button>
-              <Button asChild>
-                <Link href="/admin/access-keys">Create access key</Link>
+              <Button asChild className="justify-start gap-2" size="lg">
+                <Link href="/admin/entitlements">
+                  <ShieldCheckIcon className="size-4" />
+                  Manual plan grant
+                </Link>
               </Button>
-              <Button asChild variant="outline">
-                <Link href="/admin/change-requests">Review Change Requests</Link>
-              </Button>
-              <Button asChild variant="outline">
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
                 <Link href="/admin/demo-requests">
+                  <MailOpenIcon className="size-4" />
                   Demo Requests
                   {pendingDemoRequests > 0 ? (
-                    <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive/15 px-1.5 text-xs font-semibold text-destructive">
+                    <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive/15 px-1.5 text-xs font-semibold text-destructive">
                       {pendingDemoRequests}
                     </span>
                   ) : null}
                 </Link>
               </Button>
-              <Button asChild variant="outline">
-                <Link href="/admin/files">Manage Files</Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Content & Workflow */}
+        <Card>
+          <CardHeader className="pb-3">
+            <SectionLabel>Content &amp; Workflow</SectionLabel>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/intake-builder">
+                  <PencilRulerIcon className="size-4" />
+                  Intake Builder
+                </Link>
               </Button>
-              <Button asChild variant="outline">
-                <Link href="/admin/modules">Module Board</Link>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/modules">
+                  <LayoutDashboardIcon className="size-4" />
+                  Module Board
+                </Link>
               </Button>
-              <Button asChild variant="outline">
-                <Link href="/admin/rag">RAG Approval Queue</Link>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/change-requests">
+                  <ListChecksIcon className="size-4" />
+                  Change Requests
+                </Link>
               </Button>
-              <Button asChild variant="outline">
-                <Link href="/admin/audit">Audit logs</Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Files & Knowledge */}
+        <Card>
+          <CardHeader className="pb-3">
+            <SectionLabel>Files &amp; Knowledge</SectionLabel>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/files">
+                  <FileTextIcon className="size-4" />
+                  Manage Files
+                </Link>
               </Button>
-              <Button asChild variant="outline">
-                <Link href="/admin/intake-builder">Intake Builder</Link>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/rag">
+                  <BrainIcon className="size-4" />
+                  RAG Approval Queue
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* System */}
+        <Card>
+          <CardHeader className="pb-3">
+            <SectionLabel>System</SectionLabel>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/audit">
+                  <ScrollTextIcon className="size-4" />
+                  Audit logs
+                </Link>
               </Button>
               <form action={logout}>
-                <Button type="submit" variant="outline">
+                <Button
+                  className="w-full justify-start gap-2"
+                  size="lg"
+                  type="submit"
+                  variant="outline"
+                >
+                  <LogOutIcon className="size-4" />
                   Sign out
                 </Button>
               </form>

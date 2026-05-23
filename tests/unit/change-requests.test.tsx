@@ -224,7 +224,7 @@ describe("change request components", () => {
     expect(screen.getByLabelText("Comment")).toBeVisible();
   });
 
-  it("renders the admin review form", () => {
+  it("renders the admin review form with review dialog trigger", () => {
     const reviewRequest: ChangeRequestReviewItem = {
       ...request(),
       brandName: "Helio",
@@ -236,9 +236,8 @@ describe("change request components", () => {
     render(<ChangeRequestReviewForm request={reviewRequest} />);
 
     expect(screen.getAllByText("Requested")[0]).toBeVisible();
-    expect(screen.getByLabelText("Resolution note")).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Update status" }),
+      screen.getByRole("button", { name: "Review" }),
     ).toBeVisible();
   });
 });
