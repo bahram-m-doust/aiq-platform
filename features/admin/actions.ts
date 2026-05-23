@@ -8,13 +8,17 @@ import {
 } from "@/features/admin/access-key-schema";
 import { verifyAdminAccessKeyReferences } from "@/features/admin/queries";
 import type { AdminAccessKeyFormState } from "@/features/admin/types";
+import { getTrustedRequestOrigin } from "@/features/auth/origins";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import {
   createAccessKey,
   updateAccessKeyEmailDelivery,
 } from "@/features/access/services";
 import { sendEmailWithResend, getResendEmailConfig } from "@/lib/email/sendEmail";
-import { buildAccessKeyEmail } from "@/lib/email/templates";
+import {
+  buildAccessKeyEmail,
+  buildAccessKeyRedeemUrl,
+} from "@/lib/email/templates";
 
 function errorState(message: string): AdminAccessKeyFormState {
   return { status: "error", message };
@@ -69,8 +73,14 @@ export async function createAdminAccessKeyAction(
     let warning: string | undefined;
 
     if (validation.data.sendEmail) {
+      const redeemUrl = buildAccessKeyRedeemUrl({
+        origin: await getTrustedRequestOrigin(),
+        rawKey,
+        type: validation.data.type,
+      });
       const email = buildAccessKeyEmail({
         rawKey,
+        redeemUrl,
         type: validation.data.type,
         expiresAt: validation.data.expiresAt,
       });

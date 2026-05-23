@@ -15,9 +15,11 @@ const inactiveDashboardCopy =
 
 export function InactiveDashboardState({
   email,
+  initialRawKey,
   signOutAction,
 }: {
   email: string;
+  initialRawKey?: string;
   signOutAction: ReactNode;
 }) {
   return (
@@ -37,7 +39,7 @@ export function InactiveDashboardState({
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
-          <AccessKeyRedemptionForm />
+          <AccessKeyRedemptionForm initialRawKey={initialRawKey} />
           <DashboardActivationCtas />
         </div>
         {signOutAction}

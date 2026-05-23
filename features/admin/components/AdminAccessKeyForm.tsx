@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -26,6 +27,7 @@ import {
   requiresTargetRole,
 } from "@/features/admin/access-key-schema";
 import { createAdminAccessKeyAction } from "@/features/admin/actions";
+import type { AccessKeyType } from "@/features/access/types";
 import type {
   AdminAccessKeyFormOptions,
   AdminAccessKeyType,
@@ -49,6 +51,18 @@ const roleLabels: Record<BrandRole, string> = {
 
 function defaultRoleForType(type: AdminAccessKeyType): BrandRole {
   return type === "JOIN_BRAND" ? "BRAND_SPECIALIST" : "OWNER";
+}
+
+function buildRedeemUrl(rawKey: string, type: AccessKeyType) {
+  const encoded = encodeURIComponent(rawKey.trim());
+  const path =
+    type === "JOIN_BRAND"
+      ? `/invite/accept?key=${encoded}`
+      : `/dashboard?key=${encoded}`;
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${path}`;
+  }
+  return path;
 }
 
 export function AdminAccessKeyForm({
@@ -241,12 +255,39 @@ export function AdminAccessKeyForm({
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="raw_access_key">Raw access key</Label>
-              <Input
-                aria-label="Generated raw access key"
-                id="raw_access_key"
-                readOnly
-                value={state.rawKey}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  aria-label="Generated raw access key"
+                  className="font-mono"
+                  id="raw_access_key"
+                  readOnly
+                  value={state.rawKey}
+                />
+                <CopyButton
+                  ariaLabel="Copy raw access key"
+                  value={state.rawKey}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="activation_link">Activation link</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  aria-label="One-click activation link"
+                  id="activation_link"
+                  readOnly
+                  value={buildRedeemUrl(state.rawKey, state.accessKey.type)}
+                />
+                <CopyButton
+                  ariaLabel="Copy activation link"
+                  value={buildRedeemUrl(state.rawKey, state.accessKey.type)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {state.accessKey.type === "JOIN_BRAND"
+                  ? "Send this link to the invitee. It opens /invite/accept with the key pre-filled."
+                  : "Send this link to the recipient. It opens the dashboard with the key pre-filled."}
+              </p>
             </div>
             <div className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
               <p>

@@ -115,10 +115,17 @@ function ActiveDashboard({
   );
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ key?: string }>;
+}) {
   const { user, profile } = await requireUserProfile("/dashboard");
   const accessSummary = await getBrandAccessSummaryForProfile(profile.id);
   const email = user.email ?? profile.email;
+  const params = await searchParams;
+  const initialRawKey =
+    typeof params.key === "string" ? params.key.trim() : "";
 
   return (
     <main className="min-h-svh bg-background px-6 py-10 text-foreground">
@@ -136,6 +143,7 @@ export default async function DashboardPage() {
         ) : (
           <InactiveDashboardState
             email={email}
+            initialRawKey={initialRawKey}
             signOutAction={<SignOutButton />}
           />
         )}

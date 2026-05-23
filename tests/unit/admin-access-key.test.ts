@@ -120,8 +120,10 @@ describe("admin access key email handling", () => {
 
   it("keeps the raw key out of the email subject", () => {
     const rawKey = "bext_raw_key_once";
+    const redeemUrl = "https://bextudio.test/dashboard?key=bext_raw_key_once";
     const email = buildAccessKeyEmail({
       rawKey,
+      redeemUrl,
       type: "CREATE_BRAND",
       expiresAt: "2099-01-01T23:59:59.999Z",
     });
@@ -129,6 +131,8 @@ describe("admin access key email handling", () => {
     expect(email.subject).not.toContain(rawKey);
     expect(email.text).toContain(rawKey);
     expect(email.html).toContain(rawKey);
+    expect(email.text).toContain(redeemUrl);
+    expect(email.html).toContain(redeemUrl);
   });
 
   it("does not expose access key hashes in success state", () => {

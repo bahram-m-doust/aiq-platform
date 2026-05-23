@@ -9,7 +9,11 @@ import { redeemDashboardAccessKeyAction } from "@/features/access/actions";
 import { initialAccessKeyRedemptionFormState } from "@/features/access/types";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
 
-export function AccessKeyRedemptionForm() {
+export function AccessKeyRedemptionForm({
+  initialRawKey = "",
+}: {
+  initialRawKey?: string;
+}) {
   const [state, formAction] = useActionState(
     redeemDashboardAccessKeyAction,
     initialAccessKeyRedemptionFormState,
@@ -30,6 +34,7 @@ export function AccessKeyRedemptionForm() {
         <Label htmlFor="accessKey">Access Key</Label>
         <Input
           autoComplete="off"
+          defaultValue={initialRawKey}
           id="accessKey"
           name="accessKey"
           placeholder="Enter your Brand Access Key"

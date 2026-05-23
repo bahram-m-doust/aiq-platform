@@ -11,12 +11,40 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
+export function buildAccessKeyRedeemPath({
+  rawKey,
+  type,
+}: {
+  rawKey: string;
+  type: AdminAccessKeyType;
+}) {
+  const encoded = encodeURIComponent(rawKey.trim());
+  return type === "JOIN_BRAND"
+    ? `/invite/accept?key=${encoded}`
+    : `/dashboard?key=${encoded}`;
+}
+
+export function buildAccessKeyRedeemUrl({
+  origin,
+  rawKey,
+  type,
+}: {
+  origin: string;
+  rawKey: string;
+  type: AdminAccessKeyType;
+}) {
+  const baseUrl = new URL(origin);
+  return new URL(buildAccessKeyRedeemPath({ rawKey, type }), baseUrl).toString();
+}
+
 export function buildAccessKeyEmail({
   rawKey,
+  redeemUrl,
   type,
   expiresAt,
 }: {
   rawKey: string;
+  redeemUrl: string;
   type: AdminAccessKeyType;
   expiresAt: string;
 }) {
@@ -33,6 +61,10 @@ export function buildAccessKeyEmail({
     `Type: ${type}`,
     `Expires: ${formattedExpiry} UTC`,
     "",
+    "Activate your access:",
+    redeemUrl,
+    "",
+    "If the link does not work, paste this key manually:",
     rawKey,
   ].join("\n");
 
@@ -40,6 +72,8 @@ export function buildAccessKeyEmail({
     "<p>Your Bextudio access key is ready.</p>",
     `<p><strong>Type:</strong> ${escapeHtml(type)}</p>`,
     `<p><strong>Expires:</strong> ${escapeHtml(formattedExpiry)} UTC</p>`,
+    `<p><a href="${escapeHtml(redeemUrl)}">Activate your access</a></p>`,
+    "<p>If the link does not work, paste this key manually:</p>",
     `<p><code>${escapeHtml(rawKey)}</code></p>`,
   ].join("");
 
