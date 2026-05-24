@@ -391,6 +391,27 @@ export async function archiveIntakeQuestion({
   return after;
 }
 
+async function deleteDependentRowsForQuestions(
+  admin: ReturnType<typeof createAdminClient>,
+  questionIds: string[],
+) {
+  if (questionIds.length === 0) return;
+
+  const { error: answersError } = await admin
+    .from("intake_answers")
+    .delete()
+    .in("question_id", questionIds);
+
+  if (answersError) throw answersError;
+
+  const { error: crError } = await admin
+    .from("change_requests")
+    .delete()
+    .in("question_id", questionIds);
+
+  if (crError) throw crError;
+}
+
 export async function deleteIntakeQuestion({
   questionId,
   actor,
@@ -404,6 +425,8 @@ export async function deleteIntakeQuestion({
   if (!before) {
     throw new Error("Question could not be found.");
   }
+
+  await deleteDependentRowsForQuestions(admin, [questionId]);
 
   const { error } = await admin.from("questions").delete().eq("id", questionId);
 
@@ -434,6 +457,19 @@ export async function deleteIntakeSection({
   if (!before) {
     throw new Error("Section could not be found.");
   }
+
+  const { data: questionRows, error: listError } = await admin
+    .from("questions")
+    .select("id")
+    .eq("section_id", sectionId);
+
+  if (listError) throw listError;
+
+  const questionIds = ((questionRows ?? []) as { id: string }[]).map(
+    (r) => r.id,
+  );
+
+  await deleteDependentRowsForQuestions(admin, questionIds);
 
   const { error: questionsError } = await admin
     .from("questions")
