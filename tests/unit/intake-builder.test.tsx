@@ -243,9 +243,11 @@ describe("admin intake builder query and audit behavior", () => {
         "intake_section_created",
         "intake_section_updated",
         "intake_section_archived",
+        "intake_section_deleted",
         "intake_question_created",
         "intake_question_updated",
         "intake_question_archived",
+        "intake_question_deleted",
         "intake_question_reordered",
       ]),
     );
@@ -253,7 +255,7 @@ describe("admin intake builder query and audit behavior", () => {
 });
 
 describe("admin intake builder UI", () => {
-  it("renders add/edit/archive controls without hard-delete language", () => {
+  it("renders add/edit/archive/delete controls", () => {
     render(<IntakeBuilderWorkspace sections={[section()]} />);
 
     expect(screen.getAllByText("Add section")[0]).toBeVisible();
@@ -263,6 +265,9 @@ describe("admin intake builder UI", () => {
     expect(
       screen.getByRole("button", { name: /archive section/i }),
     ).toBeVisible();
-    expect(screen.queryByText(/delete/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /delete section/i }),
+    ).toBeVisible();
+    expect(screen.getAllByRole("button", { name: /^delete$/i }).length).toBeGreaterThanOrEqual(1);
   });
 });

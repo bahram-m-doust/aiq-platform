@@ -6,6 +6,7 @@ import {
   ArchiveRestoreIcon,
   ArrowDownIcon,
   ArrowUpIcon,
+  Trash2Icon,
 } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -22,6 +23,8 @@ import {
 import {
   archiveIntakeQuestionAction,
   archiveIntakeSectionAction,
+  deleteIntakeQuestionAction,
+  deleteIntakeSectionAction,
   reorderIntakeQuestionAction,
   reorderIntakeSectionAction,
   unarchiveIntakeQuestionAction,
@@ -227,5 +230,133 @@ export function UnarchiveQuestionButton({ questionId }: { questionId: string }) 
       </form>
       <StatusMessage state={state} />
     </div>
+  );
+}
+
+export function DeleteQuestionButton({ questionId }: { questionId: string }) {
+  const [open, setOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleConfirm() {
+    setErrorMessage(null);
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.append("question_id", questionId);
+      const result = await deleteIntakeQuestionAction(
+        initialIntakeBuilderFormState,
+        formData,
+      );
+      if (result.status === "error") {
+        setErrorMessage(result.message);
+        return;
+      }
+      setOpen(false);
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost">
+          <Trash2Icon className="size-4 text-destructive" />
+          Delete
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete question</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to permanently delete this question? This
+            action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        {errorMessage ? (
+          <Alert variant="destructive">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={isPending}
+          >
+            {isPending ? "Deleting..." : "Delete question"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function DeleteSectionButton({ sectionId }: { sectionId: string }) {
+  const [open, setOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function handleConfirm() {
+    setErrorMessage(null);
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.append("section_id", sectionId);
+      const result = await deleteIntakeSectionAction(
+        initialIntakeBuilderFormState,
+        formData,
+      );
+      if (result.status === "error") {
+        setErrorMessage(result.message);
+        return;
+      }
+      setOpen(false);
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost">
+          <Trash2Icon className="size-4 text-destructive" />
+          Delete section
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete section</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to permanently delete this section and all its
+            questions? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        {errorMessage ? (
+          <Alert variant="destructive">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={isPending}
+          >
+            {isPending ? "Deleting..." : "Delete section"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

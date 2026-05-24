@@ -27,6 +27,7 @@ import type { IntakeBuilderQuestion } from "@/features/admin/intake-builder/type
 import { intakeBuilderQuestionInputTypes } from "@/features/admin/intake-builder/types";
 import {
   ArchiveQuestionButton,
+  DeleteQuestionButton,
   ReorderButton,
   UnarchiveQuestionButton,
 } from "@/features/admin/intake-builder/components/IntakeBuilderControls";
@@ -74,9 +75,13 @@ export function QuestionEditor({
                 label={`Move ${question.questionText} down`}
               />
               <ArchiveQuestionButton questionId={question.id} />
+              <DeleteQuestionButton questionId={question.id} />
             </>
           ) : (
-            <UnarchiveQuestionButton questionId={question.id} />
+            <>
+              <UnarchiveQuestionButton questionId={question.id} />
+              <DeleteQuestionButton questionId={question.id} />
+            </>
           )}
         </div>
       </div>

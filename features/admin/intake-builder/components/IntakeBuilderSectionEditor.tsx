@@ -16,6 +16,7 @@ import { initialIntakeBuilderFormState } from "@/features/admin/intake-builder/s
 import type { IntakeBuilderSection } from "@/features/admin/intake-builder/types";
 import {
   ArchiveSectionButton,
+  DeleteSectionButton,
   UnarchiveSectionButton,
   ReorderButton,
 } from "@/features/admin/intake-builder/components/IntakeBuilderControls";
@@ -70,9 +71,13 @@ export function SectionEditor({ section }: { section: IntakeBuilderSection }) {
                 label={`Move ${section.title} down`}
               />
               <ArchiveSectionButton sectionId={section.id} />
+              <DeleteSectionButton sectionId={section.id} />
             </>
           ) : (
-            <UnarchiveSectionButton sectionId={section.id} />
+            <>
+              <UnarchiveSectionButton sectionId={section.id} />
+              <DeleteSectionButton sectionId={section.id} />
+            </>
           )}
         </div>
       </div>

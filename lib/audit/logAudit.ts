@@ -23,6 +23,8 @@ export const auditActions = [
   "intake_question_archived",
   "intake_question_unarchived",
   "intake_question_reordered",
+  "intake_question_deleted",
+  "intake_section_deleted",
   "change_request_created",
   "change_request_status_updated",
   "demo_request_created",

@@ -13,6 +13,8 @@ import {
   archiveIntakeSection,
   createIntakeQuestion,
   createIntakeSection,
+  deleteIntakeQuestion,
+  deleteIntakeSection,
   reorderIntakeQuestion,
   reorderIntakeSection,
   unarchiveIntakeQuestion,
@@ -274,5 +276,47 @@ export async function reorderIntakeQuestionAction(
   } catch (error) {
     logIntakeBuilderActionError({ action: "reorder_question", error });
     return errorState("Question order could not be updated.");
+  }
+}
+
+export async function deleteIntakeQuestionAction(
+  _previousState: IntakeBuilderFormState,
+  formData: FormData,
+): Promise<IntakeBuilderFormState> {
+  const { profile } = await requirePlatformOwner("/admin/intake-builder");
+  const validation = validateIdFormData(formData, "question_id");
+
+  if (validation.error || !validation.id) {
+    return errorState(validation.error ?? "Missing question identifier.");
+  }
+
+  try {
+    await deleteIntakeQuestion({ questionId: validation.id, actor: profile });
+    revalidateIntakeBuilderPaths();
+    return successState("Question deleted.");
+  } catch (error) {
+    logIntakeBuilderActionError({ action: "delete_question", error });
+    return errorState("Question could not be deleted.");
+  }
+}
+
+export async function deleteIntakeSectionAction(
+  _previousState: IntakeBuilderFormState,
+  formData: FormData,
+): Promise<IntakeBuilderFormState> {
+  const { profile } = await requirePlatformOwner("/admin/intake-builder");
+  const validation = validateIdFormData(formData, "section_id");
+
+  if (validation.error || !validation.id) {
+    return errorState(validation.error ?? "Missing section identifier.");
+  }
+
+  try {
+    await deleteIntakeSection({ sectionId: validation.id, actor: profile });
+    revalidateIntakeBuilderPaths();
+    return successState("Section deleted.");
+  } catch (error) {
+    logIntakeBuilderActionError({ action: "delete_section", error });
+    return errorState("Section could not be deleted.");
   }
 }

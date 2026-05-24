@@ -391,6 +391,78 @@ export async function archiveIntakeQuestion({
   return after;
 }
 
+export async function deleteIntakeQuestion({
+  questionId,
+  actor,
+}: {
+  questionId: string;
+  actor: AuditActor;
+}) {
+  const admin = createAdminClient();
+  const before = await getIntakeBuilderQuestionById(questionId);
+
+  if (!before) {
+    throw new Error("Question could not be found.");
+  }
+
+  const { error } = await admin.from("questions").delete().eq("id", questionId);
+
+  if (error) {
+    throw error;
+  }
+
+  await logAudit({
+    actorUserId: actor.id,
+    actorRole: actorRole(actor),
+    action: "intake_question_deleted",
+    entityType: "question",
+    entityId: questionId,
+    before: questionAuditShape(before),
+  });
+}
+
+export async function deleteIntakeSection({
+  sectionId,
+  actor,
+}: {
+  sectionId: string;
+  actor: AuditActor;
+}) {
+  const admin = createAdminClient();
+  const before = await getIntakeBuilderSectionById(sectionId);
+
+  if (!before) {
+    throw new Error("Section could not be found.");
+  }
+
+  const { error: questionsError } = await admin
+    .from("questions")
+    .delete()
+    .eq("section_id", sectionId);
+
+  if (questionsError) {
+    throw questionsError;
+  }
+
+  const { error } = await admin
+    .from("question_sections")
+    .delete()
+    .eq("id", sectionId);
+
+  if (error) {
+    throw error;
+  }
+
+  await logAudit({
+    actorUserId: actor.id,
+    actorRole: actorRole(actor),
+    action: "intake_section_deleted",
+    entityType: "question_section",
+    entityId: sectionId,
+    before: sectionAuditShape(before),
+  });
+}
+
 export async function unarchiveIntakeSection({
   sectionId,
   actor,
