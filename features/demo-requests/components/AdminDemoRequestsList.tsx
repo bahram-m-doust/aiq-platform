@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { ExternalLinkIcon, XCircleIcon } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,17 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useConfirmAction } from "@/components/hooks/useConfirmAction";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { rejectDemoRequestAction } from "@/features/demo-requests/actions";
 import type { DemoRequestRecord } from "@/features/demo-requests/types";
 import { initialReviewDemoRequestFormState } from "@/features/demo-requests/types";
@@ -55,107 +48,57 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function RejectDialog({ request }: { request: DemoRequestRecord }) {
-  const [open, setOpen] = useState(false);
   const [resolutionNote, setResolutionNote] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
 
-  function handleConfirm() {
-    setErrorMessage(null);
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("demo_request_id", request.id);
-      formData.append("resolution_note", resolutionNote);
-      const result = await rejectDemoRequestAction(
-        initialReviewDemoRequestFormState,
-        formData,
-      );
-      if (result.status === "error") {
-        setErrorMessage(result.message);
-        return;
-      }
-      setOpen(false);
+  const { open, handleOpenChange, errorMessage, isPending, confirm } =
+    useConfirmAction({
+      action: rejectDemoRequestAction,
+      initialState: initialReviewDemoRequestFormState,
+      buildFormData: () => {
+        const fd = new FormData();
+        fd.append("demo_request_id", request.id);
+        fd.append("resolution_note", resolutionNote);
+        return fd;
+      },
     });
-  }
 
-  function handleOpenChange(next: boolean) {
-    if (!isPending) {
-      setOpen(next);
-      if (!next) {
-        setErrorMessage(null);
-        setResolutionNote("");
-      }
-    }
+  function onOpenChange(next: boolean) {
+    handleOpenChange(next);
+    if (!next) setResolutionNote("");
   }
 
   return (
-    <Dialog onOpenChange={handleOpenChange} open={open}>
-      <Button
-        onClick={() => setOpen(true)}
-        size="sm"
-        type="button"
-        variant="ghost"
-      >
-        <XCircleIcon className="mr-1.5 size-4 text-destructive" />
-        Reject
-      </Button>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Reject demo request?</DialogTitle>
-          <DialogDescription>
-            <span className="block">
-              You are about to reject the demo request from{" "}
-              <span className="font-medium text-foreground">
-                {request.email}
-              </span>
-              .
-            </span>
-            <span className="mt-1 block">
-              This action cannot be undone.
-            </span>
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-2">
-          <Label htmlFor={`reject-note-${request.id}`}>
-            Resolution note (optional)
-          </Label>
-          <Textarea
-            id={`reject-note-${request.id}`}
-            maxLength={1000}
-            onChange={(e) => setResolutionNote(e.target.value)}
-            placeholder="Reason for rejection (audit only)"
-            rows={3}
-            value={resolutionNote}
-          />
-        </div>
-
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        <DialogFooter>
-          <Button
-            disabled={isPending}
-            onClick={() => handleOpenChange(false)}
-            type="button"
-            variant="outline"
-          >
-            Cancel
-          </Button>
-          <Button
-            disabled={isPending}
-            onClick={handleConfirm}
-            type="button"
-            variant="destructive"
-          >
-            {isPending ? "Rejecting..." : "Reject request"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={
+        <Button size="sm" type="button" variant="ghost">
+          <XCircleIcon className="mr-1.5 size-4 text-destructive" />
+          Reject
+        </Button>
+      }
+      title="Reject demo request?"
+      description={`You are about to reject the demo request from ${request.email}. This action cannot be undone.`}
+      errorMessage={errorMessage}
+      isPending={isPending}
+      onConfirm={confirm}
+      confirmLabel="Reject request"
+      pendingLabel="Rejecting..."
+    >
+      <div className="space-y-2">
+        <Label htmlFor={`reject-note-${request.id}`}>
+          Resolution note (optional)
+        </Label>
+        <Textarea
+          id={`reject-note-${request.id}`}
+          maxLength={1000}
+          onChange={(e) => setResolutionNote(e.target.value)}
+          placeholder="Reason for rejection (audit only)"
+          rows={3}
+          value={resolutionNote}
+        />
+      </div>
+    </ConfirmDialog>
   );
 }
 

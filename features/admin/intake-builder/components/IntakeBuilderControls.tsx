@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useActionState, useTransition } from "react";
+import { useActionState } from "react";
 import {
   ArchiveIcon,
   ArchiveRestoreIcon,
@@ -9,17 +9,9 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { useConfirmAction } from "@/components/hooks/useConfirmAction";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   archiveIntakeQuestionAction,
   archiveIntakeSectionAction,
@@ -66,130 +58,68 @@ export function ReorderButton({
 }
 
 export function ArchiveSectionButton({ sectionId }: { sectionId: string }) {
-  const [open, setOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleConfirm() {
-    setErrorMessage(null);
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("section_id", sectionId);
-      const result = await archiveIntakeSectionAction(
-        initialIntakeBuilderFormState,
-        formData,
-      );
-      if (result.status === "error") {
-        setErrorMessage(result.message);
-        return;
-      }
-      setOpen(false);
+  const { open, handleOpenChange, errorMessage, isPending, confirm } =
+    useConfirmAction({
+      action: archiveIntakeSectionAction,
+      initialState: initialIntakeBuilderFormState,
+      buildFormData: () => {
+        const fd = new FormData();
+        fd.append("section_id", sectionId);
+        return fd;
+      },
     });
-  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      trigger={
         <Button variant="destructive">
           <ArchiveIcon className="size-4" />
           Archive section
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Archive section</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to archive this section? All questions in this
-            section will also be hidden from the intake form.
-          </DialogDescription>
-        </DialogHeader>
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={isPending}
-          >
-            {isPending ? "Archiving..." : "Archive section"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      }
+      title="Archive section"
+      description="Are you sure you want to archive this section? All questions in this section will also be hidden from the intake form."
+      errorMessage={errorMessage}
+      isPending={isPending}
+      onConfirm={confirm}
+      confirmLabel="Archive section"
+      pendingLabel="Archiving..."
+    />
   );
 }
 
 export function ArchiveQuestionButton({ questionId }: { questionId: string }) {
-  const [open, setOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleConfirm() {
-    setErrorMessage(null);
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("question_id", questionId);
-      const result = await archiveIntakeQuestionAction(
-        initialIntakeBuilderFormState,
-        formData,
-      );
-      if (result.status === "error") {
-        setErrorMessage(result.message);
-        return;
-      }
-      setOpen(false);
+  const { open, handleOpenChange, errorMessage, isPending, confirm } =
+    useConfirmAction({
+      action: archiveIntakeQuestionAction,
+      initialState: initialIntakeBuilderFormState,
+      buildFormData: () => {
+        const fd = new FormData();
+        fd.append("question_id", questionId);
+        return fd;
+      },
     });
-  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      trigger={
         <Button size="sm" variant="destructive">
           <ArchiveIcon className="size-4" />
           Archive
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Archive question</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to archive this question? It will be hidden
-            from the intake form.
-          </DialogDescription>
-        </DialogHeader>
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={isPending}
-          >
-            {isPending ? "Archiving..." : "Archive"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      }
+      title="Archive question"
+      description="Are you sure you want to archive this question? It will be hidden from the intake form."
+      errorMessage={errorMessage}
+      isPending={isPending}
+      onConfirm={confirm}
+      confirmLabel="Archive"
+      pendingLabel="Archiving..."
+    />
   );
 }
 
@@ -234,129 +164,67 @@ export function UnarchiveQuestionButton({ questionId }: { questionId: string }) 
 }
 
 export function DeleteQuestionButton({ questionId }: { questionId: string }) {
-  const [open, setOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleConfirm() {
-    setErrorMessage(null);
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("question_id", questionId);
-      const result = await deleteIntakeQuestionAction(
-        initialIntakeBuilderFormState,
-        formData,
-      );
-      if (result.status === "error") {
-        setErrorMessage(result.message);
-        return;
-      }
-      setOpen(false);
+  const { open, handleOpenChange, errorMessage, isPending, confirm } =
+    useConfirmAction({
+      action: deleteIntakeQuestionAction,
+      initialState: initialIntakeBuilderFormState,
+      buildFormData: () => {
+        const fd = new FormData();
+        fd.append("question_id", questionId);
+        return fd;
+      },
     });
-  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      trigger={
         <Button size="sm" variant="ghost">
           <Trash2Icon className="size-4 text-destructive" />
           Delete
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete question</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to permanently delete this question? This
-            action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={isPending}
-          >
-            {isPending ? "Deleting..." : "Delete question"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      }
+      title="Delete question"
+      description="Are you sure you want to permanently delete this question? This action cannot be undone."
+      errorMessage={errorMessage}
+      isPending={isPending}
+      onConfirm={confirm}
+      confirmLabel="Delete question"
+      pendingLabel="Deleting..."
+    />
   );
 }
 
 export function DeleteSectionButton({ sectionId }: { sectionId: string }) {
-  const [open, setOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleConfirm() {
-    setErrorMessage(null);
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("section_id", sectionId);
-      const result = await deleteIntakeSectionAction(
-        initialIntakeBuilderFormState,
-        formData,
-      );
-      if (result.status === "error") {
-        setErrorMessage(result.message);
-        return;
-      }
-      setOpen(false);
+  const { open, handleOpenChange, errorMessage, isPending, confirm } =
+    useConfirmAction({
+      action: deleteIntakeSectionAction,
+      initialState: initialIntakeBuilderFormState,
+      buildFormData: () => {
+        const fd = new FormData();
+        fd.append("section_id", sectionId);
+        return fd;
+      },
     });
-  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      trigger={
         <Button variant="ghost">
           <Trash2Icon className="size-4 text-destructive" />
           Delete section
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete section</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to permanently delete this section and all its
-            questions? This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={isPending}
-          >
-            {isPending ? "Deleting..." : "Delete section"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      }
+      title="Delete section"
+      description="Are you sure you want to permanently delete this section and all its questions? This action cannot be undone."
+      errorMessage={errorMessage}
+      isPending={isPending}
+      onConfirm={confirm}
+      confirmLabel="Delete section"
+      pendingLabel="Deleting..."
+    />
   );
 }

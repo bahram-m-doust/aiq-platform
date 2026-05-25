@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState } from "react";
 import {
   ArchiveIcon,
   ArchiveRestoreIcon,
@@ -17,14 +17,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useConfirmAction } from "@/components/hooks/useConfirmAction";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -221,88 +215,40 @@ function UnarchiveActionButton({ fileId }: { fileId: string }) {
 }
 
 function DeleteActionButton({ file }: { file: BrandFileRecord }) {
-  const [open, setOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function handleConfirm() {
-    setErrorMessage(null);
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("file_id", file.id);
-      const result = await adminDeleteFileAction(
-        initialAdminFileReviewState,
-        formData,
-      );
-      if (result.status === "error") {
-        setErrorMessage(result.message);
-        return;
-      }
-      setOpen(false);
+  const { open, handleOpenChange, errorMessage, isPending, confirm } =
+    useConfirmAction({
+      action: adminDeleteFileAction,
+      initialState: initialAdminFileReviewState,
+      buildFormData: () => {
+        const fd = new FormData();
+        fd.append("file_id", file.id);
+        return fd;
+      },
     });
-  }
-
-  function handleOpenChange(next: boolean) {
-    if (!isPending) {
-      setOpen(next);
-      if (!next) setErrorMessage(null);
-    }
-  }
 
   return (
-    <Dialog onOpenChange={handleOpenChange} open={open}>
-      <Button
-        aria-label="Delete file"
-        onClick={() => setOpen(true)}
-        size="icon-sm"
-        title="Delete"
-        type="button"
-        variant="ghost"
-      >
-        <TrashIcon className="size-4 text-destructive" />
-      </Button>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete this file?</DialogTitle>
-          <DialogDescription>
-            <span className="block">
-              You are about to permanently delete{" "}
-              <span className="font-medium text-foreground">
-                {file.originalName}
-              </span>
-              .
-            </span>
-            <span className="mt-1 block">
-              This removes both the database row and the storage object.
-              This action cannot be undone.
-            </span>
-          </DialogDescription>
-        </DialogHeader>
-        {errorMessage ? (
-          <Alert variant="destructive">
-            <AlertDescription>{errorMessage}</AlertDescription>
-          </Alert>
-        ) : null}
-        <DialogFooter>
-          <Button
-            disabled={isPending}
-            onClick={() => handleOpenChange(false)}
-            type="button"
-            variant="outline"
-          >
-            Cancel
-          </Button>
-          <Button
-            disabled={isPending}
-            onClick={handleConfirm}
-            type="button"
-            variant="destructive"
-          >
-            {isPending ? "Deleting..." : "Delete permanently"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      trigger={
+        <Button
+          aria-label="Delete file"
+          size="icon-sm"
+          title="Delete"
+          type="button"
+          variant="ghost"
+        >
+          <TrashIcon className="size-4 text-destructive" />
+        </Button>
+      }
+      title="Delete this file?"
+      description={`You are about to permanently delete ${file.originalName}. This removes both the database row and the storage object. This action cannot be undone.`}
+      errorMessage={errorMessage}
+      isPending={isPending}
+      onConfirm={confirm}
+      confirmLabel="Delete permanently"
+      pendingLabel="Deleting..."
+    />
   );
 }
 
