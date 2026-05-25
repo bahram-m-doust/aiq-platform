@@ -26,8 +26,10 @@ import type {
   IntakeQuestion,
   IntakeSession,
 } from "@/features/intake/types";
+import { createIntakeKnowledgeFile } from "@/features/intake/intake-knowledge";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
+import { logServerError } from "@/lib/logging/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type IntakeSessionRow = {
@@ -470,6 +472,21 @@ export async function finalSubmitIntake({
       notification,
     }),
   });
+
+  try {
+    await createIntakeKnowledgeFile({
+      brandId: session.brandId,
+      snapshotId,
+      snapshotJson,
+      profileId,
+    });
+  } catch (error) {
+    logServerError({
+      label: "[intake] knowledge file generation failed",
+      error,
+      metadata: { snapshotId, brandId: session.brandId },
+    });
+  }
 
   return {
     brandId: session.brandId,

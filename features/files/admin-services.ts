@@ -281,4 +281,65 @@ export async function adminCreateSignedDownloadUrl({
   return { signedUrl, file };
 }
 
+export async function adminPromoteFileToRag({
+  fileId,
+  actor,
+}: {
+  fileId: string;
+  actor: UserProfile;
+}): Promise<BrandFileRecord> {
+  const before = await getFileById(fileId);
+  if (!before) adminFileError("File could not be found.");
+
+  if (before.status === "ARCHIVED") {
+    adminFileError("Cannot promote an archived file to RAG.");
+  }
+
+  if (before.status === "RAG_APPROVED") {
+    return before;
+  }
+
+  const admin = createAdminClient();
+
+  const { data, error: updateError } = await admin
+    .from("files")
+    .update({ status: "RAG_APPROVED" })
+    .eq("id", fileId)
+    .select(fileColumns)
+    .single();
+
+  if (updateError) throw updateError;
+
+  const after = toBrandFileRecord({ row: data as unknown as FileRow });
+
+  const { error: knowledgeError } = await admin
+    .from("knowledge_files")
+    .upsert(
+      {
+        brand_id: after.brandId,
+        module_id: null,
+        file_id: fileId,
+        rag_status: "RAG_APPROVED",
+        approved_by_supervisor: actor.id,
+        approved_by_platform_owner: actor.id,
+      },
+      { onConflict: "brand_id, file_id" },
+    );
+
+  if (knowledgeError) throw knowledgeError;
+
+  await logAudit({
+    actorUserId: actor.id,
+    actorRole: actor.global_role,
+    brandId: after.brandId,
+    action: "admin_file_rag_promoted",
+    entityType: "file",
+    entityId: after.id,
+    before: { file: toFileAuditMetadata(before) },
+    after: { file: toFileAuditMetadata(after) },
+  });
+
+  return after;
+}
+
 export const adminFileSignedDownloadUrlTtlSeconds = signedDownloadUrlTtlSeconds;

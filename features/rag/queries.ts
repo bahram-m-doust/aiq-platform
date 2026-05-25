@@ -497,6 +497,27 @@ async function fetchApprovedPdfArtifacts({
   }, new Map());
 }
 
+function isStandaloneEligible(
+  row: KnowledgeFileRow,
+  file: FileRow,
+  approvedOnly: boolean,
+) {
+  const brandMatches = file.brand_id === row.brand_id;
+  if (!brandMatches) return false;
+
+  if (approvedOnly) {
+    return (
+      row.rag_status === "RAG_APPROVED" && file.status === "RAG_APPROVED"
+    );
+  }
+
+  return (
+    ["RAG_APPROVED", "SYNCING", "RAG_SYNCED", "SYNC_FAILED"].includes(
+      row.rag_status,
+    ) && file.status === "RAG_APPROVED"
+  );
+}
+
 async function buildRagSyncFileItems(
   knowledgeRows: KnowledgeFileRow[],
   {
@@ -505,10 +526,13 @@ async function buildRagSyncFileItems(
     approvedOnly: boolean;
   },
 ): Promise<RagSyncFileItem[]> {
+  const moduleRows = knowledgeRows.filter((row) => row.module_id);
+  const standaloneRows = knowledgeRows.filter((row) => !row.module_id);
+
   const fileIds = knowledgeRows
     .map((row) => row.file_id)
     .filter((fileId): fileId is string => Boolean(fileId));
-  const moduleIds = knowledgeRows
+  const moduleIds = moduleRows
     .map((row) => row.module_id)
     .filter((moduleId): moduleId is string => Boolean(moduleId));
 
@@ -518,7 +542,7 @@ async function buildRagSyncFileItems(
     fetchApprovedPdfArtifacts({ moduleIds, fileIds }),
   ]);
 
-  return knowledgeRows.flatMap((row) => {
+  const moduleItems = moduleRows.flatMap((row) => {
     const file = row.file_id ? filesById.get(row.file_id) : null;
     const brandModule = row.module_id ? modulesById.get(row.module_id) : null;
     const artifact =
@@ -561,6 +585,32 @@ async function buildRagSyncFileItems(
       },
     ];
   });
+
+  const standaloneItems = standaloneRows.flatMap((row) => {
+    const file = row.file_id ? filesById.get(row.file_id) : null;
+    if (!file || !isStandaloneEligible(row, file, approvedOnly)) {
+      return [];
+    }
+
+    return [
+      {
+        knowledgeFileId: row.id,
+        brandId: row.brand_id,
+        moduleId: null,
+        artifactId: row.id,
+        artifactVersion: 1,
+        fileId: file.id,
+        storagePath: file.storage_path,
+        originalName: file.original_name,
+        mimeType: file.mime_type,
+        ragStatus: safeRagStatus(row.rag_status),
+        providerFileId: row.provider_file_id,
+        syncedAt: row.synced_at,
+      },
+    ];
+  });
+
+  return [...moduleItems, ...standaloneItems];
 }
 
 export async function getRagApprovedFilesForSync({

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import {
   ArchiveIcon,
   ArchiveRestoreIcon,
+  BrainIcon,
   DownloadIcon,
   TrashIcon,
 } from "lucide-react";
@@ -34,6 +35,7 @@ import {
   adminArchiveFileAction,
   adminDeleteFileAction,
   adminDownloadFileAction,
+  adminPromoteFileToRagAction,
   adminUnarchiveFileAction,
   adminUploadFileAction,
 } from "@/features/files/admin-actions";
@@ -269,10 +271,61 @@ function DownloadButton({ fileId }: { fileId: string }) {
   );
 }
 
+const ragPromotableStatuses = new Set<FileStatus>([
+  "UPLOADED",
+  "PENDING_OWNER_APPROVAL",
+  "OWNER_APPROVED",
+  "INTERNAL_DRAFT",
+  "SUPERVISOR_APPROVED",
+  "CLIENT_REVIEW",
+  "CLIENT_APPROVED",
+]);
+
+function PromoteToRagButton({ file }: { file: BrandFileRecord }) {
+  const { open, handleOpenChange, errorMessage, isPending, confirm } =
+    useConfirmAction({
+      action: adminPromoteFileToRagAction,
+      initialState: initialAdminFileReviewState,
+      buildFormData: () => {
+        const fd = new FormData();
+        fd.append("file_id", file.id);
+        return fd;
+      },
+    });
+
+  return (
+    <ConfirmDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      trigger={
+        <Button
+          aria-label="Promote to RAG"
+          size="icon-sm"
+          title="Promote to RAG"
+          type="button"
+          variant="ghost"
+        >
+          <BrainIcon className="size-4 text-emerald-600" />
+        </Button>
+      }
+      title="Promote this file to RAG?"
+      description={`This will mark "${file.originalName}" as RAG-approved and make it eligible for Knowledge Brain sync.`}
+      errorMessage={errorMessage}
+      isPending={isPending}
+      onConfirm={confirm}
+      confirmLabel="Promote to RAG"
+      pendingLabel="Promoting..."
+    />
+  );
+}
+
 function FileRowActions({ file }: { file: BrandFileRecord }) {
   return (
     <div className="flex items-center justify-end gap-1">
       <DownloadButton fileId={file.id} />
+      {ragPromotableStatuses.has(file.status) ? (
+        <PromoteToRagButton file={file} />
+      ) : null}
       {file.status === "ARCHIVED" ? (
         <UnarchiveActionButton fileId={file.id} />
       ) : (

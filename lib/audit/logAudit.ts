@@ -52,6 +52,8 @@ export const auditActions = [
   "agent_activated",
   "agent_run_created",
   "admin_override_used",
+  "intake_knowledge_generated",
+  "admin_file_rag_promoted",
 ] as const;
 
 export type AuditAction = (typeof auditActions)[number];

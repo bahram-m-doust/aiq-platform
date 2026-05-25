@@ -8,6 +8,7 @@ import {
   adminArchiveFile,
   adminCreateSignedDownloadUrl,
   adminDeleteFile,
+  adminPromoteFileToRag,
   adminUnarchiveFile,
   adminUploadFileForBrand,
   isAdminFileError,
@@ -162,6 +163,36 @@ export async function adminDeleteFileAction(
       metadata: { profileId: profile.id, fileId },
     });
     return { status: "error", message: "File could not be deleted." };
+  }
+}
+
+export async function adminPromoteFileToRagAction(
+  _prev: AdminFileReviewState,
+  formData: FormData,
+): Promise<AdminFileReviewState> {
+  const { profile } = await requirePlatformOwner("/admin/files");
+  const fileId = readString(formData, "file_id");
+
+  if (!fileId) {
+    return { status: "error", message: "Missing file identifier." };
+  }
+
+  try {
+    const after = await adminPromoteFileToRag({ fileId, actor: profile });
+    revalidatePath("/admin/files");
+    revalidatePath(adminFilesPathFor(after.brandId));
+    revalidatePath("/admin/rag");
+    return { status: "success", message: "File promoted to RAG." };
+  } catch (error) {
+    if (isAdminFileError(error)) {
+      return { status: "error", message: error.message };
+    }
+    logServerError({
+      label: "[admin-files] RAG promotion failed",
+      error,
+      metadata: { profileId: profile.id, fileId },
+    });
+    return { status: "error", message: "File could not be promoted to RAG." };
   }
 }
 
