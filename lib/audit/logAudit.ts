@@ -1,6 +1,11 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  isSensitiveKey,
+  sanitize,
+  type SafeJson,
+} from "@/lib/security/sanitize";
 
 export const auditActions = [
   "access_key_created",
@@ -51,13 +56,7 @@ export const auditActions = [
 
 export type AuditAction = (typeof auditActions)[number];
 
-export type AuditJson =
-  | null
-  | string
-  | number
-  | boolean
-  | AuditJson[]
-  | { [key: string]: AuditJson };
+export type AuditJson = SafeJson;
 
 export type LogAuditInput = {
   actorUserId?: string | null;
@@ -72,105 +71,12 @@ export type LogAuditInput = {
   userAgent?: string | null;
 };
 
-const redactedValue = "[REDACTED]";
-const sensitiveKeyNames = new Set([
-  "apikey",
-  "authorization",
-  "content",
-  "documentcontent",
-  "filecontent",
-  "hash",
-  "keyhash",
-  "outputtext",
-  "prompt",
-  "rawaccesskey",
-  "rawkey",
-  "secret",
-  "servicerolekey",
-  "signeddownloadurl",
-  "signedurl",
-  "token",
-  "answer",
-]);
-
-function normalizedKey(key: string) {
-  return key.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
 export function isSensitiveAuditKey(key: string) {
-  const normalized = normalizedKey(key);
-
-  return (
-    sensitiveKeyNames.has(normalized) ||
-    normalized.endsWith("apikey") ||
-    normalized.endsWith("secret") ||
-    normalized.endsWith("token") ||
-    normalized.endsWith("signedurl") ||
-    normalized.endsWith("filecontent") ||
-    normalized.endsWith("documentcontent")
-  );
-}
-
-function sanitizeAuditValue(
-  value: unknown,
-  seen: WeakSet<object>,
-  depth: number,
-): AuditJson {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return value;
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (Array.isArray(value)) {
-    if (depth > 20) {
-      return redactedValue;
-    }
-
-    return value.map((item) => sanitizeAuditValue(item, seen, depth + 1));
-  }
-
-  if (typeof value === "object") {
-    if (seen.has(value)) {
-      return redactedValue;
-    }
-
-    if (depth > 20) {
-      return redactedValue;
-    }
-
-    seen.add(value);
-
-    return Object.entries(value).reduce<Record<string, AuditJson>>(
-      (safeJson, [key, entryValue]) => {
-        if (entryValue === undefined) {
-          return safeJson;
-        }
-
-        safeJson[key] = isSensitiveAuditKey(key)
-          ? redactedValue
-          : sanitizeAuditValue(entryValue, seen, depth + 1);
-        return safeJson;
-      },
-      {},
-    );
-  }
-
-  return String(value);
+  return isSensitiveKey(key);
 }
 
 export function sanitizeAuditJson(value: unknown): AuditJson {
-  return sanitizeAuditValue(value, new WeakSet(), 0);
+  return sanitize(value, { maxDepth: 20 });
 }
 
 export async function logAudit(input: LogAuditInput) {
