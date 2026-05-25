@@ -25,6 +25,7 @@ import {
 import type { IntakeBuilderFormState } from "@/features/admin/intake-builder/types";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import { CACHE_TAGS } from "@/lib/cache/tags";
+import { isDomainError } from "@/lib/errors";
 import { logServerError } from "@/lib/logging/server";
 
 function errorState(message: string): IntakeBuilderFormState {
@@ -71,6 +72,9 @@ export async function createIntakeSectionAction(
     revalidateIntakeBuilderPaths();
     return successState("Section created.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "create_section", error });
     return errorState("Section could not be created.");
   }
@@ -95,6 +99,9 @@ export async function updateIntakeSectionAction(
     revalidateIntakeBuilderPaths();
     return successState("Section updated.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "update_section", error });
     return errorState("Section could not be updated.");
   }
@@ -116,6 +123,9 @@ export async function archiveIntakeSectionAction(
     revalidateIntakeBuilderPaths();
     return successState("Section archived.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "archive_section", error });
     return errorState("Section could not be archived.");
   }
@@ -137,6 +147,9 @@ export async function unarchiveIntakeSectionAction(
     revalidateIntakeBuilderPaths();
     return successState("Section restored.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "unarchive_section", error });
     return errorState("Section could not be restored.");
   }
@@ -162,6 +175,9 @@ export async function reorderIntakeSectionAction(
     revalidateIntakeBuilderPaths();
     return successState("Section order updated.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "reorder_section", error });
     return errorState("Section order could not be updated.");
   }
@@ -183,6 +199,9 @@ export async function createIntakeQuestionAction(
     revalidateIntakeBuilderPaths();
     return successState("Question created and added to this section.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "create_question", error });
     return errorState("Question could not be created.");
   }
@@ -207,6 +226,9 @@ export async function updateIntakeQuestionAction(
     revalidateIntakeBuilderPaths();
     return successState("Question updated.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "update_question", error });
     return errorState("Question could not be updated.");
   }
@@ -228,6 +250,9 @@ export async function archiveIntakeQuestionAction(
     revalidateIntakeBuilderPaths();
     return successState("Question archived.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "archive_question", error });
     return errorState("Question could not be archived.");
   }
@@ -249,6 +274,9 @@ export async function unarchiveIntakeQuestionAction(
     revalidateIntakeBuilderPaths();
     return successState("Question restored.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "unarchive_question", error });
     return errorState("Question could not be restored.");
   }
@@ -274,6 +302,9 @@ export async function reorderIntakeQuestionAction(
     revalidateIntakeBuilderPaths();
     return successState("Question order updated.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "reorder_question", error });
     return errorState("Question order could not be updated.");
   }
@@ -295,6 +326,9 @@ export async function deleteIntakeQuestionAction(
     revalidateIntakeBuilderPaths();
     return successState("Question deleted.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "delete_question", error });
     return errorState("Question could not be deleted.");
   }
@@ -316,6 +350,9 @@ export async function deleteIntakeSectionAction(
     revalidateIntakeBuilderPaths();
     return successState("Section deleted.");
   } catch (error) {
+    if (isDomainError(error)) {
+      return errorState(error.message);
+    }
     logIntakeBuilderActionError({ action: "delete_section", error });
     return errorState("Section could not be deleted.");
   }

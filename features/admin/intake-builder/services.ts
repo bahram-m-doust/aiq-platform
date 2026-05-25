@@ -23,6 +23,7 @@ import {
 } from "@/features/admin/intake-builder/queries";
 import type { UserProfile } from "@/features/auth/types";
 import { logAudit } from "@/lib/audit/logAudit";
+import { DomainError } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type AuditActor = Pick<UserProfile, "id" | "global_role">;
@@ -152,7 +153,7 @@ export async function updateIntakeSection({
   const before = await getIntakeBuilderSectionById(input.sectionId);
 
   if (!before) {
-    throw new Error("Section could not be found.");
+    throw new DomainError("intake_builder", "Section could not be found.");
   }
 
   const { data, error } = await admin
@@ -199,7 +200,7 @@ export async function archiveIntakeSection({
   const before = await getIntakeBuilderSectionById(sectionId);
 
   if (!before) {
-    throw new Error("Section could not be found.");
+    throw new DomainError("intake_builder", "Section could not be found.");
   }
 
   const { data, error } = await admin
@@ -243,7 +244,7 @@ export async function createIntakeQuestion({
   const section = await getIntakeBuilderSectionById(input.sectionId);
 
   if (!section) {
-    throw new Error("Section could not be found.");
+    throw new DomainError("intake_builder", "Section could not be found.");
   }
 
   const existingKeys = await getExistingIntakeQuestionKeys();
@@ -305,7 +306,7 @@ export async function updateIntakeQuestion({
   const before = await getIntakeBuilderQuestionById(input.questionId);
 
   if (!before) {
-    throw new Error("Question could not be found.");
+    throw new DomainError("intake_builder", "Question could not be found.");
   }
 
   const validationSchema = validationSchemaFromOptions({
@@ -358,7 +359,7 @@ export async function archiveIntakeQuestion({
   const before = await getIntakeBuilderQuestionById(questionId);
 
   if (!before) {
-    throw new Error("Question could not be found.");
+    throw new DomainError("intake_builder", "Question could not be found.");
   }
 
   const { data, error } = await admin
@@ -423,7 +424,7 @@ export async function deleteIntakeQuestion({
   const before = await getIntakeBuilderQuestionById(questionId);
 
   if (!before) {
-    throw new Error("Question could not be found.");
+    throw new DomainError("intake_builder", "Question could not be found.");
   }
 
   await deleteDependentRowsForQuestions(admin, [questionId]);
@@ -455,7 +456,7 @@ export async function deleteIntakeSection({
   const before = await getIntakeBuilderSectionById(sectionId);
 
   if (!before) {
-    throw new Error("Section could not be found.");
+    throw new DomainError("intake_builder", "Section could not be found.");
   }
 
   const { data: questionRows, error: listError } = await admin
@@ -510,7 +511,7 @@ export async function unarchiveIntakeSection({
   const before = await getIntakeBuilderSectionById(sectionId);
 
   if (!before) {
-    throw new Error("Section could not be found.");
+    throw new DomainError("intake_builder", "Section could not be found.");
   }
 
   const { data: activeRows, error: activeError } = await admin
@@ -588,7 +589,7 @@ export async function reorderIntakeSection({
   const currentIndex = sections.findIndex((section) => section.id === sectionId);
 
   if (currentIndex < 0) {
-    throw new Error("Active section could not be found.");
+    throw new DomainError("intake_builder", "Active section could not be found.");
   }
 
   const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
@@ -647,7 +648,7 @@ export async function unarchiveIntakeQuestion({
   const before = await getIntakeBuilderQuestionById(questionId);
 
   if (!before) {
-    throw new Error("Question could not be found.");
+    throw new DomainError("intake_builder", "Question could not be found.");
   }
 
   const { data: activeRows, error: activeError } = await admin
@@ -710,7 +711,7 @@ export async function reorderIntakeQuestion({
   const current = await getIntakeBuilderQuestionById(questionId);
 
   if (!current || !current.isActive) {
-    throw new Error("Active question could not be found.");
+    throw new DomainError("intake_builder", "Active question could not be found.");
   }
 
   const { data, error } = await admin
