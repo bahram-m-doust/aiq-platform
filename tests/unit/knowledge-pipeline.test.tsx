@@ -16,7 +16,6 @@ vi.mock("@/features/intake/docx-generator", () => ({
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit/logAudit";
 import { generateIntakeDocx as mockedGenerateIntakeDocx } from "@/features/intake/docx-generator";
-import { generateIntakeDocx as realGenerateIntakeDocx } from "@/features/intake/docx-generator";
 import { createIntakeKnowledgeFile } from "@/features/intake/intake-knowledge";
 import { adminPromoteFileToRag } from "@/features/files/admin-services";
 import {

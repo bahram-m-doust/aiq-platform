@@ -8,7 +8,7 @@ import type {
 import type { BrandAccessSummary } from "@/features/access/types";
 
 export const brandBrainAgentKey = "BRAND_INTEGRATOR_BRAIN";
-export const brandBrainProvider = "OPENAI_RESPONSES";
+export const brandBrainProvider = "OPENROUTER";
 export const brandBrainPromptMaxLength = 2000;
 
 export const initialBrandBrainChatFormState: BrandBrainChatFormState = {
@@ -112,7 +112,7 @@ export function resolveBrandBrainReadiness({
     return readiness({ status: "AGENT_UNAVAILABLE" });
   }
 
-  if (knowledgeBaseStatus !== "RAG_SYNCED" || !providerVectorStoreId) {
+  if (knowledgeBaseStatus !== "RAG_SYNCED") {
     return readiness({
       status: "KNOWLEDGE_BASE_NOT_SYNCED",
       knowledgeBaseId,

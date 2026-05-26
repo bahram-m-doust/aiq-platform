@@ -6,10 +6,10 @@ vi.mock("@/features/agents/brain/actions", () => ({
   initialBrandBrainChatFormState: { status: "idle", message: "" },
 }));
 
-vi.mock("@/features/agents/brain/openai", () => ({
+vi.mock("@/features/agents/brain/llm", () => ({
   createBrandBrainResponse: vi.fn(),
   getBrandBrainModel: vi.fn(() => "gpt-test"),
-  isOpenAIBrainConfigError: vi.fn(() => false),
+  isLLMBrainConfigError: vi.fn(() => false),
 }));
 
 vi.mock("@/features/agents/brain/queries", () => ({
@@ -23,7 +23,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 import {
   createBrandBrainResponse,
   getBrandBrainModel,
-} from "@/features/agents/brain/openai";
+} from "@/features/agents/brain/llm";
 import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { BrainChat } from "@/features/agents/brain/components/BrainChat";
@@ -118,7 +118,7 @@ describe("Brand Brain rules", () => {
     expect(readiness.status).toBe("KNOWLEDGE_BASE_NOT_SYNCED");
   });
 
-  it("locks when the synced vector store or synced files are missing", () => {
+  it("locks when knowledge base is not synced or synced files are missing", () => {
     expect(
       resolveBrandBrainReadiness({
         accessSummary: {
@@ -128,7 +128,7 @@ describe("Brand Brain rules", () => {
         },
         hasAgent: true,
         knowledgeBaseId: "kb-1",
-        knowledgeBaseStatus: "RAG_SYNCED",
+        knowledgeBaseStatus: "NOT_READY",
         providerVectorStoreId: null,
         syncedFileCount: 1,
       }).status,
@@ -144,7 +144,7 @@ describe("Brand Brain rules", () => {
         hasAgent: true,
         knowledgeBaseId: "kb-1",
         knowledgeBaseStatus: "RAG_SYNCED",
-        providerVectorStoreId: "vs_123",
+        providerVectorStoreId: null,
         syncedFileCount: 0,
       }).status,
     ).toBe("NO_SYNCED_FILES");
@@ -287,8 +287,6 @@ describe("Brand Brain service", () => {
     expect(mockedCreateBrandBrainResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         brandId: "brand-1",
-        profileId: "profile-1",
-        providerVectorStoreId: "vs_current_brand",
       }),
     );
     expect(agentRunBuilder.insert).toHaveBeenCalledWith(
@@ -301,7 +299,7 @@ describe("Brand Brain service", () => {
           answer: "The brand opportunity is clear.",
           response_id: "resp-1",
         },
-        provider: "OPENAI_RESPONSES",
+        provider: "OPENROUTER",
         model: "gpt-test",
         cost: null,
       }),

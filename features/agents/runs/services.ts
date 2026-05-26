@@ -6,7 +6,7 @@ import {
   catalogAgentKeyFromRoute,
 } from "@/features/agents/catalog/schema";
 import type { CatalogAgentKey } from "@/features/agents/catalog/types";
-import { createAgentRunResponse, getAgentRunModel } from "@/features/agents/runs/openai";
+import { createAgentRunResponse, getAgentRunModel } from "@/features/agents/runs/llm";
 import {
   agentRunProvider,
   buildAgentKnowledgeModuleScope,
@@ -129,7 +129,6 @@ async function getSyncedModuleIdsForRequiredModules({
     .select("module_id")
     .eq("brand_id", brandId)
     .eq("rag_status", "RAG_SYNCED")
-    .not("provider_file_id", "is", null)
     .in("module_id", moduleIds);
 
   if (knowledgeError) {
@@ -304,9 +303,6 @@ export async function runCatalogAgent({
     runError("This agent must be activated before it can run.");
   }
 
-  const providerVectorStoreId =
-    brainWorkspace.readiness.providerVectorStoreId ??
-    runError("Brand Brain vector store is not ready.");
   const moduleScope = await resolveKnowledgeModuleScope({
     brandId: brainWorkspace.access.brandId,
     requiredModules: agent.required_modules,
@@ -316,9 +312,7 @@ export async function runCatalogAgent({
   const response = await createAgentRunResponse({
     agentKey: normalizedAgentKey,
     prompt,
-    providerVectorStoreId,
     brandId: brainWorkspace.access.brandId,
-    profileId: profile.id,
     moduleScope,
     model,
   });

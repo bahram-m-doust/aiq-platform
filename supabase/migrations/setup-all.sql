@@ -1,4 +1,5 @@
 create extension if not exists pgcrypto;
+create extension if not exists vector;
 
 create table if not exists public.users_profile (
   id uuid primary key default gen_random_uuid(),
@@ -242,6 +243,18 @@ create table if not exists public.knowledge_files (
   created_at timestamptz default now()
 );
 
+create table if not exists public.knowledge_chunks (
+  id uuid primary key default gen_random_uuid(),
+  knowledge_file_id uuid not null references public.knowledge_files(id) on delete cascade,
+  brand_id uuid not null references public.brands(id) on delete cascade,
+  module_id uuid references public.brand_modules(id),
+  chunk_index int not null,
+  chunk_text text not null,
+  token_count int not null default 0,
+  embedding vector(1536),
+  created_at timestamptz default now()
+);
+
 create table if not exists public.agent_entitlements (
   id uuid primary key default gen_random_uuid(),
   brand_id uuid not null references public.brands(id) on delete cascade,
@@ -368,6 +381,12 @@ create index if not exists idx_knowledge_files_approved_by_supervisor on public.
 create index if not exists idx_knowledge_files_approved_by_platform_owner on public.knowledge_files(approved_by_platform_owner);
 
 create index if not exists idx_agents_is_active on public.agents(is_active);
+
+create index if not exists idx_knowledge_chunks_brand on public.knowledge_chunks(brand_id);
+create index if not exists idx_knowledge_chunks_knowledge_file on public.knowledge_chunks(knowledge_file_id);
+create index if not exists idx_knowledge_chunks_module on public.knowledge_chunks(module_id);
+create index if not exists idx_knowledge_chunks_embedding
+  on public.knowledge_chunks using hnsw (embedding vector_cosine_ops);
 
 create index if not exists idx_agent_entitlements_brand on public.agent_entitlements(brand_id);
 create index if not exists idx_agent_entitlements_agent on public.agent_entitlements(agent_id);
@@ -530,6 +549,8 @@ alter table public.module_reviews force row level security;
 alter table public.change_requests force row level security;
 alter table public.knowledge_bases force row level security;
 alter table public.knowledge_files force row level security;
+alter table public.knowledge_chunks enable row level security;
+alter table public.knowledge_chunks force row level security;
 alter table public.agent_entitlements force row level security;
 alter table public.agent_runs force row level security;
 alter table public.audit_logs force row level security;
@@ -541,3 +562,36 @@ revoke all on all sequences in schema public from anon, authenticated;
 -- Note: on Supabase Cloud, storage.objects is owned by supabase_storage_admin
 -- and RLS is already enabled by default, so we do not toggle it here. The
 -- bucket-policy block above already gates access via policies.
+
+create or replace function match_knowledge_chunks(
+  query_embedding vector(1536),
+  match_brand_id uuid,
+  match_count int default 5,
+  match_module_ids uuid[] default null
+)
+returns table (
+  id uuid,
+  knowledge_file_id uuid,
+  module_id uuid,
+  chunk_text text,
+  score float,
+  file_name text
+)
+language sql stable
+as $$
+  select
+    kc.id,
+    kc.knowledge_file_id,
+    kc.module_id,
+    kc.chunk_text,
+    1 - (kc.embedding <=> query_embedding) as score,
+    f.original_name as file_name
+  from knowledge_chunks kc
+  join knowledge_files kf on kf.id = kc.knowledge_file_id
+  join files f on f.id = kf.file_id
+  where kc.brand_id = match_brand_id
+    and kf.rag_status = 'RAG_SYNCED'
+    and (match_module_ids is null or kc.module_id = any(match_module_ids))
+  order by kc.embedding <=> query_embedding
+  limit match_count;
+$$;

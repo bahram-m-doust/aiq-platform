@@ -16,10 +16,12 @@ vi.mock("@/features/files/storage", () => ({
   downloadPrivateFile: vi.fn(),
 }));
 
-vi.mock("@/features/rag/openai", () => ({
-  createOpenAIFileSearchVectorStore: vi.fn(),
-  hasOpenAIFileSearchEnv: vi.fn(),
-  uploadOpenAIFileToVectorStore: vi.fn(),
+vi.mock("@/features/rag/embeddings", () => ({
+  hasEmbeddingEnv: vi.fn(),
+}));
+
+vi.mock("@/features/rag/pgvector-sync", () => ({
+  syncFileToChunks: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -34,11 +36,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { downloadPrivateFile } from "@/features/files/storage";
 import { RagApprovalQueue } from "@/features/rag/components/RagApprovalQueue";
 import { RagSyncPanel } from "@/features/rag/components/RagSyncPanel";
-import {
-  createOpenAIFileSearchVectorStore,
-  hasOpenAIFileSearchEnv,
-  uploadOpenAIFileToVectorStore,
-} from "@/features/rag/openai";
+import { hasEmbeddingEnv } from "@/features/rag/embeddings";
+import { syncFileToChunks } from "@/features/rag/pgvector-sync";
 import {
   canSyncRagRole,
   canPlatformOwnerApproveRag,
@@ -75,9 +74,8 @@ const mockedGetEligibleItem = vi.mocked(getEligibleRagApprovalItemByArtifactId);
 const mockedGetApprovedFilesForSync = vi.mocked(getRagApprovedFilesForSync);
 const mockedCreateAdminClient = vi.mocked(createAdminClient);
 const mockedDownloadPrivateFile = vi.mocked(downloadPrivateFile);
-const mockedCreateVectorStore = vi.mocked(createOpenAIFileSearchVectorStore);
-const mockedHasOpenAIEnv = vi.mocked(hasOpenAIFileSearchEnv);
-const mockedUploadToVectorStore = vi.mocked(uploadOpenAIFileToVectorStore);
+const mockedHasEmbeddingEnv = vi.mocked(hasEmbeddingEnv);
+const mockedSyncFileToChunks = vi.mocked(syncFileToChunks);
 
 function profile(role: UserProfile["global_role"]): UserProfile {
   return {
@@ -422,7 +420,7 @@ function setupSyncAdminClient({
     data: {
       id: "kb-1",
       brand_id: "brand-1",
-      provider: "OPENAI_FILE_SEARCH",
+      provider: "PGVECTOR",
       provider_vector_store_id: null,
       status: "NOT_READY",
     },
@@ -432,7 +430,7 @@ function setupSyncAdminClient({
     data: {
       id: "kb-1",
       brand_id: "brand-1",
-      provider: "OPENAI_FILE_SEARCH",
+      provider: "PGVECTOR",
       provider_vector_store_id: null,
       status: "SYNCING",
     },
@@ -442,7 +440,7 @@ function setupSyncAdminClient({
     data: {
       id: "kb-1",
       brand_id: "brand-1",
-      provider: "OPENAI_FILE_SEARCH",
+      provider: "PGVECTOR",
       provider_vector_store_id: "vs_123",
       status: "SYNCING",
     },
@@ -452,7 +450,7 @@ function setupSyncAdminClient({
     data: {
       id: "kb-1",
       brand_id: "brand-1",
-      provider: "OPENAI_FILE_SEARCH",
+      provider: "PGVECTOR",
       provider_vector_store_id: "vs_123",
       status: "RAG_SYNCED",
     },
@@ -516,21 +514,9 @@ function setupSyncAdminClient({
 describe("RAG sync service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedHasOpenAIEnv.mockReturnValue(true);
+    mockedHasEmbeddingEnv.mockReturnValue(true);
     mockedGetApprovedFilesForSync.mockResolvedValue([syncFile()]);
-    mockedDownloadPrivateFile.mockResolvedValue(
-      new Blob(["pdf bytes"], { type: "application/pdf" }),
-    );
-    mockedCreateVectorStore.mockResolvedValue({
-      providerVectorStoreId: "vs_123",
-      status: "completed",
-    });
-    mockedUploadToVectorStore.mockResolvedValue({
-      providerFileId: "file_openai_1",
-      vectorStoreFileId: "vsf_1",
-      status: "completed",
-      errorMessage: null,
-    });
+    mockedSyncFileToChunks.mockResolvedValue({ ok: true, chunkCount: 3 });
   });
 
   it("blocks non-Platform Owner sync attempts", async () => {
@@ -543,8 +529,8 @@ describe("RAG sync service", () => {
     expect(mockedCreateAdminClient).not.toHaveBeenCalled();
   });
 
-  it("returns a controlled error before status changes when OPENAI_API_KEY is missing", async () => {
-    mockedHasOpenAIEnv.mockReturnValue(false);
+  it("returns a controlled error when OPENAI_API_KEY is missing", async () => {
+    mockedHasEmbeddingEnv.mockReturnValue(false);
     setupSyncAdminClient();
 
     await expect(
@@ -553,9 +539,6 @@ describe("RAG sync service", () => {
         triggeredBy: profile("PLATFORM_OWNER"),
       }),
     ).rejects.toSatisfy(isRagSyncServiceError);
-
-    expect(mockedCreateVectorStore).not.toHaveBeenCalled();
-    expect(mockedUploadToVectorStore).not.toHaveBeenCalled();
   });
 
   it("moves RAG_APPROVED files through SYNCING to RAG_SYNCED and audits the sync", async () => {
@@ -569,7 +552,6 @@ describe("RAG sync service", () => {
 
     expect(result).toMatchObject({
       brandId: "brand-1",
-      providerVectorStoreId: "vs_123",
       attemptedCount: 1,
       syncedCount: 1,
       failedCount: 0,
@@ -580,7 +562,6 @@ describe("RAG sync service", () => {
     expect(fileResultBuilder.update).toHaveBeenCalledWith(
       expect.objectContaining({
         rag_status: "RAG_SYNCED",
-        provider_file_id: "file_openai_1",
       }),
     );
     expect(auditBuilder.insert).toHaveBeenCalledWith(
@@ -591,14 +572,13 @@ describe("RAG sync service", () => {
     );
   });
 
-  it("marks only the failed file SYNC_FAILED when OpenAI ingestion fails", async () => {
+  it("marks the file SYNC_FAILED when chunk embedding fails", async () => {
     const { fileResultBuilder } = setupSyncAdminClient();
 
-    mockedUploadToVectorStore.mockResolvedValue({
-      providerFileId: "file_openai_1",
-      vectorStoreFileId: "vsf_1",
-      status: "failed",
-      errorMessage: "invalid file",
+    mockedSyncFileToChunks.mockResolvedValue({
+      ok: false,
+      chunkCount: 0,
+      error: "No text extracted",
     });
 
     const result = await syncBrandKnowledgeBase({
@@ -610,7 +590,6 @@ describe("RAG sync service", () => {
     expect(fileResultBuilder.update).toHaveBeenCalledWith(
       expect.objectContaining({
         rag_status: "SYNC_FAILED",
-        provider_file_id: "file_openai_1",
       }),
     );
   });

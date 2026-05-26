@@ -80,7 +80,7 @@ async function getKnowledgeBase(brandId: string) {
     .from("knowledge_bases")
     .select("id, status, provider_vector_store_id")
     .eq("brand_id", brandId)
-    .eq("provider", "OPENAI_FILE_SEARCH")
+    .eq("provider", "PGVECTOR")
     .maybeSingle();
 
   if (error) {
@@ -96,8 +96,7 @@ async function getSyncedKnowledgeFileCount(brandId: string) {
     .from("knowledge_files")
     .select("id")
     .eq("brand_id", brandId)
-    .eq("rag_status", "RAG_SYNCED")
-    .not("provider_file_id", "is", null);
+    .eq("rag_status", "RAG_SYNCED");
 
   if (error) {
     throw error;

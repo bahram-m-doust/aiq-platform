@@ -15,7 +15,7 @@ vi.mock("@/features/agents/brain/queries", () => ({
   getBrandBrainWorkspace: vi.fn(),
 }));
 
-vi.mock("@/features/agents/runs/openai", () => ({
+vi.mock("@/features/agents/runs/llm", () => ({
   createAgentRunResponse: vi.fn(),
   getAgentRunModel: vi.fn(() => "gpt-test"),
 }));
@@ -39,7 +39,7 @@ import type {
 import {
   createAgentRunResponse,
   getAgentRunModel,
-} from "@/features/agents/runs/openai";
+} from "@/features/agents/runs/llm";
 import {
   agentSystemPrompts,
   getAgentSystemPrompt,
@@ -385,9 +385,9 @@ describe("agent run service", () => {
       retrievedSources: [
         {
           fileName: "brand-knowledge.pdf",
-          providerFileId: "file_openai_1",
+          providerFileId: "knowledge-1",
           score: 0.91,
-          attributes: { brand_id: "brand-1" },
+          attributes: { chunk_id: "chunk-1", knowledge_file_id: "knowledge-1" },
         },
       ],
       displaySources: [{ fileName: "brand-knowledge.pdf", score: 0.91 }],
@@ -412,8 +412,6 @@ describe("agent run service", () => {
       expect.objectContaining({
         agentKey: "STORY_TELLER",
         brandId: "brand-1",
-        profileId: "profile-1",
-        providerVectorStoreId: "vs_current_brand",
         moduleScope: expect.objectContaining({ filter: null }),
       }),
     );

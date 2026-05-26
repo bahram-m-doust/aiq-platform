@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { requireUserProfile } from "@/features/auth/queries";
 import { catalogAgentKeyFromRoute, catalogAgentSlugForKey } from "@/features/agents/catalog/schema";
 import {
-  isOpenAIAgentRunConfigError,
-} from "@/features/agents/runs/openai";
+  isLLMAgentRunConfigError,
+} from "@/features/agents/runs/llm";
 import {
   validateAgentRunFormData,
 } from "@/features/agents/runs/schema";
@@ -68,7 +68,7 @@ export async function runAgentAction(
       agentKey: validation.agentKey,
     };
   } catch (error) {
-    if (isAgentRunServiceError(error) || isOpenAIAgentRunConfigError(error)) {
+    if (isAgentRunServiceError(error) || isLLMAgentRunConfigError(error)) {
       return errorState(error.message);
     }
 

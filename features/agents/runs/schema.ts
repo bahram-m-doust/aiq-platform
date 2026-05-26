@@ -12,7 +12,7 @@ export const initialAgentRunFormState: AgentRunFormState = {
 };
 
 export const agentRunPromptMaxLength = 2000;
-export const agentRunProvider = "OPENAI_RESPONSES";
+export const agentRunProvider = "OPENROUTER";
 
 function formString(formData: FormData, key: string) {
   const value = formData.get(key);

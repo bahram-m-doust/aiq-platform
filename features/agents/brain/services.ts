@@ -4,7 +4,7 @@ import type { UserProfile } from "@/features/auth/types";
 import {
   createBrandBrainResponse,
   getBrandBrainModel,
-} from "@/features/agents/brain/openai";
+} from "@/features/agents/brain/llm";
 import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
 import {
   brandBrainProvider,
@@ -121,16 +121,11 @@ export async function runBrandBrain({
     brainError(readiness.message);
   }
 
-  const providerVectorStoreId =
-    readiness.providerVectorStoreId ??
-    brainError("Brand Brain vector store is not ready.");
   const model = getBrandBrainModel();
   const startedAt = Date.now();
   const response = await createBrandBrainResponse({
     prompt,
-    providerVectorStoreId,
     brandId: access.brandId,
-    profileId: profile.id,
     model,
   });
   const latencyMs = Math.max(0, Date.now() - startedAt);

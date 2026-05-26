@@ -1,7 +1,7 @@
 "use server";
 
 import { requireUserProfile } from "@/features/auth/queries";
-import { isOpenAIBrainConfigError } from "@/features/agents/brain/openai";
+import { isLLMBrainConfigError } from "@/features/agents/brain/llm";
 import {
   validateBrandBrainPromptFormData,
 } from "@/features/agents/brain/schema";
@@ -56,7 +56,7 @@ export async function askBrandBrainAction(
       runId: result.runId,
     };
   } catch (error) {
-    if (isBrandBrainServiceError(error) || isOpenAIBrainConfigError(error)) {
+    if (isBrandBrainServiceError(error) || isLLMBrainConfigError(error)) {
       return errorState(error.message);
     }
 

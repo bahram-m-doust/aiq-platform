@@ -282,7 +282,7 @@ async function fetchKnowledgeBases(brandIds: string[]) {
   const { data, error } = await admin
     .from("knowledge_bases")
     .select(knowledgeBaseColumns)
-    .eq("provider", "OPENAI_FILE_SEARCH")
+    .eq("provider", "PGVECTOR")
     .in("brand_id", brandIds);
 
   if (error) {
