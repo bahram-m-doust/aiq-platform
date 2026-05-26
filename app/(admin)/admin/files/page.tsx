@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import { AdminFilesConsole } from "@/features/files/components/AdminFilesConsole";
+import { hasBrandApiKey } from "@/features/brands/api-keys";
 import {
   getAdminBrandOptions,
   getFilesForBrand,
@@ -35,9 +36,12 @@ export default async function AdminFilesPage({
   const selectedBrandId = brands.some((brand) => brand.id === requestedBrandId)
     ? requestedBrandId
     : null;
-  const files = selectedBrandId
-    ? await getFilesForBrand({ brandId: selectedBrandId })
-    : [];
+  const [files, brandHasKey] = selectedBrandId
+    ? await Promise.all([
+        getFilesForBrand({ brandId: selectedBrandId }),
+        hasBrandApiKey(selectedBrandId),
+      ])
+    : [[], false];
 
   return (
     <main className="min-h-svh bg-background px-6 py-10 text-foreground">
@@ -62,6 +66,7 @@ export default async function AdminFilesPage({
         <AdminFilesConsole
           brands={brands}
           files={files}
+          hasApiKey={brandHasKey}
           selectedBrandId={selectedBrandId}
         />
       </section>

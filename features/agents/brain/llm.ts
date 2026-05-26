@@ -7,7 +7,7 @@ import type { BrandBrainRetrievedSource } from "@/features/agents/brain/types";
 import { searchBrandKnowledge } from "@/features/rag/vector-search";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import {
-  getOpenRouterClient,
+  getOpenRouterClientForBrand,
   getOpenRouterModel,
 } from "@/lib/openrouter/client";
 
@@ -68,7 +68,7 @@ export async function createBrandBrainResponse({
 
   const context = buildContextBlock(chunks);
 
-  const client = getOpenRouterClient();
+  const client = await getOpenRouterClientForBrand(brandId);
   const completion = await client.chat.completions.create({
     model,
     messages: [

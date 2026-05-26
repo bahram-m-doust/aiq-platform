@@ -38,7 +38,6 @@ describe("release readiness docs", () => {
       "EMAIL_FROM",
       "NEXT_PUBLIC_SUPABASE_ANON_KEY",
       "NEXT_PUBLIC_SUPABASE_URL",
-      "OPENAI_API_KEY",
       "OPENROUTER_API_KEY",
       "OPENROUTER_MODEL",
       "RESEND_API_KEY",

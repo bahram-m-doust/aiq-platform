@@ -1,42 +1,29 @@
 import "server-only";
 
-import OpenAI from "openai";
+import {
+  getOpenRouterClientForBrand,
+  hasOpenRouterEnv,
+} from "@/lib/openrouter/client";
 
-import { readTrimmedRuntimeEnv } from "@/lib/env/runtime";
-import { DomainError } from "@/lib/errors";
-
-let client: OpenAI | null = null;
-
-const EMBEDDING_MODEL = "text-embedding-3-small";
+const EMBEDDING_MODEL = "openai/text-embedding-3-small";
 const BATCH_SIZE = 100;
 
 export function hasEmbeddingEnv(): boolean {
-  return Boolean(readTrimmedRuntimeEnv("OPENAI_API_KEY"));
+  return hasOpenRouterEnv();
 }
 
-function getClient(): OpenAI {
-  if (client) return client;
-
-  const apiKey = readTrimmedRuntimeEnv("OPENAI_API_KEY");
-  if (!apiKey) {
-    throw new DomainError(
-      "embedding_config",
-      "OPENAI_API_KEY is required for generating embeddings.",
-    );
-  }
-
-  client = new OpenAI({ apiKey });
-  return client;
-}
-
-export async function embedTexts(texts: string[]): Promise<number[][]> {
+export async function embedTexts(
+  texts: string[],
+  brandId: string,
+): Promise<number[][]> {
   if (texts.length === 0) return [];
 
+  const client = await getOpenRouterClientForBrand(brandId);
   const results: number[][] = [];
 
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE);
-    const response = await getClient().embeddings.create({
+    const response = await client.embeddings.create({
       model: EMBEDDING_MODEL,
       input: batch,
     });
@@ -50,7 +37,10 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   return results;
 }
 
-export async function embedQuery(query: string): Promise<number[]> {
-  const [embedding] = await embedTexts([query]);
+export async function embedQuery(
+  query: string,
+  brandId: string,
+): Promise<number[]> {
+  const [embedding] = await embedTexts([query], brandId);
   return embedding;
 }

@@ -58,7 +58,7 @@ describe("Netlify readiness", () => {
   it("does not directly dot-access server-only env keys in bundled app code", () => {
     const bundledDirs = ["app", "features", "lib"];
     const secretEnvPattern =
-      /process\.env\.(SUPABASE_SERVICE_ROLE_KEY|OPENAI_API_KEY|RESEND_API_KEY)/;
+      /process\.env\.(SUPABASE_SERVICE_ROLE_KEY|OPENROUTER_API_KEY|RESEND_API_KEY)/;
     const matches = bundledDirs.flatMap((dir) =>
       listFiles(path.join(process.cwd(), dir))
         .filter(

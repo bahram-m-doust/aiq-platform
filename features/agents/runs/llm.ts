@@ -9,7 +9,7 @@ import type { CatalogAgentKey } from "@/features/agents/catalog/types";
 import { searchBrandKnowledge } from "@/features/rag/vector-search";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import {
-  getOpenRouterClient,
+  getOpenRouterClientForBrand,
   getOpenRouterModel,
 } from "@/lib/openrouter/client";
 
@@ -62,7 +62,7 @@ export async function createAgentRunResponse({
   const context = buildContextBlock(chunks);
   const systemPrompt = getAgentSystemPrompt(agentKey);
 
-  const client = getOpenRouterClient();
+  const client = await getOpenRouterClientForBrand(brandId);
   const completion = await client.chat.completions.create({
     model,
     messages: [

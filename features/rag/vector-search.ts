@@ -32,7 +32,7 @@ export async function searchBrandKnowledge({
   topK?: number;
   moduleIds?: string[];
 }): Promise<VectorSearchResult[]> {
-  const queryEmbedding = await embedQuery(query);
+  const queryEmbedding = await embedQuery(query, brandId);
 
   const admin = createAdminClient();
   const { data, error } = await admin.rpc("match_knowledge_chunks", {

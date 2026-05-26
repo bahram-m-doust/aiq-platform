@@ -298,6 +298,19 @@ create table if not exists public.audit_logs (
   created_at timestamptz default now()
 );
 
+create table if not exists public.brand_api_keys (
+  id uuid primary key default gen_random_uuid(),
+  brand_id uuid not null references public.brands(id) on delete cascade,
+  provider text not null default 'OPENROUTER',
+  encrypted_key text not null,
+  label text,
+  is_active boolean not null default true,
+  created_by uuid references public.users_profile(id),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique (brand_id, provider)
+);
+
 create index if not exists idx_users_profile_auth_user_id on public.users_profile(auth_user_id);
 create index if not exists idx_users_profile_email on public.users_profile(email);
 create index if not exists idx_users_profile_global_role on public.users_profile(global_role);
@@ -387,6 +400,8 @@ create index if not exists idx_knowledge_chunks_knowledge_file on public.knowled
 create index if not exists idx_knowledge_chunks_module on public.knowledge_chunks(module_id);
 create index if not exists idx_knowledge_chunks_embedding
   on public.knowledge_chunks using hnsw (embedding vector_cosine_ops);
+
+create index if not exists idx_brand_api_keys_brand on public.brand_api_keys(brand_id);
 
 create index if not exists idx_agent_entitlements_brand on public.agent_entitlements(brand_id);
 create index if not exists idx_agent_entitlements_agent on public.agent_entitlements(agent_id);
@@ -551,6 +566,8 @@ alter table public.knowledge_bases force row level security;
 alter table public.knowledge_files force row level security;
 alter table public.knowledge_chunks enable row level security;
 alter table public.knowledge_chunks force row level security;
+alter table public.brand_api_keys enable row level security;
+alter table public.brand_api_keys force row level security;
 alter table public.agent_entitlements force row level security;
 alter table public.agent_runs force row level security;
 alter table public.audit_logs force row level security;

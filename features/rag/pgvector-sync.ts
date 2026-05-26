@@ -24,7 +24,7 @@ export async function syncFileToChunks(
     return { ok: false, chunkCount: 0, error: "Chunking produced no chunks." };
   }
 
-  const embeddings = await embedTexts(chunks.map((c) => c.text));
+  const embeddings = await embedTexts(chunks.map((c) => c.text), file.brandId);
 
   const admin = createAdminClient();
 
