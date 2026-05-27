@@ -128,3 +128,43 @@
     @apply font-sans;
   }
 }
+
+/* ── Build View design tokens ── */
+:root {
+  --bv-bg: #f1f1f3;
+  --bv-panel: #f6f6f8;
+  --bv-panel-edge: rgba(15, 15, 20, 0.06);
+  --bv-card: #ffffff;
+  --bv-card-soft: #fafafb;
+  --bv-ink: #0e0e14;
+  --bv-ink-2: #4a4a55;
+  --bv-ink-3: #82828d;
+  --bv-ink-4: #b6b6bf;
+  --bv-line: rgba(15, 15, 20, 0.07);
+  --bv-line-2: rgba(15, 15, 20, 0.12);
+  --bv-line-dashed: rgba(15, 15, 20, 0.16);
+  --bv-accent: #2a7cff;
+  --bv-accent-tint: rgba(42, 124, 255, 0.08);
+  --bv-c1-a: #ff8a5b; --bv-c1-b: #ff5b3c;
+  --bv-c2-a: #5bb3ff; --bv-c2-b: #2a7cff;
+  --bv-c3-a: #7ee3a8; --bv-c3-b: #2bc78a;
+  --bv-ease: cubic-bezier(.2,.7,.2,1);
+  --bv-shadow-card: 0 1px 2px rgba(15,15,20,0.04), 0 12px 30px -12px rgba(15,15,20,0.10);
+  --bv-shadow-card-hover: 0 1px 2px rgba(15,15,20,0.05), 0 18px 40px -14px rgba(15,15,20,0.14);
+  --bv-shadow-hub: 0 1px 2px rgba(15,15,20,0.06), 0 14px 40px -10px rgba(15,15,20,0.16);
+  --bv-shadow-panel: 0 1px 2px rgba(15,15,20,0.04), 0 28px 80px -32px rgba(15,15,20,0.18);
+}
+
+@keyframes bv-spin { to { transform: rotate(360deg); } }
+@keyframes bv-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.5); }
+}
+@keyframes bv-live-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(43, 199, 138, 0.18); }
+  50% { box-shadow: 0 0 0 8px rgba(43, 199, 138, 0.04); }
+}
+@keyframes bv-slide-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
