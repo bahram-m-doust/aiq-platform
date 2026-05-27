@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import type {
   BrandBuildProgress,
@@ -576,6 +577,7 @@ export function BrandBuildView({
     return Math.round((filled / progress.phases.length) * 100);
   }, [progress.phases, phaseInfo]);
 
+  const router = useRouter();
   const activePhase = progress.activePhase;
   const toggle = useCallback(
     (key: string) =>
@@ -583,9 +585,23 @@ export function BrandBuildView({
     [],
   );
   const openSub = useCallback(
-    (phase: PhaseProgress, substep: SubstepProgress, state: SubstepState) =>
-      setDetail({ phase, substep, state }),
-    [],
+    (phase: PhaseProgress, substep: SubstepProgress, state: SubstepState) => {
+      if (state === "locked") return;
+      if (phase.key === "questionnaires") {
+        router.push(`/dashboard/questionnaire/${substep.id}`);
+        return;
+      }
+      if (phase.key === "strategies") {
+        router.push("/dashboard/modules");
+        return;
+      }
+      if (phase.key === "brain_build") {
+        router.push("/dashboard/brain");
+        return;
+      }
+      setDetail({ phase, substep, state });
+    },
+    [router],
   );
   const closeDetail = useCallback(() => setDetail(null), []);
 
