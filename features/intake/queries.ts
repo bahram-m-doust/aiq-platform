@@ -142,12 +142,29 @@ export async function getIntakeAccessForProfile({
   brandId?: string;
 }) {
   const admin = createAdminClient();
+
+  const { data: profileData } = await admin
+    .from("users_profile")
+    .select("global_role")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  const isPlatformOwner =
+    (profileData as { global_role: string } | null)?.global_role ===
+    "PLATFORM_OWNER";
+
   let membershipQuery = admin
     .from("brand_memberships")
     .select("brand_id, role, brands(id, name)")
     .eq("user_id", profileId)
-    .eq("status", "ACTIVE")
-    .in("role", ["OWNER", "EXECUTIVE_MANAGER"]);
+    .eq("status", "ACTIVE");
+
+  if (!isPlatformOwner) {
+    membershipQuery = membershipQuery.in("role", [
+      "OWNER",
+      "EXECUTIVE_MANAGER",
+    ]);
+  }
 
   if (brandId) {
     membershipQuery = membershipQuery.eq("brand_id", brandId);
@@ -164,19 +181,36 @@ export async function getIntakeAccessForProfile({
     .map((membership) => {
       const brand = firstRelated(membership.brands);
 
-      if (!brand || !canAnswerIntakeRole(membership.role)) {
+      if (!brand || (!isPlatformOwner && !canAnswerIntakeRole(membership.role))) {
         return null;
       }
 
       return {
         brandId: membership.brand_id,
         brandName: brand.name,
-        membershipRole: membership.role,
+        membershipRole: isPlatformOwner ? "OWNER" : membership.role,
       };
     })
     .filter((membership): membership is IntakeAccessContext =>
       Boolean(membership),
     );
+
+  if (memberships.length === 0 && isPlatformOwner) {
+    let brandQuery = admin.from("brands").select("id, name").limit(1);
+    if (brandId) {
+      brandQuery = brandQuery.eq("id", brandId);
+    }
+    const { data: brandData } = await brandQuery.maybeSingle();
+    const brand = brandData as { id: string; name: string } | null;
+    if (brand) {
+      return {
+        brandId: brand.id,
+        brandName: brand.name,
+        membershipRole: "OWNER" as const,
+        planName: null,
+      };
+    }
+  }
 
   if (memberships.length === 0) {
     return null;
@@ -217,6 +251,13 @@ export async function getIntakeAccessForProfile({
       return {
         ...membership,
         planName: entitlement.planName,
+      };
+    }
+
+    if (isPlatformOwner) {
+      return {
+        ...membership,
+        planName: null,
       };
     }
   }
