@@ -53,7 +53,7 @@ function logIntakeBuilderActionError({
 function revalidateIntakeBuilderPaths() {
   revalidateTag(CACHE_TAGS.intakeConfig, "max");
   revalidatePath("/admin/intake-builder");
-  revalidatePath("/dashboard/intake");
+  revalidatePath("/dashboard/questionnaire");
 }
 
 export async function createIntakeSectionAction(

@@ -47,12 +47,9 @@ export default async function DashboardPage({
     );
 
     return (
-      <main
-        className="min-h-svh"
-        style={{ background: "var(--bv-bg)", color: "var(--bv-ink)" }}
-      >
+      <div style={{ background: "var(--bv-bg)", color: "var(--bv-ink)" }}>
         <BrandBuildView email={email} progress={buildProgress} />
-      </main>
+      </div>
     );
   }
 

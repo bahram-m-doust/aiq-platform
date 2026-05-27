@@ -53,13 +53,10 @@ export const canonicalModuleTypeLabels: Record<CanonicalModuleTypeKey, string> =
     BRAND_KNOWLEDGE: "Brand Knowledge",
     ARCHETYPE: "Archetype",
     MARKET_INTELLIGENCE: "Market Intelligence",
-    RESEARCH_BENCHMARK: "Research Benchmark",
-    BRAND_CITY_CANVAS: "Brand City Canvas",
     CITY_EXPERIENCE_STRATEGIES: "City Experience Strategies",
     LANGUAGE_STYLE: "Language Style",
     VISUAL_SYSTEM: "Visual System",
-    TOUCHPOINT_SYSTEM: "Touchpoint System",
-    BRAND_INTEGRATOR_BRAIN_PACK: "Brand Integrator Brain Pack",
+    RESEARCHES_AND_BENCHMARKS: "Researches and Benchmarks",
   };
 
 const maxClientCommentLength = 4000;

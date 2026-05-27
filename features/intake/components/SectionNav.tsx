@@ -28,7 +28,7 @@ export function SectionNav({
               "rounded-lg border border-border px-4 py-3 text-sm transition-colors hover:bg-muted",
               isActive && "border-primary bg-muted",
             )}
-            href={`/dashboard/intake/${section.key}`}
+            href={`/dashboard/questionnaire/${section.key}`}
             key={section.id}
           >
             <span className="block font-medium">{section.title}</span>

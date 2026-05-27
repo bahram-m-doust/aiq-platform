@@ -342,7 +342,7 @@ export async function getBrandBuildProgress(
     title: "Strategies",
     description:
       "Synthesize the inputs into a working brand strategy the brain can reason from.",
-    team: "Backstudio Strategy Team",
+    team: "Bextudio Strategy Team",
     teamVerb: "Drafted",
     iconKind: "spark",
     status: modules.status,
@@ -358,7 +358,7 @@ export async function getBrandBuildProgress(
     title: "Brain Build",
     description:
       "Assemble, train and ship the brand-aware model — locked until strategy lands.",
-    team: "Backstudio AI Team",
+    team: "Bextudio AI Team",
     teamVerb: "Engineered",
     iconKind: "chip",
     status: brain.status,

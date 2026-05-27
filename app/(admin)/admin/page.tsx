@@ -24,6 +24,7 @@ import {
 import { logout } from "@/features/auth/actions";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import { getPendingDemoRequestCount } from "@/features/demo-requests/queries";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = {
   title: "Admin | Bextudio Platform",
@@ -43,6 +44,13 @@ export default async function AdminPage() {
   const { user, profile } = await requirePlatformOwner("/admin");
   const email = user.email ?? profile.email;
   const pendingDemoRequests = await getPendingDemoRequestCount();
+  const admin = createAdminClient();
+  const { data: recentSubmissions } = await admin
+    .from("audit_logs")
+    .select("brand_id, created_at, after_json")
+    .eq("action", "intake_final_submitted")
+    .order("created_at", { ascending: false })
+    .limit(5);
 
   return (
     <main className="min-h-svh bg-background px-6 py-10 text-foreground">
@@ -67,6 +75,36 @@ export default async function AdminPage() {
             </p>
           </CardContent>
         </Card>
+
+        {recentSubmissions && recentSubmissions.length > 0 ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <SectionLabel>Recent Questionnaire Submissions</SectionLabel>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {(recentSubmissions as { brand_id: string; created_at: string; after_json: unknown }[]).map((sub, i) => (
+                  <div
+                    className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+                    key={i}
+                  >
+                    <span className="font-medium">
+                      Brand {String(sub.brand_id).slice(0, 8)}...
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(sub.created_at).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         {/* Access & Activation */}
         <Card>

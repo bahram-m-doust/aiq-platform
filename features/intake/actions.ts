@@ -17,7 +17,7 @@ import type {
 export async function autosaveIntakeAnswerAction(
   input: AutosaveIntakeAnswerInput,
 ): Promise<AutosaveIntakeAnswerResult> {
-  const { profile } = await requireUserProfile("/dashboard/intake");
+  const { profile } = await requireUserProfile("/dashboard/questionnaire");
   const result = await autosaveIntakeAnswer({
     input,
     profileId: profile.id,
@@ -25,7 +25,7 @@ export async function autosaveIntakeAnswerAction(
   });
 
   if (result.ok) {
-    revalidatePath("/dashboard/intake");
+    revalidatePath("/dashboard/questionnaire");
   }
 
   return result;
@@ -44,7 +44,7 @@ export async function finalSubmitIntakeAction(
   _previousState: FinalSubmitIntakeFormState,
   formData: FormData,
 ): Promise<FinalSubmitIntakeFormState> {
-  const { profile } = await requireUserProfile("/dashboard/intake");
+  const { profile } = await requireUserProfile("/dashboard/questionnaire");
   const sessionId = formValue(formData, "session_id");
 
   if (!sessionId) {
@@ -59,14 +59,14 @@ export async function finalSubmitIntakeAction(
     });
 
     revalidatePath("/dashboard");
-    revalidatePath("/dashboard/intake");
+    revalidatePath("/dashboard/questionnaire");
     result.sectionKeys.forEach((sectionKey) => {
-      revalidatePath(`/dashboard/intake/${sectionKey}`);
+      revalidatePath(`/dashboard/questionnaire/${sectionKey}`);
     });
 
     return {
       status: "success",
-      message: "Strategic Intake has been submitted and locked.",
+      message: "Questionnaire has been submitted and locked.",
       snapshotId: result.snapshotId,
     };
   } catch (error) {
@@ -75,7 +75,7 @@ export async function finalSubmitIntakeAction(
     }
 
     return finalSubmitErrorState(
-      "Strategic Intake could not be submitted. Please try again.",
+      "Questionnaire could not be submitted. Please try again.",
     );
   }
 }

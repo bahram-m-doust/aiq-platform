@@ -18,8 +18,7 @@ const STATE_COPY: Record<SubstepState, string> = {
   locked: "Locked",
 };
 
-const avg = (arr: number[]) =>
-  Math.round(arr.reduce((a, b) => a + b, 0) / Math.max(1, arr.length));
+
 
 /* ── SVG Glyphs ── */
 
@@ -620,7 +619,7 @@ export function BrandBuildView({
               Brand Brain
             </div>
             <div className="mt-px font-mono text-[11.5px] tracking-wider text-[var(--bv-ink-3)]">
-              backstudio · build view
+              bextudio · build view
             </div>
           </div>
         </div>
@@ -823,7 +822,7 @@ export function BrandBuildView({
           Go to
         </span>
         {[
-          { href: "/dashboard/intake", label: "Intake" },
+          { href: "/dashboard/questionnaire", label: "Questionnaire" },
           { href: "/dashboard/modules", label: "Modules" },
           { href: "/dashboard/brain", label: "Brain" },
           { href: "/dashboard/agents", label: "Agents" },

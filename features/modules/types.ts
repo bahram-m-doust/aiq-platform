@@ -5,26 +5,20 @@ export const canonicalModuleTypes = [
   "Brand Knowledge",
   "Archetype",
   "Market Intelligence",
-  "Research Benchmark",
-  "Brand City Canvas",
   "City Experience Strategies",
   "Language Style",
   "Visual System",
-  "Touchpoint System",
-  "Brand Integrator Brain Pack",
+  "Researches and Benchmarks",
 ] as const;
 
 export const canonicalModuleTypeKeys = [
   "BRAND_KNOWLEDGE",
   "ARCHETYPE",
   "MARKET_INTELLIGENCE",
-  "RESEARCH_BENCHMARK",
-  "BRAND_CITY_CANVAS",
   "CITY_EXPERIENCE_STRATEGIES",
   "LANGUAGE_STYLE",
   "VISUAL_SYSTEM",
-  "TOUCHPOINT_SYSTEM",
-  "BRAND_INTEGRATOR_BRAIN_PACK",
+  "RESEARCHES_AND_BENCHMARKS",
 ] as const;
 
 export type CanonicalModuleType = (typeof canonicalModuleTypes)[number];
