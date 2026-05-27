@@ -23,6 +23,10 @@ export default async function DashboardLayout({
       const catalogWorkspace = await getAgentCatalogWorkspace(profile.id);
       const agents = catalogWorkspace?.agents ?? [];
 
+      const defByKey = new Map(
+        catalogAgentDefinitions.map((d) => [d.key, d]),
+      );
+
       sidebarProps = {
         email: user.email ?? profile.email,
         fullName: profile.full_name,
@@ -30,7 +34,7 @@ export default async function DashboardLayout({
         brandName: accessSummary.brandName,
         agents: agents.map((a) => ({
           key: a.key,
-          name: a.name,
+          name: defByKey.get(a.key)?.name ?? a.name,
           slug: a.slug,
           state: a.displayState,
         })),

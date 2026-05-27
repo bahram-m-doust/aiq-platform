@@ -594,6 +594,13 @@ export function BrandBuildView({
       className="mx-auto max-w-[1180px] px-7 pb-24 pt-10"
       style={{ color: "var(--bv-ink)" }}
     >
+      {/* ── Welcome ── */}
+      <div className="mb-8">
+        <h1 className="text-[clamp(24px,3vw,32px)] font-semibold tracking-[-0.02em] text-[var(--bv-ink)]">
+          Welcome to {progress.brandName} City
+        </h1>
+      </div>
+
       {/* ── Top Bar ── */}
       <div className="mb-14 flex items-center justify-between">
         <div className="flex items-center gap-3">
