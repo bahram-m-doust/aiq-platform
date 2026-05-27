@@ -153,6 +153,8 @@ export async function getIntakeAccessForProfile({
     (profileData as { global_role: string } | null)?.global_role ===
     "PLATFORM_OWNER";
 
+  console.log("[intake] access check", { profileId, globalRole: (profileData as { global_role: string } | null)?.global_role, isPlatformOwner });
+
   if (isPlatformOwner) {
     let brandQuery = admin.from("brands").select("id, name").limit(1);
     if (brandId) {
@@ -410,6 +412,7 @@ export async function getIntakePageData({
   const access = await getIntakeAccessForProfile({ profileId });
 
   if (!access) {
+    console.error("[intake] getIntakePageData: access is null", { profileId });
     return null;
   }
 
