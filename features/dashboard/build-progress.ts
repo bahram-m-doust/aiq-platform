@@ -70,8 +70,7 @@ async function getIntakeProgress(brandId: string) {
       .maybeSingle(),
     admin
       .from("questions")
-      .select("id")
-      .eq("is_archived", false),
+      .select("id"),
   ]);
 
   if (sessionResult.error) throw sessionResult.error;
