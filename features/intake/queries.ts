@@ -140,7 +140,7 @@ export async function getIntakeAccessForProfile({
 }: {
   profileId: string;
   brandId?: string;
-}) {
+}): Promise<IntakeAccessContext | null> {
   const admin = createAdminClient();
 
   const { data: profileData } = await admin
@@ -153,18 +153,39 @@ export async function getIntakeAccessForProfile({
     (profileData as { global_role: string } | null)?.global_role ===
     "PLATFORM_OWNER";
 
+  if (isPlatformOwner) {
+    let brandQuery = admin.from("brands").select("id, name").limit(1);
+    if (brandId) {
+      brandQuery = brandQuery.eq("id", brandId);
+    }
+    const { data: brandData } = await brandQuery.maybeSingle();
+    const brand = brandData as { id: string; name: string } | null;
+    if (brand) {
+      const { data: entData } = await admin
+        .from("brand_entitlements")
+        .select("plans(name)")
+        .eq("brand_id", brand.id)
+        .eq("status", "ACTIVE")
+        .limit(1)
+        .maybeSingle();
+      const plan = entData
+        ? firstRelated((entData as { plans: RelatedRecord<PlanRow> }).plans)
+        : null;
+      return {
+        brandId: brand.id,
+        brandName: brand.name,
+        membershipRole: "OWNER",
+        planName: plan?.name ?? null,
+      };
+    }
+  }
+
   let membershipQuery = admin
     .from("brand_memberships")
     .select("brand_id, role, brands(id, name)")
     .eq("user_id", profileId)
-    .eq("status", "ACTIVE");
-
-  if (!isPlatformOwner) {
-    membershipQuery = membershipQuery.in("role", [
-      "OWNER",
-      "EXECUTIVE_MANAGER",
-    ]);
-  }
+    .eq("status", "ACTIVE")
+    .in("role", ["OWNER", "EXECUTIVE_MANAGER"]);
 
   if (brandId) {
     membershipQuery = membershipQuery.eq("brand_id", brandId);
@@ -181,36 +202,20 @@ export async function getIntakeAccessForProfile({
     .map((membership) => {
       const brand = firstRelated(membership.brands);
 
-      if (!brand || (!isPlatformOwner && !canAnswerIntakeRole(membership.role))) {
+      if (!brand || !canAnswerIntakeRole(membership.role)) {
         return null;
       }
 
       return {
         brandId: membership.brand_id,
         brandName: brand.name,
-        membershipRole: isPlatformOwner ? "OWNER" : membership.role,
+        membershipRole: membership.role as "OWNER" | "EXECUTIVE_MANAGER",
       };
     })
-    .filter((membership): membership is IntakeAccessContext =>
-      Boolean(membership),
+    .filter(
+      (membership): membership is NonNullable<typeof membership> =>
+        Boolean(membership),
     );
-
-  if (memberships.length === 0 && isPlatformOwner) {
-    let brandQuery = admin.from("brands").select("id, name").limit(1);
-    if (brandId) {
-      brandQuery = brandQuery.eq("id", brandId);
-    }
-    const { data: brandData } = await brandQuery.maybeSingle();
-    const brand = brandData as { id: string; name: string } | null;
-    if (brand) {
-      return {
-        brandId: brand.id,
-        brandName: brand.name,
-        membershipRole: "OWNER" as const,
-        planName: null,
-      };
-    }
-  }
 
   if (memberships.length === 0) {
     return null;
