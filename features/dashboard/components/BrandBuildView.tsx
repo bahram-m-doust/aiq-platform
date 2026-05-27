@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import type {
   BrandBuildProgress,
@@ -577,7 +576,6 @@ export function BrandBuildView({
     return Math.round((filled / progress.phases.length) * 100);
   }, [progress.phases, phaseInfo]);
 
-  const router = useRouter();
   const activePhase = progress.activePhase;
   const toggle = useCallback(
     (key: string) =>
@@ -588,20 +586,20 @@ export function BrandBuildView({
     (phase: PhaseProgress, substep: SubstepProgress, state: SubstepState) => {
       if (state === "locked") return;
       if (phase.key === "questionnaires") {
-        router.push(`/dashboard/questionnaire/${substep.id}`);
+        window.location.href = `/dashboard/questionnaire/${substep.id}`;
         return;
       }
       if (phase.key === "strategies") {
-        router.push("/dashboard/modules");
+        window.location.href = "/dashboard/modules";
         return;
       }
       if (phase.key === "brain_build") {
-        router.push("/dashboard/brain");
+        window.location.href = "/dashboard/brain";
         return;
       }
       setDetail({ phase, substep, state });
     },
-    [router],
+    [],
   );
   const closeDetail = useCallback(() => setDetail(null), []);
 
@@ -838,35 +836,6 @@ export function BrandBuildView({
           </div>
         </div>
       </section>
-
-      {/* ── Quick Links ── */}
-      <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-dashed pt-6" style={{ borderColor: "var(--bv-line-dashed)" }}>
-        <span className="mr-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
-          Go to
-        </span>
-        {[
-          { href: "/dashboard/questionnaire", label: "Questionnaire" },
-          { href: "/dashboard/modules", label: "Modules" },
-          { href: "/dashboard/brain", label: "Brain" },
-          { href: "/dashboard/agents", label: "Agents" },
-          { href: "/dashboard/files", label: "Files" },
-          { href: "/dashboard/change-requests", label: "Changes" },
-        ].map((link) => (
-          <Link
-            className="rounded-full border bg-white px-3 py-1.5 text-xs text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-            href={link.href}
-            key={link.href}
-            style={{ borderColor: "var(--bv-line)" }}
-          >
-            {link.label}
-          </Link>
-        ))}
-      </div>
-
-      {/* ── Footer ── */}
-      <div className="mt-6 text-xs text-[var(--bv-ink-4)]">
-        Signed in as {email}
-      </div>
 
       {/* ── Detail overlay ── */}
       {detail && (

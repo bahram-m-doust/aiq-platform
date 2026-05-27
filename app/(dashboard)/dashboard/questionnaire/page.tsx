@@ -18,7 +18,16 @@ export default async function QuestionnairePage() {
   const data = await getIntakePageData({ profileId: profile.id });
 
   if (!data) {
-    redirect("/dashboard");
+    return (
+      <main className="min-h-svh px-6 py-10" style={{ background: "var(--bv-bg)", color: "var(--bv-ink)" }}>
+        <section className="mx-auto w-full max-w-5xl space-y-6">
+          <h1 className="text-2xl font-semibold">Brand Questionnaire</h1>
+          <p className="text-sm text-[var(--bv-ink-3)]">
+            Questionnaire access requires Owner or Executive Manager role. Please contact your admin.
+          </p>
+        </section>
+      </main>
+    );
   }
 
   const email = user.email ?? profile.email;

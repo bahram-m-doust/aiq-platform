@@ -23,7 +23,7 @@ export default async function QuestionnaireSectionPage({
   const data = await getIntakePageData({ profileId: profile.id });
 
   if (!data) {
-    redirect("/dashboard");
+    redirect("/dashboard/questionnaire");
   }
 
   const selectedSection = data.sections.find(
