@@ -47,13 +47,31 @@ export default async function AdminPage() {
   const admin = createAdminClient();
   const { data: recentSubmissions } = await admin
     .from("audit_logs")
-    .select("brand_id, created_at, after_json")
+    .select("brand_id, created_at")
     .eq("action", "intake_final_submitted")
     .order("created_at", { ascending: false })
     .limit(5);
 
+  const submissionBrandIds = Array.from(
+    new Set(
+      (recentSubmissions ?? [])
+        .map((row) => row.brand_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+  const brandNameById = new Map<string, string>();
+  if (submissionBrandIds.length > 0) {
+    const { data: brandRows } = await admin
+      .from("brands")
+      .select("id, name")
+      .in("id", submissionBrandIds);
+    for (const row of (brandRows ?? []) as { id: string; name: string }[]) {
+      brandNameById.set(row.id, row.name);
+    }
+  }
+
   return (
-    <main className="min-h-svh bg-background px-6 py-10 text-foreground">
+    <main className="px-6 py-10">
       <section className="mx-auto w-full max-w-4xl space-y-6">
         <div>
           <p className="font-mono text-sm uppercase tracking-[0.2em] text-muted-foreground">
@@ -83,24 +101,27 @@ export default async function AdminPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {(recentSubmissions as { brand_id: string; created_at: string; after_json: unknown }[]).map((sub, i) => (
-                  <div
-                    className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
-                    key={i}
-                  >
-                    <span className="font-medium">
-                      Brand {String(sub.brand_id).slice(0, 8)}...
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(sub.created_at).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                ))}
+                {(recentSubmissions as { brand_id: string; created_at: string }[]).map((sub, i) => {
+                  const name = brandNameById.get(sub.brand_id);
+                  return (
+                    <div
+                      className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+                      key={i}
+                    >
+                      <span className="font-medium">
+                        {name ?? `Brand ${String(sub.brand_id).slice(0, 8)}…`}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(sub.created_at).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
