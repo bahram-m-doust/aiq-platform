@@ -844,7 +844,7 @@ export function BrandBuildView({
                   key={p.key}
                 >
                   <div
-                    className="absolute -left-[45px] top-5 z-[2] size-3.5 rounded-full border-2 transition-all duration-500 max-sm:-left-[29px]"
+                    className="absolute -left-[43px] top-5 z-[2] size-3.5 rounded-full border-2 transition-all duration-500 max-sm:-left-[31px]"
                     style={{
                       background:
                         info.phaseState === "complete"
@@ -877,7 +877,7 @@ export function BrandBuildView({
                     }}
                   />
                   <div
-                    className="absolute -left-[38px] top-[27px] z-[1] h-0.5 w-[30px] max-sm:hidden"
+                    className="absolute -left-[29px] top-[27px] z-[1] h-0.5 w-[29px] max-sm:hidden"
                     style={{
                       backgroundImage:
                         info.phaseState === "active" || info.phaseState === "complete"
