@@ -598,16 +598,24 @@ export function BrandBuildView({
   const phaseInfo = useMemo(() => {
     const info: Record<
       string,
-      { phaseState: PhaseStatus; isLocked: boolean; overall: number }
+      {
+        phaseState: PhaseStatus;
+        isLocked: boolean;
+        overall: number;
+        nextUp: boolean;
+      }
     > = {};
     let prevComplete = true;
+    let prevReadyToHandoff = false;
     for (const p of progress.phases) {
       const isLocked = !prevComplete;
       info[p.key] = {
         phaseState: isLocked ? "locked" : p.status,
         isLocked,
         overall: p.percent,
+        nextUp: isLocked && prevReadyToHandoff,
       };
+      prevReadyToHandoff = !isLocked && p.percent === 100 && p.status !== "complete";
       prevComplete = prevComplete && p.status === "complete";
     }
     return info;
@@ -615,12 +623,19 @@ export function BrandBuildView({
 
   const spineFillPct = useMemo(() => {
     let filled = 0;
-    for (const p of progress.phases) {
+    for (let i = 0; i < progress.phases.length; i += 1) {
+      const p = progress.phases[i];
       const inf = phaseInfo[p.key];
-      if (inf.phaseState === "complete") filled += 1;
-      else if (inf.phaseState === "active") filled += p.percent / 100;
+      if (inf.phaseState === "complete") {
+        filled += 1;
+      } else if (inf.phaseState === "active") {
+        const slice = p.percent / 100;
+        const next = progress.phases[i + 1];
+        const reachNext = slice === 1 && next ? 0.5 : 0;
+        filled += slice + reachNext;
+      }
     }
-    return Math.round((filled / progress.phases.length) * 100);
+    return Math.min(100, Math.round((filled / progress.phases.length) * 100));
   }, [progress.phases, phaseInfo]);
 
   const activePhase = progress.activePhase;
@@ -829,26 +844,35 @@ export function BrandBuildView({
                   key={p.key}
                 >
                   <div
-                    className="absolute -left-[45px] top-5 z-[2] size-3.5 rounded-full border-2 transition-all duration-300 max-sm:-left-[29px]"
+                    className="absolute -left-[45px] top-5 z-[2] size-3.5 rounded-full border-2 transition-all duration-500 max-sm:-left-[29px]"
                     style={{
                       background:
                         info.phaseState === "complete"
-                          ? `linear-gradient(140deg, var(--bv-c2-a), var(--bv-c2-b))`
+                          ? `linear-gradient(140deg, var(--bv-brand), var(--bv-brand-mid))`
                           : info.phaseState === "active"
                             ? "#fff"
-                            : "var(--bv-bg)",
+                            : info.nextUp
+                              ? "#fff"
+                              : "var(--bv-bg)",
                       borderColor:
                         info.phaseState === "complete"
                           ? "transparent"
                           : info.phaseState === "active"
-                            ? "var(--bv-accent)"
-                            : "var(--bv-line-2)",
+                            ? "var(--bv-brand-deep)"
+                            : info.nextUp
+                              ? "var(--bv-brand-mid)"
+                              : "var(--bv-line-2)",
                       boxShadow:
                         info.phaseState === "complete"
-                          ? "0 0 0 4px rgba(42,124,255,0.12)"
+                          ? "0 0 0 4px var(--bv-brand-tint-16), 0 0 12px var(--bv-brand-tint-32)"
                           : info.phaseState === "active"
-                            ? "0 0 0 4px rgba(42,124,255,0.16)"
-                            : undefined,
+                            ? "0 0 0 4px var(--bv-brand-tint-16)"
+                            : info.nextUp
+                              ? "0 0 0 4px var(--bv-brand-tint-8)"
+                              : undefined,
+                      animation: info.nextUp
+                        ? "ds-glow-pulse 2.4s var(--bv-ease) infinite"
+                        : undefined,
                       transitionTimingFunction: "var(--bv-ease)",
                     }}
                   />
@@ -856,9 +880,11 @@ export function BrandBuildView({
                     className="absolute -left-[38px] top-[27px] z-[1] h-0.5 w-[30px] max-sm:hidden"
                     style={{
                       backgroundImage:
-                        info.phaseState === "active"
-                          ? `linear-gradient(to right, var(--bv-accent) 0 4px, transparent 4px 8px)`
-                          : `linear-gradient(to right, var(--bv-line-dashed) 0 4px, transparent 4px 8px)`,
+                        info.phaseState === "active" || info.phaseState === "complete"
+                          ? `linear-gradient(to right, var(--bv-brand-deep) 0 4px, transparent 4px 8px)`
+                          : info.nextUp
+                            ? `linear-gradient(to right, var(--bv-brand-mid) 0 4px, transparent 4px 8px)`
+                            : `linear-gradient(to right, var(--bv-line-dashed) 0 4px, transparent 4px 8px)`,
                       backgroundSize: "8px 2px",
                     }}
                   />

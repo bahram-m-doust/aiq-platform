@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRightIcon, SparklesIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { DSButton } from "@/components/ds/Button";
 import {
   Dialog,
   DialogClose,
@@ -30,9 +30,9 @@ function ConfirmSubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <Button disabled={pending} type="submit">
+    <DSButton disabled={pending} type="submit" variant="brand">
       {pending ? "Submitting..." : "Confirm"}
-    </Button>
+    </DSButton>
   );
 }
 
@@ -103,9 +103,9 @@ export function FinalSubmitReadiness({
           ) : null}
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">
+              <DSButton type="button" variant="outline">
                 Cancel
-              </Button>
+              </DSButton>
             </DialogClose>
             <ConfirmSubmitButton />
           </DialogFooter>
