@@ -127,9 +127,9 @@ function PhaseGlyph({ kind }: { kind: string }) {
 
 function StatePill({ state }: { state: SubstepState }) {
   const stateStyles: Record<SubstepState, React.CSSProperties> = {
-    done: { color: "#1f9c69", borderColor: "rgba(43,199,138,0.28)", background: "rgba(43,199,138,0.08)" },
-    "in-progress": { color: "#1f6cd6", borderColor: "rgba(42,124,255,0.28)", background: "rgba(42,124,255,0.08)" },
-    "awaiting-review": { color: "#b87600", borderColor: "rgba(255,178,35,0.32)", background: "rgba(255,178,35,0.10)" },
+    done: { color: "#157a52", borderColor: "rgba(43,199,138,0.28)", background: "rgba(43,199,138,0.12)" },
+    "in-progress": { color: "#1a5bb5", borderColor: "rgba(42,124,255,0.28)", background: "rgba(42,124,255,0.12)" },
+    "awaiting-review": { color: "#996100", borderColor: "rgba(255,178,35,0.32)", background: "rgba(255,178,35,0.14)" },
     locked: { color: "var(--bv-ink-3)", borderStyle: "dashed", background: "#fff" },
   };
 
@@ -308,7 +308,7 @@ function PhaseCard({
             const effectiveState = isLocked ? "locked" : s.state;
             return (
               <button
-                className="block w-full cursor-pointer rounded-[14px] border bg-[var(--bv-card-soft)] p-3 text-left transition-all duration-200 hover:border-[var(--bv-line-2)] hover:bg-white disabled:cursor-not-allowed disabled:opacity-55"
+                className="block w-full cursor-pointer rounded-[14px] border bg-[var(--bv-card-soft)] p-3 text-left transition-all duration-200 hover:border-[var(--bv-line-2)] hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={effectiveState === "locked"}
                 key={s.id}
                 onClick={() => onOpenSub(phase, s, effectiveState)}
@@ -327,7 +327,12 @@ function PhaseCard({
                 <p className="mb-2.5 text-xs leading-relaxed text-[var(--bv-ink-3)]">
                   {s.description}
                 </p>
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-between">
+                  {effectiveState === "locked" ? (
+                    <span className="text-[10px] text-[var(--bv-ink-4)]">
+                      Unlocks after Phase {String(phase.phase - 1).padStart(2, "0")}
+                    </span>
+                  ) : <span />}
                   <StatePill state={effectiveState} />
                 </div>
               </button>

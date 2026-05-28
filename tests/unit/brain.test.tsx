@@ -342,7 +342,7 @@ describe("Brand Brain components", () => {
   it("renders the ready chat input for the current brand", () => {
     render(<BrainChat access={brainAccess()} />);
 
-    expect(screen.getByText("Brand Integrator Brain")).toBeVisible();
+    expect(screen.getByText("Brand Brain")).toBeVisible();
     expect(screen.getByLabelText("Question")).toBeVisible();
     expect(
       screen.getByRole("button", { name: /Ask Brand Brain/i }),

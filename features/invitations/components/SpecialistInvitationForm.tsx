@@ -6,6 +6,7 @@ import { MailCheckIcon, MailWarningIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import {
   Card,
   CardContent,
@@ -115,12 +116,16 @@ export function SpecialistInvitationForm({
             {state.invitationUrl ? (
               <div className="space-y-2">
                 <Label htmlFor="invitation_url">One-time invitation link</Label>
-                <Input
-                  aria-label="One-time invitation link"
-                  id="invitation_url"
-                  readOnly
-                  value={state.invitationUrl}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    aria-label="One-time invitation link"
+                    className="flex-1"
+                    id="invitation_url"
+                    readOnly
+                    value={state.invitationUrl}
+                  />
+                  <CopyButton ariaLabel="Copy invitation link" value={state.invitationUrl} />
+                </div>
               </div>
             ) : null}
 

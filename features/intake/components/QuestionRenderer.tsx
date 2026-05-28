@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { CheckIcon, AlertCircleIcon, LoaderIcon } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ import type {
   IntakeAnswerValue,
   IntakeQuestion,
 } from "@/features/intake/types";
+import { cn } from "@/lib/utils";
 
 type AutosaveAction = (
   input: AutosaveIntakeAnswerInput,
@@ -34,7 +35,6 @@ function valueToString(value: IntakeAnswerValue) {
   if (typeof value === "string" || typeof value === "number") {
     return String(value);
   }
-
   return "";
 }
 
@@ -42,26 +42,47 @@ function valueToStringArray(value: IntakeAnswerValue) {
   return Array.isArray(value) ? value : [];
 }
 
-function statusLabel({
+function SaveIndicator({
   isPending,
   status,
+  onRetry,
 }: {
   isPending: boolean;
   status: "idle" | "saved" | "error";
+  onRetry?: () => void;
 }) {
   if (isPending) {
-    return "Saving";
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-[var(--bv-accent)]">
+        <LoaderIcon className="size-3 animate-spin" />
+        Saving
+      </span>
+    );
   }
 
   if (status === "saved") {
-    return "Saved";
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-emerald-600 animate-in fade-in duration-300">
+        <CheckIcon className="size-3" />
+        Saved
+      </span>
+    );
   }
 
   if (status === "error") {
-    return "Unable to save";
+    return (
+      <button
+        className="inline-flex items-center gap-1 text-xs text-destructive transition-colors hover:underline"
+        onClick={onRetry}
+        type="button"
+      >
+        <AlertCircleIcon className="size-3" />
+        Failed — tap to retry
+      </button>
+    );
   }
 
-  return "Ready";
+  return null;
 }
 
 export function QuestionRenderer({
@@ -81,6 +102,7 @@ export function QuestionRenderer({
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [lastSavedValue, setLastSavedValue] = useState<unknown>(null);
   const kind = resolveQuestionInputKind(question.inputType);
   const options = useMemo(
     () => parseQuestionOptions(question.validationSchema),
@@ -90,6 +112,7 @@ export function QuestionRenderer({
   const statusId = `${controlId}-status`;
 
   function save(nextValue: unknown) {
+    setLastSavedValue(nextValue);
     startTransition(async () => {
       const result = await autosaveAction({
         sessionId,
@@ -108,6 +131,12 @@ export function QuestionRenderer({
       setMessage("");
       onSaved?.(question.id, result.value);
     });
+  }
+
+  function retry() {
+    if (lastSavedValue !== null) {
+      save(lastSavedValue);
+    }
   }
 
   function renderControl() {
@@ -191,7 +220,7 @@ export function QuestionRenderer({
                     const nextValues =
                       nextChecked === true
                         ? [...selectedValues, option.value]
-                        : selectedValues.filter((value) => value !== option.value);
+                        : selectedValues.filter((v) => v !== option.value);
 
                     save(nextValues);
                   }}
@@ -208,6 +237,7 @@ export function QuestionRenderer({
       return (
         <Textarea
           aria-describedby={statusId}
+          aria-invalid={status === "error"}
           id={controlId}
           onBlur={() => save(localValue)}
           onChange={(event) => {
@@ -223,6 +253,7 @@ export function QuestionRenderer({
     return (
       <Input
         aria-describedby={statusId}
+        aria-invalid={status === "error"}
         id={controlId}
         onBlur={() => save(localValue)}
         onChange={(event) => {
@@ -237,33 +268,28 @@ export function QuestionRenderer({
   }
 
   return (
-    <article className="rounded-lg border border-border p-4">
-      <div className="space-y-2">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-          <Label className="text-base leading-6" htmlFor={controlId}>
+    <div>
+      <div className="space-y-1.5">
+        <div className="flex items-start justify-between gap-2">
+          <Label className="text-sm font-medium leading-relaxed" htmlFor={controlId}>
             {question.questionText}
           </Label>
-          <span className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">
+          <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
             Required
           </span>
         </div>
         {question.helpText ? (
-          <p className="text-sm leading-6 text-muted-foreground">
+          <p className="text-xs leading-relaxed text-[var(--bv-ink-3)]">
             {question.helpText}
           </p>
         ) : null}
       </div>
 
-      <div className="mt-4">{renderControl()}</div>
+      <div className="mt-3">{renderControl()}</div>
 
-      <p className="mt-3 text-xs text-muted-foreground" id={statusId}>
-        {statusLabel({ isPending, status })}
-      </p>
-      {message ? (
-        <Alert className="mt-3" variant="destructive">
-          <AlertDescription>{message}</AlertDescription>
-        </Alert>
-      ) : null}
-    </article>
+      <div className="mt-2 flex min-h-[20px] items-center" id={statusId} role="status" aria-live="polite">
+        <SaveIndicator isPending={isPending} onRetry={retry} status={status} />
+      </div>
+    </div>
   );
 }

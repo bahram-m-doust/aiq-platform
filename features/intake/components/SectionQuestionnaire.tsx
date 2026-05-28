@@ -73,10 +73,10 @@ export function SectionQuestionnaire({
             }}
           >
             <ArrowLeftIcon className="size-3.5" />
-            Back to Dashboard
+            Dashboard
           </Link>
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
-            {sectionAnswered} / {sectionTotal} answered
+            Section {sectionIndex} of {allSections.length} · {sectionAnswered}/{sectionTotal} answered
           </span>
         </div>
 
@@ -137,7 +137,7 @@ export function SectionQuestionnaire({
           </div>
 
           {/* Section nav pills */}
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
             {allSections.map((s, i) => {
               const isActive = s.id === section.id;
               const sIds = s.questions.map((q) => q.id);
@@ -209,7 +209,7 @@ export function SectionQuestionnaire({
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer nav */}
         <div
           className="mt-8 flex items-center justify-between border-t border-dashed pt-6"
           style={{ borderColor: "var(--bv-line-dashed)" }}
@@ -219,11 +219,26 @@ export function SectionQuestionnaire({
             href="/dashboard"
           >
             <ArrowLeftIcon className="size-3.5" />
-            Back to Dashboard
+            Dashboard
           </Link>
-          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
-            Overall: {completion.completionPercent}% · {completion.answeredQuestions}/{completion.totalQuestions}
-          </span>
+
+          {sectionIndex < allSections.length ? (
+            <Link
+              className="inline-flex items-center gap-2 rounded-full border bg-white px-4 py-2 text-[13px] font-medium shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+              href={`/dashboard/questionnaire/${allSections[sectionIndex].key}`}
+              style={{
+                borderColor: "var(--bv-line)",
+                color: "var(--bv-ink-2)",
+              }}
+            >
+              Next: {allSections[sectionIndex].title}
+              <span className="text-[var(--bv-ink-4)]">→</span>
+            </Link>
+          ) : (
+            <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
+              Last section · {completion.completionPercent}% overall
+            </span>
+          )}
         </div>
       </div>
     </div>

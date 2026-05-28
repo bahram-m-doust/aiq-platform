@@ -1,8 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
 import { useFormStatus } from "react-dom";
-import { BrainIcon, SendIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  BrainIcon,
+  LoaderIcon,
+  RefreshCwIcon,
+  SendIcon,
+} from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -28,10 +34,32 @@ function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <Button disabled={pending} type="submit">
-      <SendIcon className="size-4" />
-      {pending ? "Thinking" : "Ask Brand Brain"}
+    <Button className="gap-2" disabled={pending} type="submit">
+      {pending ? (
+        <>
+          <LoaderIcon className="size-4 animate-spin" />
+          Thinking...
+        </>
+      ) : (
+        <>
+          <SendIcon className="size-4" />
+          Ask Brand Brain
+        </>
+      )}
     </Button>
+  );
+}
+
+function ThinkingSkeleton() {
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-4">
+      <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+      <div className="space-y-2">
+        <div className="h-3 w-full animate-pulse rounded bg-muted" />
+        <div className="h-3 w-5/6 animate-pulse rounded bg-muted" />
+        <div className="h-3 w-4/6 animate-pulse rounded bg-muted" />
+      </div>
+    </div>
   );
 }
 
@@ -40,75 +68,120 @@ export function BrainChat({ access }: { access: BrandBrainAccess }) {
     askBrandBrainAction,
     initialBrandBrainChatFormState,
   );
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const hasResult = state.status === "success" || state.status === "error";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BrainIcon className="size-5" />
-            Brand Integrator Brain
-          </CardTitle>
-          <CardDescription>
-            Ask strategic questions against the approved knowledge base for{" "}
-            {access.brandName}.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form action={formAction} className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="brand-brain-prompt">Question</Label>
-              <Textarea
-                id="brand-brain-prompt"
-                maxLength={brandBrainPromptMaxLength}
-                name="prompt"
-                placeholder="Ask Brand Brain for a strategic summary, implication, or recommendation."
-                required
-                rows={6}
-              />
-            </div>
-            <SubmitButton />
-          </form>
-
-          {state.status === "error" ? (
-            <Alert variant="destructive">
-              <AlertDescription>{state.message}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {state.status === "success" && state.answer ? (
-            <section className="space-y-4 rounded-lg border border-border p-4">
-              <div>
-                <h2 className="text-base font-semibold">Answer</h2>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
-                  {state.answer}
-                </p>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BrainIcon className="size-5" />
+              Brand Brain
+            </CardTitle>
+            <CardDescription>
+              Ask strategic questions against the approved knowledge base for{" "}
+              {access.brandName}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form action={formAction} className="space-y-3" ref={formRef}>
+              <div className="space-y-2">
+                <Label htmlFor="brand-brain-prompt">Question</Label>
+                <Textarea
+                  id="brand-brain-prompt"
+                  maxLength={brandBrainPromptMaxLength}
+                  name="prompt"
+                  placeholder="Ask Brand Brain for a strategic summary, implication, or recommendation."
+                  required
+                  rows={4}
+                />
               </div>
-              {state.sources && state.sources.length > 0 ? (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Sources</h3>
-                  <ul className="space-y-1 text-sm text-muted-foreground">
-                    {state.sources.map((source) => (
-                      <li key={`${source.fileName}-${source.score ?? "source"}`}>
-                        {source.fileName}
-                        {source.score !== null
-                          ? ` (${Math.round(source.score * 100)}%)`
-                          : ""}
-                      </li>
-                    ))}
-                  </ul>
+              <SubmitButton />
+            </form>
+
+            <PendingAnswer />
+
+            {state.status === "error" ? (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-destructive">
+                      Unable to process question
+                    </p>
+                    <p className="text-xs text-[var(--bv-ink-3)]">
+                      {state.message}
+                    </p>
+                    <Button
+                      className="gap-1.5"
+                      onClick={() => formRef.current?.requestSubmit()}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      <RefreshCwIcon className="size-3" />
+                      Try again
+                    </Button>
+                  </div>
                 </div>
-              ) : null}
-            </section>
-          ) : null}
-        </CardContent>
-      </Card>
+              </div>
+            ) : null}
+
+            {state.status === "success" && state.answer ? (
+              <section className="space-y-4 rounded-lg border border-border bg-[var(--bv-card-soft)] p-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-[var(--bv-ink)]">Answer</h2>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[var(--bv-ink-2)]">
+                    {state.answer}
+                  </p>
+                </div>
+                {state.sources && state.sources.length > 0 ? (
+                  <div className="space-y-1.5 border-t border-dashed pt-3" style={{ borderColor: "var(--bv-line-dashed)" }}>
+                    <h3 className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
+                      Sources
+                    </h3>
+                    <ul className="space-y-1 text-xs text-[var(--bv-ink-3)]">
+                      {state.sources.map((source) => (
+                        <li key={`${source.fileName}-${source.score ?? "source"}`}>
+                          {source.fileName}
+                          {source.score !== null
+                            ? ` · ${Math.round(source.score * 100)}%`
+                            : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+
+            {!hasResult && (
+              <div className="flex flex-col items-center gap-3 py-8 text-center">
+                <div className="flex size-12 items-center justify-center rounded-full bg-[var(--bv-panel)]">
+                  <BrainIcon className="size-6 text-[var(--bv-ink-4)]" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[var(--bv-ink-2)]">
+                    Ask anything about {access.brandName}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--bv-ink-4)]">
+                    Brand Brain searches your knowledge base and responds with sources.
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <Card size="sm">
         <CardHeader>
-          <CardTitle>Workspace scope</CardTitle>
+          <CardTitle>Scope</CardTitle>
           <CardDescription>
-            Brand Brain is restricted to the current brand knowledge base.
+            Restricted to {access.brandName} knowledge.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -130,4 +203,10 @@ export function BrainChat({ access }: { access: BrandBrainAccess }) {
       </Card>
     </div>
   );
+}
+
+function PendingAnswer() {
+  const { pending } = useFormStatus();
+  if (!pending) return null;
+  return <ThinkingSkeleton />;
 }
