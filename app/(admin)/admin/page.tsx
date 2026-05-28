@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   FileTextIcon,
+  ImageIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
   ListChecksIcon,
@@ -248,6 +249,17 @@ export default async function AdminPage() {
                 <Link href="/admin/files">
                   <KeyRoundIcon className="size-4" />
                   API Keys & Costs
+                </Link>
+              </Button>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/brand-icons">
+                  <ImageIcon className="size-4" />
+                  Brand Icons
                 </Link>
               </Button>
             </div>

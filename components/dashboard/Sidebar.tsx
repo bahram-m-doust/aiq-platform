@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,13 +11,16 @@ import {
   FileIcon,
   GitBranchIcon,
   HomeIcon,
+  ImageIcon,
   LayersIcon,
-  LogOutIcon,
+  MegaphoneIcon,
   MenuIcon,
   MailIcon,
-  SparklesIcon,
   UserIcon,
+  VideoIcon,
   XIcon,
+  ZapIcon,
+  type LucideIcon,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -33,8 +37,17 @@ type SidebarProps = {
   fullName: string | null;
   role: string | null;
   brandName: string | null;
+  brandIconUrl?: string | null;
   agents: SidebarAgent[];
   logoutAction: (formData: FormData) => void | Promise<void>;
+};
+
+const agentIcons: Record<string, LucideIcon> = {
+  STORY_TELLER: BookOpenIcon,
+  IMAGE_GENERATOR: ImageIcon,
+  VIDEO_GENERATOR: VideoIcon,
+  CAMPAIGN_MAKER: MegaphoneIcon,
+  BRAND_DIGITAL_ACTIVATION: ZapIcon,
 };
 
 const navItems = [
@@ -70,6 +83,7 @@ export function Sidebar({
   fullName,
   role,
   brandName,
+  brandIconUrl,
   agents,
   logoutAction,
 }: SidebarProps) {
@@ -122,23 +136,39 @@ export function Sidebar({
         <div className="flex items-center justify-between border-b px-3 py-4" style={{ borderColor: "var(--bv-line)" }}>
           {!collapsed && (
             <div className="flex items-center gap-2.5">
-              <div
-                className="relative size-7 shrink-0 rounded-lg"
-                style={{
-                  background: "linear-gradient(135deg, #0e0e14, #2a2a36)",
-                  boxShadow: "0 2px 6px rgba(15,15,20,0.18)",
-                }}
-              >
+              {brandIconUrl ? (
                 <div
-                  className="absolute inset-[6px] rounded"
+                  className="relative size-7 shrink-0 overflow-hidden rounded-lg"
+                  style={{ boxShadow: "0 2px 6px rgba(15,15,20,0.18)" }}
+                >
+                  <Image
+                    alt={brandName ?? "Brand"}
+                    className="size-full object-contain"
+                    height={28}
+                    src={brandIconUrl}
+                    unoptimized
+                    width={28}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="relative size-7 shrink-0 rounded-lg"
                   style={{
-                    background: "linear-gradient(135deg, #ff8a5b, #2a7cff 60%, #2bc78a)",
-                    opacity: 0.92,
+                    background: "linear-gradient(135deg, #0e0e14, #2a2a36)",
+                    boxShadow: "0 2px 6px rgba(15,15,20,0.18)",
                   }}
-                />
-              </div>
+                >
+                  <div
+                    className="absolute inset-[6px] rounded"
+                    style={{
+                      background: "linear-gradient(135deg, #ff8a5b, #2a7cff 60%, #2bc78a)",
+                      opacity: 0.92,
+                    }}
+                  />
+                </div>
+              )}
               <span className="text-sm font-semibold tracking-[-0.01em] text-[var(--bv-ink)]">
-                Bextudio
+                {brandName ?? "Bextudio"}
               </span>
             </div>
           )}
@@ -212,6 +242,7 @@ export function Sidebar({
                 {agents.map((agent) => {
                   const agentHref = `/dashboard/agents/${agent.slug}`;
                   const active = pathname === agentHref;
+                  const Icon = agentIcons[agent.key];
                   return (
                     <Link
                       className={cn(
@@ -225,14 +256,21 @@ export function Sidebar({
                       key={agent.key}
                       title={collapsed ? agent.name : undefined}
                     >
-                      {collapsed ? (
-                        <AgentDot state={agent.state} />
-                      ) : (
-                        <>
+                      <span className="relative inline-flex shrink-0">
+                        {Icon ? (
+                          <Icon className="size-4" />
+                        ) : (
                           <AgentDot state={agent.state} />
-                          <span className="truncate">{agent.name}</span>
-                        </>
-                      )}
+                        )}
+                        <span
+                          className={cn(
+                            "absolute -bottom-0.5 -right-0.5 size-1.5 rounded-full ring-1 ring-[var(--bv-card)]",
+                            agentStateColors[agent.state] ??
+                              "bg-[var(--bv-ink-4)]",
+                          )}
+                        />
+                      </span>
+                      {!collapsed && <span className="truncate">{agent.name}</span>}
                     </Link>
                   );
                 })}

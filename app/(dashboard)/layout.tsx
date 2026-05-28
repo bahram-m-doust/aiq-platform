@@ -1,11 +1,13 @@
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
+import { brandIconPublicUrl } from "@/features/admin/brand-icons/storage";
 import { logout } from "@/features/auth/actions";
 import { requireUserProfile } from "@/features/auth/queries";
 import {
   catalogAgentDefinitions,
 } from "@/features/agents/catalog/schema";
 import { getAgentCatalogWorkspace } from "@/features/agents/catalog/queries";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function DashboardLayout({
   children,
@@ -26,11 +28,23 @@ export default async function DashboardLayout({
         catalogAgentDefinitions.map((d) => [d.key, d]),
       );
 
+      let brandIconUrl: string | null = null;
+      if (accessSummary.brandId) {
+        const admin = createAdminClient();
+        const { data: brandRow } = await admin
+          .from("brands")
+          .select("icon_path")
+          .eq("id", accessSummary.brandId)
+          .maybeSingle<{ icon_path: string | null }>();
+        brandIconUrl = brandIconPublicUrl(brandRow?.icon_path ?? null);
+      }
+
       sidebarProps = {
         email: user.email ?? profile.email,
         fullName: profile.full_name,
         role: profile.global_role,
         brandName: accessSummary.brandName,
+        brandIconUrl,
         agents: agents.map((a) => ({
           key: a.key,
           name: defByKey.get(a.key)?.name ?? a.name,
