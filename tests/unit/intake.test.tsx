@@ -316,12 +316,12 @@ describe("intake UI components", () => {
     expect(screen.getByText("Use concise executive language.")).toBeVisible();
   });
 
-  it("disables Final Submit below 100 percent and enables readiness at 100", () => {
-    const { rerender } = render(
+  it("hides Submit below 100 percent and shows at 100", () => {
+    const { rerender, container } = render(
       <FinalSubmitReadiness completion={completion()} sessionId="session-1" />,
     );
 
-    expect(screen.getByRole("button", { name: "Final Submit" })).toBeDisabled();
+    expect(container.querySelector("button")).toBeNull();
 
     rerender(
       <FinalSubmitReadiness
@@ -343,7 +343,7 @@ describe("intake UI components", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Final Submit" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Submit/ })).toBeEnabled();
   });
 
   it("shows the final submit confirmation copy in the modal", async () => {
@@ -368,11 +368,11 @@ describe("intake UI components", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Final Submit" }));
+    await user.click(screen.getByRole("button", { name: /Submit/ }));
 
     expect(screen.getByText(finalSubmitConfirmationCopy)).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Confirm final submission" }),
+      screen.getByRole("button", { name: "Confirm" }),
     ).toBeVisible();
   });
 

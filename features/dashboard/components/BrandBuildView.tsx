@@ -796,15 +796,18 @@ export function BrandBuildView({
         </div>
       </div>
 
-      {/* ── Final Submit ── */}
-      {intakeCompletion && intakeSessionId && (
-        <div className="mt-6">
-          <FinalSubmitReadiness
-            completion={intakeCompletion}
-            sessionId={intakeSessionId}
-          />
-        </div>
-      )}
+      {/* ── Submit ── */}
+      {intakeCompletion &&
+        intakeSessionId &&
+        intakeCompletion.totalQuestions > 0 &&
+        intakeCompletion.completionPercent === 100 && (
+          <div className="mt-6 flex justify-center">
+            <FinalSubmitReadiness
+              completion={intakeCompletion}
+              sessionId={intakeSessionId}
+            />
+          </div>
+        )}
 
       {/* ── Caption ── */}
       <section className="max-w-[720px] px-1 pt-10">
