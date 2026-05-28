@@ -194,7 +194,7 @@ function PhaseCard({
       className="group/card relative w-full overflow-hidden rounded-[20px] border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
       style={{
         background: "var(--bv-card)",
-        borderColor: isReadyToSubmit ? "var(--bv-brand-deep)" : "var(--bv-line)",
+        borderColor: isReadyToSubmit ? "var(--bv-brand-mid)" : "var(--bv-line)",
         animation: cardAnimation,
         boxShadow: "var(--bv-shadow-card)",
         maxWidth: 560,
@@ -268,7 +268,7 @@ function PhaseCard({
                 background: isLocked
                   ? "var(--bv-ink-4)"
                   : isReadyToSubmit
-                    ? "linear-gradient(90deg, var(--bv-c3-a), var(--bv-c3-b))"
+                    ? "linear-gradient(90deg, var(--bv-brand), var(--bv-brand-mid))"
                     : BAR_GRADIENTS[tone],
                 transitionTimingFunction: "var(--bv-ease)",
               }}
@@ -740,7 +740,7 @@ export function BrandBuildView({
               <span
                 className="size-9 rounded-full"
                 style={{
-                  background: `conic-gradient(from 0deg, rgba(42,124,255,0) 0deg, rgba(42,124,255,0.7) 270deg, rgba(42,124,255,0) 360deg), #ffffff`,
+                  background: `conic-gradient(from 0deg, rgba(0,229,217,0) 0deg, rgba(0,229,217,0.85) 270deg, rgba(0,229,217,0) 360deg), #ffffff`,
                   mask: `radial-gradient(circle at 50% 50%, transparent 13px, #000 13.5px, #000 17px, transparent 17.5px)`,
                   WebkitMask: `radial-gradient(circle at 50% 50%, transparent 13px, #000 13.5px, #000 17px, transparent 17.5px)`,
                   animation: "bv-spin 1.6s linear infinite",
@@ -776,8 +776,8 @@ export function BrandBuildView({
                 className="absolute inset-x-0 top-0 rounded-sm transition-all duration-700"
                 style={{
                   height: `${spineFillPct}%`,
-                  background: `linear-gradient(to bottom, var(--bv-c2-a), var(--bv-c2-b))`,
-                  boxShadow: "0 0 16px rgba(42,124,255,0.35)",
+                  background: `linear-gradient(to bottom, var(--bv-brand), var(--bv-brand-mid))`,
+                  boxShadow: "0 0 16px var(--bv-brand-tint-32)",
                   transitionTimingFunction: "var(--bv-ease)",
                 }}
               />

@@ -42,6 +42,16 @@ function valueToStringArray(value: IntakeAnswerValue) {
   return Array.isArray(value) ? value : [];
 }
 
+// Detect RTL script (Arabic, Persian, Hebrew) — returns "rtl" or "ltr"
+function detectDir(value: IntakeAnswerValue): "rtl" | "ltr" {
+  const text = typeof value === "string" ? value : "";
+  if (!text) return "ltr";
+  // Match Arabic, Persian, Hebrew character ranges
+  // eslint-disable-next-line no-misleading-character-class
+  const rtlPattern = /[֐-׿؀-ۿݐ-ݿࢠ-ࣿיִ-﷿ﹰ-﻿]/;
+  return rtlPattern.test(text) ? "rtl" : "ltr";
+}
+
 function SaveIndicator({
   isPending,
   status,
@@ -238,6 +248,7 @@ export function QuestionRenderer({
         <Textarea
           aria-describedby={statusId}
           aria-invalid={status === "error"}
+          dir={detectDir(localValue)}
           id={controlId}
           onBlur={() => save(localValue)}
           onChange={(event) => {
@@ -254,6 +265,7 @@ export function QuestionRenderer({
       <Input
         aria-describedby={statusId}
         aria-invalid={status === "error"}
+        dir={detectDir(localValue)}
         id={controlId}
         onBlur={() => save(localValue)}
         onChange={(event) => {

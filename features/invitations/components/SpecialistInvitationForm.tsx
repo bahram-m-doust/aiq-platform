@@ -7,13 +7,7 @@ import { MailCheckIcon, MailWarningIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
@@ -34,15 +28,15 @@ export function SpecialistInvitationForm({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Invite Brand Specialist</CardTitle>
-          <CardDescription>
+      <DSCard>
+        <DSCardHeader>
+          <h2 className="ds-h2">Invite Brand Specialist</h2>
+          <p className="ds-body mt-1">
             Send a time-limited, email-bound invitation to join{" "}
             {context.brandName} as a Brand Specialist.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+        </DSCardHeader>
+        <DSCardBody>
           <form action={formAction} className="grid gap-5">
             {state.status === "error" ? (
               <Alert variant="destructive">
@@ -88,23 +82,23 @@ export function SpecialistInvitationForm({
               />
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </DSCardBody>
+      </DSCard>
 
       {state.status === "success" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <DSCard>
+          <DSCardHeader>
+            <h2 className="ds-h2 flex items-center gap-2">
               {state.warning ? (
                 <MailWarningIcon className="size-4" />
               ) : (
                 <MailCheckIcon className="size-4" />
               )}
               Invitation created
-            </CardTitle>
-            <CardDescription>{state.message}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </h2>
+            <p className="ds-body mt-1">{state.message}</p>
+          </DSCardHeader>
+          <DSCardBody className="space-y-4">
             {state.warning ? (
               <Alert>
                 <MailWarningIcon className="size-4" />
@@ -151,8 +145,8 @@ export function SpecialistInvitationForm({
                 </p>
               ) : null}
             </div>
-          </CardContent>
-        </Card>
+          </DSCardBody>
+        </DSCard>
       ) : null}
 
       <Button asChild variant="outline">

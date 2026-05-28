@@ -66,10 +66,10 @@ export function FinalSubmitReadiness({
           className="group relative inline-flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-[14px] px-5 py-3 text-[14px] font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
           style={{
             background:
-              "linear-gradient(135deg, var(--bv-brand) 0%, var(--bv-brand-deep) 100%)",
+              "linear-gradient(135deg, var(--bv-brand) 0%, var(--bv-brand-mid) 60%, var(--bv-brand-deep) 100%)",
             color: "var(--bv-brand-ink)",
             boxShadow:
-              "0 8px 28px -10px var(--bv-brand-tint-32), 0 0 0 1px var(--bv-brand-deep)",
+              "0 8px 28px -10px var(--bv-brand-tint-32), 0 0 0 1px var(--bv-brand-mid)",
             animation: "ds-glow-pulse 2.4s var(--bv-ease) infinite",
           }}
           type="button"

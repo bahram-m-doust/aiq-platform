@@ -148,7 +148,9 @@ async function getIntakeProgress(brandId: string) {
       answeredIds.has(q.id),
     ).length;
     const total = sectionQuestions.length;
-    const progress = total > 0 ? Math.round((answered / total) * 100) : 0;
+    const rawProgress = total > 0 ? Math.round((answered / total) * 100) : 0;
+    // Once intake is locked (submitted), all sections are sealed at 100%
+    const progress = isLocked ? 100 : rawProgress;
 
     let state: SubstepState = "locked";
     if (isLocked || progress === 100) state = "done";
@@ -164,9 +166,10 @@ async function getIntakeProgress(brandId: string) {
     };
   });
 
-  const percent = session?.completion_percent ?? 0;
   const totalQuestions = questions.length;
-  const answeredCount = answeredIds.size;
+  // When locked, force 100% (truth is "submitted") regardless of stale completion_percent
+  const percent = isLocked ? 100 : session?.completion_percent ?? 0;
+  const answeredCount = isLocked ? totalQuestions : answeredIds.size;
 
   let status: PhaseStatus = "locked";
   if (isLocked) status = "complete";
