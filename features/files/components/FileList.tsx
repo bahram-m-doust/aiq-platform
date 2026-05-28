@@ -53,14 +53,24 @@ export function FileList({
   if (files.length === 0) {
     return (
       <DSCard tone="soft">
-        <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-          <div className="flex size-12 items-center justify-center rounded-full bg-[var(--bv-panel)] text-[var(--bv-ink-3)]">
-            <FileIcon className="size-5" />
+        <div className="flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
+          <div
+            className="flex size-14 items-center justify-center rounded-2xl"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--bv-brand-tint-16), var(--bv-brand-tint-8))",
+              color: "var(--bv-brand-deep)",
+              boxShadow: "0 0 0 1px var(--bv-brand-tint-16)",
+            }}
+          >
+            <FileIcon className="size-6" />
           </div>
-          <h2 className="ds-h3">No files yet</h2>
-          <p className="ds-body max-w-md">
-            Upload your first file using the form above. All files are stored privately.
-          </p>
+          <div className="space-y-1.5">
+            <h2 className="ds-h3">No files yet</h2>
+            <p className="ds-body max-w-md mx-auto">
+              Upload your first file using the form above. All files are stored privately.
+            </p>
+          </div>
         </div>
       </DSCard>
     );

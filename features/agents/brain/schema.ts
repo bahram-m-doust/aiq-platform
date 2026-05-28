@@ -30,6 +30,15 @@ const readinessMessages: Record<BrandBrainReadinessStatus, string> = {
   READY: "Brand Brain is ready.",
 };
 
+export const readinessLabels: Record<BrandBrainReadinessStatus, string> = {
+  NO_ACTIVE_ACCESS: "No active access",
+  ROLE_NOT_ALLOWED: "Role restricted",
+  AGENT_UNAVAILABLE: "Agent unavailable",
+  KNOWLEDGE_BASE_NOT_SYNCED: "Awaiting RAG sync",
+  NO_SYNCED_FILES: "No synced files",
+  READY: "Ready",
+};
+
 function readString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";

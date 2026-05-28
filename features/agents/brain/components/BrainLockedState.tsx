@@ -2,6 +2,7 @@ import { BrainIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
+import { readinessLabels } from "@/features/agents/brain/schema";
 import type {
   BrandBrainAccess,
   BrandBrainReadiness,
@@ -40,7 +41,9 @@ export function BrainLockedState({
           </div>
           <div>
             <dt className="text-[var(--bv-ink-3)] text-xs">Knowledge base</dt>
-            <dd className="mt-0.5 font-medium">{readiness.status}</dd>
+            <dd className="mt-0.5 font-medium">
+              {readinessLabels[readiness.status]}
+            </dd>
           </div>
           <div>
             <dt className="text-[var(--bv-ink-3)] text-xs">Synced files</dt>

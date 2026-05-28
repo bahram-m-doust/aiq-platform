@@ -242,7 +242,10 @@ export function Sidebar({
         </nav>
 
         {/* Footer */}
-        <div className="border-t px-2 py-3" style={{ borderColor: "var(--bv-line)" }}>
+        <div
+          className="border-t px-2 py-3 pb-[max(env(safe-area-inset-bottom,0px),12px)]"
+          style={{ borderColor: "var(--bv-line)" }}
+        >
           <form action={logoutAction}>
             <button
               className={cn(

@@ -1,11 +1,9 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import Link from "next/link";
 import { BadgeCheckIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -245,10 +243,6 @@ export function ChangeRequestCreateForm({
           </CardContent>
         </Card>
       ) : null}
-
-      <Button asChild variant="outline">
-        <Link href="/dashboard">Return to Dashboard</Link>
-      </Button>
     </div>
   );
 }

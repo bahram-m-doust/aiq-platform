@@ -159,15 +159,21 @@ export function BrainChat({ access }: { access: BrandBrainAccess }) {
             ) : null}
 
             {!hasResult && (
-              <div className="flex flex-col items-center gap-3 py-8 text-center">
-                <div className="flex size-12 items-center justify-center rounded-full bg-[var(--bv-panel)]">
-                  <BrainIcon className="size-6 text-[var(--bv-ink-4)]" />
+              <div className="flex flex-col items-center gap-4 py-10 text-center">
+                <div
+                  className="flex size-14 items-center justify-center rounded-2xl"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--bv-brand-tint-16), var(--bv-brand-tint-8))",
+                    color: "var(--bv-brand-deep)",
+                    boxShadow: "0 0 0 1px var(--bv-brand-tint-16)",
+                  }}
+                >
+                  <BrainIcon className="size-6" />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-[var(--bv-ink-2)]">
-                    Ask anything about {access.brandName}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--bv-ink-4)]">
+                <div className="space-y-1.5">
+                  <p className="ds-h3">Ask anything about {access.brandName}</p>
+                  <p className="ds-caption max-w-md">
                     Brand Brain searches your knowledge base and responds with sources.
                   </p>
                 </div>
