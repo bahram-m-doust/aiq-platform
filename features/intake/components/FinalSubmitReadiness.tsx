@@ -63,18 +63,23 @@ export function FinalSubmitReadiness({
     <Dialog>
       <DialogTrigger asChild>
         <button
-          className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-full px-7 py-3 text-[14px] font-medium text-white shadow-[0_8px_24px_-8px_rgba(42,124,255,0.5)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_32px_-8px_rgba(42,124,255,0.6)] active:scale-[0.98]"
+          className="group relative inline-flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-[14px] px-5 py-3 text-[14px] font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
           style={{
             background:
-              "linear-gradient(135deg, var(--bv-c2-a), var(--bv-c2-b))",
+              "linear-gradient(135deg, var(--bv-brand) 0%, var(--bv-brand-deep) 100%)",
+            color: "var(--bv-brand-ink)",
+            boxShadow:
+              "0 8px 28px -10px var(--bv-brand-tint-32), 0 0 0 1px var(--bv-brand-deep)",
+            animation: "ds-glow-pulse 2.4s var(--bv-ease) infinite",
           }}
           type="button"
         >
           <span
+            aria-hidden="true"
             className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
             style={{
               background:
-                "linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)",
+                "linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)",
               backgroundSize: "200% 200%",
               animation: "bv-shimmer 2s linear infinite",
             }}

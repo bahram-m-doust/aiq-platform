@@ -171,22 +171,31 @@ function PhaseCard({
   onToggle,
   onOpenSub,
   phaseState,
+  submitSlot,
+  justUnlocked,
 }: {
   phase: PhaseProgress;
   open: boolean;
   onToggle: () => void;
   onOpenSub: (phase: PhaseProgress, substep: SubstepProgress, state: SubstepState) => void;
   phaseState: PhaseStatus;
+  submitSlot?: React.ReactNode;
+  justUnlocked?: boolean;
 }) {
   const isLocked = phaseState === "locked";
+  const isReadyToSubmit = phase.phase === 1 && submitSlot !== undefined;
   const tone = phase.phase;
+  const cardAnimation = justUnlocked
+    ? "ds-unlock 800ms var(--bv-ease)"
+    : undefined;
 
   return (
     <div
       className="group/card relative w-full overflow-hidden rounded-[20px] border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
       style={{
         background: "var(--bv-card)",
-        borderColor: "var(--bv-line)",
+        borderColor: isReadyToSubmit ? "var(--bv-brand-deep)" : "var(--bv-line)",
+        animation: cardAnimation,
         boxShadow: "var(--bv-shadow-card)",
         maxWidth: 560,
       }}
@@ -239,10 +248,12 @@ function PhaseCard({
         </div>
 
         <h2 className="mb-1 text-[17px] font-semibold tracking-[-0.014em] text-[var(--bv-ink)]">
-          {phase.title}
+          {isReadyToSubmit ? "Ready to Submit" : phase.title}
         </h2>
         <p className="mb-3 text-[13px] leading-relaxed text-[var(--bv-ink-2)]">
-          {phase.description}
+          {isReadyToSubmit
+            ? "All inputs captured. Lock the foundation and pass to Strategy."
+            : phase.description}
         </p>
 
         <div className="mb-2.5 flex items-center gap-3">
@@ -256,7 +267,9 @@ function PhaseCard({
                 width: `${phase.percent}%`,
                 background: isLocked
                   ? "var(--bv-ink-4)"
-                  : BAR_GRADIENTS[tone],
+                  : isReadyToSubmit
+                    ? "linear-gradient(90deg, var(--bv-c3-a), var(--bv-c3-b))"
+                    : BAR_GRADIENTS[tone],
                 transitionTimingFunction: "var(--bv-ease)",
               }}
             />
@@ -268,10 +281,21 @@ function PhaseCard({
 
         <div className="flex items-center justify-between gap-2.5 border-t border-dashed pt-2.5" style={{ borderColor: "var(--bv-line-dashed)" }}>
           <span className="text-xs text-[var(--bv-ink-3)]">
-            {phase.teamVerb} by the{" "}
-            <strong className="font-medium text-[var(--bv-ink-2)]">
-              {phase.team}
-            </strong>
+            {isReadyToSubmit ? (
+              <>
+                <strong className="font-medium text-[var(--bv-ink-2)]">
+                  {phase.stepsDone} / {phase.stepsTotal}
+                </strong>{" "}
+                answered
+              </>
+            ) : (
+              <>
+                {phase.teamVerb} by the{" "}
+                <strong className="font-medium text-[var(--bv-ink-2)]">
+                  {phase.team}
+                </strong>
+              </>
+            )}
           </span>
           <span
             className="text-[var(--bv-ink-3)] transition-transform duration-300"
@@ -284,6 +308,18 @@ function PhaseCard({
           </span>
         </div>
       </button>
+
+      {isReadyToSubmit && submitSlot ? (
+        <div
+          className="border-t bg-[var(--bv-card-soft)] px-4 py-3.5"
+          style={{
+            borderColor: "var(--bv-line)",
+            animation: "ds-fade-in 500ms var(--bv-ease) 200ms backwards",
+          }}
+        >
+          {submitSlot}
+        </div>
+      ) : null}
 
       <div
         aria-hidden={!open}
@@ -726,24 +762,6 @@ export function BrandBuildView({
             </div>
           </div>
 
-          {/* Submit CTA when ready */}
-          {intakeCompletion &&
-            intakeSessionId &&
-            intakeCompletion.totalQuestions > 0 &&
-            intakeCompletion.completionPercent === 100 && (
-              <div
-                className="mb-7 flex justify-center"
-                style={{
-                  animation: "bv-slide-up 600ms var(--bv-ease)",
-                }}
-              >
-                <FinalSubmitReadiness
-                  completion={intakeCompletion}
-                  sessionId={intakeSessionId}
-                />
-              </div>
-            )}
-
           {/* Spine Track */}
           <div className="relative pl-14 max-sm:pl-9">
             <div
@@ -765,8 +783,19 @@ export function BrandBuildView({
               />
             </div>
 
-            {progress.phases.map((p) => {
+            {progress.phases.map((p, idx) => {
               const info = phaseInfo[p.key];
+              const isPhase1ReadyToSubmit =
+                p.key === "questionnaires" &&
+                intakeCompletion !== null &&
+                intakeCompletion !== undefined &&
+                intakeSessionId !== null &&
+                intakeSessionId !== undefined &&
+                intakeCompletion.totalQuestions > 0 &&
+                intakeCompletion.completionPercent === 100;
+              // Unlock animation when phase becomes "active" or "complete" right after previous phase finished
+              const justUnlocked = idx > 0 && info.phaseState !== "locked" && progress.phases[idx - 1].status === "complete";
+
               return (
                 <div
                   className="relative mb-3 last:mb-0"
@@ -807,11 +836,20 @@ export function BrandBuildView({
                     }}
                   />
                   <PhaseCard
+                    justUnlocked={justUnlocked}
                     onOpenSub={openSub}
                     onToggle={() => toggle(p.key)}
                     open={Boolean(openPhases[p.key])}
                     phase={p}
                     phaseState={info.phaseState}
+                    submitSlot={
+                      isPhase1ReadyToSubmit && intakeCompletion && intakeSessionId ? (
+                        <FinalSubmitReadiness
+                          completion={intakeCompletion}
+                          sessionId={intakeSessionId}
+                        />
+                      ) : undefined
+                    }
                   />
                 </div>
               );

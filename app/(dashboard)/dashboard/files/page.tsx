@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { PageShell } from "@/components/ds/PageShell";
 import { PaginationControls } from "@/components/PaginationControls";
 import { requireUserProfile } from "@/features/auth/queries";
 import { FileList } from "@/features/files/components/FileList";
@@ -21,7 +20,7 @@ export default async function DashboardFilesPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { user, profile } = await requireUserProfile("/dashboard/files");
+  const { profile } = await requireUserProfile("/dashboard/files");
   const workspace = await getBrandFilesWorkspace(
     profile.id,
     paginationInputFromSearchParams((await searchParams) ?? {}),
@@ -31,38 +30,22 @@ export default async function DashboardFilesPage({
     redirect("/dashboard");
   }
 
-  const email = user.email ?? profile.email;
-
   return (
-    <main className="min-h-svh bg-background px-6 py-10 text-foreground">
-      <section className="mx-auto w-full max-w-5xl space-y-6">
-        <div>
-          <p className="font-mono text-sm uppercase tracking-[0.2em] text-muted-foreground">
-            Secure Files
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-normal">
-            Brand File Workspace
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Signed in as {email}
-          </p>
-        </div>
-
-        <FileUploader access={workspace.access} />
-        <FileList
-          access={workspace.access}
-          files={workspace.files}
-          profileId={profile.id}
-        />
-        <PaginationControls
-          basePath="/dashboard/files"
-          pagination={workspace.pagination}
-        />
-
-        <Button asChild variant="outline">
-          <Link href="/dashboard">Return to Dashboard</Link>
-        </Button>
-      </section>
-    </main>
+    <PageShell
+      eyebrow="Secure Files"
+      subtitle="Upload, review and share files for your brand workspace. All transfers use signed URLs."
+      title="Brand File Workspace"
+    >
+      <FileUploader access={workspace.access} />
+      <FileList
+        access={workspace.access}
+        files={workspace.files}
+        profileId={profile.id}
+      />
+      <PaginationControls
+        basePath="/dashboard/files"
+        pagination={workspace.pagination}
+      />
+    </PageShell>
   );
 }
