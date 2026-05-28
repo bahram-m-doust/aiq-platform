@@ -39,7 +39,6 @@ type SidebarProps = {
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
-  { href: "/dashboard/questionnaire", label: "Questionnaire", icon: BookOpenIcon },
   { href: "/dashboard/modules", label: "Strategies", icon: LayersIcon },
   { href: "/dashboard/brain", label: "Brand Brain", icon: BrainIcon },
   { href: "/dashboard/files", label: "Files", icon: FileIcon },

@@ -7,6 +7,8 @@ import { logout } from "@/features/auth/actions";
 import { requireUserProfile } from "@/features/auth/queries";
 import { getBrandBuildProgress } from "@/features/dashboard/build-progress";
 import { BrandBuildView } from "@/features/dashboard/components/BrandBuildView";
+import { getIntakePageData } from "@/features/intake/queries";
+import { isIntakeSessionLocked } from "@/features/intake/schemas";
 
 export const metadata: Metadata = {
   title: "Dashboard | Bextudio Platform",
@@ -41,14 +43,25 @@ export default async function DashboardPage({
     accessSummary.brandId &&
     accessSummary.brandName
   ) {
-    const buildProgress = await getBrandBuildProgress(
-      accessSummary.brandId,
-      accessSummary.brandName,
-    );
+    const [buildProgress, intakeData] = await Promise.all([
+      getBrandBuildProgress(accessSummary.brandId, accessSummary.brandName),
+      getIntakePageData({ profileId: profile.id }),
+    ]);
+
+    const intakeSessionId = intakeData?.session.id ?? null;
+    const intakeCompletion = intakeData?.completion ?? null;
+    const intakeLocked = intakeData
+      ? isIntakeSessionLocked(intakeData.session)
+      : false;
 
     return (
       <div style={{ background: "var(--bv-bg)", color: "var(--bv-ink)" }}>
-        <BrandBuildView email={email} progress={buildProgress} />
+        <BrandBuildView
+          email={email}
+          intakeCompletion={intakeLocked ? null : intakeCompletion}
+          intakeSessionId={intakeLocked ? null : intakeSessionId}
+          progress={buildProgress}
+        />
       </div>
     );
   }

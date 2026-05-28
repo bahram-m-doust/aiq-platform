@@ -10,6 +10,8 @@ import type {
   SubstepProgress,
   SubstepState,
 } from "@/features/dashboard/build-progress";
+import { FinalSubmitReadiness } from "@/features/intake/components/FinalSubmitReadiness";
+import type { IntakeCompletion } from "@/features/intake/types";
 
 const STATE_COPY: Record<SubstepState, string> = {
   done: "Done",
@@ -537,9 +539,13 @@ function DetailPage({
 export function BrandBuildView({
   progress,
   email,
+  intakeCompletion,
+  intakeSessionId,
 }: {
   progress: BrandBuildProgress;
   email: string;
+  intakeCompletion?: IntakeCompletion | null;
+  intakeSessionId?: string | null;
 }) {
   const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({});
   const [detail, setDetail] = useState<{
@@ -789,6 +795,16 @@ export function BrandBuildView({
           </div>
         </div>
       </div>
+
+      {/* ── Final Submit ── */}
+      {intakeCompletion && intakeSessionId && (
+        <div className="mt-6">
+          <FinalSubmitReadiness
+            completion={intakeCompletion}
+            sessionId={intakeSessionId}
+          />
+        </div>
+      )}
 
       {/* ── Caption ── */}
       <section className="max-w-[720px] px-1 pt-10">
