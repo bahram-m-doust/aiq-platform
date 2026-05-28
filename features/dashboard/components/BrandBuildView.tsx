@@ -183,7 +183,7 @@ function PhaseCard({
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-[20px] border transition-all duration-300"
+      className="group/card relative w-full overflow-hidden rounded-[20px] border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
       style={{
         background: "var(--bv-card)",
         borderColor: "var(--bv-line)",
@@ -680,6 +680,7 @@ export function BrandBuildView({
           background: "var(--bv-panel)",
           borderColor: "var(--bv-panel-edge)",
           boxShadow: "var(--bv-shadow-panel)",
+          animation: "bv-fade-in 600ms var(--bv-ease)",
         }}
       >
         <div
@@ -724,6 +725,24 @@ export function BrandBuildView({
               </span>
             </div>
           </div>
+
+          {/* Submit CTA when ready */}
+          {intakeCompletion &&
+            intakeSessionId &&
+            intakeCompletion.totalQuestions > 0 &&
+            intakeCompletion.completionPercent === 100 && (
+              <div
+                className="mb-7 flex justify-center"
+                style={{
+                  animation: "bv-slide-up 600ms var(--bv-ease)",
+                }}
+              >
+                <FinalSubmitReadiness
+                  completion={intakeCompletion}
+                  sessionId={intakeSessionId}
+                />
+              </div>
+            )}
 
           {/* Spine Track */}
           <div className="relative pl-14 max-sm:pl-9">
@@ -800,19 +819,6 @@ export function BrandBuildView({
           </div>
         </div>
       </div>
-
-      {/* ── Submit ── */}
-      {intakeCompletion &&
-        intakeSessionId &&
-        intakeCompletion.totalQuestions > 0 &&
-        intakeCompletion.completionPercent === 100 && (
-          <div className="mt-6 flex justify-center">
-            <FinalSubmitReadiness
-              completion={intakeCompletion}
-              sessionId={intakeSessionId}
-            />
-          </div>
-        )}
 
       {/* ── Caption ── */}
       <section className="max-w-[720px] px-1 pt-10">

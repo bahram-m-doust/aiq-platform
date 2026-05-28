@@ -3,7 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { CheckCircleIcon } from "lucide-react";
+import { ArrowRightIcon, SparklesIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -62,14 +62,27 @@ export function FinalSubmitReadiness({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
-          className="gap-2 rounded-full px-6 shadow-md"
-          size="lg"
+        <button
+          className="group relative inline-flex items-center gap-2.5 overflow-hidden rounded-full px-7 py-3 text-[14px] font-medium text-white shadow-[0_8px_24px_-8px_rgba(42,124,255,0.5)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_32px_-8px_rgba(42,124,255,0.6)] active:scale-[0.98]"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--bv-c2-a), var(--bv-c2-b))",
+          }}
           type="button"
         >
-          <CheckCircleIcon className="size-4" />
-          Submit
-        </Button>
+          <span
+            className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            style={{
+              background:
+                "linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%)",
+              backgroundSize: "200% 200%",
+              animation: "bv-shimmer 2s linear infinite",
+            }}
+          />
+          <SparklesIcon className="relative size-4" />
+          <span className="relative">Submit Questionnaire</span>
+          <ArrowRightIcon className="relative size-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+        </button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
