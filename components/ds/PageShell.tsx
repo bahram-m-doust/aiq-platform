@@ -28,7 +28,7 @@ export function PageShell({
 
   return (
     <main
-      className="min-h-svh px-6 py-10"
+      className="min-h-svh px-4 py-6 sm:px-6 sm:py-10"
       style={{ background: "var(--bv-bg)", color: "var(--bv-ink)" }}
     >
       <section

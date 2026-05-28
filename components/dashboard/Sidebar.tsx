@@ -34,7 +34,7 @@ type SidebarProps = {
   role: string | null;
   brandName: string | null;
   agents: SidebarAgent[];
-  logoutAction: React.ReactNode;
+  logoutAction: (formData: FormData) => void | Promise<void>;
 };
 
 const navItems = [
@@ -109,7 +109,7 @@ export function Sidebar({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 flex h-full flex-col border-r transition-all duration-300 md:relative md:translate-x-0",
+          "fixed left-0 top-0 z-40 flex h-svh flex-col border-r transition-all duration-300 md:sticky md:top-0 md:translate-x-0",
           sidebarWidth,
           open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         )}
@@ -243,7 +243,31 @@ export function Sidebar({
 
         {/* Footer */}
         <div className="border-t px-2 py-3" style={{ borderColor: "var(--bv-line)" }}>
-          {logoutAction}
+          <form action={logoutAction}>
+            <button
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-[var(--bv-ink-3)] transition-colors hover:bg-[var(--bv-panel)] hover:text-[var(--bv-ink)]",
+                collapsed && "justify-center px-0",
+              )}
+              title={collapsed ? "Sign out" : undefined}
+              type="submit"
+            >
+              <svg
+                className="size-4 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.8"
+                viewBox="0 0 24 24"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" x2="9" y1="12" y2="12" />
+              </svg>
+              {!collapsed && <span>Sign out</span>}
+            </button>
+          </form>
         </div>
       </aside>
     </>

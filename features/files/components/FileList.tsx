@@ -1,13 +1,7 @@
-import { DownloadIcon, ShieldCheckIcon, ShieldXIcon } from "lucide-react";
+import { DownloadIcon, FileIcon, ShieldCheckIcon, ShieldXIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
 import {
   approveSpecialistFileAction,
   createSignedDownloadUrlAction,
@@ -58,27 +52,29 @@ export function FileList({
 }) {
   if (files.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Files</CardTitle>
-          <CardDescription>
-            No files are available for this brand workspace yet.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <DSCard tone="soft">
+        <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+          <div className="flex size-12 items-center justify-center rounded-full bg-[var(--bv-panel)] text-[var(--bv-ink-3)]">
+            <FileIcon className="size-5" />
+          </div>
+          <h2 className="ds-h3">No files yet</h2>
+          <p className="ds-body max-w-md">
+            Upload your first file using the form above. All files are stored privately.
+          </p>
+        </div>
+      </DSCard>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Files</CardTitle>
-        <CardDescription>
-          Files are stored privately. Download creates a short-lived signed URL
-          after permission validation.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <DSCard>
+      <DSCardHeader>
+        <h2 className="ds-h2">Files</h2>
+        <p className="ds-body mt-1">
+          Files are stored privately. Download creates a short-lived signed URL.
+        </p>
+      </DSCardHeader>
+      <DSCardBody className="space-y-4">
         {files.map((file) => {
           const canDownload = canDownloadFile({
             file,
@@ -92,8 +88,9 @@ export function FileList({
 
           return (
             <div
-              className="grid gap-4 rounded-lg border border-border p-4 md:grid-cols-[1fr_auto]"
+              className="grid gap-4 rounded-[14px] border p-4 md:grid-cols-[1fr_auto]"
               key={file.id}
+              style={{ borderColor: "var(--bv-line)", background: "var(--bv-card-soft)" }}
             >
               <div className="min-w-0 space-y-3">
                 <div>
@@ -145,7 +142,7 @@ export function FileList({
             </div>
           );
         })}
-      </CardContent>
-    </Card>
+      </DSCardBody>
+    </DSCard>
   );
 }

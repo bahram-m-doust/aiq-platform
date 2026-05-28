@@ -218,6 +218,17 @@ export default async function AdminPage() {
                   RAG Approval Queue
                 </Link>
               </Button>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/files">
+                  <KeyRoundIcon className="size-4" />
+                  API Keys & Costs
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>

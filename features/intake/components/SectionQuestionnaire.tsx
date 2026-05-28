@@ -58,7 +58,7 @@ export function SectionQuestionnaire({
 
   return (
     <div
-      className="min-h-svh px-6 py-8"
+      className="min-h-svh px-4 py-6 sm:px-6 sm:py-8"
       style={{ background: "var(--bv-bg)", color: "var(--bv-ink)" }}
     >
       <div className="mx-auto max-w-[780px]">

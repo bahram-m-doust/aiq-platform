@@ -652,7 +652,7 @@ export function BrandBuildView({
 
   return (
     <div
-      className="mx-auto max-w-[1180px] px-7 pb-24 pt-10"
+      className="mx-auto max-w-[1180px] px-4 pb-16 pt-6 sm:px-7 sm:pb-24 sm:pt-10"
       style={{ color: "var(--bv-ink)" }}
     >
       {/* ── Welcome ── */}
@@ -711,7 +711,7 @@ export function BrandBuildView({
 
       {/* ── Panel ── */}
       <div
-        className="relative overflow-hidden rounded-[28px] border px-7 pb-11 pt-9"
+        className="relative overflow-hidden rounded-[20px] border px-4 pb-8 pt-7 sm:rounded-[28px] sm:px-7 sm:pb-11 sm:pt-9"
         style={{
           background: "var(--bv-panel)",
           borderColor: "var(--bv-panel-edge)",
@@ -731,33 +731,60 @@ export function BrandBuildView({
           {/* Hub */}
           <div className="mb-7 flex w-full items-center justify-center">
             <div
-              className="relative inline-flex items-center gap-3.5 rounded-full border bg-white px-5 py-3 pl-3.5"
+              className="relative inline-flex items-center gap-3 rounded-full border bg-white px-5 py-3 pl-3"
               style={{
                 borderColor: "var(--bv-line)",
                 boxShadow: "var(--bv-shadow-hub)",
               }}
             >
-              <span
-                className="size-9 rounded-full"
-                style={{
-                  background: `conic-gradient(from 0deg, rgba(0,229,217,0) 0deg, rgba(0,229,217,0.85) 270deg, rgba(0,229,217,0) 360deg), #ffffff`,
-                  mask: `radial-gradient(circle at 50% 50%, transparent 13px, #000 13.5px, #000 17px, transparent 17.5px)`,
-                  WebkitMask: `radial-gradient(circle at 50% 50%, transparent 13px, #000 13.5px, #000 17px, transparent 17.5px)`,
-                  animation: "bv-spin 1.6s linear infinite",
-                }}
-              />
-              <span className="text-[15px] font-medium tracking-[-0.01em] whitespace-nowrap">
-                Building{" "}
-                <span className="text-[var(--bv-accent)]">
-                  {activePhase?.title ?? "Brand Brain"}
+              {activePhase ? (
+                <span
+                  aria-hidden="true"
+                  className="size-9 rounded-full"
+                  style={{
+                    background: `conic-gradient(from 0deg, rgba(0,229,217,0) 0deg, rgba(0,229,217,0.85) 270deg, rgba(0,229,217,0) 360deg), #ffffff`,
+                    mask: `radial-gradient(circle at 50% 50%, transparent 13px, #000 13.5px, #000 17px, transparent 17.5px)`,
+                    WebkitMask: `radial-gradient(circle at 50% 50%, transparent 13px, #000 13.5px, #000 17px, transparent 17.5px)`,
+                    animation: "bv-spin 1.6s linear infinite",
+                  }}
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="flex size-9 items-center justify-center rounded-full"
+                  style={{
+                    background: "var(--bv-panel)",
+                    color: "var(--bv-ink-3)",
+                  }}
+                >
+                  <svg
+                    fill="none"
+                    height="14"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.5"
+                    viewBox="0 0 24 24"
+                    width="14"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
                 </span>
-              </span>
-              <span
-                className="ml-1 border-l pl-3.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-[var(--bv-ink-3)]"
-                style={{ borderColor: "var(--bv-line)" }}
-              >
-                {progress.overallPercent}% · {progress.stepsDone}/
-                {progress.stepsTotal}
+              )}
+              <span className="text-[15px] font-medium tracking-[-0.01em] whitespace-nowrap">
+                {activePhase ? (
+                  <>
+                    Building{" "}
+                    <span className="text-[var(--bv-accent)]">
+                      {activePhase.title}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[var(--bv-accent)]">All phases</span>{" "}
+                    complete
+                  </>
+                )}
               </span>
             </div>
           </div>
@@ -867,42 +894,13 @@ export function BrandBuildView({
           />
           Brand Brain · build roadmap
         </span>
-        <h1 className="mb-3.5 text-[clamp(28px,3.6vw,38px)] font-semibold leading-[1.1] tracking-[-0.024em] text-[var(--bv-ink)]">
+        <h2 className="mb-3.5 text-[clamp(22px,2.8vw,30px)] font-semibold leading-[1.1] tracking-[-0.024em] text-[var(--bv-ink)]">
           Three phases. One brand-aware brain.
-        </h1>
+        </h2>
         <p className="max-w-[560px] text-base leading-relaxed text-[var(--bv-ink-2)]">
           Brand Brain is built in sequence — first the brand tells us who it is,
-          then strategy makes it operable, then the AI team makes it speak. Tap
-          any phase to open its steps.
+          then strategy makes it operable, then the AI team makes it speak.
         </p>
-        <div className="mt-7 flex flex-wrap gap-x-9 gap-y-5">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
-              Overall
-            </div>
-            <div className="mt-1 font-mono text-xl font-medium tracking-[-0.01em]">
-              {progress.overallPercent}%
-            </div>
-          </div>
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
-              Steps done
-            </div>
-            <div className="mt-1 font-mono text-xl font-medium tracking-[-0.01em]">
-              {progress.stepsDone} / {progress.stepsTotal}
-            </div>
-          </div>
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
-              Active phase
-            </div>
-            <div className="mt-1 font-mono text-xl font-medium tracking-[-0.01em]">
-              {activePhase
-                ? `0${activePhase.phase} · ${activePhase.title}`
-                : "Complete"}
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* ── Detail overlay ── */}

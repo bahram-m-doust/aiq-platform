@@ -335,7 +335,7 @@ describe("Brand Brain components", () => {
       />,
     );
 
-    expect(screen.getByText("Brand Integrator Brain locked")).toBeVisible();
+    expect(screen.getByText("Brand Brain locked")).toBeVisible();
     expect(screen.queryByLabelText("Question")).not.toBeInTheDocument();
   });
 

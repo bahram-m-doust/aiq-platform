@@ -1,15 +1,7 @@
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { BrainIcon } from "lucide-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
 import type {
   BrandBrainAccess,
   BrandBrainReadiness,
@@ -23,34 +15,39 @@ export function BrainLockedState({
   readiness: BrandBrainReadiness;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Brand Integrator Brain locked</CardTitle>
-        <CardDescription>
-          Brand Brain becomes available after the current brand knowledge base
-          has completed RAG sync.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <DSCard>
+      <DSCardHeader>
+        <h2 className="ds-h2 flex items-center gap-2">
+          <BrainIcon className="size-5" />
+          Brand Brain locked
+        </h2>
+        <p className="ds-body mt-1">
+          Brand Brain becomes available after the brand knowledge base completes
+          RAG sync.
+        </p>
+      </DSCardHeader>
+      <DSCardBody className="space-y-4">
         <Alert>
           <AlertTitle>Readiness status</AlertTitle>
           <AlertDescription>{readiness.message}</AlertDescription>
         </Alert>
         <dl className="grid gap-3 text-sm sm:grid-cols-3">
           <div>
-            <dt className="text-muted-foreground">Brand</dt>
-            <dd className="font-medium">{access?.brandName ?? "Not active"}</dd>
+            <dt className="text-[var(--bv-ink-3)] text-xs">Brand</dt>
+            <dd className="mt-0.5 font-medium">
+              {access?.brandName ?? "Not active"}
+            </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Knowledge base</dt>
-            <dd className="font-medium">{readiness.status}</dd>
+            <dt className="text-[var(--bv-ink-3)] text-xs">Knowledge base</dt>
+            <dd className="mt-0.5 font-medium">{readiness.status}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Synced files</dt>
-            <dd className="font-medium">{readiness.syncedFileCount}</dd>
+            <dt className="text-[var(--bv-ink-3)] text-xs">Synced files</dt>
+            <dd className="mt-0.5 font-medium">{readiness.syncedFileCount}</dd>
           </div>
         </dl>
-      </CardContent>
-    </Card>
+      </DSCardBody>
+    </DSCard>
   );
 }

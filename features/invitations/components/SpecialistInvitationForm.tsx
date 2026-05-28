@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useMemo } from "react";
-import Link from "next/link";
 import { MailCheckIcon, MailWarningIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -148,10 +147,6 @@ export function SpecialistInvitationForm({
           </DSCardBody>
         </DSCard>
       ) : null}
-
-      <Button asChild variant="outline">
-        <Link href="/dashboard">Return to Dashboard</Link>
-      </Button>
     </div>
   );
 }

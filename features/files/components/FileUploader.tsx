@@ -4,13 +4,7 @@ import { useActionState } from "react";
 import { UploadIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -39,18 +33,17 @@ export function FileUploader({ access }: { access: FileAccessContext }) {
   const defaultVisibility = defaultUploadVisibility(access.membershipRole);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <DSCard>
+      <DSCardHeader>
+        <h2 className="ds-h2 flex items-center gap-2">
           <UploadIcon className="size-4" />
           Upload file
-        </CardTitle>
-        <CardDescription>
-          Store files in the private Bextudio bucket for {access.brandName}.
-          Downloads always require a signed URL.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </h2>
+        <p className="ds-body mt-1">
+          Store files securely for {access.brandName}. Downloads always require a signed URL.
+        </p>
+      </DSCardHeader>
+      <DSCardBody>
         <form action={formAction} className="grid gap-5">
           {state.status === "error" ? (
             <Alert variant="destructive">
@@ -97,7 +90,7 @@ export function FileUploader({ access }: { access: FileAccessContext }) {
             <SubmitButton idleLabel="Upload file" pendingLabel="Uploading" />
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </DSCardBody>
+    </DSCard>
   );
 }

@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { logout } from "@/features/auth/actions";
@@ -50,34 +49,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-svh" style={{ background: "var(--bv-bg)" }}>
-      <Sidebar
-        {...sidebarProps}
-        logoutAction={
-          <form action={logout}>
-            <Button
-              className="w-full justify-start gap-2.5 text-[13px] text-[var(--bv-ink-3)] hover:text-[var(--bv-ink)]"
-              size="sm"
-              type="submit"
-              variant="ghost"
-            >
-              <svg
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.8"
-                viewBox="0 0 24 24"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" x2="9" y1="12" y2="12" />
-              </svg>
-              Sign out
-            </Button>
-          </form>
-        }
-      />
+      <Sidebar {...sidebarProps} logoutAction={logout} />
       <main className="flex-1 overflow-x-hidden">{children}</main>
     </div>
   );
