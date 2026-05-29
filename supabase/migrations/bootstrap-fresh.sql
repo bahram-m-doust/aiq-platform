@@ -28,9 +28,21 @@
 -- errors are gone for good.
 -- =============================================================================
 
--- 1) Drop the storage policy we own (DDL — not blocked by protect_delete) ----
+-- 1) Best-effort: drop the public-read policy on storage.objects ------------
+-- Hosted Supabase: storage.objects is owned by supabase_storage_admin, so
+-- the SQL Editor's postgres role gets "42501: must be owner of table
+-- objects" trying to touch it. We wrap the policy ops in a DO block that
+-- swallows that one specific error so the script keeps running. If you
+-- want the brand-icons bucket to render publicly, finish the job from the
+-- Storage UI after this script succeeds (instructions at the bottom).
 
-drop policy if exists brand_icons_public_read on storage.objects;
+do $$
+begin
+  drop policy if exists brand_icons_public_read on storage.objects;
+exception
+  when insufficient_privilege then
+    raise notice 'Skipping drop policy on storage.objects (not owner); use the Storage UI.';
+end $$;
 
 -- 2) Nuke and recreate the public schema --------------------------------------
 
@@ -514,8 +526,17 @@ alter table public.audit_logs force row level security;
 revoke all on all tables in schema public from anon, authenticated;
 revoke all on all sequences in schema public from anon, authenticated;
 
-alter table storage.objects enable row level security;
-alter table storage.objects force row level security;
+-- storage.objects is owned by supabase_storage_admin on hosted Supabase;
+-- RLS is already enabled by the platform. Skip altering it here so the
+-- script runs cleanly as the postgres role.
+do $$
+begin
+  alter table storage.objects enable row level security;
+  alter table storage.objects force row level security;
+exception
+  when insufficient_privilege then
+    raise notice 'Skipping storage.objects RLS toggle (not owner); Supabase already manages this.';
+end $$;
 
 -- =============================================================================
 -- Migration 0009: performance indexes
@@ -706,6 +727,13 @@ insert into storage.buckets (id, name, public)
 values ('brand-icons', 'brand-icons', true)
 on conflict (id) do update set public = true;
 
+-- Public-read policy for brand-icons. Wrapped in a DO block that catches
+-- the "not owner" error on hosted Supabase. If it gets skipped, create
+-- the policy manually:
+--   Storage → Policies → New policy → on storage.objects
+--   Allowed operation: SELECT
+--   Policy definition: bucket_id = 'brand-icons'
+--   Target roles: anon, authenticated
 do $$
 begin
   if not exists (
@@ -718,6 +746,9 @@ begin
       for select
       using (bucket_id = 'brand-icons');
   end if;
+exception
+  when insufficient_privilege then
+    raise notice 'Skipping brand_icons_public_read policy (not owner); create it from the Storage UI.';
 end $$;
 
 -- =============================================================================
