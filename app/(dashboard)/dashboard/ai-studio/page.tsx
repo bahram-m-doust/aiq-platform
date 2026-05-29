@@ -5,11 +5,6 @@ import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
 import { PageShell } from "@/components/ds/PageShell";
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { requireUserProfile } from "@/features/auth/queries";
-import { getBrandModelDefaults } from "@/features/agents/runs/services";
-import {
-  DefaultImageModelCard,
-  DefaultTextModelCard,
-} from "@/features/openrouter/components/ModelSelectCard";
 import {
   getMonthSpendCents,
   getRecentMonthUsageRows,
@@ -56,9 +51,8 @@ export default async function DashboardAiStudioPage() {
     .maybeSingle<{ monthly_budget_cents: number | null }>();
 
   const cap = brandRow?.monthly_budget_cents ?? null;
-  const [spend, defaults, recent] = await Promise.all([
+  const [spend, recent] = await Promise.all([
     getMonthSpendCents(brandId),
-    getBrandModelDefaults(brandId),
     getRecentMonthUsageRows(brandId, 5),
   ]);
 
@@ -68,7 +62,7 @@ export default async function DashboardAiStudioPage() {
   return (
     <PageShell
       eyebrow="AI"
-      subtitle="Track this month's spend and pick the default models your agents use."
+      subtitle="Track this month's AI spend. Model selection now lives on each agent's run screen."
       title="AI Studio"
     >
       <DSCard>
@@ -134,11 +128,6 @@ export default async function DashboardAiStudioPage() {
           )}
         </DSCardBody>
       </DSCard>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <DefaultTextModelCard currentModel={defaults.text} />
-        <DefaultImageModelCard currentModel={defaults.image} />
-      </div>
     </PageShell>
   );
 }
