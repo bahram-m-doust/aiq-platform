@@ -38,7 +38,7 @@ export async function setDefaultTextModelAction(
   _prev: ModelPrefFormState,
   formData: FormData,
 ): Promise<ModelPrefFormState> {
-  const { profile } = await requireUserProfile("/dashboard/openrouter");
+  const { profile } = await requireUserProfile("/dashboard/ai-studio");
   const raw = formData.get("text_model");
 
   if (!isTextModelId(raw)) {
@@ -53,7 +53,7 @@ export async function setDefaultTextModelAction(
       .update({ default_text_model: coerceTextModel(raw) })
       .eq("id", brandId);
     if (error) throw error;
-    revalidatePath("/dashboard/openrouter");
+    revalidatePath("/dashboard/ai-studio");
     return { status: "success", message: "Default text model updated." };
   } catch (error) {
     logServerError({
@@ -73,7 +73,7 @@ export async function setDefaultImageModelAction(
   _prev: ModelPrefFormState,
   formData: FormData,
 ): Promise<ModelPrefFormState> {
-  const { profile } = await requireUserProfile("/dashboard/openrouter");
+  const { profile } = await requireUserProfile("/dashboard/ai-studio");
   const raw = formData.get("image_model");
 
   if (!isImageModelId(raw)) {
@@ -88,7 +88,7 @@ export async function setDefaultImageModelAction(
       .update({ default_image_model: coerceImageModel(raw) })
       .eq("id", brandId);
     if (error) throw error;
-    revalidatePath("/dashboard/openrouter");
+    revalidatePath("/dashboard/ai-studio");
     return { status: "success", message: "Default image model updated." };
   } catch (error) {
     logServerError({
