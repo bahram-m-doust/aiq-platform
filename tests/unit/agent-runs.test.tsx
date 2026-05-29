@@ -581,7 +581,7 @@ describe("agent run service", () => {
 });
 
 describe("agent run components", () => {
-  it("renders the active agent run form and scoped run history", () => {
+  it("renders the chat workspace with scoped run history for active agents", () => {
     render(
       <AgentDetail
         access={access()}
@@ -590,15 +590,16 @@ describe("agent run components", () => {
       />,
     );
 
-    expect(screen.getByText("Run Story Teller")).toBeVisible();
-    expect(screen.getByLabelText("Request")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Run agent" })).toBeVisible();
-    expect(screen.getByText("Run history")).toBeVisible();
+    // Composer (icon-only send button) and prompt textarea
+    expect(screen.getByRole("button", { name: "Send" })).toBeVisible();
+    expect(screen.getByRole("textbox")).toBeVisible();
+    // History bubbles
     expect(screen.getByText("Build a narrative arc for launch.")).toBeVisible();
     expect(
       screen.getByText("Lead with the market shift and the brand's role."),
     ).toBeVisible();
-    expect(screen.getByText("brand-knowledge.pdf")).toBeVisible();
+    // Source tag
+    expect(screen.getByText(/brand-knowledge\.pdf/)).toBeVisible();
     expect(
       screen.queryByRole("button", { name: "Activate agent" }),
     ).not.toBeInTheDocument();
@@ -620,6 +621,6 @@ describe("agent run components", () => {
 
     expect(screen.getByText("Activation")).toBeVisible();
     expect(screen.getByRole("button", { name: "Activate agent" })).toBeDisabled();
-    expect(screen.queryByLabelText("Request")).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 });
