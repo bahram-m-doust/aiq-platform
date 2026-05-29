@@ -97,6 +97,30 @@ export default function Error({
             Reference: {error.digest}
           </p>
         ) : null}
+
+        {process.env.NODE_ENV !== "production" && error.message ? (
+          <details
+            className="mx-auto mt-6 max-w-xl rounded-2xl border p-4 text-left"
+            style={{
+              borderColor: "var(--bv-line)",
+              background: "var(--bv-card-soft)",
+            }}
+          >
+            <summary
+              className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.16em]"
+              style={{ color: "var(--bv-ink-3)" }}
+            >
+              Developer details
+            </summary>
+            <pre
+              className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-[11.5px] leading-5"
+              style={{ color: "var(--bv-ink-2)" }}
+            >
+              {error.message}
+              {error.stack ? `\n\n${error.stack}` : ""}
+            </pre>
+          </details>
+        ) : null}
       </section>
     </main>
   );
