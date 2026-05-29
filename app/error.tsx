@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Error({
   error,
@@ -10,6 +11,11 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const pathname = usePathname();
+  const inAdmin = pathname?.startsWith("/admin") ?? false;
+  const backHref = inAdmin ? "/admin" : "/dashboard";
+  const backLabel = inAdmin ? "Back to admin" : "Back to dashboard";
+
   useEffect(() => {
     // Surface the failure in the console for local debugging.
     console.error(error);
@@ -78,14 +84,14 @@ export default function Error({
             Try again
           </button>
           <Link
-            href="/dashboard"
+            href={backHref}
             className="inline-flex h-11 w-full items-center justify-center rounded-full border px-7 text-sm font-medium transition-colors sm:w-auto"
             style={{
               borderColor: "var(--bv-line)",
               color: "var(--bv-ink-2)",
             }}
           >
-            Back to dashboard
+            {backLabel}
           </Link>
         </div>
 
