@@ -17,6 +17,7 @@ export type AgentRunFormState = {
   sources?: AgentRunSource[];
   runId?: string;
   agentKey?: CatalogAgentKey;
+  imagePaths?: string[];
 };
 
 export type AgentRunHistoryItem = {
@@ -36,6 +37,7 @@ export type AgentRunResult = {
   answer: string;
   sources: AgentRunSource[];
   model: string;
+  imagePaths?: string[];
 };
 
 export type AgentKnowledgeModuleScope = {

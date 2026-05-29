@@ -14,6 +14,7 @@ import type {
   AgentCatalogItem,
 } from "@/features/agents/catalog/types";
 import type { AgentRunHistoryItem } from "@/features/agents/runs/types";
+import type { ImageModelId, TextModelId } from "@/lib/openrouter/models";
 
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString() : "Not recorded";
@@ -23,10 +24,14 @@ export function AgentDetail({
   access,
   agent,
   runHistory = [],
+  defaultTextModel,
+  defaultImageModel,
 }: {
   access: AgentCatalogAccess;
   agent: AgentCatalogItem;
   runHistory?: AgentRunHistoryItem[];
+  defaultTextModel?: TextModelId;
+  defaultImageModel?: ImageModelId;
 }) {
   return (
     <div className="space-y-6">
@@ -63,7 +68,11 @@ export function AgentDetail({
 
       {agent.displayState === "ACTIVE" ? (
         <>
-          <AgentRunPanel agent={agent} />
+          <AgentRunPanel
+            agent={agent}
+            defaultImageModel={defaultImageModel}
+            defaultTextModel={defaultTextModel}
+          />
           <AgentRunHistory history={runHistory} />
         </>
       ) : (

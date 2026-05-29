@@ -11,6 +11,7 @@ import {
   toAgentRunAuditMetadata,
 } from "@/features/agents/brain/schema";
 import type { BrandBrainRunResult } from "@/features/agents/brain/types";
+import { assertWithinBudget, recordRunUsage } from "@/features/openrouter/usage";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -121,6 +122,8 @@ export async function runBrandBrain({
     brainError(readiness.message);
   }
 
+  await assertWithinBudget(access.brandId);
+
   const model = getBrandBrainModel();
   const startedAt = Date.now();
   const response = await createBrandBrainResponse({
@@ -144,6 +147,16 @@ export async function runBrandBrain({
     model,
     retrievedSources: response.retrievedSources,
     latencyMs,
+  });
+
+  await recordRunUsage({
+    runId,
+    brandId: access.brandId,
+    kind: "TEXT",
+    model: response.usage.model,
+    promptTokens: response.usage.promptTokens,
+    completionTokens: response.usage.completionTokens,
+    costCents: response.usage.costCents,
   });
 
   await insertAgentRunAudit({

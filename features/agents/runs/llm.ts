@@ -12,6 +12,7 @@ import {
   getOpenRouterClientForBrand,
   getOpenRouterModel,
 } from "@/lib/openrouter/client";
+import { computeTextCostCents } from "@/lib/openrouter/models";
 
 const CODE = "openrouter_agent_run_config";
 
@@ -83,10 +84,67 @@ export async function createAgentRunResponse({
     },
   }));
 
+  const promptTokens = completion.usage?.prompt_tokens ?? 0;
+  const completionTokens = completion.usage?.completion_tokens ?? 0;
+  const costCents = computeTextCostCents({
+    model,
+    promptTokens,
+    completionTokens,
+  });
+
   return {
     responseId: completion.id ?? `pgvector-${Date.now()}`,
     answer,
     retrievedSources,
     displaySources: toAgentRunDisplaySources(retrievedSources),
+    usage: { promptTokens, completionTokens, costCents, model },
   };
+}
+
+export async function rewritePromptForImage({
+  brandId,
+  brandPrompt,
+  model,
+  brandContext,
+}: {
+  brandId: string;
+  brandPrompt: string;
+  model: string;
+  brandContext: string;
+}) {
+  const client = await getOpenRouterClientForBrand(brandId);
+  const completion = await client.chat.completions.create({
+    model,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You convert a user's request into ONE tight, visual image-generation prompt for a text-to-image model. " +
+          "Use the supplied brand knowledge to keep style, palette, and tone on-brand. " +
+          "Output ONLY the prompt text — no preamble, no markdown, no quotes. Keep it under 100 words." +
+          (brandContext ? `\n\n${brandContext}` : ""),
+      },
+      { role: "user", content: brandPrompt },
+    ],
+  });
+
+  const optimized = completion.choices[0]?.message?.content?.trim() ?? brandPrompt;
+  const promptTokens = completion.usage?.prompt_tokens ?? 0;
+  const completionTokens = completion.usage?.completion_tokens ?? 0;
+  const costCents = computeTextCostCents({
+    model,
+    promptTokens,
+    completionTokens,
+  });
+
+  return {
+    optimizedPrompt: optimized,
+    usage: { promptTokens, completionTokens, costCents, model },
+  };
+}
+
+export function buildBrandContextBlock(
+  chunks: { chunkText: string; fileName: string; score: number }[],
+) {
+  return buildContextBlock(chunks);
 }

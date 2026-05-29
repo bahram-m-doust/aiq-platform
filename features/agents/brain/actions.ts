@@ -10,6 +10,7 @@ import {
   runBrandBrain,
 } from "@/features/agents/brain/services";
 import type { BrandBrainChatFormState } from "@/features/agents/brain/types";
+import { isBudgetExceededError } from "@/features/openrouter/usage";
 import { logServerError } from "@/lib/logging/server";
 import {
   checkRequestRateLimit,
@@ -56,7 +57,11 @@ export async function askBrandBrainAction(
       runId: result.runId,
     };
   } catch (error) {
-    if (isBrandBrainServiceError(error) || isLLMBrainConfigError(error)) {
+    if (
+      isBudgetExceededError(error) ||
+      isBrandBrainServiceError(error) ||
+      isLLMBrainConfigError(error)
+    ) {
       return errorState(error.message);
     }
 

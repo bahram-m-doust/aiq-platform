@@ -6,7 +6,10 @@ import {
   catalogAgentKeyFromRoute,
 } from "@/features/agents/catalog/schema";
 import type { CatalogAgentKey } from "@/features/agents/catalog/types";
-import { createAgentRunResponse, getAgentRunModel } from "@/features/agents/runs/llm";
+import {
+  createAgentRunResponse,
+  rewritePromptForImage,
+} from "@/features/agents/runs/llm";
 import {
   agentRunProvider,
   buildAgentKnowledgeModuleScope,
@@ -17,9 +20,21 @@ import type {
   AgentKnowledgeModuleScope,
   AgentRunResult,
 } from "@/features/agents/runs/types";
+import { uploadAgentImagePng } from "@/features/agents/runs/image-storage";
 import type { UserProfile } from "@/features/auth/types";
+import { assertWithinBudget, recordRunUsage } from "@/features/openrouter/usage";
+import { searchBrandKnowledge } from "@/features/rag/vector-search";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
+import { generateImage } from "@/lib/openrouter/image";
+import {
+  coerceImageModel,
+  coerceTextModel,
+  DEFAULT_IMAGE_MODEL,
+  DEFAULT_TEXT_MODEL,
+  type ImageModelId,
+  type TextModelId,
+} from "@/lib/openrouter/models";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type AgentRunContextRow = {
@@ -181,6 +196,7 @@ async function insertAgentRun({
   retrievedSources,
   moduleScope,
   latencyMs,
+  outputExtras,
 }: {
   brandId: string;
   agentId: string;
@@ -193,6 +209,7 @@ async function insertAgentRun({
   retrievedSources: unknown[];
   moduleScope: AgentKnowledgeModuleScope;
   latencyMs: number;
+  outputExtras?: Record<string, unknown>;
 }) {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -207,7 +224,7 @@ async function insertAgentRun({
         required_modules: moduleScope.requiredModuleTypes,
         filtered_module_ids: moduleScope.filteredModuleIds,
       },
-      output: { answer, response_id: responseId },
+      output: { answer, response_id: responseId, ...(outputExtras ?? {}) },
       provider: agentRunProvider,
       model,
       retrieved_sources: retrievedSources,
@@ -222,6 +239,29 @@ async function insertAgentRun({
   }
 
   return (data as AgentRunRow).id;
+}
+
+export async function getBrandModelDefaults(brandId: string): Promise<{
+  text: TextModelId;
+  image: ImageModelId;
+}> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("brands")
+    .select("default_text_model, default_image_model")
+    .eq("id", brandId)
+    .maybeSingle<{
+      default_text_model: string | null;
+      default_image_model: string | null;
+    }>();
+  return {
+    text: data?.default_text_model
+      ? coerceTextModel(data.default_text_model)
+      : DEFAULT_TEXT_MODEL,
+    image: data?.default_image_model
+      ? coerceImageModel(data.default_image_model)
+      : DEFAULT_IMAGE_MODEL,
+  };
 }
 
 async function insertAgentRunAudit({
@@ -263,10 +303,14 @@ export async function runCatalogAgent({
   profile,
   agentKey,
   prompt,
+  textModelOverride,
+  imageModelOverride,
 }: {
   profile: UserProfile;
   agentKey: CatalogAgentKey;
   prompt: string;
+  textModelOverride?: TextModelId | null;
+  imageModelOverride?: ImageModelId | null;
 }): Promise<AgentRunResult> {
   const normalizedAgentKey = catalogAgentKeyFromRoute(agentKey) ?? agentKey;
   const [brainWorkspace, agent] = await Promise.all([
@@ -303,18 +347,37 @@ export async function runCatalogAgent({
     runError("This agent must be activated before it can run.");
   }
 
+  await assertWithinBudget(brainWorkspace.access.brandId);
+
   const moduleScope = await resolveKnowledgeModuleScope({
     brandId: brainWorkspace.access.brandId,
     requiredModules: agent.required_modules,
   });
-  const model = getAgentRunModel();
+
+  const defaults = await getBrandModelDefaults(brainWorkspace.access.brandId);
+  const textModel: TextModelId = textModelOverride ?? defaults.text;
+  const imageModel: ImageModelId = imageModelOverride ?? defaults.image;
+
+  if (normalizedAgentKey === "IMAGE_GENERATOR") {
+    return runImageGeneratorAgent({
+      profile,
+      brandId: brainWorkspace.access.brandId,
+      agent,
+      agentKey: normalizedAgentKey,
+      prompt,
+      moduleScope,
+      textModel,
+      imageModel,
+    });
+  }
+
   const startedAt = Date.now();
   const response = await createAgentRunResponse({
     agentKey: normalizedAgentKey,
     prompt,
     brandId: brainWorkspace.access.brandId,
     moduleScope,
-    model,
+    model: textModel,
   });
   const latencyMs = Math.max(0, Date.now() - startedAt);
 
@@ -330,10 +393,20 @@ export async function runCatalogAgent({
     prompt,
     answer: response.answer,
     responseId: response.responseId,
-    model,
+    model: textModel,
     retrievedSources: response.retrievedSources,
     moduleScope,
     latencyMs,
+  });
+
+  await recordRunUsage({
+    runId,
+    brandId: brainWorkspace.access.brandId,
+    kind: "TEXT",
+    model: response.usage.model,
+    promptTokens: response.usage.promptTokens,
+    completionTokens: response.usage.completionTokens,
+    costCents: response.usage.costCents,
   });
 
   await insertAgentRunAudit({
@@ -342,13 +415,160 @@ export async function runCatalogAgent({
     agentId: agent.id,
     agentKey: normalizedAgentKey,
     runId,
-    model,
+    model: textModel,
   });
 
   return {
     runId,
     answer: response.answer,
     sources: response.displaySources,
-    model,
+    model: textModel,
+  };
+}
+
+async function runImageGeneratorAgent({
+  profile,
+  brandId,
+  agent,
+  agentKey,
+  prompt,
+  moduleScope,
+  textModel,
+  imageModel,
+}: {
+  profile: UserProfile;
+  brandId: string;
+  agent: AgentRunContextRow;
+  agentKey: CatalogAgentKey;
+  prompt: string;
+  moduleScope: AgentKnowledgeModuleScope;
+  textModel: TextModelId;
+  imageModel: ImageModelId;
+}): Promise<AgentRunResult> {
+  const chunks = await searchBrandKnowledge({
+    brandId,
+    query: prompt,
+    topK: 5,
+    moduleIds:
+      moduleScope.filteredModuleIds.length > 0
+        ? moduleScope.filteredModuleIds
+        : undefined,
+  });
+  const brandContext = chunks.length
+    ? "## Brand Knowledge Context\n\n" +
+      chunks
+        .map(
+          (c) =>
+            `--- Source: ${c.fileName} (relevance: ${Math.round(c.score * 100)}%) ---\n${c.chunkText}`,
+        )
+        .join("\n\n")
+    : "";
+
+  const startedAt = Date.now();
+  const { optimizedPrompt, usage: textUsage } = await rewritePromptForImage({
+    brandId,
+    brandPrompt: prompt,
+    model: textModel,
+    brandContext,
+  });
+
+  const { b64Images, usage: imageUsage } = await generateImage({
+    brandId,
+    model: imageModel,
+    prompt: optimizedPrompt,
+    n: 1,
+  });
+  const latencyMs = Math.max(0, Date.now() - startedAt);
+
+  if (b64Images.length === 0) {
+    runError("Image model did not return any images.");
+  }
+
+  const retrievedSources = chunks.map((c) => ({
+    fileName: c.fileName,
+    score: c.score,
+    providerFileId: c.knowledgeFileId,
+    attributes: {
+      chunk_id: c.chunkId,
+      knowledge_file_id: c.knowledgeFileId,
+    },
+  }));
+
+  const answer = `Generated ${b64Images.length} image(s) with ${imageModel}.\n\nPrompt sent to the image model:\n${optimizedPrompt}`;
+  const responseId = `image-${Date.now()}`;
+
+  const runId = await insertAgentRun({
+    brandId,
+    agentId: agent.id,
+    userId: profile.id,
+    agentKey,
+    prompt,
+    answer,
+    responseId,
+    model: imageModel,
+    retrievedSources,
+    moduleScope,
+    latencyMs,
+    outputExtras: { image_prompt: optimizedPrompt, text_model: textModel },
+  });
+
+  const imagePaths: string[] = [];
+  for (let i = 0; i < b64Images.length; i += 1) {
+    const path = `${brandId}/${runId}/${i}.png`;
+    await uploadAgentImagePng({
+      storagePath: path,
+      pngBytes: Buffer.from(b64Images[i], "base64"),
+    });
+    imagePaths.push(path);
+  }
+
+  const admin = createAdminClient();
+  await admin
+    .from("agent_runs")
+    .update({
+      output: {
+        answer,
+        response_id: responseId,
+        image_prompt: optimizedPrompt,
+        image_paths: imagePaths,
+        text_model: textModel,
+      },
+    })
+    .eq("id", runId);
+
+  await recordRunUsage({
+    runId,
+    brandId,
+    kind: "TEXT",
+    model: textUsage.model,
+    promptTokens: textUsage.promptTokens,
+    completionTokens: textUsage.completionTokens,
+    costCents: textUsage.costCents,
+  });
+
+  await recordRunUsage({
+    runId,
+    brandId,
+    kind: "IMAGE",
+    model: imageUsage.model,
+    imageCount: imageUsage.imageCount,
+    costCents: imageUsage.costCents,
+  });
+
+  await insertAgentRunAudit({
+    profile,
+    brandId,
+    agentId: agent.id,
+    agentKey,
+    runId,
+    model: imageModel,
+  });
+
+  return {
+    runId,
+    answer,
+    sources: [],
+    model: imageModel,
+    imagePaths,
   };
 }

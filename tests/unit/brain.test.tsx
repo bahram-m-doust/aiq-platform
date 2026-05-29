@@ -249,13 +249,21 @@ describe("Brand Brain service", () => {
         },
       ],
       displaySources: [{ fileName: "brand-knowledge.pdf", score: 0.89 }],
+      usage: {
+        promptTokens: 10,
+        completionTokens: 20,
+        costCents: 0.15,
+        model: "gpt-test",
+      },
     });
   });
 
   it("uses only the current brand vector store and logs the run safely", async () => {
     const agentRunBuilder = {
       insert: vi.fn(() => agentRunBuilder),
+      update: vi.fn(() => agentRunBuilder),
       select: vi.fn(() => agentRunBuilder),
+      eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
       single: vi.fn(() =>
         Promise.resolve({ data: { id: "run-1" }, error: null }),
       ),
@@ -266,9 +274,29 @@ describe("Brand Brain service", () => {
     const auditBuilder = {
       insert: auditInsert,
     };
+    const brandsBuilder = {
+      select: vi.fn(() => brandsBuilder),
+      eq: vi.fn(() => brandsBuilder),
+      maybeSingle: vi.fn(() =>
+        Promise.resolve({
+          data: { monthly_budget_cents: null },
+          error: null,
+        }),
+      ),
+    };
+    const usageBuilder = {
+      select: vi.fn(() => usageBuilder),
+      eq: vi.fn(() => usageBuilder),
+      gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      insert: vi.fn((value: unknown) =>
+        Promise.resolve({ data: value, error: null }),
+      ),
+    };
     const from = vi.fn((table: string) => {
       if (table === "agent_runs") return agentRunBuilder;
       if (table === "audit_logs") return auditBuilder;
+      if (table === "brands") return brandsBuilder;
+      if (table === "agent_run_usage") return usageBuilder;
       throw new Error(`Unexpected table ${table}`);
     });
 

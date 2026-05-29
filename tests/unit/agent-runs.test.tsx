@@ -205,11 +205,32 @@ function setupRunClient({
   });
   const modulesBuilder = listBuilder({ data: modules, error: null });
   const knowledgeBuilder = listBuilder({ data: knowledgeFiles, error: null });
-  const agentRunsBuilder = insertBuilder({
-    data: { id: "run-1" },
+  const agentRunsBuilder = {
+    insert: vi.fn(() => agentRunsBuilder),
+    update: vi.fn(() => agentRunsBuilder),
+    select: vi.fn(() => agentRunsBuilder),
+    eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+    single: vi.fn(() =>
+      Promise.resolve({ data: { id: "run-1" }, error: null }),
+    ),
+  };
+  const auditBuilder = {
+    insert: vi.fn((value: unknown) =>
+      Promise.resolve({ data: value, error: null }),
+    ),
+  };
+  const brandsBuilder = queryBuilder({
+    data: {
+      monthly_budget_cents: null,
+      default_text_model: null,
+      default_image_model: null,
+    },
     error: null,
   });
-  const auditBuilder = {
+  const usageQueryBuilder = {
+    select: vi.fn(() => usageQueryBuilder),
+    eq: vi.fn(() => usageQueryBuilder),
+    gte: vi.fn(() => Promise.resolve({ data: [], error: null })),
     insert: vi.fn((value: unknown) =>
       Promise.resolve({ data: value, error: null }),
     ),
@@ -221,6 +242,8 @@ function setupRunClient({
     if (table === "knowledge_files") return knowledgeBuilder;
     if (table === "agent_runs") return agentRunsBuilder;
     if (table === "audit_logs") return auditBuilder;
+    if (table === "brands") return brandsBuilder;
+    if (table === "agent_run_usage") return usageQueryBuilder;
     throw new Error(`Unexpected table ${table}`);
   });
 
@@ -233,6 +256,8 @@ function setupRunClient({
     knowledgeBuilder,
     agentRunsBuilder,
     auditBuilder,
+    brandsBuilder,
+    usageQueryBuilder,
   };
 }
 
@@ -247,7 +272,7 @@ describe("agent run rules", () => {
     });
 
     expect(agentSystemPrompts.IMAGE_GENERATOR).toContain(
-      "Do not claim to generate image assets",
+      "image-generation prompt",
     );
     expect(agentSystemPrompts.VIDEO_GENERATOR).toContain(
       "Do not claim to generate video assets",
@@ -391,6 +416,12 @@ describe("agent run service", () => {
         },
       ],
       displaySources: [{ fileName: "brand-knowledge.pdf", score: 0.91 }],
+      usage: {
+        promptTokens: 10,
+        completionTokens: 20,
+        costCents: 0.15,
+        model: "gpt-test",
+      },
     });
   });
 
@@ -406,7 +437,7 @@ describe("agent run service", () => {
     expect(result).toMatchObject({
       runId: "run-1",
       answer: "A disciplined strategic response.",
-      model: "gpt-test",
+      model: "openai/gpt-4o-mini",
     });
     expect(mockedCreateAgentRunResponse).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -431,7 +462,7 @@ describe("agent run service", () => {
           response_id: "resp-1",
         },
         provider: agentRunProvider,
-        model: "gpt-test",
+        model: "openai/gpt-4o-mini",
         cost: null,
       }),
     );

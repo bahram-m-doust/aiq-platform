@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireUserProfile } from "@/features/auth/queries";
 import { catalogAgentKeyFromRoute, catalogAgentSlugForKey } from "@/features/agents/catalog/schema";
+import { createAgentImageSignedUrls } from "@/features/agents/runs/image-storage";
 import {
   isLLMAgentRunConfigError,
 } from "@/features/agents/runs/llm";
@@ -15,7 +16,14 @@ import {
   runCatalogAgent,
 } from "@/features/agents/runs/services";
 import type { AgentRunFormState } from "@/features/agents/runs/types";
+import { isBudgetExceededError } from "@/features/openrouter/usage";
 import { logServerError } from "@/lib/logging/server";
+import {
+  coerceImageModel,
+  coerceTextModel,
+  isImageModelId,
+  isTextModelId,
+} from "@/lib/openrouter/models";
 import {
   checkRequestRateLimit,
   RATE_LIMITED_MESSAGE,
@@ -47,11 +55,22 @@ export async function runAgentAction(
     return errorState(RATE_LIMITED_MESSAGE);
   }
 
+  const rawTextModel = formData.get("text_model");
+  const rawImageModel = formData.get("image_model");
+  const textModelOverride = isTextModelId(rawTextModel)
+    ? coerceTextModel(rawTextModel)
+    : null;
+  const imageModelOverride = isImageModelId(rawImageModel)
+    ? coerceImageModel(rawImageModel)
+    : null;
+
   try {
     const result = await runCatalogAgent({
       profile,
       agentKey: validation.agentKey,
       prompt: validation.prompt,
+      textModelOverride,
+      imageModelOverride,
     });
 
     revalidatePath("/dashboard/agents");
@@ -66,9 +85,14 @@ export async function runAgentAction(
       sources: result.sources,
       runId: result.runId,
       agentKey: validation.agentKey,
+      imagePaths: result.imagePaths,
     };
   } catch (error) {
-    if (isAgentRunServiceError(error) || isLLMAgentRunConfigError(error)) {
+    if (
+      isBudgetExceededError(error) ||
+      isAgentRunServiceError(error) ||
+      isLLMAgentRunConfigError(error)
+    ) {
       return errorState(error.message);
     }
 
@@ -82,5 +106,22 @@ export async function runAgentAction(
     });
 
     return errorState("The agent could not complete this request.");
+  }
+}
+
+export async function resolveAgentImageUrlsAction(
+  imagePaths: string[],
+): Promise<string[]> {
+  if (!Array.isArray(imagePaths) || imagePaths.length === 0) return [];
+  await requireUserProfile("/dashboard/agents");
+  try {
+    return await createAgentImageSignedUrls(imagePaths.slice(0, 8));
+  } catch (error) {
+    logServerError({
+      label: "[agent-runs] resolve image urls failed",
+      error,
+      metadata: { paths: imagePaths },
+    });
+    return [];
   }
 }

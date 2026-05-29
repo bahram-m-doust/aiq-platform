@@ -246,7 +246,7 @@ export default async function AdminPage() {
                 size="lg"
                 variant="outline"
               >
-                <Link href="/admin/files">
+                <Link href="/admin/openrouter">
                   <KeyRoundIcon className="size-4" />
                   API Keys & Costs
                 </Link>

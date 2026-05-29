@@ -6,6 +6,7 @@ import { AgentDetail } from "@/features/agents/catalog/components/AgentDetail";
 import { canActivateAgentRole } from "@/features/agents/catalog/schema";
 import { getAgentCatalogDetail } from "@/features/agents/catalog/queries";
 import { getAgentRunHistory } from "@/features/agents/runs/queries";
+import { getBrandModelDefaults } from "@/features/agents/runs/services";
 import { requireUserProfile } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
@@ -40,6 +41,10 @@ export default async function AgentCatalogDetailPage({
         })
       : [];
 
+  const defaults = await getBrandModelDefaults(
+    detail.workspace.access.brandId,
+  );
+
   return (
     <PageShell
       eyebrow="Agent"
@@ -49,6 +54,8 @@ export default async function AgentCatalogDetailPage({
       <AgentDetail
         access={detail.workspace.access}
         agent={detail.agent}
+        defaultImageModel={defaults.image}
+        defaultTextModel={defaults.text}
         runHistory={runHistory}
       />
     </PageShell>

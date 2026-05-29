@@ -10,6 +10,7 @@ import {
   getOpenRouterClientForBrand,
   getOpenRouterModel,
 } from "@/lib/openrouter/client";
+import { computeTextCostCents } from "@/lib/openrouter/models";
 
 const CODE = "openrouter_brain_config";
 
@@ -80,10 +81,19 @@ export async function createBrandBrainResponse({
   const answer = completion.choices[0]?.message?.content?.trim() ?? "";
   const retrievedSources = toRetrievedSources(chunks);
 
+  const promptTokens = completion.usage?.prompt_tokens ?? 0;
+  const completionTokens = completion.usage?.completion_tokens ?? 0;
+  const costCents = computeTextCostCents({
+    model,
+    promptTokens,
+    completionTokens,
+  });
+
   return {
     responseId: completion.id ?? `pgvector-${Date.now()}`,
     answer,
     retrievedSources,
     displaySources: toBrandBrainDisplaySources(retrievedSources),
+    usage: { promptTokens, completionTokens, costCents, model },
   };
 }
