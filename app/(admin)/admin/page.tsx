@@ -12,6 +12,7 @@ import {
   ScrollTextIcon,
   ShieldCheckIcon,
   BrainIcon,
+  TagIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -260,6 +261,17 @@ export default async function AdminPage() {
                 <Link href="/admin/brand-icons">
                   <ImageIcon className="size-4" />
                   Brand Icons
+                </Link>
+              </Button>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/plans">
+                  <TagIcon className="size-4" />
+                  Pricing Plans
                 </Link>
               </Button>
             </div>
