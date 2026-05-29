@@ -1,15 +1,23 @@
 -- =============================================================================
 -- BOOTSTRAP: full Bextudio platform schema from scratch.
 -- =============================================================================
--- !! DESTRUCTIVE !!  Drops the public schema and three storage buckets
--- (bextudio-files, brand-icons, agent-images) along with every row and file
--- they contain. Supabase Auth users (auth.users) are NOT touched, but every
--- users_profile row IS — so users will need to re-onboard on next sign-in.
+-- !! DESTRUCTIVE !!  Drops the public schema and every row in it. Supabase
+-- Auth users (auth.users) are NOT touched, but every users_profile row IS —
+-- so users will need to re-onboard on next sign-in.
 --
 -- BEFORE RUNNING
 --   1. Supabase Dashboard → Database → Backups → download a snapshot.
 --   2. Make sure SUPABASE_URL in .env.local points at the project you mean
 --      to wipe.
+--   3. (OPTIONAL) If you also want to wipe uploaded files, do it from the
+--      Storage UI BEFORE running this script — Supabase blocks DELETE from
+--      storage.objects / storage.buckets in SQL via a protect_delete()
+--      trigger. From the dashboard:
+--        Storage → bextudio-files → select all → Delete
+--        Storage → brand-icons   → select all → Delete
+--        Storage → agent-images  → select all → Delete
+--      Skipping this step leaves orphan files in storage but is harmless —
+--      the metadata that referenced them in public.files is wiped anyway.
 --
 -- HOW TO RUN
 --   Supabase Dashboard → SQL Editor → New query → paste the ENTIRE file →
@@ -20,13 +28,7 @@
 -- errors are gone for good.
 -- =============================================================================
 
--- 1) Wipe storage objects and buckets we own ----------------------------------
-
-delete from storage.objects
-where bucket_id in ('bextudio-files', 'brand-icons', 'agent-images');
-
-delete from storage.buckets
-where id in ('bextudio-files', 'brand-icons', 'agent-images');
+-- 1) Drop the storage policy we own (DDL — not blocked by protect_delete) ----
 
 drop policy if exists brand_icons_public_read on storage.objects;
 
