@@ -1,6 +1,10 @@
 import "server-only";
 
-import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
+import {
+  DomainError,
+  isDomainErrorWithCode,
+  wrapSupabaseError,
+} from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const BUDGET_ERROR_CODE = "openrouter_budget_exceeded";
@@ -43,7 +47,9 @@ export async function recordRunUsage({
     image_count: imageCount ?? null,
     cost_cents: safeCost,
   });
-  if (usageError) throw usageError;
+  if (usageError) {
+    throw wrapSupabaseError(usageError, "agent_run_usage.insert failed");
+  }
 
   if (runId) {
     await admin
@@ -68,7 +74,9 @@ export async function getMonthSpendCents(brandId: string): Promise<number> {
     .eq("brand_id", brandId)
     .gte("created_at", firstOfMonthUtc());
 
-  if (error) throw error;
+  if (error) {
+    throw wrapSupabaseError(error, "getMonthSpendCents failed");
+  }
 
   let total = 0;
   for (const row of (data ?? []) as { cost_cents: number | string }[]) {
@@ -90,7 +98,9 @@ export async function getBrandBudgetCents(
     .select("monthly_budget_cents")
     .eq("id", brandId)
     .maybeSingle<{ monthly_budget_cents: number | null }>();
-  if (error) throw error;
+  if (error) {
+    throw wrapSupabaseError(error, "getBrandBudgetCents failed");
+  }
   return data?.monthly_budget_cents ?? null;
 }
 
@@ -131,7 +141,9 @@ export async function getRecentMonthUsageRows(
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) {
+    throw wrapSupabaseError(error, "getRecentMonthUsageRows failed");
+  }
 
   return ((data ?? []) as Array<{
     id: string;

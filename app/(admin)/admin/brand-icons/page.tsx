@@ -13,6 +13,7 @@ import {
 import { brandIconPublicUrl } from "@/features/admin/brand-icons/storage";
 import { BrandIconRow } from "@/features/admin/brand-icons/components/BrandIconRow";
 import { requirePlatformOwner } from "@/features/auth/queries";
+import { wrapSupabaseError } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = {
@@ -35,7 +36,9 @@ export default async function AdminBrandIconsPage() {
     .select("id, name, icon_path")
     .order("name", { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    throw wrapSupabaseError(error, "admin brand-icons list failed");
+  }
 
   const brands = (data ?? []) as BrandRow[];
 
