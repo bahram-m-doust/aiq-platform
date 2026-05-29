@@ -10,9 +10,9 @@ import {
   ChevronLeftIcon,
   FileIcon,
   GitBranchIcon,
+  GaugeIcon,
   HomeIcon,
   ImageIcon,
-  KeyRoundIcon,
   LayersIcon,
   MegaphoneIcon,
   MenuIcon,
@@ -58,7 +58,7 @@ const navItems = [
   { href: "/dashboard/files", label: "Files", icon: FileIcon },
   { href: "/dashboard/change-requests", label: "Changes", icon: GitBranchIcon },
   { href: "/dashboard/invitations", label: "Invitations", icon: MailIcon },
-  { href: "/dashboard/openrouter", label: "OpenRouter", icon: KeyRoundIcon },
+  { href: "/dashboard/ai-studio", label: "AI Studio", icon: GaugeIcon },
 ];
 
 const agentStateColors: Record<string, string> = {

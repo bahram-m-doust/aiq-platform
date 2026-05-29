@@ -17,7 +17,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = {
-  title: "OpenRouter | Bextudio Platform",
+  title: "AI Studio | Bextudio Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -35,8 +35,8 @@ function formatDate(value: string) {
   });
 }
 
-export default async function DashboardOpenRouterPage() {
-  const { profile } = await requireUserProfile("/dashboard/openrouter");
+export default async function DashboardAiStudioPage() {
+  const { profile } = await requireUserProfile("/dashboard/ai-studio");
   const summary = await getBrandAccessSummaryForProfile(profile.id);
 
   if (summary.status !== "ACTIVE_ACCESS" || !summary.brandId) {
@@ -67,9 +67,9 @@ export default async function DashboardOpenRouterPage() {
 
   return (
     <PageShell
-      eyebrow="OpenRouter"
+      eyebrow="AI"
       subtitle="Track this month's spend and pick the default models your agents use."
-      title="OpenRouter"
+      title="AI Studio"
     >
       <DSCard>
         <DSCardHeader>
