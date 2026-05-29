@@ -52,6 +52,17 @@ create schema public;
 grant usage on schema public to anon, authenticated, service_role, postgres;
 grant create on schema public to postgres, service_role;
 
+-- Restore Supabase's default grant model: service_role bypasses RLS but
+-- still needs explicit table-level privileges. Without these ALTER DEFAULT
+-- PRIVILEGES, every table we create below would be inaccessible to the
+-- service role and every server query would 42501 "permission denied".
+alter default privileges in schema public
+  grant all on tables to service_role;
+alter default privileges in schema public
+  grant all on sequences to service_role;
+alter default privileges in schema public
+  grant all on routines to service_role;
+
 -- 3) Re-create extensions used by the schema ----------------------------------
 
 create extension if not exists pgcrypto;
