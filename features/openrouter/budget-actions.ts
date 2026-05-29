@@ -25,7 +25,7 @@ export async function setBrandBudgetAction(
   _prev: BudgetFormState,
   formData: FormData,
 ): Promise<BudgetFormState> {
-  const { profile } = await requirePlatformOwner("/admin/openrouter");
+  const { profile } = await requirePlatformOwner("/admin/ai-studio");
   const brandId = readString(formData, "brand_id");
   const dollars = readString(formData, "monthly_dollars");
 
@@ -55,7 +55,7 @@ export async function setBrandBudgetAction(
       .eq("id", brandId);
     if (error) throw error;
 
-    revalidatePath("/admin/openrouter");
+    revalidatePath("/admin/ai-studio");
     return {
       status: "success",
       message:

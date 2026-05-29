@@ -246,9 +246,9 @@ export default async function AdminPage() {
                 size="lg"
                 variant="outline"
               >
-                <Link href="/admin/openrouter">
+                <Link href="/admin/ai-studio">
                   <KeyRoundIcon className="size-4" />
-                  API Keys & Costs
+                  AI Studio — Keys &amp; Costs
                 </Link>
               </Button>
               <Button
