@@ -17,6 +17,7 @@ import {
   SquareUserIcon,
 } from "lucide-react";
 
+import { CreditCounter } from "@/components/dashboard/CreditCounter";
 import {
   Collapsible,
   CollapsibleContent,
@@ -64,7 +65,7 @@ const primaryNav = [
 const secondaryNav = [
   { href: "/dashboard", label: "Community", icon: MessagesSquareIcon },
   { href: "/dashboard/documents", label: "Documents", icon: BookOpenIcon },
-  { href: "/dashboard/ai-studio", label: "Settings", icon: Settings2Icon },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings2Icon },
 ];
 
 export function Sidebar({
@@ -253,12 +254,7 @@ export function Sidebar({
               <ChevronRightIcon className="size-4" />
             </button>
           </div>
-          <div className="flex items-center justify-between px-2.5 py-2.5">
-            <span className="text-sm font-medium text-foreground">Credits</span>
-            <span className="text-sm text-muted-foreground">
-              120 remaining 1000
-            </span>
-          </div>
+          <CreditCounter />
         </div>
 
         <form action={logoutAction}>
