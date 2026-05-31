@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon, CheckCircleIcon, LockIcon } from "lucide-react";
 
@@ -11,6 +11,7 @@ import {
   isIntakeSessionLocked,
 } from "@/features/intake/schemas";
 import { QuestionRenderer } from "@/features/intake/components/QuestionRenderer";
+import { useIntakeAutosaveQueue } from "@/features/intake/components/useIntakeAutosaveQueue";
 import type {
   IntakeAnswerMap,
   IntakeAnswerValue,
@@ -34,8 +35,6 @@ export function SectionQuestionnaire({
   section,
   session,
   answers: initialAnswers,
-  completion: initialCompletion,
-  brandName,
   allSections,
 }: {
   section: IntakeSectionWithQuestions;
@@ -45,27 +44,31 @@ export function SectionQuestionnaire({
   brandName: string;
   allSections: IntakeSectionWithQuestions[];
 }) {
-  const [answers, setAnswers] = useState<IntakeAnswerMap>(initialAnswers);
   const locked = isIntakeSessionLocked(session);
+  const { answers, enqueueAnswer, retryQuestion, saveStates } =
+    useIntakeAutosaveQueue({
+      sessionId: session.id,
+      initialAnswers,
+    });
+  const displayedAnswers = locked ? initialAnswers : answers;
   const completion = useMemo(
-    () => calculateIntakeCompletion({ sections: allSections, answers }),
-    [answers, allSections],
+    () =>
+      calculateIntakeCompletion({
+        sections: allSections,
+        answers: displayedAnswers,
+      }),
+    [displayedAnswers, allSections],
   );
 
-  const sectionQuestionIds = section.questions.map((q) => q.id);
+  const sectionQuestionIds = section.questions.map((question) => question.id);
   const sectionAnswered = sectionQuestionIds.filter((id) =>
-    isIntakeAnswerComplete(answers[id] ?? null),
+    isIntakeAnswerComplete(displayedAnswers[id] ?? null),
   ).length;
   const sectionTotal = section.questions.length;
   const sectionPercent =
     sectionTotal > 0 ? Math.round((sectionAnswered / sectionTotal) * 100) : 0;
 
-  const sectionIndex =
-    allSections.findIndex((s) => s.id === section.id) + 1;
-
-  function handleSaved(questionId: string, value: IntakeAnswerValue) {
-    setAnswers((current) => ({ ...current, [questionId]: value }));
-  }
+  const sectionIndex = allSections.findIndex((item) => item.id === section.id) + 1;
 
   return (
     <div
@@ -73,7 +76,6 @@ export function SectionQuestionnaire({
       style={{ background: "var(--bv-bg)", color: "var(--bv-ink)" }}
     >
       <div className="mx-auto max-w-[780px]">
-        {/* Back + breadcrumb */}
         <div className="mb-6 flex items-center justify-between">
           <Link
             className="inline-flex items-center gap-2 rounded-full border bg-white px-3.5 py-2 text-[13px] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
@@ -87,14 +89,14 @@ export function SectionQuestionnaire({
             All sections
           </Link>
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
-            Section {sectionIndex} of {allSections.length} · {sectionAnswered}/{sectionTotal} answered
+            Section {sectionIndex} of {allSections.length} - {sectionAnswered}/
+            {sectionTotal} answered
           </span>
         </div>
 
-        {/* Section header */}
         <div className="mb-9">
           <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
-            Brand Research · Phase 01
+            Brand Research - Phase 01
           </span>
 
           <div className="mt-1.5 flex items-baseline gap-2.5">
@@ -127,20 +129,20 @@ export function SectionQuestionnaire({
               style={{ borderColor: "var(--bv-line-2)" }}
             >
               <LockIcon className="size-3.5 shrink-0" />
-              This questionnaire is submitted and locked — answers are shown for
+              This questionnaire is submitted and locked - answers are shown for
               reference only.
             </div>
           )}
 
-          {/* Section nav pills */}
           <div className="mt-5 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-            {allSections.map((s) => {
-              const isActive = s.id === section.id;
-              const sIds = s.questions.map((q) => q.id);
-              const sDone = sIds.filter((id) =>
-                isIntakeAnswerComplete(answers[id] ?? null),
+            {allSections.map((item) => {
+              const isActive = item.id === section.id;
+              const questionIds = item.questions.map((question) => question.id);
+              const answered = questionIds.filter((id) =>
+                isIntakeAnswerComplete(displayedAnswers[id] ?? null),
               ).length;
-              const sComplete = sDone === s.questions.length && s.questions.length > 0;
+              const isComplete =
+                answered === item.questions.length && item.questions.length > 0;
 
               return (
                 <Link
@@ -150,20 +152,19 @@ export function SectionQuestionnaire({
                       ? "border-[var(--bv-c1-b)] bg-orange-50 font-medium text-[var(--bv-c1-b)]"
                       : "border-[var(--bv-line)] bg-white text-[var(--bv-ink-3)] hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink-2)]",
                   )}
-                  href={`/dashboard/questionnaire/${s.key}`}
-                  key={s.id}
+                  href={`/dashboard/questionnaire/${item.key}`}
+                  key={item.id}
                 >
-                  {sComplete && (
+                  {isComplete && (
                     <CheckCircleIcon className="size-3 text-emerald-500" />
                   )}
-                  {s.title}
+                  {item.title}
                 </Link>
               );
             })}
           </div>
         </div>
 
-        {/* Questions */}
         <div className="space-y-4">
           {section.questions.length === 0 ? (
             <div
@@ -176,7 +177,7 @@ export function SectionQuestionnaire({
               No questions configured for this section yet.
             </div>
           ) : (
-            section.questions.map((question, i) => (
+            section.questions.map((question, index) => (
               <div
                 className="overflow-hidden rounded-xl border"
                 key={question.id}
@@ -187,7 +188,7 @@ export function SectionQuestionnaire({
               >
                 <div className="px-5 pt-4 pb-1">
                   <span className="font-mono text-[10px] text-[var(--bv-ink-4)]">
-                    {sectionIndex}.{String(i + 1).padStart(2, "0")}
+                    {sectionIndex}.{String(index + 1).padStart(2, "0")}
                   </span>
                 </div>
                 <div className="px-5 pb-5">
@@ -208,16 +209,18 @@ export function SectionQuestionnaire({
                           borderColor: "var(--bv-line)",
                         }}
                       >
-                        {formatAnswerValue(answers[question.id] ?? null)}
+                        {formatAnswerValue(displayedAnswers[question.id] ?? null)}
                       </div>
                     </div>
                   ) : (
                     <QuestionRenderer
                       key={question.id}
-                      onSaved={handleSaved}
+                      onQueuedChange={enqueueAnswer}
+                      onRetryQueuedSave={retryQuestion}
                       question={question}
+                      saveState={saveStates[question.id]}
                       sessionId={session.id}
-                      value={answers[question.id] ?? null}
+                      value={displayedAnswers[question.id] ?? null}
                     />
                   )}
                 </div>
@@ -226,7 +229,6 @@ export function SectionQuestionnaire({
           )}
         </div>
 
-        {/* Footer nav */}
         <div
           className="mt-8 flex items-center justify-between border-t border-dashed pt-6"
           style={{ borderColor: "var(--bv-line-dashed)" }}
@@ -249,11 +251,11 @@ export function SectionQuestionnaire({
               }}
             >
               Next: {allSections[sectionIndex].title}
-              <span className="text-[var(--bv-ink-4)]">→</span>
+              <span className="text-[var(--bv-ink-4)]">-&gt;</span>
             </Link>
           ) : (
             <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
-              Last section · {completion.completionPercent}% overall
+              Last section - {completion.completionPercent}% overall
             </span>
           )}
         </div>

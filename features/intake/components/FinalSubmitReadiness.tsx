@@ -38,10 +38,12 @@ function ConfirmSubmitButton() {
 
 export function FinalSubmitReadiness({
   completion,
+  disabled = false,
   sessionId,
   canApprove = true,
 }: {
   completion: IntakeCompletion;
+  disabled?: boolean;
   sessionId: string;
   canApprove?: boolean;
 }) {
@@ -83,6 +85,7 @@ export function FinalSubmitReadiness({
       <DialogTrigger asChild>
         <button
           className="group relative inline-flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-[14px] px-5 py-3 text-[14px] font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
+          disabled={disabled}
           style={{
             background:
               "linear-gradient(135deg, var(--bv-brand) 0%, var(--bv-brand-mid) 60%, var(--bv-brand-deep) 100%)",
@@ -90,6 +93,7 @@ export function FinalSubmitReadiness({
             boxShadow:
               "0 8px 28px -10px var(--bv-brand-tint-32), 0 0 0 1px var(--bv-brand-mid)",
             animation: "ds-glow-pulse 2.4s var(--bv-ease) infinite",
+            opacity: disabled ? 0.6 : 1,
           }}
           type="button"
         >

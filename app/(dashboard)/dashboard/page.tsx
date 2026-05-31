@@ -46,9 +46,12 @@ export default async function DashboardPage({
     accessSummary.brandId &&
     accessSummary.brandName
   ) {
+    const intakeDataPromise = getIntakePageData({ profileId: profile.id });
     const [buildProgress, intakeData] = await Promise.all([
-      getBrandBuildProgress(accessSummary.brandId, accessSummary.brandName),
-      getIntakePageData({ profileId: profile.id }),
+      getBrandBuildProgress(accessSummary.brandId, accessSummary.brandName, {
+        intakeData: intakeDataPromise,
+      }),
+      intakeDataPromise,
     ]);
 
     const intakeSessionId = intakeData?.session.id ?? null;

@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { DashboardNavbar } from "@/components/dashboard/DashboardNavbar";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -11,6 +13,17 @@ import {
 import { getAgentCatalogWorkspace } from "@/features/agents/catalog/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const getBrandIconUrl = cache(async (brandId: string) => {
+  const admin = createAdminClient();
+  const { data: brandRow } = await admin
+    .from("brands")
+    .select("icon_path")
+    .eq("id", brandId)
+    .maybeSingle<{ icon_path: string | null }>();
+
+  return brandIconPublicUrl(brandRow?.icon_path ?? null);
+});
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -21,26 +34,22 @@ export default async function DashboardLayout({
 
   try {
     const { user, profile } = await requireUserProfile("/login");
-    const accessSummary = await getBrandAccessSummaryForProfile(profile.id);
+    const accessSummaryPromise = getBrandAccessSummaryForProfile(profile.id);
+    const catalogWorkspacePromise = getAgentCatalogWorkspace(profile.id).catch(
+      () => null,
+    );
+    const accessSummary = await accessSummaryPromise;
 
     if (accessSummary.status === "ACTIVE_ACCESS") {
-      const catalogWorkspace = await getAgentCatalogWorkspace(profile.id);
+      const [catalogWorkspace, brandIconUrl] = await Promise.all([
+        catalogWorkspacePromise,
+        accessSummary.brandId ? getBrandIconUrl(accessSummary.brandId) : null,
+      ]);
       const agents = catalogWorkspace?.agents ?? [];
 
       const defByKey = new Map(
         catalogAgentDefinitions.map((d) => [d.key, d]),
       );
-
-      let brandIconUrl: string | null = null;
-      if (accessSummary.brandId) {
-        const admin = createAdminClient();
-        const { data: brandRow } = await admin
-          .from("brands")
-          .select("icon_path")
-          .eq("id", accessSummary.brandId)
-          .maybeSingle<{ icon_path: string | null }>();
-        brandIconUrl = brandIconPublicUrl(brandRow?.icon_path ?? null);
-      }
 
       displayName = profile.full_name ?? user.email ?? profile.email;
       sidebarProps = {

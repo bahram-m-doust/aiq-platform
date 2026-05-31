@@ -98,6 +98,14 @@ export type AutosaveIntakeAnswerInput = {
   value: unknown;
 };
 
+export type AutosaveIntakeAnswersInput = {
+  sessionId: string;
+  answers: Array<{
+    questionId: string;
+    value: unknown;
+  }>;
+};
+
 export type AutosaveIntakeAnswerResult =
   | {
       ok: true;
@@ -108,6 +116,21 @@ export type AutosaveIntakeAnswerResult =
   | {
       ok: false;
       message: string;
+    };
+
+export type AutosaveIntakeAnswersResult =
+  | {
+      ok: true;
+      answers: Array<{
+        questionId: string;
+        value: IntakeAnswerValue;
+      }>;
+      completionPercent: number;
+    }
+  | {
+      ok: false;
+      message: string;
+      failedQuestionIds?: string[];
     };
 
 export type FinalSubmitIntakeFormState =

@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { IntakePageData } from "@/features/intake/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type PhaseStatus = "locked" | "active" | "complete";
@@ -52,6 +53,7 @@ const MODULE_APPROVED_STATUSES = [
 ];
 
 type IntakeRow = {
+  id: string;
   completion_percent: number | null;
   status: string;
 };
@@ -83,60 +85,32 @@ function mapModuleState(status: string): SubstepState {
   if (MODULE_APPROVED_STATUSES.includes(status)) return "done";
   if (status === "CLIENT_REVIEW") return "awaiting-review";
   if (status === "CLIENT_CHANGE_REQUESTED") return "in-progress";
-  if (status === "IN_PROGRESS" || status === "ASSIGNED" || status === "INTERNAL_REVIEW" || status === "SUPERVISOR_APPROVED") return "in-progress";
+  if (
+    status === "IN_PROGRESS" ||
+    status === "ASSIGNED" ||
+    status === "INTERNAL_REVIEW" ||
+    status === "SUPERVISOR_APPROVED"
+  ) {
+    return "in-progress";
+  }
   return "locked";
 }
 
-async function getIntakeProgress(brandId: string) {
-  const admin = createAdminClient();
+function getBrandResearchProgress({
+  answeredCount,
+  percent,
+  sessionExists,
+  totalQuestions,
+}: {
+  answeredCount: number;
+  percent: number;
+  sessionExists: boolean;
+  totalQuestions: number;
+}) {
+  const intakeStarted = sessionExists || percent > 0;
 
-  const [sessionResult, questionsResult, answersResult] = await Promise.all([
-    admin
-      .from("intake_sessions")
-      .select("completion_percent, status")
-      .eq("brand_id", brandId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    admin.from("questions").select("id, section_id"),
-    admin
-      .from("intake_answers")
-      .select("question_id")
-      .eq(
-        "session_id",
-        (
-          await admin
-            .from("intake_sessions")
-            .select("id")
-            .eq("brand_id", brandId)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle()
-        ).data?.id ?? "00000000-0000-0000-0000-000000000000",
-      ),
-  ]);
-
-  if (sessionResult.error) throw sessionResult.error;
-  if (questionsResult.error) throw questionsResult.error;
-
-  const session = sessionResult.data as IntakeRow | null;
-  const questions = (questionsResult.data ?? []) as QuestionRow[];
-  const answeredIds = new Set(
-    ((answersResult.data ?? []) as AnswerRow[]).map((a) => a.question_id),
-  );
-  const isLocked = session?.status === "LOCKED";
-
-  const totalQuestions = questions.length;
-  // When locked, force 100% (truth is "submitted") regardless of stale completion_percent
-  const percent = isLocked ? 100 : session?.completion_percent ?? 0;
-  const answeredCount = isLocked ? totalQuestions : answeredIds.size;
-  const intakeStarted = Boolean(session) || percent > 0;
-
-  // Phase 1 "Brand Research" — the Questionnaires substep is wired to the
-  // intake flow; Stakeholder Interviews and Futures Research are placeholders
-  // until their pipelines ship.
   let questionnairesState: SubstepState = "locked";
-  if (isLocked || percent === 100) questionnairesState = "done";
+  if (percent === 100) questionnairesState = "done";
   else if (intakeStarted) questionnairesState = "in-progress";
 
   const substeps: SubstepProgress[] = [
@@ -144,7 +118,7 @@ async function getIntakeProgress(brandId: string) {
       id: "questionnaires",
       title: "Questionnaires",
       description:
-        "Capture the raw signal — voice, audience, identity — direct from the brand.",
+        "Capture the raw signal - voice, audience, identity - direct from the brand.",
       progress: percent,
       state: questionnairesState,
     },
@@ -166,17 +140,15 @@ async function getIntakeProgress(brandId: string) {
     },
   ];
 
-  // The phase only completes when every substep is done. Stakeholder
-  // Interviews and Futures Research are required, so until their pipelines
-  // ship the phase stays active and Strategies remains locked behind it.
-  const allSubstepsDone = substeps.every((s) => s.state === "done");
+  const allSubstepsDone = substeps.every((substep) => substep.state === "done");
   const phasePercent = Math.round(
-    substeps.reduce((sum, s) => sum + s.progress, 0) / substeps.length,
+    substeps.reduce((sum, substep) => sum + substep.progress, 0) /
+      substeps.length,
   );
 
   let status: PhaseStatus = "locked";
   if (allSubstepsDone) status = "complete";
-  else if (percent > 0 || session) status = "active";
+  else if (intakeStarted) status = "active";
 
   return {
     percent: phasePercent,
@@ -185,6 +157,65 @@ async function getIntakeProgress(brandId: string) {
     stepsTotal: totalQuestions,
     substeps,
   };
+}
+
+async function getIntakeProgress(brandId: string) {
+  const admin = createAdminClient();
+
+  const [sessionResult, questionsResult] = await Promise.all([
+    admin
+      .from("intake_sessions")
+      .select("id, completion_percent, status")
+      .eq("brand_id", brandId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin.from("questions").select("id, section_id"),
+  ]);
+
+  if (sessionResult.error) throw sessionResult.error;
+  if (questionsResult.error) throw questionsResult.error;
+
+  const session = sessionResult.data as IntakeRow | null;
+  const answersResult = session
+    ? await admin
+        .from("intake_answers")
+        .select("question_id")
+        .eq("session_id", session.id)
+    : { data: [], error: null };
+
+  if (answersResult.error) throw answersResult.error;
+
+  const questions = (questionsResult.data ?? []) as QuestionRow[];
+  const answeredIds = new Set(
+    ((answersResult.data ?? []) as AnswerRow[]).map((answer) => answer.question_id),
+  );
+  const isLocked = session?.status === "LOCKED";
+  const totalQuestions = questions.length;
+  const percent = isLocked ? 100 : session?.completion_percent ?? 0;
+  const answeredCount = isLocked ? totalQuestions : answeredIds.size;
+
+  return getBrandResearchProgress({
+    answeredCount,
+    percent,
+    sessionExists: Boolean(session),
+    totalQuestions,
+  });
+}
+
+function getIntakeProgressFromPageData(data: IntakePageData) {
+  const isLocked = data.session.status === "LOCKED";
+  const percent = isLocked ? 100 : data.completion.completionPercent;
+  const stepsDone = isLocked
+    ? data.completion.totalQuestions
+    : data.completion.answeredQuestions;
+
+  return getBrandResearchProgress({
+    answeredCount: stepsDone,
+    percent,
+    sessionExists: Boolean(data.session),
+    totalQuestions: data.completion.totalQuestions,
+  });
 }
 
 async function getModulesProgress(brandId: string) {
@@ -210,22 +241,26 @@ async function getModulesProgress(brandId: string) {
     };
   }
 
-  const approved = modules.filter((m) =>
-    MODULE_APPROVED_STATUSES.includes(m.status),
+  const approved = modules.filter((module) =>
+    MODULE_APPROVED_STATUSES.includes(module.status),
   ).length;
   const percent = Math.round((approved / total) * 100);
 
   let status: PhaseStatus = "locked";
   if (approved === total) status = "complete";
-  else if (approved > 0 || modules.some((m) => m.status !== "NOT_STARTED"))
+  else if (
+    approved > 0 ||
+    modules.some((module) => module.status !== "NOT_STARTED")
+  ) {
     status = "active";
+  }
 
-  const substeps: SubstepProgress[] = modules.map((m) => ({
-    id: m.id,
-    title: m.title,
-    description: m.module_type,
-    progress: MODULE_APPROVED_STATUSES.includes(m.status) ? 100 : 0,
-    state: mapModuleState(m.status),
+  const substeps: SubstepProgress[] = modules.map((module) => ({
+    id: module.id,
+    title: module.title,
+    description: module.module_type,
+    progress: MODULE_APPROVED_STATUSES.includes(module.status) ? 100 : 0,
+    state: mapModuleState(module.status),
   }));
 
   return { percent, status, stepsDone: approved, stepsTotal: total, substeps };
@@ -309,9 +344,6 @@ async function getBrainProgress(brandId: string) {
   return { percent, status, stepsDone: done, stepsTotal: total, substeps };
 }
 
-// Placeholder phase — Aesthetics has no backend yet. It surfaces in the
-// workflow between Strategies and Brain Build; substeps and completion will be
-// wired once the aesthetics pipeline is built.
 function getAestheticsProgress() {
   const substeps: SubstepProgress[] = [
     {
@@ -349,9 +381,20 @@ function getAestheticsProgress() {
 export async function getBrandBuildProgress(
   brandId: string,
   brandName: string,
+  options: {
+    intakeData?: IntakePageData | null | Promise<IntakePageData | null>;
+  } = {},
 ): Promise<BrandBuildProgress> {
+  const intakeProgressPromise =
+    "intakeData" in options
+      ? Promise.resolve(options.intakeData).then((intakeData) =>
+          intakeData
+            ? getIntakeProgressFromPageData(intakeData)
+            : getIntakeProgress(brandId),
+        )
+      : getIntakeProgress(brandId);
   const [intake, modules, brain] = await Promise.all([
-    getIntakeProgress(brandId),
+    intakeProgressPromise,
     getModulesProgress(brandId),
     getBrainProgress(brandId),
   ]);
@@ -360,12 +403,11 @@ export async function getBrandBuildProgress(
   if (intake.status !== "complete") {
     modules.status = modules.stepsDone > 0 ? "active" : "locked";
   }
-  // Aesthetics unlocks once Strategies (modules) is complete. It has no backend
-  // yet, so it stays "active" (never auto-completes) — Brain Build remains
-  // locked behind it until the aesthetics pipeline ships.
+
   if (modules.status === "complete") {
     aesthetics.status = "active";
   }
+
   if (aesthetics.status !== "complete") {
     brain.status = brain.stepsDone > 0 ? "active" : "locked";
   }
@@ -375,7 +417,7 @@ export async function getBrandBuildProgress(
     key: "questionnaires",
     title: "Brand Research",
     description:
-      "Gather the raw signal — questionnaires, stakeholder interviews and futures research — straight from the brand.",
+      "Gather the raw signal - questionnaires, stakeholder interviews and futures research - straight from the brand.",
     team: "Brand Marketing Team",
     teamVerb: "Completed",
     iconKind: "clipboard",
@@ -407,7 +449,7 @@ export async function getBrandBuildProgress(
     key: "aesthetics",
     title: "Aesthetics",
     description:
-      "Shape the brand's visual language — direction, system and assets — before the brain ships.",
+      "Shape the brand's visual language - direction, system and assets - before the brain ships.",
     team: "Bextudio Design Team",
     teamVerb: "Crafted",
     iconKind: "palette",
@@ -423,7 +465,7 @@ export async function getBrandBuildProgress(
     key: "brain_build",
     title: "Brain Build",
     description:
-      "Assemble, train and ship the brand-aware model — locked until aesthetics lands.",
+      "Assemble, train and ship the brand-aware model - locked until aesthetics lands.",
     team: "Bextudio AI Team",
     teamVerb: "Engineered",
     iconKind: "chip",
@@ -450,8 +492,8 @@ export async function getBrandBuildProgress(
   const overallPercent =
     totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0;
   const activePhase =
-    phases.find((p) => p.status === "active") ??
-    phases.find((p) => p.status === "locked") ??
+    phases.find((phase) => phase.status === "active") ??
+    phases.find((phase) => phase.status === "locked") ??
     null;
 
   return {
