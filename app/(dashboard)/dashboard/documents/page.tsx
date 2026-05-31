@@ -20,7 +20,7 @@ export default async function DashboardFilesPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { profile } = await requireUserProfile("/dashboard/files");
+  const { profile } = await requireUserProfile("/dashboard/documents");
   const workspace = await getBrandFilesWorkspace(
     profile.id,
     paginationInputFromSearchParams((await searchParams) ?? {}),
@@ -43,7 +43,7 @@ export default async function DashboardFilesPage({
         profileId={profile.id}
       />
       <PaginationControls
-        basePath="/dashboard/files"
+        basePath="/dashboard/documents"
         pagination={workspace.pagination}
       />
     </PageShell>

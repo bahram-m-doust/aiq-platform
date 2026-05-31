@@ -135,7 +135,7 @@ test("dashboard invitations redirects unauthenticated users to login", async ({
 test("dashboard files redirects unauthenticated users to login", async ({
   page,
 }) => {
-  await page.goto("/dashboard/files");
+  await page.goto("/dashboard/documents");
 
   await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%2Ffiles$/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();

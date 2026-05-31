@@ -30,7 +30,7 @@ export async function uploadFileAction(
   _previousState: FileUploadFormState,
   formData: FormData,
 ): Promise<FileUploadFormState> {
-  const { profile } = await requireUserProfile("/dashboard/files");
+  const { profile } = await requireUserProfile("/dashboard/documents");
   const rateLimit = await checkRequestRateLimit({
     bucket: "file.upload",
     identifiers: [profile.id],
@@ -48,7 +48,7 @@ export async function uploadFileAction(
       profileId: profile.id,
     });
 
-    revalidatePath("/dashboard/files");
+    revalidatePath("/dashboard/documents");
 
     return {
       status: "success",
@@ -76,11 +76,11 @@ export async function uploadFileAction(
 }
 
 export async function createSignedDownloadUrlAction(formData: FormData) {
-  const { profile } = await requireUserProfile("/dashboard/files");
+  const { profile } = await requireUserProfile("/dashboard/documents");
   const fileId = readFileId(formData);
 
   if (!fileId) {
-    redirect("/dashboard/files");
+    redirect("/dashboard/documents");
   }
 
   const { signedUrl } = await createSignedDownloadUrlForFile({
@@ -92,7 +92,7 @@ export async function createSignedDownloadUrlAction(formData: FormData) {
 }
 
 export async function approveSpecialistFileAction(formData: FormData) {
-  const { profile } = await requireUserProfile("/dashboard/files");
+  const { profile } = await requireUserProfile("/dashboard/documents");
   const fileId = readFileId(formData);
 
   if (fileId) {
@@ -103,11 +103,11 @@ export async function approveSpecialistFileAction(formData: FormData) {
     });
   }
 
-  revalidatePath("/dashboard/files");
+  revalidatePath("/dashboard/documents");
 }
 
 export async function rejectSpecialistFileAction(formData: FormData) {
-  const { profile } = await requireUserProfile("/dashboard/files");
+  const { profile } = await requireUserProfile("/dashboard/documents");
   const fileId = readFileId(formData);
 
   if (fileId) {
@@ -118,5 +118,5 @@ export async function rejectSpecialistFileAction(formData: FormData) {
     });
   }
 
-  revalidatePath("/dashboard/files");
+  revalidatePath("/dashboard/documents");
 }
