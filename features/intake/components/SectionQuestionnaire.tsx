@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon, CheckCircleIcon } from "lucide-react";
 
@@ -11,9 +11,9 @@ import {
   isIntakeAnswerComplete,
 } from "@/features/intake/schemas";
 import { QuestionRenderer } from "@/features/intake/components/QuestionRenderer";
+import { useIntakeAutosaveQueue } from "@/features/intake/components/useIntakeAutosaveQueue";
 import type {
   IntakeAnswerMap,
-  IntakeAnswerValue,
   IntakeCompletion,
   IntakeSectionWithQuestions,
   IntakeSession,
@@ -35,7 +35,11 @@ export function SectionQuestionnaire({
   brandName: string;
   allSections: IntakeSectionWithQuestions[];
 }) {
-  const [answers, setAnswers] = useState<IntakeAnswerMap>(initialAnswers);
+  const { answers, enqueueAnswer, retryQuestion, saveStates } =
+    useIntakeAutosaveQueue({
+      sessionId: session.id,
+      initialAnswers,
+    });
   const completion = useMemo(
     () => calculateIntakeCompletion({ sections: allSections, answers }),
     [answers, allSections],
@@ -51,10 +55,6 @@ export function SectionQuestionnaire({
 
   const sectionIndex =
     allSections.findIndex((s) => s.id === section.id) + 1;
-
-  function handleSaved(questionId: string, value: IntakeAnswerValue) {
-    setAnswers((current) => ({ ...current, [questionId]: value }));
-  }
 
   return (
     <div
@@ -198,8 +198,10 @@ export function SectionQuestionnaire({
                 <div className="px-5 pb-5">
                   <QuestionRenderer
                     key={question.id}
-                    onSaved={handleSaved}
+                    onQueuedChange={enqueueAnswer}
+                    onRetryQueuedSave={retryQuestion}
                     question={question}
+                    saveState={saveStates[question.id]}
                     sessionId={session.id}
                     value={answers[question.id] ?? null}
                   />

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { isActiveBrandEntitlement } from "@/features/access/access-summary";
 import type { BrandAccessEntitlement } from "@/features/access/types";
 import {
@@ -134,7 +136,7 @@ function toIntakeQuestion(row: QuestionRow): IntakeQuestion {
   };
 }
 
-export async function getIntakeAccessForProfile({
+export const getIntakeAccessForProfile = cache(async function getIntakeAccessForProfile({
   profileId,
   brandId,
 }: {
@@ -268,7 +270,7 @@ export async function getIntakeAccessForProfile({
   }
 
   return null;
-}
+});
 
 export async function getLatestIntakeSessionForBrand(brandId: string) {
   const admin = createAdminClient();

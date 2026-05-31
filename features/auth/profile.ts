@@ -193,6 +193,53 @@ export async function loadUserProfileByAuthUserId({
   return data ? normalizeUserProfile(data as UserProfileRow) : null;
 }
 
+async function createMissingProfile({
+  user,
+  context,
+}: {
+  user: User;
+  context: string;
+}): Promise<UserProfile> {
+  const authUserId = user.id;
+  const email = getNormalizedEmail(user);
+  const insert = toUserProfileInsert(user);
+  const admin = createAdminClient();
+  const { data, error } = await withSchemaCacheRetry(() =>
+    admin
+      .from("users_profile")
+      .upsert(insert, {
+        onConflict: "auth_user_id",
+      })
+      .select(profileColumns)
+      .single(),
+  );
+
+  if (error) {
+    logProfileQueryError({
+      context: `${context}.upsert`,
+      table: "users_profile",
+      action: "upsert",
+      query: "users_profile.upsert.on_auth_user_id",
+      authUserId,
+      emailPresent: Boolean(email),
+      error,
+    });
+    const fallbackProfile = await loadUserProfileByAuthUserId({
+      authUserId,
+      context: `${context}.upsertFallbackSelect`,
+      emailPresent: Boolean(email),
+    });
+
+    if (fallbackProfile) {
+      return fallbackProfile;
+    }
+
+    throw error;
+  }
+
+  return normalizeUserProfile(data as UserProfileRow);
+}
+
 async function updateExistingProfile({
   authUserId,
   email,
@@ -305,40 +352,34 @@ export async function ensureUserProfile(user: User): Promise<UserProfile> {
     }
   }
 
-  const insert = toUserProfileInsert(user);
-  const admin = createAdminClient();
-  const { data, error } = await withSchemaCacheRetry(() =>
-    admin
-      .from("users_profile")
-      .upsert(insert, {
-        onConflict: "auth_user_id",
-      })
-      .select(profileColumns)
-      .single(),
-  );
+  return createMissingProfile({
+    user,
+    context: "ensureUserProfile",
+  });
+}
 
-  if (error) {
-    logProfileQueryError({
-      context: "ensureUserProfile.upsert",
-      table: "users_profile",
-      action: "upsert",
-      query: "users_profile.upsert.on_auth_user_id",
-      authUserId,
-      emailPresent: Boolean(email),
-      error,
-    });
-    const fallbackProfile = await loadUserProfileByAuthUserId({
-      authUserId,
-      context: "ensureUserProfile.upsertFallbackSelect",
-      emailPresent: Boolean(email),
-    });
+export async function ensureUserProfileExists(
+  user: User,
+): Promise<UserProfile> {
+  const authUserId = user.id;
 
-    if (fallbackProfile) {
-      return fallbackProfile;
-    }
-
-    throw error;
+  if (!authUserId) {
+    throw new Error("Authenticated user is missing an id.");
   }
 
-  return normalizeUserProfile(data as UserProfileRow);
+  const email = getNormalizedEmail(user);
+  const existingProfile = await loadUserProfileByAuthUserId({
+    authUserId,
+    context: "ensureUserProfileExists.initialSelect",
+    emailPresent: Boolean(email),
+  });
+
+  if (existingProfile) {
+    return existingProfile;
+  }
+
+  return createMissingProfile({
+    user,
+    context: "ensureUserProfileExists",
+  });
 }

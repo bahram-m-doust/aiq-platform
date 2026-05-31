@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CheckIcon, AlertCircleIcon, LoaderIcon } from "lucide-react";
+import { AlertCircleIcon, CheckIcon, LoaderIcon } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { autosaveIntakeAnswerAction } from "@/features/intake/actions";
+import type {
+  AutosaveQuestionState,
+  AutosaveQuestionStatus,
+} from "@/features/intake/components/useIntakeAutosaveQueue";
 import {
   parseQuestionOptions,
   resolveQuestionInputKind,
@@ -25,7 +29,6 @@ import type {
   IntakeAnswerValue,
   IntakeQuestion,
 } from "@/features/intake/types";
-import { cn } from "@/lib/utils";
 
 type AutosaveAction = (
   input: AutosaveIntakeAnswerInput,
@@ -42,26 +45,26 @@ function valueToStringArray(value: IntakeAnswerValue) {
   return Array.isArray(value) ? value : [];
 }
 
-// Detect RTL script (Arabic, Persian, Hebrew) — returns "rtl" or "ltr"
 function detectDir(value: IntakeAnswerValue): "rtl" | "ltr" {
   const text = typeof value === "string" ? value : "";
   if (!text) return "ltr";
-  // Match Arabic, Persian, Hebrew character ranges
-  // eslint-disable-next-line no-misleading-character-class
-  const rtlPattern = /[֐-׿؀-ۿݐ-ݿࢠ-ࣿיִ-﷿ﹰ-﻿]/;
+
+  const rtlPattern = /[\u0590-\u05ff\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb1d-\ufdff\ufe70-\ufeff]/;
   return rtlPattern.test(text) ? "rtl" : "ltr";
 }
 
 function SaveIndicator({
   isPending,
   status,
+  message,
   onRetry,
 }: {
   isPending: boolean;
-  status: "idle" | "saved" | "error";
+  status: AutosaveQuestionStatus;
+  message?: string;
   onRetry?: () => void;
 }) {
-  if (isPending) {
+  if (isPending || status === "queued" || status === "saving") {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--bv-accent)]">
         <LoaderIcon className="size-3 animate-spin" />
@@ -87,7 +90,7 @@ function SaveIndicator({
         type="button"
       >
         <AlertCircleIcon className="size-3" />
-        Failed — tap to retry
+        {message || "Failed - tap to retry"}
       </button>
     );
   }
@@ -100,19 +103,30 @@ export function QuestionRenderer({
   question,
   value,
   onSaved,
+  onQueuedChange,
+  saveState,
+  onRetryQueuedSave,
   autosaveAction = autosaveIntakeAnswerAction,
 }: {
   sessionId: string;
   question: IntakeQuestion;
   value: IntakeAnswerValue;
   onSaved?: (questionId: string, value: IntakeAnswerValue) => void;
+  onQueuedChange?: (
+    questionId: string,
+    value: IntakeAnswerValue,
+    options?: { flush?: boolean },
+  ) => void;
+  saveState?: AutosaveQuestionState;
+  onRetryQueuedSave?: (questionId: string) => void;
   autosaveAction?: AutosaveAction;
 }) {
   const [localValue, setLocalValue] = useState<IntakeAnswerValue>(value);
-  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [status, setStatus] = useState<AutosaveQuestionStatus>("idle");
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [lastSavedValue, setLastSavedValue] = useState<unknown>(null);
+  const [lastSavedValue, setLastSavedValue] =
+    useState<IntakeAnswerValue | null>(null);
   const kind = resolveQuestionInputKind(question.inputType);
   const options = useMemo(
     () => parseQuestionOptions(question.validationSchema),
@@ -120,8 +134,21 @@ export function QuestionRenderer({
   );
   const controlId = `question-${question.id}`;
   const statusId = `${controlId}-status`;
+  const displayedStatus = saveState?.status ?? status;
+  const displayedMessage = saveState?.message ?? message;
+  const usesQueuedAutosave = Boolean(onQueuedChange);
+  const currentValue = usesQueuedAutosave ? value : localValue;
 
-  function save(nextValue: unknown) {
+  function queueValue(nextValue: IntakeAnswerValue, flush = false) {
+    onQueuedChange?.(question.id, nextValue, { flush });
+  }
+
+  function save(nextValue: IntakeAnswerValue) {
+    if (onQueuedChange) {
+      queueValue(nextValue);
+      return;
+    }
+
     setLastSavedValue(nextValue);
     startTransition(async () => {
       const result = await autosaveAction({
@@ -144,8 +171,22 @@ export function QuestionRenderer({
   }
 
   function retry() {
+    if (onRetryQueuedSave) {
+      onRetryQueuedSave(question.id);
+      return;
+    }
+
     if (lastSavedValue !== null) {
       save(lastSavedValue);
+    }
+  }
+
+  function setTextValue(nextValue: string) {
+    setStatus("idle");
+    if (onQueuedChange) {
+      queueValue(nextValue);
+    } else {
+      setLocalValue(nextValue);
     }
   }
 
@@ -153,8 +194,13 @@ export function QuestionRenderer({
     if (kind === "select") {
       return (
         <Select
-          onValueChange={(nextValue) => save(nextValue)}
-          value={typeof localValue === "string" ? localValue : undefined}
+          onValueChange={(nextValue) => {
+            if (!onQueuedChange) {
+              setLocalValue(nextValue);
+            }
+            save(nextValue);
+          }}
+          value={typeof currentValue === "string" ? currentValue : undefined}
         >
           <SelectTrigger aria-describedby={statusId} id={controlId}>
             <SelectValue placeholder="Select an answer" />
@@ -179,10 +225,15 @@ export function QuestionRenderer({
               key={option.value}
             >
               <input
-                checked={localValue === option.value}
+                checked={currentValue === option.value}
                 className="size-4"
                 name={controlId}
-                onChange={() => save(option.value)}
+                onChange={() => {
+                  if (!onQueuedChange) {
+                    setLocalValue(option.value);
+                  }
+                  save(option.value);
+                }}
                 type="radio"
                 value={option.value}
               />
@@ -194,7 +245,7 @@ export function QuestionRenderer({
     }
 
     if (kind === "checkbox") {
-      const checked = localValue === true;
+      const checked = currentValue === true;
 
       return (
         <div className="flex items-center gap-2">
@@ -202,7 +253,13 @@ export function QuestionRenderer({
             aria-describedby={statusId}
             checked={checked}
             id={controlId}
-            onCheckedChange={(nextChecked) => save(nextChecked === true)}
+            onCheckedChange={(nextChecked) => {
+              const nextValue = nextChecked === true;
+              if (!onQueuedChange) {
+                setLocalValue(nextValue);
+              }
+              save(nextValue);
+            }}
           />
           <Label className="text-sm font-normal" htmlFor={controlId}>
             Confirm
@@ -212,7 +269,7 @@ export function QuestionRenderer({
     }
 
     if (kind === "multi_select") {
-      const selectedValues = valueToStringArray(localValue);
+      const selectedValues = valueToStringArray(currentValue);
 
       return (
         <div className="grid gap-2" aria-describedby={statusId}>
@@ -232,6 +289,9 @@ export function QuestionRenderer({
                         ? [...selectedValues, option.value]
                         : selectedValues.filter((v) => v !== option.value);
 
+                    if (!onQueuedChange) {
+                      setLocalValue(nextValues);
+                    }
                     save(nextValues);
                   }}
                 />
@@ -247,16 +307,19 @@ export function QuestionRenderer({
       return (
         <Textarea
           aria-describedby={statusId}
-          aria-invalid={status === "error"}
-          dir={detectDir(localValue)}
+          aria-invalid={displayedStatus === "error"}
+          dir={detectDir(currentValue)}
           id={controlId}
-          onBlur={() => save(localValue)}
-          onChange={(event) => {
-            setStatus("idle");
-            setLocalValue(event.target.value);
+          onBlur={() => {
+            if (onQueuedChange) {
+              queueValue(currentValue, true);
+            } else {
+              save(currentValue);
+            }
           }}
+          onChange={(event) => setTextValue(event.target.value)}
           placeholder="Enter a considered response"
-          value={valueToString(localValue)}
+          value={valueToString(currentValue)}
         />
       );
     }
@@ -264,17 +327,20 @@ export function QuestionRenderer({
     return (
       <Input
         aria-describedby={statusId}
-        aria-invalid={status === "error"}
-        dir={detectDir(localValue)}
+        aria-invalid={displayedStatus === "error"}
+        dir={detectDir(currentValue)}
         id={controlId}
-        onBlur={() => save(localValue)}
-        onChange={(event) => {
-          setStatus("idle");
-          setLocalValue(event.target.value);
+        onBlur={() => {
+          if (onQueuedChange) {
+            queueValue(currentValue, true);
+          } else {
+            save(currentValue);
+          }
         }}
+        onChange={(event) => setTextValue(event.target.value)}
         placeholder="Enter your response"
         type={kind}
-        value={valueToString(localValue)}
+        value={valueToString(currentValue)}
       />
     );
   }
@@ -300,7 +366,12 @@ export function QuestionRenderer({
       <div className="mt-3">{renderControl()}</div>
 
       <div className="mt-2 flex min-h-[20px] items-center" id={statusId} role="status" aria-live="polite">
-        <SaveIndicator isPending={isPending} onRetry={retry} status={status} />
+        <SaveIndicator
+          isPending={isPending && !usesQueuedAutosave}
+          message={displayedMessage}
+          onRetry={retry}
+          status={displayedStatus}
+        />
       </div>
     </div>
   );

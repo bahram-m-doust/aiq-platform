@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { IntakePageData } from "@/features/intake/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type PhaseStatus = "locked" | "active" | "complete";
@@ -52,6 +53,7 @@ const MODULE_APPROVED_STATUSES = [
 ];
 
 type IntakeRow = {
+  id: string;
   completion_percent: number | null;
   status: string;
 };
@@ -97,42 +99,35 @@ function mapModuleState(status: string): SubstepState {
 async function getIntakeProgress(brandId: string) {
   const admin = createAdminClient();
 
-  const [sessionResult, sectionsResult, questionsResult, answersResult] =
-    await Promise.all([
-      admin
-        .from("intake_sessions")
-        .select("completion_percent, status")
-        .eq("brand_id", brandId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      admin
-        .from("question_sections")
-        .select("id, key, title, description")
-        .order("order_index", { ascending: true }),
-      admin.from("questions").select("id, section_id"),
-      admin
-        .from("intake_answers")
-        .select("question_id")
-        .eq(
-          "session_id",
-          (
-            await admin
-              .from("intake_sessions")
-              .select("id")
-              .eq("brand_id", brandId)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle()
-          ).data?.id ?? "00000000-0000-0000-0000-000000000000",
-        ),
-    ]);
+  const [sessionResult, sectionsResult, questionsResult] = await Promise.all([
+    admin
+      .from("intake_sessions")
+      .select("id, completion_percent, status")
+      .eq("brand_id", brandId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("question_sections")
+      .select("id, key, title, description")
+      .order("order_index", { ascending: true }),
+    admin.from("questions").select("id, section_id"),
+  ]);
 
   if (sessionResult.error) throw sessionResult.error;
   if (sectionsResult.error) throw sectionsResult.error;
   if (questionsResult.error) throw questionsResult.error;
 
   const session = sessionResult.data as IntakeRow | null;
+  const answersResult = session
+    ? await admin
+        .from("intake_answers")
+        .select("question_id")
+        .eq("session_id", session.id)
+    : { data: [], error: null };
+
+  if (answersResult.error) throw answersResult.error;
+
   const sections = (sectionsResult.data ?? []) as SectionRow[];
   const questions = (questionsResult.data ?? []) as QuestionRow[];
   const answeredIds = new Set(
@@ -180,6 +175,47 @@ async function getIntakeProgress(brandId: string) {
     status,
     stepsDone: answeredCount,
     stepsTotal: totalQuestions,
+    substeps,
+  };
+}
+
+function getIntakeProgressFromPageData(data: IntakePageData) {
+  const isLocked = data.session.status === "LOCKED";
+  const substeps: SubstepProgress[] = data.completion.sections.map(
+    (sectionProgress) => {
+      const section = data.sections.find(
+        (item) => item.id === sectionProgress.sectionId,
+      );
+      const progress = isLocked ? 100 : sectionProgress.completionPercent;
+
+      let state: SubstepState = "locked";
+      if (isLocked || progress === 100) state = "done";
+      else if (progress > 0) state = "in-progress";
+      else state = "in-progress";
+
+      return {
+        id: sectionProgress.sectionKey,
+        title: sectionProgress.title,
+        description: section?.description ?? "",
+        progress,
+        state,
+      };
+    },
+  );
+  const percent = isLocked ? 100 : data.completion.completionPercent;
+  const stepsDone = isLocked
+    ? data.completion.totalQuestions
+    : data.completion.answeredQuestions;
+
+  let status: PhaseStatus = "locked";
+  if (isLocked) status = "complete";
+  else if (percent > 0 || data.session) status = "active";
+
+  return {
+    percent,
+    status,
+    stepsDone,
+    stepsTotal: data.completion.totalQuestions,
     substeps,
   };
 }
@@ -309,9 +345,18 @@ async function getBrainProgress(brandId: string) {
 export async function getBrandBuildProgress(
   brandId: string,
   brandName: string,
+  options: {
+    intakeData?: IntakePageData | null | Promise<IntakePageData | null>;
+  } = {},
 ): Promise<BrandBuildProgress> {
+  const intakeProgressPromise =
+    "intakeData" in options
+      ? Promise.resolve(options.intakeData).then((intakeData) =>
+          intakeData ? getIntakeProgressFromPageData(intakeData) : getIntakeProgress(brandId),
+        )
+      : getIntakeProgress(brandId);
   const [intake, modules, brain] = await Promise.all([
-    getIntakeProgress(brandId),
+    intakeProgressPromise,
     getModulesProgress(brandId),
     getBrainProgress(brandId),
   ]);

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   describeProfileProvisioningError,
   ensureUserProfile,
+  ensureUserProfileExists,
   logProfileProvisioningError,
 } from "@/features/auth/profile";
 import { getTrustedRequestOrigin } from "@/features/auth/origins";
@@ -56,7 +57,7 @@ export async function login(
   }
 
   try {
-    await ensureUserProfile(data.user);
+    await ensureUserProfileExists(data.user);
   } catch (error) {
     logProfileProvisioningError({
       context: "login",

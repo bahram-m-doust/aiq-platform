@@ -10,6 +10,8 @@ import type {
   BrandBrainAgent,
   BrandBrainWorkspace,
 } from "@/features/agents/brain/types";
+import { cacheSharedConfig } from "@/lib/cache/shared";
+import { CACHE_TAGS } from "@/lib/cache/tags";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type KnowledgeBaseRow = {
@@ -48,30 +50,41 @@ function toAccess({
   };
 }
 
+const loadBrandBrainAgent = cacheSharedConfig(
+  async (): Promise<BrandBrainAgent | null> => {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("agents")
+      .select("id, key, name, is_active")
+      .eq("key", brandBrainAgentKey)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    const agent = data as AgentRow | null;
+
+    if (!agent) {
+      return null;
+    }
+
+    return {
+      id: agent.id,
+      key: "BRAND_INTEGRATOR_BRAIN",
+      name: agent.name,
+    };
+  },
+  ["brand-brain-agent"],
+  {
+    revalidate: 300,
+    tags: [CACHE_TAGS.activeAgentCatalog],
+  },
+);
+
 export async function getBrandBrainAgent(): Promise<BrandBrainAgent | null> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("agents")
-    .select("id, key, name, is_active")
-    .eq("key", brandBrainAgentKey)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  const agent = data as AgentRow | null;
-
-  if (!agent) {
-    return null;
-  }
-
-  return {
-    id: agent.id,
-    key: "BRAND_INTEGRATOR_BRAIN",
-    name: agent.name,
-  };
+  return loadBrandBrainAgent();
 }
 
 async function getKnowledgeBase(brandId: string) {

@@ -2,9 +2,10 @@ import "server-only";
 
 import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import {
-  ensureUserProfile,
+  ensureUserProfileExists,
   loadUserProfileByAuthUserId,
   logProfileProvisioningError,
 } from "@/features/auth/profile";
@@ -16,7 +17,15 @@ import { isPlatformOwnerProfile } from "@/features/auth/roles";
 import { hasPublicSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getCurrentUser() {
+function claimString(
+  claims: Record<string, unknown> | null | undefined,
+  key: string,
+) {
+  const value = claims?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+const getCachedCurrentUser = cache(async (): Promise<User | null> => {
   if (!hasPublicSupabaseEnv()) {
     return null;
   }
@@ -29,6 +38,19 @@ export async function getCurrentUser() {
     return null;
   }
 
+  const claims = claimsData.claims as Record<string, unknown>;
+  return {
+    id: String(claimsData.claims.sub),
+    email: claimString(claims, "email"),
+  } as User;
+});
+
+const getCachedVerifiedCurrentUser = cache(async () => {
+  if (!hasPublicSupabaseEnv()) {
+    return null;
+  }
+
+  const supabase = await createClient();
   const {
     data: { user },
     error,
@@ -39,14 +61,18 @@ export async function getCurrentUser() {
   }
 
   return user;
+});
+
+export async function getCurrentUser() {
+  return getCachedCurrentUser();
 }
 
-export async function getUserProfileByAuthUserId(authUserId: string) {
+export const getUserProfileByAuthUserId = cache(async (authUserId: string) => {
   return loadUserProfileByAuthUserId({
     authUserId,
     context: "getUserProfileByAuthUserId",
   });
-}
+});
 
 export async function requireUser(nextPath = "/dashboard") {
   const user = await getCurrentUser();
@@ -65,16 +91,26 @@ export async function requireUserProfile(nextPath = "/dashboard") {
   let profile = await getUserProfileByAuthUserId(user.id);
 
   if (!profile) {
+    const verifiedUser = await getCachedVerifiedCurrentUser();
+
+    if (!verifiedUser) {
+      const sanitized = sanitizeRedirectPath(nextPath);
+      const loginPath = resolveLoginPathForNext(sanitized);
+      redirect(`${loginPath}?next=${encodeURIComponent(sanitized)}`);
+    }
+
     try {
-      profile = await ensureUserProfile(user);
+      profile = await ensureUserProfileExists(verifiedUser);
     } catch (error) {
       logProfileProvisioningError({
         context: "requireUserProfile",
         error,
-        user,
+        user: verifiedUser,
       });
       throw error;
     }
+
+    return { user: verifiedUser, profile };
   }
 
   if (!profile) {

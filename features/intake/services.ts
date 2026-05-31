@@ -1,5 +1,7 @@
 import "server-only";
 
+import { after } from "next/server";
+
 import {
   buildIntakeFinalSubmitAfterAudit,
   buildIntakeFinalSubmitBeforeAudit,
@@ -22,11 +24,15 @@ import {
 import type {
   AutosaveIntakeAnswerInput,
   AutosaveIntakeAnswerResult,
+  AutosaveIntakeAnswersInput,
+  AutosaveIntakeAnswersResult,
   FinalSubmitIntakeResult,
+  IntakeAnswerValue,
   IntakeQuestion,
   IntakeSession,
 } from "@/features/intake/types";
 import { createIntakeKnowledgeFile } from "@/features/intake/intake-knowledge";
+import { loadUserProfileByAuthUserId } from "@/features/auth/profile";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { logServerError } from "@/lib/logging/server";
@@ -41,21 +47,41 @@ type IntakeSessionRow = {
   locked_by: string | null;
 };
 
+type AnswerRow = {
+  id: string;
+  value: unknown;
+};
+
 type QuestionRow = {
   id: string;
   input_type: string;
 };
 
-type AnswerRow = {
-  id: string;
+type FastAutosaveRow = {
+  ok: boolean;
+  message: string | null;
+  question_id: string | null;
+  answer_id: string | null;
+  previous_value: unknown;
   value: unknown;
+  input_type: string | null;
+  brand_id: string | null;
+  actor_profile_id: string | null;
+  actor_role: string | null;
+  completion_percent: number | null;
 };
+
+type BatchAutosaveRow = FastAutosaveRow;
 
 type SnapshotRow = {
   id: string;
 };
 
 const CODE = "final_submit_intake";
+const FAST_AUTOSAVE_RPC_RETRY_MS = 60_000;
+const BATCH_AUTOSAVE_RPC_RETRY_MS = 60_000;
+let fastAutosaveRpcRetryAt = 0;
+let batchAutosaveRpcRetryAt = 0;
 
 function finalSubmitError(message: string): never {
   throw new DomainError(CODE, message);
@@ -80,6 +106,13 @@ function toIntakeSession(row: IntakeSessionRow): IntakeSession {
 
 function errorResult(message: string): AutosaveIntakeAnswerResult {
   return { ok: false, message };
+}
+
+function batchErrorResult(
+  message: string,
+  failedQuestionIds?: string[],
+): AutosaveIntakeAnswersResult {
+  return { ok: false, message, failedQuestionIds };
 }
 
 export async function ensureIntakeSessionForBrand(brandId: string) {
@@ -107,21 +140,6 @@ export async function ensureIntakeSessionForBrand(brandId: string) {
   return toIntakeSession(data as unknown as IntakeSessionRow);
 }
 
-async function getQuestion(questionId: string) {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("questions")
-    .select("id, input_type")
-    .eq("id", questionId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return data as QuestionRow | null;
-}
-
 async function getSession(sessionId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -135,6 +153,21 @@ async function getSession(sessionId: string) {
   }
 
   return data ? toIntakeSession(data as unknown as IntakeSessionRow) : null;
+}
+
+async function getQuestion(questionId: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("questions")
+    .select("id, input_type")
+    .eq("id", questionId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as QuestionRow | null;
 }
 
 async function calculateAndPersistCompletion(sessionId: string) {
@@ -275,17 +308,121 @@ async function auditIntakeAnswerUpdated({
   });
 }
 
-export async function autosaveIntakeAnswer({
+type IntakeAnswerAuditInput = {
+  actorUserId: string;
+  actorRole?: string | null;
+  brandId: string;
+  sessionId: string;
+  question: IntakeQuestion;
+  answerId: string;
+  previousAnswer: AnswerRow | null;
+  nextAnswer: AnswerRow;
+  completionPercent: number;
+};
+
+function scheduleBestEffortIntakeAnswerAudits(
+  inputs: IntakeAnswerAuditInput[],
+) {
+  if (inputs.length === 0) {
+    return;
+  }
+
+  const task = async () => {
+    for (const input of inputs) {
+      try {
+        await auditIntakeAnswerUpdated(input);
+      } catch (error) {
+        logServerError({
+          label: "[intake] autosave audit failed",
+          error,
+          metadata: {
+            brandId: input.brandId,
+            sessionId: input.sessionId,
+            questionId: input.question.id,
+          },
+        });
+      }
+    }
+  };
+
+  try {
+    after(task);
+  } catch {
+    void task();
+  }
+}
+
+function scheduleBestEffortIntakeAnswerAudit(input: IntakeAnswerAuditInput) {
+  scheduleBestEffortIntakeAnswerAudits([input]);
+}
+
+function firstFastAutosaveRow(data: unknown): FastAutosaveRow | null {
+  if (Array.isArray(data)) {
+    return (data[0] as FastAutosaveRow | undefined) ?? null;
+  }
+
+  return (data as FastAutosaveRow | null) ?? null;
+}
+
+function autosaveRows(data: unknown): BatchAutosaveRow[] {
+  if (Array.isArray(data)) {
+    return data as BatchAutosaveRow[];
+  }
+
+  return data ? [data as BatchAutosaveRow] : [];
+}
+
+function isMissingAutosaveRpcError(error: unknown, rpcName: string) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const record = error as { code?: unknown; message?: unknown };
+  const message = typeof record.message === "string" ? record.message : "";
+
+  return (
+    record.code === "PGRST202" &&
+    message.includes(rpcName)
+  );
+}
+
+function isMissingFastAutosaveRpcError(error: unknown) {
+  return isMissingAutosaveRpcError(error, "autosave_intake_answer_fast");
+}
+
+function isMissingBatchAutosaveRpcError(error: unknown) {
+  return isMissingAutosaveRpcError(error, "autosave_intake_answers_batch");
+}
+
+function isBrokenAutosaveRpcError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const record = error as { code?: unknown; message?: unknown };
+  const message = typeof record.message === "string" ? record.message : "";
+
+  return (
+    record.code === "42702" &&
+    message.includes("column reference") &&
+    message.includes("ambiguous")
+  );
+}
+
+async function autosaveIntakeAnswerLegacy({
   input,
-  profileId,
-  actorRole,
+  authUserId,
 }: {
   input: AutosaveIntakeAnswerInput;
-  profileId: string;
-  actorRole?: string | null;
+  authUserId: string;
 }): Promise<AutosaveIntakeAnswerResult> {
-  if (!input.sessionId || !input.questionId) {
-    return errorResult("The intake answer could not be saved.");
+  const profile = await loadUserProfileByAuthUserId({
+    authUserId,
+    context: "autosaveIntakeAnswer.legacyProfile",
+  });
+
+  if (!profile) {
+    return errorResult("You do not have permission to answer this intake.");
   }
 
   const [session, questionRow] = await Promise.all([
@@ -302,7 +439,7 @@ export async function autosaveIntakeAnswer({
   }
 
   const access = await getIntakeAccessForProfile({
-    profileId,
+    profileId: profile.id,
     brandId: session.brandId,
   });
 
@@ -327,13 +464,13 @@ export async function autosaveIntakeAnswer({
     sessionId: session.id,
     questionId: question.id,
     value: toStoredAnswerValue(normalizedValue),
-    profileId,
+    profileId: profile.id,
   });
   const completion = await calculateAndPersistCompletion(session.id);
 
-  await auditIntakeAnswerUpdated({
-    actorUserId: profileId,
-    actorRole,
+  scheduleBestEffortIntakeAnswerAudit({
+    actorUserId: profile.id,
+    actorRole: profile.global_role,
     brandId: session.brandId,
     sessionId: session.id,
     question,
@@ -348,6 +485,347 @@ export async function autosaveIntakeAnswer({
     questionId: question.id,
     value: normalizedValue,
     completionPercent: completion.completionPercent,
+  };
+}
+
+async function autosaveIntakeAnswerSingle({
+  input,
+  authUserId,
+}: {
+  input: AutosaveIntakeAnswerInput;
+  authUserId: string;
+}): Promise<AutosaveIntakeAnswerResult> {
+  if (!input.sessionId || !input.questionId) {
+    return errorResult("The intake answer could not be saved.");
+  }
+
+  if (Date.now() < fastAutosaveRpcRetryAt) {
+    return autosaveIntakeAnswerLegacy({ input, authUserId });
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("autosave_intake_answer_fast", {
+    p_session_id: input.sessionId,
+    p_question_id: input.questionId,
+    p_auth_user_id: authUserId,
+    p_value: input.value ?? null,
+  });
+
+  if (error) {
+    if (isMissingFastAutosaveRpcError(error) || isBrokenAutosaveRpcError(error)) {
+      fastAutosaveRpcRetryAt = Date.now() + FAST_AUTOSAVE_RPC_RETRY_MS;
+      return autosaveIntakeAnswerLegacy({ input, authUserId });
+    }
+
+    logServerError({
+      label: "[intake] fast autosave failed",
+      error,
+      metadata: { sessionId: input.sessionId, questionId: input.questionId },
+    });
+    return errorResult("The intake answer could not be saved.");
+  }
+
+  fastAutosaveRpcRetryAt = 0;
+
+  const row = firstFastAutosaveRow(data);
+
+  if (!row?.ok) {
+    return errorResult(row?.message ?? "The intake answer could not be saved.");
+  }
+
+  if (
+    !row.question_id ||
+    !row.answer_id ||
+    !row.input_type ||
+    !row.brand_id ||
+    !row.actor_profile_id ||
+    typeof row.completion_percent !== "number"
+  ) {
+    return errorResult("The intake answer could not be saved.");
+  }
+
+  const question: IntakeQuestion = {
+    id: row.question_id,
+    sectionId: "",
+    key: "",
+    questionText: "",
+    helpText: null,
+    inputType: row.input_type,
+    isRequired: true,
+    orderIndex: 0,
+    validationSchema: null,
+  };
+  const normalizedValue = extractStoredAnswerValue({
+    inputType: row.input_type,
+    storedValue: row.value,
+  });
+  const answer = { id: row.answer_id, value: row.value };
+  const previousAnswer =
+    row.previous_value == null
+      ? null
+      : { id: row.answer_id, value: row.previous_value };
+
+  scheduleBestEffortIntakeAnswerAudit({
+    actorUserId: row.actor_profile_id,
+    actorRole: row.actor_role,
+    brandId: row.brand_id,
+    sessionId: input.sessionId,
+    question,
+    answerId: answer.id,
+    previousAnswer,
+    nextAnswer: answer,
+    completionPercent: row.completion_percent,
+  });
+
+  return {
+    ok: true,
+    questionId: row.question_id,
+    value: normalizedValue,
+    completionPercent: row.completion_percent,
+  };
+}
+
+async function autosaveIntakeAnswersFallbackSequential({
+  input,
+  authUserId,
+}: {
+  input: AutosaveIntakeAnswersInput;
+  authUserId: string;
+}): Promise<AutosaveIntakeAnswersResult> {
+  const savedAnswers: Array<{ questionId: string; value: IntakeAnswerValue }> =
+    [];
+  let completionPercent = 0;
+
+  for (const answerInput of input.answers) {
+    const result = await autosaveIntakeAnswerSingle({
+      input: {
+        sessionId: input.sessionId,
+        questionId: answerInput.questionId,
+        value: answerInput.value,
+      },
+      authUserId,
+    });
+
+    if (!result.ok) {
+      return batchErrorResult(result.message, [answerInput.questionId]);
+    }
+
+    savedAnswers.push({
+      questionId: result.questionId,
+      value: result.value,
+    });
+    completionPercent = result.completionPercent;
+  }
+
+  return {
+    ok: true,
+    answers: savedAnswers,
+    completionPercent,
+  };
+}
+
+function normalizeAutosaveBatchInput(input: AutosaveIntakeAnswersInput) {
+  const answerByQuestionId = new Map<string, unknown>();
+
+  input.answers.forEach((answer) => {
+    const questionId = answer.questionId.trim();
+    if (questionId) {
+      answerByQuestionId.set(questionId, answer.value);
+    }
+  });
+
+  return Array.from(answerByQuestionId, ([questionId, value]) => ({
+    questionId,
+    value,
+  }));
+}
+
+export async function autosaveIntakeAnswers({
+  input,
+  authUserId,
+}: {
+  input: AutosaveIntakeAnswersInput;
+  authUserId: string;
+}): Promise<AutosaveIntakeAnswersResult> {
+  const answers = normalizeAutosaveBatchInput(input);
+  const failedQuestionIds = answers.map((answer) => answer.questionId);
+
+  if (!input.sessionId || answers.length === 0) {
+    return batchErrorResult(
+      "The intake answer could not be saved.",
+      failedQuestionIds,
+    );
+  }
+
+  const normalizedInput: AutosaveIntakeAnswersInput = {
+    sessionId: input.sessionId,
+    answers,
+  };
+
+  if (Date.now() < batchAutosaveRpcRetryAt) {
+    return autosaveIntakeAnswersFallbackSequential({
+      input: normalizedInput,
+      authUserId,
+    });
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("autosave_intake_answers_batch", {
+    p_session_id: input.sessionId,
+    p_auth_user_id: authUserId,
+    p_answers: answers.map((answer) => ({
+      question_id: answer.questionId,
+      value: answer.value ?? null,
+    })),
+  });
+
+  if (error) {
+    if (isMissingBatchAutosaveRpcError(error) || isBrokenAutosaveRpcError(error)) {
+      batchAutosaveRpcRetryAt = Date.now() + BATCH_AUTOSAVE_RPC_RETRY_MS;
+      return autosaveIntakeAnswersFallbackSequential({
+        input: normalizedInput,
+        authUserId,
+      });
+    }
+
+    logServerError({
+      label: "[intake] batch autosave failed",
+      error,
+      metadata: {
+        sessionId: input.sessionId,
+        questionIds: failedQuestionIds,
+      },
+    });
+    return batchErrorResult(
+      "The intake answer could not be saved.",
+      failedQuestionIds,
+    );
+  }
+
+  batchAutosaveRpcRetryAt = 0;
+
+  const rows = autosaveRows(data);
+  const failedRow = rows.find((row) => !row.ok);
+
+  if (failedRow) {
+    return batchErrorResult(
+      failedRow.message ?? "The intake answer could not be saved.",
+      failedQuestionIds,
+    );
+  }
+
+  if (rows.length !== answers.length) {
+    return batchErrorResult(
+      "The intake answer could not be saved.",
+      failedQuestionIds,
+    );
+  }
+
+  const auditInputs: IntakeAnswerAuditInput[] = [];
+  const savedAnswers: Array<{ questionId: string; value: IntakeAnswerValue }> =
+    [];
+  let completionPercent = 0;
+
+  for (const row of rows) {
+    if (
+      !row.question_id ||
+      !row.answer_id ||
+      !row.input_type ||
+      !row.brand_id ||
+      !row.actor_profile_id ||
+      typeof row.completion_percent !== "number"
+    ) {
+      return batchErrorResult(
+        "The intake answer could not be saved.",
+        failedQuestionIds,
+      );
+    }
+
+    const question: IntakeQuestion = {
+      id: row.question_id,
+      sectionId: "",
+      key: "",
+      questionText: "",
+      helpText: null,
+      inputType: row.input_type,
+      isRequired: true,
+      orderIndex: 0,
+      validationSchema: null,
+    };
+    const normalizedValue = extractStoredAnswerValue({
+      inputType: row.input_type,
+      storedValue: row.value,
+    });
+    const answer = { id: row.answer_id, value: row.value };
+    const previousAnswer =
+      row.previous_value == null
+        ? null
+        : { id: row.answer_id, value: row.previous_value };
+
+    savedAnswers.push({
+      questionId: row.question_id,
+      value: normalizedValue,
+    });
+    completionPercent = row.completion_percent;
+    auditInputs.push({
+      actorUserId: row.actor_profile_id,
+      actorRole: row.actor_role,
+      brandId: row.brand_id,
+      sessionId: input.sessionId,
+      question,
+      answerId: answer.id,
+      previousAnswer,
+      nextAnswer: answer,
+      completionPercent: row.completion_percent,
+    });
+  }
+
+  scheduleBestEffortIntakeAnswerAudits(auditInputs);
+
+  return {
+    ok: true,
+    answers: savedAnswers,
+    completionPercent,
+  };
+}
+
+export async function autosaveIntakeAnswer({
+  input,
+  authUserId,
+}: {
+  input: AutosaveIntakeAnswerInput;
+  authUserId: string;
+}): Promise<AutosaveIntakeAnswerResult> {
+  const result = await autosaveIntakeAnswers({
+    input: {
+      sessionId: input.sessionId,
+      answers: [
+        {
+          questionId: input.questionId,
+          value: input.value,
+        },
+      ],
+    },
+    authUserId,
+  });
+
+  if (!result.ok) {
+    return errorResult(result.message);
+  }
+
+  const savedAnswer =
+    result.answers.find((answer) => answer.questionId === input.questionId) ??
+    result.answers[0];
+
+  if (!savedAnswer) {
+    return errorResult("The intake answer could not be saved.");
+  }
+
+  return {
+    ok: true,
+    questionId: savedAnswer.questionId,
+    value: savedAnswer.value,
+    completionPercent: result.completionPercent,
   };
 }
 

@@ -6,6 +6,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 import {
   ensureUserProfile,
+  ensureUserProfileExists,
   logProfileProvisioningError,
 } from "@/features/auth/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -105,6 +106,47 @@ describe("profile provisioning", () => {
     expect(updateProfile.eq).not.toHaveBeenCalledWith("id", authUserId);
     expect(updateProfile.update).toHaveBeenCalledWith(
       expect.not.objectContaining({ global_role: "REGISTERED_USER" }),
+    );
+  });
+
+  it("returns an existing profile for fast login without refreshing it", async () => {
+    const selectProfile = builder({
+      maybeSingle: { data: profile(), error: null },
+    });
+    const { from } = setupAdmin([selectProfile]);
+
+    const result = await ensureUserProfileExists(user());
+
+    expect(result.id).toBe(profileId);
+    expect(selectProfile.eq).toHaveBeenCalledWith("auth_user_id", authUserId);
+    expect(selectProfile.update).not.toHaveBeenCalled();
+    expect(from).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates a missing profile for fast login with an upsert on auth_user_id", async () => {
+    const selectProfile = builder({
+      maybeSingle: { data: null, error: null },
+    });
+    const upsertProfile = builder({
+      single: {
+        data: profile({ global_role: "REGISTERED_USER" }),
+        error: null,
+      },
+    });
+
+    setupAdmin([selectProfile, upsertProfile]);
+
+    const result = await ensureUserProfileExists(user());
+
+    expect(result.auth_user_id).toBe(authUserId);
+    expect(upsertProfile.upsert).toHaveBeenCalledWith(
+      {
+        auth_user_id: authUserId,
+        email: "owner@example.com",
+        full_name: "Brand Owner",
+        global_role: "REGISTERED_USER",
+      },
+      { onConflict: "auth_user_id" },
     );
   });
 

@@ -2,33 +2,39 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireUserProfile } from "@/features/auth/queries";
+import { requireUser, requireUserProfile } from "@/features/auth/queries";
 import {
   autosaveIntakeAnswer,
+  autosaveIntakeAnswers,
   finalSubmitIntake,
   isFinalSubmitIntakeError,
 } from "@/features/intake/services";
 import type {
   AutosaveIntakeAnswerInput,
   AutosaveIntakeAnswerResult,
+  AutosaveIntakeAnswersInput,
+  AutosaveIntakeAnswersResult,
   FinalSubmitIntakeFormState,
 } from "@/features/intake/types";
 
 export async function autosaveIntakeAnswerAction(
   input: AutosaveIntakeAnswerInput,
 ): Promise<AutosaveIntakeAnswerResult> {
-  const { profile } = await requireUserProfile("/dashboard/questionnaire");
-  const result = await autosaveIntakeAnswer({
+  const user = await requireUser("/dashboard/questionnaire");
+  return autosaveIntakeAnswer({
     input,
-    profileId: profile.id,
-    actorRole: profile.global_role,
+    authUserId: user.id,
   });
+}
 
-  if (result.ok) {
-    revalidatePath("/dashboard/questionnaire");
-  }
-
-  return result;
+export async function autosaveIntakeAnswersAction(
+  input: AutosaveIntakeAnswersInput,
+): Promise<AutosaveIntakeAnswersResult> {
+  const user = await requireUser("/dashboard/questionnaire");
+  return autosaveIntakeAnswers({
+    input,
+    authUserId: user.id,
+  });
 }
 
 function formValue(formData: FormData, key: string) {

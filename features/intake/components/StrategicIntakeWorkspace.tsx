@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import {
   Card,
@@ -17,10 +17,9 @@ import { FinalSubmitReadiness } from "@/features/intake/components/FinalSubmitRe
 import { IntakeProgress } from "@/features/intake/components/IntakeProgress";
 import { LockedIntakeView } from "@/features/intake/components/LockedIntakeView";
 import { QuestionRenderer } from "@/features/intake/components/QuestionRenderer";
+import { useIntakeAutosaveQueue } from "@/features/intake/components/useIntakeAutosaveQueue";
 import { SectionNav } from "@/features/intake/components/SectionNav";
 import type {
-  IntakeAnswerMap,
-  IntakeAnswerValue,
   IntakePageData,
 } from "@/features/intake/types";
 
@@ -45,7 +44,16 @@ export function StrategicIntakeWorkspace({
   data: IntakePageData;
   selectedSectionKey: string | null;
 }) {
-  const [answers, setAnswers] = useState<IntakeAnswerMap>(data.answers);
+  const {
+    answers,
+    enqueueAnswer,
+    hasPendingSaves,
+    retryQuestion,
+    saveStates,
+  } = useIntakeAutosaveQueue({
+    sessionId: data.session.id,
+    initialAnswers: data.answers,
+  });
   const completion = useMemo(
     () => calculateIntakeCompletion({ sections: data.sections, answers }),
     [answers, data.sections],
@@ -62,13 +70,6 @@ export function StrategicIntakeWorkspace({
         selectedSectionKey={selectedSection?.key ?? null}
       />
     );
-  }
-
-  function handleSaved(questionId: string, value: IntakeAnswerValue) {
-    setAnswers((currentAnswers) => ({
-      ...currentAnswers,
-      [questionId]: value,
-    }));
   }
 
   return (
@@ -112,8 +113,10 @@ export function StrategicIntakeWorkspace({
               selectedSection.questions.map((question) => (
                 <QuestionRenderer
                   key={question.id}
-                  onSaved={handleSaved}
+                  onQueuedChange={enqueueAnswer}
+                  onRetryQueuedSave={retryQuestion}
                   question={question}
+                  saveState={saveStates[question.id]}
                   sessionId={data.session.id}
                   value={answers[question.id] ?? null}
                 />
@@ -125,6 +128,7 @@ export function StrategicIntakeWorkspace({
 
       <FinalSubmitReadiness
         completion={completion}
+        disabled={hasPendingSaves}
         sessionId={data.session.id}
       />
     </div>

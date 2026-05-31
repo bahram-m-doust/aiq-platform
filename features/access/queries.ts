@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { resolveBrandAccessSummary } from "@/features/access/access-summary";
 import type {
   BrandAccessEntitlement,
@@ -36,7 +38,7 @@ function firstRelated<T>(record: RelatedRecord<T>) {
   return Array.isArray(record) ? (record[0] ?? null) : record;
 }
 
-export async function getBrandAccessSummaryForProfile(profileId: string) {
+export const getBrandAccessSummaryForProfile = cache(async (profileId: string) => {
   const admin = createAdminClient();
   const { data: membershipData, error: membershipError } = await admin
     .from("brand_memberships")
@@ -96,4 +98,4 @@ export async function getBrandAccessSummaryForProfile(profileId: string) {
   );
 
   return resolveBrandAccessSummary({ memberships, entitlements });
-}
+});
