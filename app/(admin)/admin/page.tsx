@@ -212,10 +212,10 @@ export default async function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Files & Knowledge */}
+        {/* Documents & Knowledge */}
         <Card>
           <CardHeader className="pb-3">
-            <SectionLabel>Files &amp; Knowledge</SectionLabel>
+            <SectionLabel>Documents &amp; Knowledge</SectionLabel>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -225,9 +225,9 @@ export default async function AdminPage() {
                 size="lg"
                 variant="outline"
               >
-                <Link href="/admin/files">
+                <Link href="/admin/documents">
                   <FileTextIcon className="size-4" />
-                  Manage Files
+                  Manage Documents
                 </Link>
               </Button>
               <Button

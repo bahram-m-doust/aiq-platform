@@ -1,6 +1,6 @@
 import type { PaginationState } from "@/lib/pagination";
 
-export const fileVisibilities = [
+export const documentVisibilities = [
   "OWNER_ONLY",
   "BRAND_TEAM",
   "HELIO_INTERNAL",
@@ -8,9 +8,9 @@ export const fileVisibilities = [
   "AGENT_VISIBLE",
 ] as const;
 
-export type FileVisibility = (typeof fileVisibilities)[number];
+export type DocumentVisibility = (typeof documentVisibilities)[number];
 
-export const fileStatuses = [
+export const documentStatuses = [
   "UPLOADED",
   "PENDING_OWNER_APPROVAL",
   "OWNER_APPROVED",
@@ -23,46 +23,46 @@ export const fileStatuses = [
   "ARCHIVED",
 ] as const;
 
-export type FileStatus = (typeof fileStatuses)[number];
+export type DocumentStatus = (typeof documentStatuses)[number];
 
-export type BrandFileRole =
+export type BrandDocumentRole =
   | "OWNER"
   | "EXECUTIVE_MANAGER"
   | "BRAND_SPECIALIST";
 
-export type FileAccessContext = {
+export type DocumentAccessContext = {
   brandId: string;
   brandName: string;
-  membershipRole: BrandFileRole;
+  membershipRole: BrandDocumentRole;
   planName: string | null;
 };
 
-export type BrandFileRecord = {
+export type BrandDocumentRecord = {
   id: string;
   brandId: string;
   storagePath: string;
   originalName: string;
   mimeType: string | null;
   sizeBytes: number | null;
-  visibility: FileVisibility;
-  status: FileStatus;
+  visibility: DocumentVisibility;
+  status: DocumentStatus;
   uploadedBy: string | null;
   uploadedByEmail: string | null;
   createdAt: string | null;
 };
 
-export type BrandFilesWorkspace = {
-  access: FileAccessContext;
-  files: BrandFileRecord[];
+export type BrandDocumentsWorkspace = {
+  access: DocumentAccessContext;
+  files: BrandDocumentRecord[];
   pagination: PaginationState;
 };
 
-export type FileUploadInput = {
+export type DocumentUploadInput = {
   file: File;
-  visibility: FileVisibility;
+  visibility: DocumentVisibility;
 };
 
-export type FileUploadFormState =
+export type DocumentUploadFormState =
   | {
       status: "idle";
       message: string;
@@ -77,4 +77,4 @@ export type FileUploadFormState =
       fileId: string;
     };
 
-export type FileReviewDecision = "APPROVE" | "REJECT";
+export type DocumentReviewDecision = "APPROVE" | "REJECT";

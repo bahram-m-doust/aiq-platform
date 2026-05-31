@@ -5,19 +5,19 @@ import { redirect } from "next/navigation";
 
 import { requireUserProfile } from "@/features/auth/queries";
 import {
-  createSignedDownloadUrlForFile,
-  isFileServiceError,
-  reviewSpecialistFile,
-  uploadBrandFileFromFormData,
-} from "@/features/files/services";
-import type { FileUploadFormState } from "@/features/files/types";
+  createSignedDownloadUrlForDocument,
+  isDocumentServiceError,
+  reviewSpecialistDocument,
+  uploadBrandDocumentFromFormData,
+} from "@/features/documents/services";
+import type { DocumentUploadFormState } from "@/features/documents/types";
 import { logServerError } from "@/lib/logging/server";
 import {
   checkRequestRateLimit,
   RATE_LIMITED_MESSAGE,
 } from "@/lib/rate-limit";
 
-function uploadErrorState(message: string): FileUploadFormState {
+function uploadErrorState(message: string): DocumentUploadFormState {
   return { status: "error", message };
 }
 
@@ -26,10 +26,10 @@ function readFileId(formData: FormData) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-export async function uploadFileAction(
-  _previousState: FileUploadFormState,
+export async function uploadDocumentAction(
+  _previousState: DocumentUploadFormState,
   formData: FormData,
-): Promise<FileUploadFormState> {
+): Promise<DocumentUploadFormState> {
   const { profile } = await requireUserProfile("/dashboard/documents");
   const rateLimit = await checkRequestRateLimit({
     bucket: "file.upload",
@@ -43,7 +43,7 @@ export async function uploadFileAction(
   }
 
   try {
-    const file = await uploadBrandFileFromFormData({
+    const file = await uploadBrandDocumentFromFormData({
       formData,
       profileId: profile.id,
     });
@@ -54,12 +54,12 @@ export async function uploadFileAction(
       status: "success",
       message:
         file.status === "PENDING_OWNER_APPROVAL"
-          ? "File uploaded and sent for Owner approval."
-          : "File uploaded.",
+          ? "Document uploaded and sent for Owner approval."
+          : "Document uploaded.",
       fileId: file.id,
     };
   } catch (error) {
-    if (isFileServiceError(error)) {
+    if (isDocumentServiceError(error)) {
       return uploadErrorState(error.message);
     }
 
@@ -71,7 +71,7 @@ export async function uploadFileAction(
       },
     });
 
-    return uploadErrorState("File could not be uploaded.");
+    return uploadErrorState("Document could not be uploaded.");
   }
 }
 
@@ -83,7 +83,7 @@ export async function createSignedDownloadUrlAction(formData: FormData) {
     redirect("/dashboard/documents");
   }
 
-  const { signedUrl } = await createSignedDownloadUrlForFile({
+  const { signedUrl } = await createSignedDownloadUrlForDocument({
     fileId,
     profileId: profile.id,
   });
@@ -91,12 +91,12 @@ export async function createSignedDownloadUrlAction(formData: FormData) {
   redirect(signedUrl);
 }
 
-export async function approveSpecialistFileAction(formData: FormData) {
+export async function approveSpecialistDocumentAction(formData: FormData) {
   const { profile } = await requireUserProfile("/dashboard/documents");
   const fileId = readFileId(formData);
 
   if (fileId) {
-    await reviewSpecialistFile({
+    await reviewSpecialistDocument({
       fileId,
       profileId: profile.id,
       decision: "APPROVE",
@@ -106,12 +106,12 @@ export async function approveSpecialistFileAction(formData: FormData) {
   revalidatePath("/dashboard/documents");
 }
 
-export async function rejectSpecialistFileAction(formData: FormData) {
+export async function rejectSpecialistDocumentAction(formData: FormData) {
   const { profile } = await requireUserProfile("/dashboard/documents");
   const fileId = readFileId(formData);
 
   if (fileId) {
-    await reviewSpecialistFile({
+    await reviewSpecialistDocument({
       fileId,
       profileId: profile.id,
       decision: "REJECT",

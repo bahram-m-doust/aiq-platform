@@ -12,7 +12,7 @@ vi.mock("@/features/rag/queries", () => ({
   getRagApprovedFilesForSync: vi.fn(),
 }));
 
-vi.mock("@/features/files/storage", () => ({
+vi.mock("@/features/documents/storage", () => ({
   downloadPrivateFile: vi.fn(),
 }));
 
@@ -33,7 +33,7 @@ import {
   getRagApprovedFilesForSync,
 } from "@/features/rag/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { downloadPrivateFile } from "@/features/files/storage";
+import { downloadPrivateFile } from "@/features/documents/storage";
 import { RagApprovalQueue } from "@/features/rag/components/RagApprovalQueue";
 import { RagSyncPanel } from "@/features/rag/components/RagSyncPanel";
 import { hasEmbeddingEnv } from "@/features/rag/embeddings";

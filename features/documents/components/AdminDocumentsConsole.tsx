@@ -33,26 +33,26 @@ import {
 import { cn } from "@/lib/utils";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
 import {
-  adminArchiveFileAction,
-  adminDeleteFileAction,
-  adminDownloadFileAction,
-  adminPromoteFileToRagAction,
-  adminUnarchiveFileAction,
-  adminUploadFileAction,
-} from "@/features/files/admin-actions";
+  adminArchiveDocumentAction,
+  adminDeleteDocumentAction,
+  adminDownloadDocumentAction,
+  adminPromoteDocumentToRagAction,
+  adminUnarchiveDocumentAction,
+  adminUploadDocumentAction,
+} from "@/features/documents/admin-actions";
 import {
   adminDeleteBrandApiKeyAction,
   adminSetBrandApiKeyAction,
   initialApiKeyFormState,
 } from "@/features/brands/api-key-actions";
-import type { AdminBrandOption } from "@/features/files/admin-queries";
+import type { AdminBrandOption } from "@/features/documents/admin-queries";
 import {
-  initialAdminFileReviewState,
-  initialAdminFileUploadState,
-} from "@/features/files/admin-types";
-import { fileStatusLabels, fileVisibilityLabels } from "@/features/files/schema";
-import type { BrandFileRecord, FileStatus } from "@/features/files/types";
-import { fileVisibilities } from "@/features/files/types";
+  initialAdminDocumentReviewState,
+  initialAdminDocumentUploadState,
+} from "@/features/documents/admin-types";
+import { documentStatusLabels, documentVisibilityLabels } from "@/features/documents/schema";
+import type { BrandDocumentRecord, DocumentStatus } from "@/features/documents/types";
+import { documentVisibilities } from "@/features/documents/types";
 
 function formatSize(bytes: number | null) {
   if (!bytes) return "—";
@@ -71,7 +71,7 @@ function formatDate(value: string | null) {
   });
 }
 
-function statusBadgeClass(status: FileStatus) {
+function statusBadgeClass(status: DocumentStatus) {
   switch (status) {
     case "ARCHIVED":
       return "bg-muted text-muted-foreground";
@@ -89,7 +89,7 @@ function statusBadgeClass(status: FileStatus) {
   }
 }
 
-function StatusBadge({ status }: { status: FileStatus }) {
+function StatusBadge({ status }: { status: DocumentStatus }) {
   return (
     <span
       className={cn(
@@ -97,7 +97,7 @@ function StatusBadge({ status }: { status: FileStatus }) {
         statusBadgeClass(status),
       )}
     >
-      {fileStatusLabels[status]}
+      {documentStatusLabels[status]}
     </span>
   );
 }
@@ -135,8 +135,8 @@ function BrandPicker({
 
 function UploadForm({ brandId }: { brandId: string }) {
   const [state, formAction] = useActionState(
-    adminUploadFileAction,
-    initialAdminFileUploadState,
+    adminUploadDocumentAction,
+    initialAdminDocumentUploadState,
   );
 
   return (
@@ -154,7 +154,7 @@ function UploadForm({ brandId }: { brandId: string }) {
       ) : null}
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
         <div className="space-y-2">
-          <Label htmlFor="admin_upload_file">File</Label>
+          <Label htmlFor="admin_upload_file">Document</Label>
           <Input id="admin_upload_file" name="file" required type="file" />
         </div>
         <div className="space-y-2">
@@ -164,9 +164,9 @@ function UploadForm({ brandId }: { brandId: string }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {fileVisibilities.map((visibility) => (
+              {documentVisibilities.map((visibility) => (
                 <SelectItem key={visibility} value={visibility}>
-                  {fileVisibilityLabels[visibility]}
+                  {documentVisibilityLabels[visibility]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -180,15 +180,15 @@ function UploadForm({ brandId }: { brandId: string }) {
 
 function ArchiveActionButton({ fileId }: { fileId: string }) {
   const [, formAction] = useActionState(
-    adminArchiveFileAction,
-    initialAdminFileReviewState,
+    adminArchiveDocumentAction,
+    initialAdminDocumentReviewState,
   );
 
   return (
     <form action={formAction} className="inline-flex">
       <input name="file_id" type="hidden" value={fileId} />
       <Button
-        aria-label="Archive file"
+        aria-label="Archive document"
         size="icon-sm"
         title="Archive"
         type="submit"
@@ -202,15 +202,15 @@ function ArchiveActionButton({ fileId }: { fileId: string }) {
 
 function UnarchiveActionButton({ fileId }: { fileId: string }) {
   const [, formAction] = useActionState(
-    adminUnarchiveFileAction,
-    initialAdminFileReviewState,
+    adminUnarchiveDocumentAction,
+    initialAdminDocumentReviewState,
   );
 
   return (
     <form action={formAction} className="inline-flex">
       <input name="file_id" type="hidden" value={fileId} />
       <Button
-        aria-label="Restore archived file"
+        aria-label="Restore archived document"
         size="icon-sm"
         title="Unarchive"
         type="submit"
@@ -222,11 +222,11 @@ function UnarchiveActionButton({ fileId }: { fileId: string }) {
   );
 }
 
-function DeleteActionButton({ file }: { file: BrandFileRecord }) {
+function DeleteActionButton({ file }: { file: BrandDocumentRecord }) {
   const { open, handleOpenChange, errorMessage, isPending, confirm } =
     useConfirmAction({
-      action: adminDeleteFileAction,
-      initialState: initialAdminFileReviewState,
+      action: adminDeleteDocumentAction,
+      initialState: initialAdminDocumentReviewState,
       buildFormData: () => {
         const fd = new FormData();
         fd.append("file_id", file.id);
@@ -240,7 +240,7 @@ function DeleteActionButton({ file }: { file: BrandFileRecord }) {
       onOpenChange={handleOpenChange}
       trigger={
         <Button
-          aria-label="Delete file"
+          aria-label="Delete document"
           size="icon-sm"
           title="Delete"
           type="button"
@@ -249,7 +249,7 @@ function DeleteActionButton({ file }: { file: BrandFileRecord }) {
           <TrashIcon className="size-4 text-destructive" />
         </Button>
       }
-      title="Delete this file?"
+      title="Delete this document?"
       description={`You are about to permanently delete ${file.originalName}. This removes both the database row and the storage object. This action cannot be undone.`}
       errorMessage={errorMessage}
       isPending={isPending}
@@ -262,10 +262,10 @@ function DeleteActionButton({ file }: { file: BrandFileRecord }) {
 
 function DownloadButton({ fileId }: { fileId: string }) {
   return (
-    <form action={adminDownloadFileAction} className="inline-flex">
+    <form action={adminDownloadDocumentAction} className="inline-flex">
       <input name="file_id" type="hidden" value={fileId} />
       <Button
-        aria-label="Download file"
+        aria-label="Download document"
         size="icon-sm"
         title="Download"
         type="submit"
@@ -277,7 +277,7 @@ function DownloadButton({ fileId }: { fileId: string }) {
   );
 }
 
-const ragPromotableStatuses = new Set<FileStatus>([
+const ragPromotableStatuses = new Set<DocumentStatus>([
   "UPLOADED",
   "PENDING_OWNER_APPROVAL",
   "OWNER_APPROVED",
@@ -287,11 +287,11 @@ const ragPromotableStatuses = new Set<FileStatus>([
   "CLIENT_APPROVED",
 ]);
 
-function PromoteToRagButton({ file }: { file: BrandFileRecord }) {
+function PromoteToRagButton({ file }: { file: BrandDocumentRecord }) {
   const { open, handleOpenChange, errorMessage, isPending, confirm } =
     useConfirmAction({
-      action: adminPromoteFileToRagAction,
-      initialState: initialAdminFileReviewState,
+      action: adminPromoteDocumentToRagAction,
+      initialState: initialAdminDocumentReviewState,
       buildFormData: () => {
         const fd = new FormData();
         fd.append("file_id", file.id);
@@ -314,7 +314,7 @@ function PromoteToRagButton({ file }: { file: BrandFileRecord }) {
           <BrainIcon className="size-4 text-emerald-600" />
         </Button>
       }
-      title="Promote this file to RAG?"
+      title="Promote this document to RAG?"
       description={`This will mark "${file.originalName}" as RAG-approved and make it eligible for Knowledge Brain sync.`}
       errorMessage={errorMessage}
       isPending={isPending}
@@ -325,7 +325,7 @@ function PromoteToRagButton({ file }: { file: BrandFileRecord }) {
   );
 }
 
-function FileRowActions({ file }: { file: BrandFileRecord }) {
+function FileRowActions({ file }: { file: BrandDocumentRecord }) {
   return (
     <div className="flex items-center justify-end gap-1">
       <DownloadButton fileId={file.id} />
@@ -342,7 +342,7 @@ function FileRowActions({ file }: { file: BrandFileRecord }) {
   );
 }
 
-function FilesTable({ files }: { files: BrandFileRecord[] }) {
+function FilesTable({ files }: { files: BrandDocumentRecord[] }) {
   if (files.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -390,7 +390,7 @@ function FilesTable({ files }: { files: BrandFileRecord[] }) {
                 ) : null}
               </td>
               <td className="px-3 py-2 text-xs">
-                {fileVisibilityLabels[file.visibility]}
+                {documentVisibilityLabels[file.visibility]}
               </td>
               <td className="px-3 py-2">
                 <StatusBadge status={file.status} />
@@ -472,7 +472,7 @@ function ApiKeyPanel({ brandId, hasApiKey }: { brandId: string; hasApiKey: boole
   );
 }
 
-export function AdminFilesConsole({
+export function AdminDocumentsConsole({
   brands,
   selectedBrandId,
   files,
@@ -480,7 +480,7 @@ export function AdminFilesConsole({
 }: {
   brands: AdminBrandOption[];
   selectedBrandId: string | null;
-  files: BrandFileRecord[];
+  files: BrandDocumentRecord[];
   hasApiKey?: boolean;
 }) {
   return (
@@ -513,9 +513,9 @@ export function AdminFilesConsole({
 
           <Card>
             <CardHeader>
-              <CardTitle>Upload file</CardTitle>
+              <CardTitle>Upload document</CardTitle>
               <CardDescription>
-                File is stored under the selected brand and audited.
+                Document is stored under the selected brand and audited.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -525,9 +525,9 @@ export function AdminFilesConsole({
 
           <Card>
             <CardHeader>
-              <CardTitle>Files</CardTitle>
+              <CardTitle>Documents</CardTitle>
               <CardDescription>
-                {files.length} file{files.length === 1 ? "" : "s"}.
+                {files.length} document{files.length === 1 ? "" : "s"}.
               </CardDescription>
             </CardHeader>
             <CardContent>

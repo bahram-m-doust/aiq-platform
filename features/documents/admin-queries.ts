@@ -1,7 +1,7 @@
 import "server-only";
 
-import { toBrandFileRecord } from "@/features/files/queries";
-import type { BrandFileRecord } from "@/features/files/types";
+import { toBrandDocumentRecord } from "@/features/documents/queries";
+import type { BrandDocumentRecord } from "@/features/documents/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type FileRowForBrand = {
@@ -50,11 +50,11 @@ export async function getAdminBrandOptions(): Promise<AdminBrandOption[]> {
   }));
 }
 
-export async function getFilesForBrand({
+export async function getDocumentsForBrand({
   brandId,
 }: {
   brandId: string;
-}): Promise<BrandFileRecord[]> {
+}): Promise<BrandDocumentRecord[]> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("files")
@@ -88,7 +88,7 @@ export async function getFilesForBrand({
   );
 
   return rows.map((row) =>
-    toBrandFileRecord({
+    toBrandDocumentRecord({
       row,
       uploaderEmail: row.uploaded_by
         ? emailsById.get(row.uploaded_by) ?? null
