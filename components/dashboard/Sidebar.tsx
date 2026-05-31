@@ -1,30 +1,40 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpenIcon,
-  BrainIcon,
-  ChevronLeftIcon,
-  FileIcon,
-  GitBranchIcon,
-  GaugeIcon,
-  HomeIcon,
-  ImageIcon,
-  LayersIcon,
-  MegaphoneIcon,
-  MenuIcon,
-  MailIcon,
-  UserIcon,
-  VideoIcon,
-  XIcon,
-  ZapIcon,
-  type LucideIcon,
+  BotIcon,
+  BrainCircuitIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  InfinityIcon,
+  LogOutIcon,
+  MessagesSquareIcon,
+  PlusIcon,
+  Settings2Icon,
+  SquareUserIcon,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Sidebar as SidebarRoot,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from "@/components/ui/sidebar";
 
 type SidebarAgent = {
   key: string;
@@ -43,46 +53,21 @@ type SidebarProps = {
   logoutAction: (formData: FormData) => void | Promise<void>;
 };
 
-const agentIcons: Record<string, LucideIcon> = {
-  STORY_TELLER: BookOpenIcon,
-  IMAGE_GENERATOR: ImageIcon,
-  VIDEO_GENERATOR: VideoIcon,
-  CAMPAIGN_MAKER: MegaphoneIcon,
-  BRAND_DIGITAL_ACTIVATION: ZapIcon,
-};
-
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
-  { href: "/dashboard/modules", label: "Strategies", icon: LayersIcon },
-  { href: "/dashboard/brain", label: "Brand Brain", icon: BrainIcon },
-  { href: "/dashboard/files", label: "Files", icon: FileIcon },
-  { href: "/dashboard/change-requests", label: "Changes", icon: GitBranchIcon },
-  { href: "/dashboard/invitations", label: "Invitations", icon: MailIcon },
-  { href: "/dashboard/ai-studio", label: "AI Studio", icon: GaugeIcon },
+const primaryNav = [
+  {
+    href: "/dashboard/brain",
+    label: "Brand Integrated Brain",
+    icon: BrainCircuitIcon,
+  },
 ];
 
-const agentStateColors: Record<string, string> = {
-  ACTIVE: "bg-emerald-500",
-  AVAILABLE: "bg-blue-500",
-  LOCKED_BY_BRAIN: "bg-amber-500",
-  LOCKED_BY_PLAN: "bg-[var(--bv-ink-4)]",
-  SUSPENDED: "bg-red-500",
-};
-
-function AgentDot({ state }: { state: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-block size-1.5 rounded-full",
-        agentStateColors[state] ?? "bg-[var(--bv-ink-4)]",
-      )}
-    />
-  );
-}
+const secondaryNav = [
+  { href: "/dashboard", label: "Community", icon: MessagesSquareIcon },
+  { href: "/dashboard/files", label: "Documents", icon: BookOpenIcon },
+  { href: "/dashboard/ai-studio", label: "Settings", icon: Settings2Icon },
+];
 
 export function Sidebar({
-  email,
-  fullName,
   role,
   brandName,
   brandIconUrl,
@@ -90,229 +75,202 @@ export function Sidebar({
   logoutAction,
 }: SidebarProps) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-
-  const closeOnNavigate = () => setOpen(false);
 
   const isActive = (href: string) =>
     href === "/dashboard"
       ? pathname === "/dashboard"
       : pathname.startsWith(href);
 
-  const sidebarWidth = collapsed ? "w-[60px]" : "w-[240px]";
+  const agentsOpen = pathname.startsWith("/dashboard/agents");
+  const adminOpen =
+    pathname.startsWith("/dashboard/invitations") ||
+    pathname.startsWith("/admin");
 
   return (
-    <>
-      {/* Mobile toggle */}
-      <button
-        className="fixed left-4 top-4 z-50 flex size-9 items-center justify-center rounded-lg border bg-white shadow-sm md:hidden"
-        onClick={() => setOpen(!open)}
-        style={{ borderColor: "var(--bv-line)" }}
-        type="button"
-      >
-        {open ? <XIcon className="size-4" /> : <MenuIcon className="size-4" />}
-      </button>
-
-      {/* Overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/20 md:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed left-0 top-0 z-40 flex h-svh flex-col border-r transition-all duration-300 md:sticky md:top-0 md:translate-x-0",
-          sidebarWidth,
-          open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-        )}
-        style={{
-          background: "var(--bv-card)",
-          borderColor: "var(--bv-line)",
-        }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b px-3 py-4" style={{ borderColor: "var(--bv-line)" }}>
-          {!collapsed && (
-            <div className="flex items-center gap-2.5">
-              {brandIconUrl ? (
-                <div
-                  className="relative size-7 shrink-0 overflow-hidden rounded-lg"
-                  style={{ boxShadow: "0 2px 6px rgba(15,15,20,0.18)" }}
-                >
-                  <Image
-                    alt={brandName ?? "Brand"}
-                    className="size-full object-contain"
-                    height={28}
-                    src={brandIconUrl}
-                    unoptimized
-                    width={28}
-                  />
-                </div>
-              ) : (
-                <div
-                  className="relative size-7 shrink-0 rounded-lg"
-                  style={{
-                    background: "linear-gradient(135deg, #0e0e14, #2a2a36)",
-                    boxShadow: "0 2px 6px rgba(15,15,20,0.18)",
-                  }}
-                >
-                  <div
-                    className="absolute inset-[6px] rounded"
-                    style={{
-                      background: "linear-gradient(135deg, #ff8a5b, #2a7cff 60%, #2bc78a)",
-                      opacity: 0.92,
-                    }}
-                  />
-                </div>
-              )}
-              <span className="text-sm font-semibold tracking-[-0.01em] text-[var(--bv-ink)]">
-                {brandName ?? "Bextudio"}
-              </span>
-            </div>
-          )}
-          <button
-            className="hidden size-6 items-center justify-center rounded text-[var(--bv-ink-3)] hover:text-[var(--bv-ink)] md:flex"
-            onClick={() => setCollapsed(!collapsed)}
-            type="button"
-          >
-            <ChevronLeftIcon
-              className={cn("size-4 transition-transform", collapsed && "rotate-180")}
-            />
-          </button>
-        </div>
-
-        {/* User info */}
-        {!collapsed && (
-          <div className="border-b px-3 py-3" style={{ borderColor: "var(--bv-line)" }}>
-            <div className="flex items-center gap-2">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--bv-panel)] text-[var(--bv-ink-3)]">
-                <UserIcon className="size-3.5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-[var(--bv-ink)]">
-                  {fullName ?? email}
-                </p>
-                {brandName && (
-                  <p className="truncate text-[10px] text-[var(--bv-ink-3)]">
-                    {brandName}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Nav links */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3">
-          <div className="space-y-0.5">
-            {navItems.map((item) => {
-              const active = isActive(item.href);
-              const Icon = item.icon;
-              return (
-                <Link
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors",
-                    active
-                      ? "bg-[var(--bv-accent-tint)] font-medium text-[var(--bv-accent)]"
-                      : "text-[var(--bv-ink-2)] hover:bg-[var(--bv-panel)] hover:text-[var(--bv-ink)]",
-                    collapsed && "justify-center px-0",
+    <SidebarRoot collapsible="offcanvas">
+      {/* Header */}
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild size="lg" className="gap-2">
+              <Link href="/dashboard">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  {brandIconUrl ? (
+                    <Image
+                      alt={brandName ?? "Brand"}
+                      className="size-full rounded-lg object-cover"
+                      height={32}
+                      src={brandIconUrl}
+                      unoptimized
+                      width={32}
+                    />
+                  ) : (
+                    <InfinityIcon className="size-5" />
                   )}
-                  href={item.href}
-                  key={item.href}
-                  title={collapsed ? item.label : undefined}
+                </span>
+                <span className="truncate text-sm font-semibold">
+                  {brandName ?? "Bextudio"}
+                </span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+
+      {/* Content */}
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarMenu>
+            {/* Primary single links */}
+            {primaryNav.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive(item.href)}
+                  tooltip={item.label}
                 >
-                  <Icon className="size-4 shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
-                </Link>
-              );
-            })}
-          </div>
+                  <Link href={item.href}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
 
-          {/* Agents section */}
-          {agents.length > 0 && (
-            <div className="mt-4 border-t pt-3" style={{ borderColor: "var(--bv-line)" }}>
-              {!collapsed && (
-                <p className="mb-2 px-2.5 font-mono text-[9px] uppercase tracking-[0.14em] text-[var(--bv-ink-4)]">
-                  Agents
-                </p>
-              )}
-              <div className="space-y-0.5">
-                {agents.map((agent) => {
-                  const agentHref = `/dashboard/agents/${agent.slug}`;
-                  const active = pathname === agentHref;
-                  const Icon = agentIcons[agent.key];
-                  return (
-                    <Link
-                      className={cn(
-                        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12px] transition-colors",
-                        active
-                          ? "bg-[var(--bv-accent-tint)] font-medium text-[var(--bv-accent)]"
-                          : "text-[var(--bv-ink-3)] hover:bg-[var(--bv-panel)] hover:text-[var(--bv-ink-2)]",
-                        collapsed && "justify-center px-0",
-                      )}
-                      href={agentHref}
-                      key={agent.key}
-                      title={collapsed ? agent.name : undefined}
-                    >
-                      <span className="relative inline-flex shrink-0">
-                        {Icon ? (
-                          <Icon className="size-4" />
-                        ) : (
-                          <AgentDot state={agent.state} />
-                        )}
-                        <span
-                          className={cn(
-                            "absolute -bottom-0.5 -right-0.5 size-1.5 rounded-full ring-1 ring-[var(--bv-card)]",
-                            agentStateColors[agent.state] ??
-                              "bg-[var(--bv-ink-4)]",
-                          )}
-                        />
-                      </span>
-                      {!collapsed && <span className="truncate">{agent.name}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </nav>
-
-        {/* Footer */}
-        <div
-          className="border-t px-2 py-3 pb-[max(env(safe-area-inset-bottom,0px),12px)]"
-          style={{ borderColor: "var(--bv-line)" }}
-        >
-          <form action={logoutAction}>
-            <button
-              className={cn(
-                "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-[var(--bv-ink-3)] transition-colors hover:bg-[var(--bv-panel)] hover:text-[var(--bv-ink)]",
-                collapsed && "justify-center px-0",
-              )}
-              title={collapsed ? "Sign out" : undefined}
-              type="submit"
-            >
-              <svg
-                className="size-4 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.8"
-                viewBox="0 0 24 24"
+            {/* Agents (collapsible) */}
+            {agents.length > 0 && (
+              <Collapsible
+                asChild
+                defaultOpen={agentsOpen}
+                className="group/collapsible"
               >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" x2="9" y1="12" y2="12" />
-              </svg>
-              {!collapsed && <span>Sign out</span>}
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton tooltip="Agents">
+                      <BotIcon />
+                      <span>Agents</span>
+                      <ChevronDownIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {agents.map((agent) => {
+                        const href = `/dashboard/agents/${agent.slug}`;
+                        return (
+                          <SidebarMenuSubItem key={agent.key}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={pathname === href}
+                            >
+                              <Link href={href}>
+                                <span>{agent.name}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        );
+                      })}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
+            )}
+
+            {/* Administration (collapsible) */}
+            <Collapsible
+              asChild
+              defaultOpen={adminOpen}
+              className="group/collapsible"
+            >
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton tooltip="Administration">
+                    <SquareUserIcon />
+                    <span>Administration</span>
+                    <ChevronDownIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton
+                        asChild
+                        isActive={isActive("/dashboard/invitations")}
+                      >
+                        <Link href="/dashboard/invitations">
+                          <PlusIcon />
+                          <span>Invite Member</span>
+                        </Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                    {role === "ADMIN" && (
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton
+                          asChild
+                          isActive={isActive("/admin")}
+                        >
+                          <Link href="/admin">
+                            <span>Admin Panel</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    )}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
+
+            {/* Secondary single links */}
+            {secondaryNav.map((item) => (
+              <SidebarMenuItem key={item.label}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive(item.href)}
+                  tooltip={item.label}
+                >
+                  <Link href={item.href}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {/* Footer */}
+      <SidebarFooter>
+        <div className="overflow-hidden rounded-lg border border-border bg-background shadow-xs">
+          <div className="flex items-center border-b border-border py-2.5 pl-2.5">
+            <p className="flex-1 text-sm font-medium text-card-foreground">
+              Basic Plan
+            </p>
+            <button
+              className="flex h-9 items-center gap-1 rounded-md py-2 pr-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              type="button"
+            >
+              Manage Plan
+              <ChevronRightIcon className="size-4" />
             </button>
-          </form>
+          </div>
+          <div className="flex items-center justify-between px-2.5 py-2.5">
+            <span className="text-sm font-medium text-foreground">Credits</span>
+            <span className="text-sm text-muted-foreground">
+              120 remaining 1000
+            </span>
+          </div>
         </div>
-      </aside>
-    </>
+
+        <form action={logoutAction}>
+          <button
+            className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            type="submit"
+          >
+            <LogOutIcon className="size-4 shrink-0" />
+            <span>Sign out</span>
+          </button>
+        </form>
+      </SidebarFooter>
+    </SidebarRoot>
   );
 }

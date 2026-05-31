@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/dashboard/Sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { brandIconPublicUrl } from "@/features/admin/brand-icons/storage";
 import { logout } from "@/features/auth/actions";
@@ -62,9 +63,14 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-svh" style={{ background: "var(--bv-bg)" }}>
+    <SidebarProvider>
       <Sidebar {...sidebarProps} logoutAction={logout} />
-      <main className="flex-1 overflow-x-hidden">{children}</main>
-    </div>
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-4">
+          <SidebarTrigger className="-ml-1" />
+        </header>
+        <div className="flex-1 overflow-x-hidden p-4">{children}</div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
