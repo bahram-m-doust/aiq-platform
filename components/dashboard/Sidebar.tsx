@@ -63,7 +63,7 @@ const primaryNav = [
 
 const secondaryNav = [
   { href: "/dashboard", label: "Community", icon: MessagesSquareIcon },
-  { href: "/dashboard/files", label: "Documents", icon: BookOpenIcon },
+  { href: "/dashboard/documents", label: "Documents", icon: BookOpenIcon },
   { href: "/dashboard/ai-studio", label: "Settings", icon: Settings2Icon },
 ];
 
