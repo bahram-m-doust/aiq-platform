@@ -773,24 +773,13 @@ export function BrandBuildView({
           {/* Hub */}
           <div className="mb-7 flex w-full items-center justify-center">
             <div
-              className="relative inline-flex items-center gap-3 rounded-full border bg-white px-5 py-3 pl-3"
+              className="relative inline-flex items-center gap-3 rounded-full border bg-white px-5 py-3"
               style={{
                 borderColor: "var(--bv-line)",
                 boxShadow: "var(--bv-shadow-hub)",
               }}
             >
-              {activePhase ? (
-                <span
-                  aria-hidden="true"
-                  className="size-9 rounded-full"
-                  style={{
-                    background: `conic-gradient(from 0deg, rgba(0,229,217,0) 0deg, rgba(0,229,217,0.85) 270deg, rgba(0,229,217,0) 360deg), #ffffff`,
-                    mask: `radial-gradient(circle at 50% 50%, transparent 13px, #000 13.5px, #000 17px, transparent 17.5px)`,
-                    WebkitMask: `radial-gradient(circle at 50% 50%, transparent 13px, #000 13.5px, #000 17px, transparent 17.5px)`,
-                    animation: "bv-spin 1.6s linear infinite",
-                  }}
-                />
-              ) : (
+              {!activePhase && (
                 <span
                   aria-hidden="true"
                   className="flex size-9 items-center justify-center rounded-full"
