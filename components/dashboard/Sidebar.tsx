@@ -191,7 +191,7 @@ export function Sidebar({
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <SidebarMenuSub>
+                  <SidebarMenuSub className="border-l-0">
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
                         asChild
