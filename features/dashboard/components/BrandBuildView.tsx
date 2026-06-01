@@ -215,6 +215,15 @@ function PhaseCard({
         maxWidth: 600,
       }}
     >
+      {phaseState === "active" && (
+        <div
+          className="absolute inset-x-0 top-0 z-[1] h-0.5 opacity-90"
+          style={{
+            background: `linear-gradient(90deg, transparent, var(--bv-accent), transparent)`,
+          }}
+        />
+      )}
+
       <button
         aria-controls={`${phase.key}-panel`}
         aria-expanded={open}
