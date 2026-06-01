@@ -1,5 +1,6 @@
+import { DashboardNavbar } from "@/components/dashboard/DashboardNavbar";
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { brandIconPublicUrl } from "@/features/admin/brand-icons/storage";
 import { logout } from "@/features/auth/actions";
@@ -16,6 +17,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   let sidebarProps = null;
+  let displayName = "";
 
   try {
     const { user, profile } = await requireUserProfile("/login");
@@ -40,6 +42,7 @@ export default async function DashboardLayout({
         brandIconUrl = brandIconPublicUrl(brandRow?.icon_path ?? null);
       }
 
+      displayName = profile.full_name ?? user.email ?? profile.email;
       sidebarProps = {
         email: user.email ?? profile.email,
         fullName: profile.full_name,
@@ -64,11 +67,9 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar {...sidebarProps} logoutAction={logout} />
+      <Sidebar {...sidebarProps} />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-4">
-          <SidebarTrigger className="-ml-1" />
-        </header>
+        <DashboardNavbar logoutAction={logout} userName={displayName} />
         <div className="flex-1 overflow-x-hidden p-4">{children}</div>
       </SidebarInset>
     </SidebarProvider>

@@ -10,7 +10,6 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   InfinityIcon,
-  LogOutIcon,
   MessagesSquareIcon,
   PlusIcon,
   Settings2Icon,
@@ -51,7 +50,6 @@ type SidebarProps = {
   brandName: string | null;
   brandIconUrl?: string | null;
   agents: SidebarAgent[];
-  logoutAction: (formData: FormData) => void | Promise<void>;
 };
 
 const primaryNav = [
@@ -73,7 +71,6 @@ export function Sidebar({
   brandName,
   brandIconUrl,
   agents,
-  logoutAction,
 }: SidebarProps) {
   const pathname = usePathname();
 
@@ -256,16 +253,6 @@ export function Sidebar({
           </div>
           <CreditCounter />
         </div>
-
-        <form action={logoutAction}>
-          <button
-            className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            type="submit"
-          >
-            <LogOutIcon className="size-4 shrink-0" />
-            <span>Sign out</span>
-          </button>
-        </form>
       </SidebarFooter>
     </SidebarRoot>
   );
