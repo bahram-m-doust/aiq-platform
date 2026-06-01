@@ -7,13 +7,6 @@ import type {
 
 export const catalogAgentDefinitions = [
   {
-    key: "STORY_TELLER",
-    slug: "story-teller",
-    name: "Story Teller",
-    description:
-      "Narrative development support for strategic brand storytelling.",
-  },
-  {
     key: "IMAGE_GENERATOR",
     slug: "image-generator",
     name: "Image Generator",
@@ -37,9 +30,40 @@ export const catalogAgentDefinitions = [
   {
     key: "BRAND_DIGITAL_ACTIVATION",
     slug: "brand-digital-activation",
-    name: "Brand Digital Activation",
+    name: "Brand Digital Twin",
     description:
       "Digital activation support for applying the Brand Brain across channels.",
+  },
+  {
+    key: "STORY_TELLER",
+    slug: "story-teller",
+    name: "Story Teller",
+    description:
+      "Narrative development support for strategic brand storytelling.",
+  },
+  {
+    key: "AVATAR",
+    slug: "avatar",
+    name: "Avatar",
+    description: "Brand avatar support for on-brand persona generation.",
+  },
+  {
+    key: "DETAIL_DESIGN",
+    slug: "detail-design",
+    name: "Detail Design",
+    description: "Detailed design support for refining brand assets.",
+  },
+  {
+    key: "SECURE_CHAT",
+    slug: "secure-chat",
+    name: "Secure chat",
+    description: "Private, secure conversational support for your brand.",
+  },
+  {
+    key: "BEXLOGIX",
+    slug: "bexlogix",
+    name: "BexLogix",
+    description: "Operational logistics support for brand activation.",
   },
 ] as const satisfies readonly {
   key: CatalogAgentKey;
