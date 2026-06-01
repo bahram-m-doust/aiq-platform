@@ -55,7 +55,7 @@ export default async function DashboardPage({
       : false;
 
     return (
-      <div style={{ background: "var(--bv-bg)", color: "var(--bv-ink)" }}>
+      <div style={{ color: "var(--bv-ink)" }}>
         <BrandBuildView
           email={email}
           intakeCompletion={intakeLocked ? null : intakeCompletion}
