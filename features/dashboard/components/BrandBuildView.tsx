@@ -122,6 +122,19 @@ function PhaseGlyph({ kind }: { kind: string }) {
         />
       </svg>
     );
+  if (kind === "palette")
+    return (
+      <svg aria-hidden="true" height="18" viewBox="0 0 24 24" width="18">
+        <path
+          d="M12 3a9 9 0 0 0 0 18c1.1 0 2-.9 2-2 0-.52-.2-1-.54-1.36-.33-.36-.53-.83-.53-1.34 0-1.1.9-2 2-2h1.6A4.97 4.97 0 0 0 21 9.5C21 5.9 16.97 3 12 3z"
+          {...sProps}
+        />
+        <circle cx="7.5" cy="10.5" fill="white" r="1" stroke="none" />
+        <circle cx="10.5" cy="7.5" fill="white" r="1" stroke="none" />
+        <circle cx="14.5" cy="7.5" fill="white" r="1" stroke="none" />
+        <circle cx="16.5" cy="10.5" fill="white" r="1" stroke="none" />
+      </svg>
+    );
   return null;
 }
 
@@ -157,12 +170,14 @@ const TONE_GRADIENTS: Record<number, string> = {
   1: "linear-gradient(150deg, var(--bv-c1-a), var(--bv-c1-b))",
   2: "linear-gradient(150deg, var(--bv-c2-a), var(--bv-c2-b))",
   3: "linear-gradient(150deg, var(--bv-c3-a), var(--bv-c3-b))",
+  4: "linear-gradient(150deg, var(--bv-c4-a), var(--bv-c4-b))",
 };
 
 const BAR_GRADIENTS: Record<number, string> = {
   1: "linear-gradient(90deg, var(--bv-c1-a), var(--bv-c1-b))",
   2: "linear-gradient(90deg, var(--bv-c2-a), var(--bv-c2-b))",
   3: "linear-gradient(90deg, var(--bv-c3-a), var(--bv-c3-b))",
+  4: "linear-gradient(90deg, var(--bv-c4-a), var(--bv-c4-b))",
 };
 
 function PhaseCard({
@@ -486,7 +501,7 @@ function DetailPage({
               This step is locked until the previous phase wraps. The team picks
               this up once{" "}
               <strong className="text-[var(--bv-ink)]">
-                {phase.phase === 2 ? "Phase 01" : "Phase 02"}
+                {`Phase ${String(phase.phase - 1).padStart(2, "0")}`}
               </strong>{" "}
               is delivered.
             </div>

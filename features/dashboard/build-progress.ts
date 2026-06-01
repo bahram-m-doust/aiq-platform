@@ -19,13 +19,13 @@ export type SubstepProgress = {
 };
 
 export type PhaseProgress = {
-  phase: 1 | 2 | 3;
-  key: "questionnaires" | "strategies" | "brain_build";
+  phase: 1 | 2 | 3 | 4;
+  key: "questionnaires" | "strategies" | "aesthetics" | "brain_build";
   title: string;
   description: string;
   team: string;
   teamVerb: string;
-  iconKind: "clipboard" | "spark" | "chip";
+  iconKind: "clipboard" | "spark" | "palette" | "chip";
   status: PhaseStatus;
   percent: number;
   stepsDone: number;
@@ -40,7 +40,7 @@ export type BrandBuildProgress = {
   stepsDone: number;
   stepsTotal: number;
   activePhase: PhaseProgress | null;
-  phases: [PhaseProgress, PhaseProgress, PhaseProgress];
+  phases: [PhaseProgress, PhaseProgress, PhaseProgress, PhaseProgress];
 };
 
 const MODULE_APPROVED_STATUSES = [
@@ -306,6 +306,43 @@ async function getBrainProgress(brandId: string) {
   return { percent, status, stepsDone: done, stepsTotal: total, substeps };
 }
 
+// Placeholder phase — Aesthetics has no backend yet. It surfaces in the
+// workflow between Strategies and Brain Build; substeps and completion will be
+// wired once the aesthetics pipeline is built.
+function getAestheticsProgress() {
+  const substeps: SubstepProgress[] = [
+    {
+      id: "visual-direction",
+      title: "Visual Direction",
+      description: "Define the brand's visual aesthetic direction.",
+      progress: 0,
+      state: "locked",
+    },
+    {
+      id: "color-type-system",
+      title: "Color & Type System",
+      description: "Establish the brand color palette and typography.",
+      progress: 0,
+      state: "locked",
+    },
+    {
+      id: "asset-library",
+      title: "Asset Library",
+      description: "Curate the brand's core visual assets.",
+      progress: 0,
+      state: "locked",
+    },
+  ];
+
+  return {
+    percent: 0,
+    status: "locked" as PhaseStatus,
+    stepsDone: 0,
+    stepsTotal: substeps.length,
+    substeps,
+  };
+}
+
 export async function getBrandBuildProgress(
   brandId: string,
   brandName: string,
@@ -315,11 +352,18 @@ export async function getBrandBuildProgress(
     getModulesProgress(brandId),
     getBrainProgress(brandId),
   ]);
+  const aesthetics = getAestheticsProgress();
 
   if (intake.status !== "complete") {
     modules.status = modules.stepsDone > 0 ? "active" : "locked";
   }
-  if (modules.status !== "complete") {
+  // Aesthetics unlocks once Strategies (modules) is complete. It has no backend
+  // yet, so it stays "active" (never auto-completes) — Brain Build remains
+  // locked behind it until the aesthetics pipeline ships.
+  if (modules.status === "complete") {
+    aesthetics.status = "active";
+  }
+  if (aesthetics.status !== "complete") {
     brain.status = brain.stepsDone > 0 ? "active" : "locked";
   }
 
@@ -357,10 +401,26 @@ export async function getBrandBuildProgress(
 
   const phase3: PhaseProgress = {
     phase: 3,
+    key: "aesthetics",
+    title: "Aesthetics",
+    description:
+      "Shape the brand's visual language — direction, system and assets — before the brain ships.",
+    team: "Bextudio Design Team",
+    teamVerb: "Crafted",
+    iconKind: "palette",
+    status: aesthetics.status,
+    percent: aesthetics.percent,
+    stepsDone: aesthetics.stepsDone,
+    stepsTotal: aesthetics.stepsTotal,
+    substeps: aesthetics.substeps,
+  };
+
+  const phase4: PhaseProgress = {
+    phase: 4,
     key: "brain_build",
     title: "Brain Build",
     description:
-      "Assemble, train and ship the brand-aware model — locked until strategy lands.",
+      "Assemble, train and ship the brand-aware model — locked until aesthetics lands.",
     team: "Bextudio AI Team",
     teamVerb: "Engineered",
     iconKind: "chip",
@@ -371,14 +431,19 @@ export async function getBrandBuildProgress(
     substeps: brain.substeps,
   };
 
-  const phases: [PhaseProgress, PhaseProgress, PhaseProgress] = [
-    phase1,
-    phase2,
-    phase3,
-  ];
+  const phases: [
+    PhaseProgress,
+    PhaseProgress,
+    PhaseProgress,
+    PhaseProgress,
+  ] = [phase1, phase2, phase3, phase4];
   const totalSteps =
-    phase1.stepsTotal + phase2.stepsTotal + phase3.stepsTotal;
-  const doneSteps = phase1.stepsDone + phase2.stepsDone + phase3.stepsDone;
+    phase1.stepsTotal +
+    phase2.stepsTotal +
+    phase3.stepsTotal +
+    phase4.stepsTotal;
+  const doneSteps =
+    phase1.stepsDone + phase2.stepsDone + phase3.stepsDone + phase4.stepsDone;
   const overallPercent =
     totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0;
   const activePhase =
