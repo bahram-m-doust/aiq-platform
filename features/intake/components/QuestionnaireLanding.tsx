@@ -140,21 +140,16 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
                 style={{ borderColor: "var(--bv-line)" }}
               >
                 <div className="flex items-center gap-4">
-                  <span
-                    className="grid size-7 shrink-0 place-items-center rounded-full border text-[12px] font-medium text-[var(--bv-ink-3)]"
-                    style={{
-                      borderColor: "var(--bv-line-2)",
-                      background: "var(--bv-card-soft)",
-                    }}
-                  >
-                    {index + 1}
-                  </span>
-
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3">
-                      <h2 className="truncate text-[15px] font-semibold tracking-[-0.005em]">
-                        {section.title}
-                      </h2>
+                      <div className="flex min-w-0 items-baseline gap-2.5">
+                        <span className="shrink-0 text-[15px] font-semibold tracking-[-0.005em] text-[var(--bv-ink-4)]">
+                          {index + 1}
+                        </span>
+                        <h2 className="truncate text-[15px] font-semibold tracking-[-0.005em]">
+                          {section.title}
+                        </h2>
+                      </div>
                       <span
                         className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider whitespace-nowrap"
                         style={STATE_STYLE[state]}
