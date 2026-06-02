@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon, CheckCircleIcon, LockIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   calculateIntakeCompletion,
@@ -93,53 +92,27 @@ export function SectionQuestionnaire({
         </div>
 
         {/* Section header */}
-        <div
-          className="mb-6 overflow-hidden rounded-[20px] border p-6"
-          style={{
-            background: "var(--bv-card)",
-            borderColor: "var(--bv-line)",
-            boxShadow: "var(--bv-shadow-card)",
-          }}
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span
-                className="grid size-9 place-items-center rounded-lg text-sm font-semibold text-white"
-                style={{
-                  background:
-                    "linear-gradient(150deg, var(--bv-c1-a), var(--bv-c1-b))",
-                  boxShadow:
-                    "0 3px 10px -3px rgba(15,15,20,0.25), inset 0 1px 0 rgba(255,255,255,0.35)",
-                }}
-              >
-                {sectionIndex}
-              </span>
-              <div>
-                <h1 className="text-xl font-semibold tracking-[-0.01em]">
-                  {section.title}
-                </h1>
-                {section.description && (
-                  <p className="mt-0.5 text-sm text-[var(--bv-ink-3)]">
-                    {section.description}
-                  </p>
-                )}
-              </div>
-            </div>
-            <span className="flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
-              <span
-                className="inline-block size-[5px] rounded-full"
-                style={{
-                  background:
-                    sectionPercent === 100
-                      ? "#2bc78a"
-                      : "var(--bv-c1-b)",
-                }}
-              />
-              Phase 01
+        <div className="mb-9">
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
+            Brand Research · Phase 01
+          </span>
+
+          <div className="mt-1.5 flex items-baseline gap-2.5">
+            <span className="shrink-0 text-2xl font-semibold tracking-[-0.02em] text-[var(--bv-ink-4)]">
+              {sectionIndex}
             </span>
+            <h1 className="text-2xl font-semibold tracking-[-0.02em]">
+              {section.title}
+            </h1>
           </div>
 
-          <div className="mb-3 flex items-center gap-3">
+          {section.description && (
+            <p className="mt-2 max-w-[640px] text-sm leading-relaxed text-[var(--bv-ink-3)]">
+              {section.description}
+            </p>
+          )}
+
+          <div className="mt-5 flex items-center gap-3">
             <div className="flex-1">
               <ProgressBar color="orange" value={sectionPercent} />
             </div>
@@ -150,7 +123,7 @@ export function SectionQuestionnaire({
 
           {locked && (
             <div
-              className="mb-3 flex items-center gap-2 rounded-[12px] border border-dashed px-3.5 py-2.5 text-[13px] text-[var(--bv-ink-2)]"
+              className="mt-4 flex items-center gap-2 rounded-[12px] border border-dashed px-3.5 py-2.5 text-[13px] text-[var(--bv-ink-2)]"
               style={{ borderColor: "var(--bv-line-2)" }}
             >
               <LockIcon className="size-3.5 shrink-0" />
@@ -160,8 +133,8 @@ export function SectionQuestionnaire({
           )}
 
           {/* Section nav pills */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-            {allSections.map((s, i) => {
+          <div className="mt-5 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            {allSections.map((s) => {
               const isActive = s.id === section.id;
               const sIds = s.questions.map((q) => q.id);
               const sDone = sIds.filter((id) =>
@@ -194,7 +167,7 @@ export function SectionQuestionnaire({
         <div className="space-y-4">
           {section.questions.length === 0 ? (
             <div
-              className="rounded-[16px] border p-6 text-center text-sm text-[var(--bv-ink-3)]"
+              className="rounded-xl border p-6 text-center text-sm text-[var(--bv-ink-3)]"
               style={{
                 background: "var(--bv-card)",
                 borderColor: "var(--bv-line)",
@@ -205,12 +178,11 @@ export function SectionQuestionnaire({
           ) : (
             section.questions.map((question, i) => (
               <div
-                className="overflow-hidden rounded-[16px] border transition-shadow hover:shadow-md"
+                className="overflow-hidden rounded-xl border"
                 key={question.id}
                 style={{
                   background: "var(--bv-card)",
                   borderColor: "var(--bv-line)",
-                  boxShadow: "var(--bv-shadow-card)",
                 }}
               >
                 <div className="px-5 pt-4 pb-1">
