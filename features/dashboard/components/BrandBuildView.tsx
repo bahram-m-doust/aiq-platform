@@ -711,7 +711,7 @@ export function BrandBuildView({
         <h2 className="mb-3 text-[clamp(20px,2.6vw,26px)] font-semibold leading-[1.15] tracking-[-0.02em] text-[var(--bv-ink)]">
           Building your Brand Brain, together
         </h2>
-        <p className="text-[15px] leading-relaxed text-[var(--bv-ink-2)]">
+        <p className="max-w-[620px] text-[15px] leading-relaxed text-[var(--bv-ink-2)]">
           This roadmap is how we build your{" "}
           <strong className="font-medium text-[var(--bv-ink)]">
             Brand Brain
