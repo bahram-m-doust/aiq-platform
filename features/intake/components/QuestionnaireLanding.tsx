@@ -8,7 +8,10 @@ import {
 
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { FinalSubmitReadiness } from "@/features/intake/components/FinalSubmitReadiness";
-import { isIntakeSessionLocked } from "@/features/intake/schemas";
+import {
+  canApproveIntakeRole,
+  isIntakeSessionLocked,
+} from "@/features/intake/schemas";
 import type {
   IntakePageData,
   IntakeSectionProgress,
@@ -48,8 +51,9 @@ const STATE_LABEL: Record<SectionState, string> = {
 };
 
 export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
-  const { sections, completion, session } = data;
+  const { sections, completion, session, access } = data;
   const locked = isIntakeSessionLocked(session);
+  const canApprove = canApproveIntakeRole(access.membershipRole);
   const progressByKey = new Map(
     completion.sections.map((s) => [s.sectionKey, s]),
   );
@@ -225,6 +229,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
         {!locked && (
           <div className="mt-8">
             <FinalSubmitReadiness
+              canApprove={canApprove}
               completion={completion}
               sessionId={session.id}
             />

@@ -60,6 +60,13 @@ export function canAnswerIntakeRole(role: string | null | undefined) {
   return role === "OWNER" || role === "EXECUTIVE_MANAGER";
 }
 
+// Only the brand Owner may approve and lock the questionnaire. Executive
+// managers can fill answers but cannot finalize. (PLATFORM_OWNER receives a
+// synthetic "OWNER" membership role via getIntakeAccessForProfile.)
+export function canApproveIntakeRole(role: string | null | undefined) {
+  return role === "OWNER";
+}
+
 export function isIntakeSessionLocked(session: IntakeSession) {
   return session.status === "LOCKED" || Boolean(session.lockedAt);
 }

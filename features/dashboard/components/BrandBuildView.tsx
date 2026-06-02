@@ -611,11 +611,13 @@ export function BrandBuildView({
   email,
   intakeCompletion,
   intakeSessionId,
+  intakeCanApprove = false,
 }: {
   progress: BrandBuildProgress;
   email: string;
   intakeCompletion?: IntakeCompletion | null;
   intakeSessionId?: string | null;
+  intakeCanApprove?: boolean;
 }) {
   const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({});
   const [detail, setDetail] = useState<{
@@ -875,6 +877,7 @@ export function BrandBuildView({
                     submitSlot={
                       isPhase1ReadyToSubmit && intakeCompletion && intakeSessionId ? (
                         <FinalSubmitReadiness
+                          canApprove={intakeCanApprove}
                           completion={intakeCompletion}
                           sessionId={intakeSessionId}
                         />

@@ -343,7 +343,9 @@ describe("intake UI components", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Submit/ })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: /Approve & Lock/ }),
+    ).toBeEnabled();
   });
 
   it("shows the final submit confirmation copy in the modal", async () => {
@@ -368,12 +370,40 @@ describe("intake UI components", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Submit/ }));
+    await user.click(screen.getByRole("button", { name: /Approve & Lock/ }));
 
     expect(screen.getByText(finalSubmitConfirmationCopy)).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Confirm" }),
     ).toBeVisible();
+  });
+
+  it("hides the approve button for non-owners and shows an awaiting note", () => {
+    render(
+      <FinalSubmitReadiness
+        canApprove={false}
+        completion={completion({
+          answeredQuestions: 2,
+          completionPercent: 100,
+          sections: [
+            {
+              sectionId: "section-1",
+              sectionKey: "COMPANY",
+              title: "Company",
+              totalQuestions: 2,
+              answeredQuestions: 2,
+              completionPercent: 100,
+            },
+          ],
+        })}
+        sessionId="session-1"
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /Approve & Lock/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/awaiting your brand/i)).toBeVisible();
   });
 
   it("renders locked intake answers without editable controls", () => {

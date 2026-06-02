@@ -3,7 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowRightIcon, SparklesIcon } from "lucide-react";
+import { ArrowRightIcon, CheckCircleIcon, SparklesIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DSButton } from "@/components/ds/Button";
@@ -39,9 +39,11 @@ function ConfirmSubmitButton() {
 export function FinalSubmitReadiness({
   completion,
   sessionId,
+  canApprove = true,
 }: {
   completion: IntakeCompletion;
   sessionId: string;
+  canApprove?: boolean;
 }) {
   const router = useRouter();
   const [state, formAction] = useActionState(
@@ -58,6 +60,23 @@ export function FinalSubmitReadiness({
   }, [router, state.status]);
 
   if (!isReady) return null;
+
+  // Everything is answered, but only the brand Owner can approve & lock.
+  if (!canApprove) {
+    return (
+      <div
+        className="flex items-center gap-2.5 rounded-[14px] border border-dashed px-4 py-3 text-[13px] text-[var(--bv-ink-2)]"
+        style={{ borderColor: "var(--bv-line-2)" }}
+      >
+        <CheckCircleIcon className="size-4 shrink-0 text-emerald-500" />
+        <span>
+          All sections are complete — awaiting your brand{" "}
+          <strong className="font-medium text-[var(--bv-ink)]">Owner</strong>{" "}
+          to approve and lock the questionnaire.
+        </span>
+      </div>
+    );
+  }
 
   return (
     <Dialog>
@@ -85,13 +104,13 @@ export function FinalSubmitReadiness({
             }}
           />
           <SparklesIcon className="relative size-4" />
-          <span className="relative">Submit Questionnaire</span>
+          <span className="relative">Approve &amp; Lock</span>
           <ArrowRightIcon className="relative size-4 transition-transform duration-300 group-hover:translate-x-0.5" />
         </button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Submit questionnaire</DialogTitle>
+          <DialogTitle>Approve &amp; lock questionnaire</DialogTitle>
           <DialogDescription>{finalSubmitConfirmationCopy}</DialogDescription>
         </DialogHeader>
         <form action={formAction} className="space-y-4">
