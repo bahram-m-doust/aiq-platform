@@ -393,7 +393,9 @@ function PhaseCard({
                 <div className="flex items-center justify-between">
                   {effectiveState === "locked" ? (
                     <span className="text-[10px] text-[var(--bv-ink-4)]">
-                      Unlocks after Phase {String(phase.phase - 1).padStart(2, "0")}
+                      {isLocked
+                        ? `Unlocks after Phase ${String(phase.phase - 1).padStart(2, "0")}`
+                        : "Coming soon"}
                     </span>
                   ) : <span />}
                   <StatePill state={effectiveState} />
@@ -675,7 +677,7 @@ export function BrandBuildView({
     (phase: PhaseProgress, substep: SubstepProgress, state: SubstepState) => {
       if (state === "locked") return;
       if (phase.key === "questionnaires") {
-        window.location.href = `/dashboard/questionnaire/${substep.id}`;
+        window.location.href = "/dashboard/questionnaire";
         return;
       }
       if (phase.key === "strategies") {
