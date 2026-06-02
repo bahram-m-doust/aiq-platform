@@ -705,34 +705,7 @@ export function BrandBuildView({
       </div>
 
       {/* ── Top Bar ── */}
-      <div className="mb-14 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            className="relative size-8 rounded-[9px]"
-            style={{
-              background: "linear-gradient(135deg, #0e0e14, #2a2a36)",
-              boxShadow:
-                "0 2px 6px rgba(15,15,20,0.18), inset 0 0 0 1px rgba(255,255,255,0.05)",
-            }}
-          >
-            <div
-              className="absolute inset-[7px] rounded"
-              style={{
-                background:
-                  "linear-gradient(135deg, #ff8a5b, #2a7cff 60%, #2bc78a)",
-                opacity: 0.92,
-              }}
-            />
-          </div>
-          <div>
-            <div className="text-[15px] font-semibold tracking-[-0.012em]">
-              Brand Brain
-            </div>
-            <div className="mt-px font-mono text-[11.5px] tracking-wider text-[var(--bv-ink-3)]">
-              bextudio · build view
-            </div>
-          </div>
-        </div>
+      <div className="mb-14 flex items-center justify-end">
         <div className="flex items-center gap-4 text-[12.5px] text-[var(--bv-ink-3)]">
           <span
             className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 font-mono text-[11px] tracking-wider text-[var(--bv-ink-2)] shadow-sm"
@@ -751,26 +724,9 @@ export function BrandBuildView({
         </div>
       </div>
 
-      {/* ── Panel ── */}
-      <div
-        className="relative overflow-hidden rounded-[20px] border px-4 pb-8 pt-7 sm:rounded-[28px] sm:px-7 sm:pb-11 sm:pt-9"
-        style={{
-          background: "var(--bv-panel)",
-          borderColor: "var(--bv-panel-edge)",
-          boxShadow: "var(--bv-shadow-panel)",
-          animation: "bv-fade-in 600ms var(--bv-ease)",
-        }}
-      >
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: `radial-gradient(700px 360px at 50% -20%, rgba(255,255,255,0.95), transparent 65%),
-                         radial-gradient(900px 600px at 100% 100%, rgba(231,232,240,0.4), transparent 60%)`,
-          }}
-        />
-
-        <div className="relative z-10">
-          {/* Hub */}
+      {/* ── Build content ── */}
+      <div style={{ animation: "bv-fade-in 600ms var(--bv-ease)" }}>
+        {/* Hub */}
           <div className="mb-7 flex w-full items-center justify-center">
             <div
               className="relative inline-flex items-center gap-3.5 rounded-[8px] border bg-white py-[9px] pl-[15px] pr-[23px]"
@@ -927,8 +883,6 @@ export function BrandBuildView({
             })}
           </div>
         </div>
-      </div>
-
       {/* ── Caption ── */}
       <section className="max-w-[720px] px-1 pt-10">
         <span className="mb-3.5 inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
