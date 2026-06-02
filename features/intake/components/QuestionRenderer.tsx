@@ -113,6 +113,9 @@ export function QuestionRenderer({
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
   const [lastSavedValue, setLastSavedValue] = useState<unknown>(null);
+  // Baseline of the last persisted value, so blur doesn't re-save an
+  // unchanged field (e.g. focusing then leaving without typing).
+  const [savedValue, setSavedValue] = useState<IntakeAnswerValue>(value);
   const kind = resolveQuestionInputKind(question.inputType);
   const options = useMemo(
     () => parseQuestionOptions(question.validationSchema),
@@ -137,6 +140,7 @@ export function QuestionRenderer({
       }
 
       setLocalValue(result.value);
+      setSavedValue(result.value);
       setStatus("saved");
       setMessage("");
       onSaved?.(question.id, result.value);
@@ -147,6 +151,13 @@ export function QuestionRenderer({
     if (lastSavedValue !== null) {
       save(lastSavedValue);
     }
+  }
+
+  // For free-text inputs, only autosave on blur when the value actually
+  // changed from what's already persisted — avoids saving an untouched field.
+  function handleTextBlur() {
+    if (valueToString(localValue) === valueToString(savedValue)) return;
+    save(localValue);
   }
 
   function renderControl() {
@@ -250,7 +261,7 @@ export function QuestionRenderer({
           aria-invalid={status === "error"}
           dir={detectDir(localValue)}
           id={controlId}
-          onBlur={() => save(localValue)}
+          onBlur={handleTextBlur}
           onChange={(event) => {
             setStatus("idle");
             setLocalValue(event.target.value);

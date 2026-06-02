@@ -316,6 +316,58 @@ describe("intake UI components", () => {
     expect(screen.getByText("Use concise executive language.")).toBeVisible();
   });
 
+  it("does not autosave a free-text field on blur when nothing changed", async () => {
+    const user = userEvent.setup();
+    const autosave = vi.fn();
+    render(
+      <QuestionRenderer
+        autosaveAction={autosave}
+        question={question}
+        sessionId="session-1"
+        value={null}
+      />,
+    );
+
+    const field = screen.getByLabelText(
+      "What is the strategic role of the company?",
+    );
+    await user.click(field);
+    await user.tab();
+
+    expect(autosave).not.toHaveBeenCalled();
+  });
+
+  it("autosaves a free-text field on blur after a real change", async () => {
+    const user = userEvent.setup();
+    const autosave = vi.fn().mockResolvedValue({
+      ok: true,
+      questionId: "question-1",
+      value: "A considered answer",
+      completionPercent: 50,
+    });
+    render(
+      <QuestionRenderer
+        autosaveAction={autosave}
+        question={question}
+        sessionId="session-1"
+        value={null}
+      />,
+    );
+
+    const field = screen.getByLabelText(
+      "What is the strategic role of the company?",
+    );
+    await user.click(field);
+    await user.type(field, "A considered answer");
+    await user.tab();
+
+    expect(autosave).toHaveBeenCalledWith({
+      sessionId: "session-1",
+      questionId: "question-1",
+      value: "A considered answer",
+    });
+  });
+
   it("hides Submit below 100 percent and shows at 100", () => {
     const { rerender, container } = render(
       <FinalSubmitReadiness completion={completion()} sessionId="session-1" />,
