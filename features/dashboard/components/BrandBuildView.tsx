@@ -699,15 +699,8 @@ export function BrandBuildView({
       className="w-full px-6 pb-16 pt-6 sm:pb-24"
       style={{ color: "var(--bv-ink)" }}
     >
-      {/* ── Welcome ── */}
-      <div className="mb-4">
-        <h1 className="text-[20px] font-semibold leading-none tracking-[-0.12px] text-foreground">
-          Welcome to {progress.brandName} City
-        </h1>
-      </div>
-
       {/* ── Roadmap intro ── */}
-      <section className="mb-12 max-w-[640px]">
+      <section className="mb-12 w-[calc(50%+328px)] max-w-full">
         <span className="mb-3.5 inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
           <span
             className="inline-block h-px w-[18px]"
