@@ -773,36 +773,29 @@ export function BrandBuildView({
           {/* Hub */}
           <div className="mb-7 flex w-full items-center justify-center">
             <div
-              className="relative inline-flex items-center gap-3 rounded-full border bg-white px-5 py-3"
+              className="relative inline-flex items-center gap-3.5 rounded-[8px] border bg-white py-[9px] pl-[15px] pr-[23px]"
               style={{
                 borderColor: "var(--bv-line)",
                 boxShadow: "var(--bv-shadow-hub)",
               }}
             >
               {!activePhase && (
-                <span
+                <svg
                   aria-hidden="true"
-                  className="flex size-9 items-center justify-center rounded-full"
-                  style={{
-                    background: "var(--bv-panel)",
-                    color: "var(--bv-ink-3)",
-                  }}
+                  className="shrink-0"
+                  fill="none"
+                  height="15"
+                  stroke="#2bc78a"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                  viewBox="0 0 24 24"
+                  width="15"
                 >
-                  <svg
-                    fill="none"
-                    height="14"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2.5"
-                    viewBox="0 0 24 24"
-                    width="14"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </span>
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               )}
-              <span className="text-[15px] font-medium tracking-[-0.01em] whitespace-nowrap">
+              <span className="text-[15px] font-medium tracking-[-0.01em] whitespace-nowrap text-[var(--bv-ink)]">
                 {activePhase ? (
                   <>
                     Building{" "}
@@ -817,6 +810,15 @@ export function BrandBuildView({
                   </>
                 )}
               </span>
+              {activePhase && (
+                <span
+                  className="border-l pl-[15px] font-mono text-[10.5px] uppercase tracking-[0.07em] whitespace-nowrap text-[var(--bv-ink-3)]"
+                  style={{ borderColor: "var(--bv-line)" }}
+                >
+                  {activePhase.percent}% · {activePhase.stepsDone}/
+                  {activePhase.stepsTotal}
+                </span>
+              )}
             </div>
           </div>
 
