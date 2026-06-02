@@ -1,10 +1,5 @@
 import Link from "next/link";
-import {
-  ArrowLeftIcon,
-  ArrowRightIcon,
-  CheckCircleIcon,
-  LockIcon,
-} from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, LockIcon } from "lucide-react";
 
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { FinalSubmitReadiness } from "@/features/intake/components/FinalSubmitReadiness";
@@ -82,41 +77,19 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
           </span>
         </div>
 
-        {/* Header card */}
-        <div
-          className="mb-6 overflow-hidden rounded-[20px] border p-6"
-          style={{
-            background: "var(--bv-card)",
-            borderColor: "var(--bv-line)",
-            boxShadow: "var(--bv-shadow-card)",
-          }}
-        >
-          <div className="flex items-start gap-3">
-            <span
-              className="grid size-9 shrink-0 place-items-center rounded-lg text-sm font-semibold text-white"
-              style={{
-                background:
-                  "linear-gradient(150deg, var(--bv-c1-a), var(--bv-c1-b))",
-                boxShadow:
-                  "0 3px 10px -3px rgba(15,15,20,0.25), inset 0 1px 0 rgba(255,255,255,0.35)",
-              }}
-            >
-              <CheckCircleIcon className="size-5" />
-            </span>
-            <div className="min-w-0">
-              <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
-                Brand Research · Phase 01
-              </span>
-              <h1 className="mt-0.5 text-xl font-semibold tracking-[-0.01em]">
-                Questionnaires
-              </h1>
-              <p className="mt-1 text-sm leading-relaxed text-[var(--bv-ink-3)]">
-                Six short sections capture the raw signal behind your brand —
-                voice, audience, market and ambition. Pick any section to start;
-                your answers save automatically as you go.
-              </p>
-            </div>
-          </div>
+        {/* Page header */}
+        <div className="mb-9">
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
+            Brand Research · Phase 01
+          </span>
+          <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.02em]">
+            Questionnaires
+          </h1>
+          <p className="mt-2 max-w-[640px] text-sm leading-relaxed text-[var(--bv-ink-3)]">
+            Six short sections capture the raw signal behind your brand —
+            voice, audience, market and ambition. Pick any section to start;
+            your answers save automatically as you go.
+          </p>
 
           <div className="mt-5 flex items-center gap-3">
             <div className="flex-1">
@@ -149,7 +122,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
           </span>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {sections.map((section, index) => {
             const progress = progressByKey.get(section.key);
             const total = progress?.totalQuestions ?? section.questions.length;
@@ -161,31 +134,20 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
 
             return (
               <Link
-                className="group block overflow-hidden rounded-[16px] border bg-[var(--bv-card)] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--bv-line-2)] hover:shadow-md"
+                className="group block overflow-hidden rounded-xl border bg-[var(--bv-card)] p-5 transition-all duration-200 hover:border-[var(--bv-line-2)] hover:shadow-sm"
                 href={`/dashboard/questionnaire/${section.key}`}
                 key={section.id}
-                style={{
-                  borderColor: "var(--bv-line)",
-                  boxShadow: "var(--bv-shadow-card)",
-                }}
+                style={{ borderColor: "var(--bv-line)" }}
               >
                 <div className="flex items-center gap-4">
                   <span
-                    className="grid size-9 shrink-0 place-items-center rounded-lg text-sm font-semibold text-white"
+                    className="grid size-7 shrink-0 place-items-center rounded-full border text-[12px] font-medium text-[var(--bv-ink-3)]"
                     style={{
-                      background:
-                        state === "done"
-                          ? "linear-gradient(150deg, var(--bv-c3-a), var(--bv-c3-b))"
-                          : "linear-gradient(150deg, var(--bv-c1-a), var(--bv-c1-b))",
-                      boxShadow:
-                        "0 3px 10px -3px rgba(15,15,20,0.25), inset 0 1px 0 rgba(255,255,255,0.35)",
+                      borderColor: "var(--bv-line-2)",
+                      background: "var(--bv-card-soft)",
                     }}
                   >
-                    {state === "done" ? (
-                      <CheckCircleIcon className="size-5" />
-                    ) : (
-                      index + 1
-                    )}
+                    {index + 1}
                   </span>
 
                   <div className="min-w-0 flex-1">
