@@ -166,12 +166,20 @@ async function getIntakeProgress(brandId: string) {
     },
   ];
 
+  // The phase only completes when every substep is done. Stakeholder
+  // Interviews and Futures Research are required, so until their pipelines
+  // ship the phase stays active and Strategies remains locked behind it.
+  const allSubstepsDone = substeps.every((s) => s.state === "done");
+  const phasePercent = Math.round(
+    substeps.reduce((sum, s) => sum + s.progress, 0) / substeps.length,
+  );
+
   let status: PhaseStatus = "locked";
-  if (isLocked) status = "complete";
+  if (allSubstepsDone) status = "complete";
   else if (percent > 0 || session) status = "active";
 
   return {
-    percent,
+    percent: phasePercent,
     status,
     stepsDone: answeredCount,
     stepsTotal: totalQuestions,
