@@ -694,7 +694,7 @@ export function BrandBuildView({
 
   return (
     <div
-      className="max-w-[1180px] px-6 pb-16 pt-6 sm:pb-24"
+      className="w-full px-6 pb-16 pt-6 sm:pb-24"
       style={{ color: "var(--bv-ink)" }}
     >
       {/* ── Welcome ── */}
@@ -705,7 +705,10 @@ export function BrandBuildView({
       </div>
 
       {/* ── Build content ── */}
-      <div style={{ animation: "bv-fade-in 600ms var(--bv-ease)" }}>
+      <div
+        className="mx-auto w-full max-w-[656px]"
+        style={{ animation: "bv-fade-in 600ms var(--bv-ease)" }}
+      >
         {/* Hub */}
           <div className="mb-16 pl-14 max-sm:pl-9">
             <div className="flex w-full max-w-[600px] items-center justify-center">
