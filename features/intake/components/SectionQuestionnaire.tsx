@@ -66,14 +66,14 @@ export function SectionQuestionnaire({
         <div className="mb-6 flex items-center justify-between">
           <Link
             className="inline-flex items-center gap-2 rounded-full border bg-white px-3.5 py-2 text-[13px] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-            href="/dashboard"
+            href="/dashboard/questionnaire"
             style={{
               borderColor: "var(--bv-line)",
               color: "var(--bv-ink-2)",
             }}
           >
             <ArrowLeftIcon className="size-3.5" />
-            Dashboard
+            All sections
           </Link>
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
             Section {sectionIndex} of {allSections.length} · {sectionAnswered}/{sectionTotal} answered
@@ -216,10 +216,10 @@ export function SectionQuestionnaire({
         >
           <Link
             className="inline-flex items-center gap-2 text-sm text-[var(--bv-ink-3)] transition-colors hover:text-[var(--bv-ink)]"
-            href="/dashboard"
+            href="/dashboard/questionnaire"
           >
             <ArrowLeftIcon className="size-3.5" />
-            Dashboard
+            All sections
           </Link>
 
           {sectionIndex < allSections.length ? (
