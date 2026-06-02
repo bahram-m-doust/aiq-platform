@@ -694,7 +694,7 @@ export function BrandBuildView({
 
   return (
     <div
-      className="mx-auto max-w-[1180px] px-4 pb-16 pt-6 sm:px-7 sm:pb-24"
+      className="max-w-[1180px] px-6 pb-16 pt-6 sm:pb-24"
       style={{ color: "var(--bv-ink)" }}
     >
       {/* ── Welcome ── */}
@@ -707,7 +707,8 @@ export function BrandBuildView({
       {/* ── Build content ── */}
       <div style={{ animation: "bv-fade-in 600ms var(--bv-ease)" }}>
         {/* Hub */}
-          <div className="mb-16 flex w-full items-center justify-center">
+          <div className="mb-16 pl-14 max-sm:pl-9">
+            <div className="flex w-full max-w-[600px] items-center justify-center">
             <div className="relative inline-flex items-center gap-3.5 rounded-[8px] border border-border bg-card py-2 pl-[14px] pr-[22px] shadow-lg">
               {!activePhase && (
                 <svg
@@ -749,6 +750,7 @@ export function BrandBuildView({
                   {activePhase.stepsTotal}
                 </span>
               )}
+            </div>
             </div>
           </div>
 
