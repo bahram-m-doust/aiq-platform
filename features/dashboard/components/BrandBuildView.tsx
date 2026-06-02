@@ -698,11 +698,40 @@ export function BrandBuildView({
       style={{ color: "var(--bv-ink)" }}
     >
       {/* ── Welcome ── */}
-      <div className="mb-[52px]">
+      <div className="mb-4">
         <h1 className="text-[20px] font-semibold leading-none tracking-[-0.12px] text-foreground">
           Welcome to {progress.brandName} City
         </h1>
       </div>
+
+      {/* ── Roadmap intro ── */}
+      <section className="mb-12 max-w-[640px]">
+        <span className="mb-3.5 inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
+          <span
+            className="inline-block h-px w-[18px]"
+            style={{ background: "var(--bv-line-2)" }}
+          />
+          Brand Brain · build roadmap
+        </span>
+        <h2 className="mb-3 text-[clamp(20px,2.6vw,26px)] font-semibold leading-[1.15] tracking-[-0.02em] text-[var(--bv-ink)]">
+          Building your Brand Brain, together
+        </h2>
+        <p className="text-[15px] leading-relaxed text-[var(--bv-ink-2)]">
+          This roadmap is how we build your{" "}
+          <strong className="font-medium text-[var(--bv-ink)]">
+            Brand Brain
+          </strong>{" "}
+          — a brand-aware AI that thinks, writes, and decides the way your
+          brand would. It comes together as a partnership: you bring the raw
+          signal and direction, and the{" "}
+          <strong className="font-medium text-[var(--bv-ink)]">
+            Bextudio
+          </strong>{" "}
+          team turns it into strategy, aesthetics, and a trained brand model.
+          Each phase below is completed hand in hand and unlocks the next, so
+          they move in order — every phase builds on the one before it.
+        </p>
+      </section>
 
       {/* ── Build content ── */}
       <div
@@ -862,25 +891,6 @@ export function BrandBuildView({
             })}
           </div>
         </div>
-      {/* ── Caption ── */}
-      <section className="max-w-[720px] px-1 pt-10">
-        <span className="mb-3.5 inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
-          <span
-            className="inline-block h-px w-[18px]"
-            style={{ background: "var(--bv-line-2)" }}
-          />
-          Brand Brain · build roadmap
-        </span>
-        <h2 className="mb-3.5 text-[clamp(22px,2.8vw,30px)] font-semibold leading-[1.1] tracking-[-0.024em] text-[var(--bv-ink)]">
-          Four phases. One brand-aware brain.
-        </h2>
-        <p className="max-w-[560px] text-base leading-relaxed text-[var(--bv-ink-2)]">
-          Brand Brain is built in sequence — first the brand tells us who it is,
-          then strategy makes it operable, then aesthetics give it a face, and
-          finally the AI team makes it speak.
-        </p>
-      </section>
-
       {/* ── Detail overlay ── */}
       {detail && (
         <DetailPage
