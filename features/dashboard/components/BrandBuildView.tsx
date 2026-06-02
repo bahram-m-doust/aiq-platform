@@ -694,47 +694,21 @@ export function BrandBuildView({
 
   return (
     <div
-      className="mx-auto max-w-[1180px] px-4 pb-16 pt-6 sm:px-7 sm:pb-24 sm:pt-10"
+      className="mx-auto max-w-[1180px] px-4 pb-16 pt-6 sm:px-7 sm:pb-24"
       style={{ color: "var(--bv-ink)" }}
     >
       {/* ── Welcome ── */}
-      <div className="mb-8">
-        <h1 className="text-[clamp(24px,3vw,32px)] font-semibold tracking-[-0.02em] text-[var(--bv-ink)]">
+      <div className="mb-[52px]">
+        <h1 className="text-[20px] font-semibold leading-none tracking-[-0.12px] text-foreground">
           Welcome to {progress.brandName} City
         </h1>
-      </div>
-
-      {/* ── Top Bar ── */}
-      <div className="mb-14 flex items-center justify-end">
-        <div className="flex items-center gap-4 text-[12.5px] text-[var(--bv-ink-3)]">
-          <span
-            className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 font-mono text-[11px] tracking-wider text-[var(--bv-ink-2)] shadow-sm"
-            style={{ borderColor: "var(--bv-line)" }}
-          >
-            <span
-              className="size-1.5 rounded-full"
-              style={{
-                background: "#2bc78a",
-                boxShadow: "0 0 0 4px rgba(43,199,138,0.18)",
-                animation: "bv-live-pulse 1.8s var(--bv-ease) infinite",
-              }}
-            />
-            Live
-          </span>
-        </div>
       </div>
 
       {/* ── Build content ── */}
       <div style={{ animation: "bv-fade-in 600ms var(--bv-ease)" }}>
         {/* Hub */}
-          <div className="mb-7 flex w-full items-center justify-center">
-            <div
-              className="relative inline-flex items-center gap-3.5 rounded-[8px] border bg-white py-[9px] pl-[15px] pr-[23px]"
-              style={{
-                borderColor: "var(--bv-line)",
-                boxShadow: "var(--bv-shadow-hub)",
-              }}
-            >
+          <div className="mb-16 flex w-full items-center justify-center">
+            <div className="relative inline-flex items-center gap-3.5 rounded-[8px] border border-border bg-card py-2 pl-[14px] pr-[22px] shadow-lg">
               {!activePhase && (
                 <svg
                   aria-hidden="true"
@@ -814,7 +788,7 @@ export function BrandBuildView({
 
               return (
                 <div
-                  className="relative mb-3 last:mb-0"
+                  className="relative mb-16 last:mb-0"
                   key={p.key}
                 >
                   <div
