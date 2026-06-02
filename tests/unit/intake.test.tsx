@@ -316,6 +316,25 @@ describe("intake UI components", () => {
     expect(screen.getByText("Use concise executive language.")).toBeVisible();
   });
 
+  it("collapses an answered question to read-only with an Edit affordance", async () => {
+    const user = userEvent.setup();
+    render(
+      <QuestionRenderer
+        autosaveAction={vi.fn()}
+        question={question}
+        sessionId="session-1"
+        value="An existing answer"
+      />,
+    );
+
+    expect(screen.getByText("An existing answer")).toBeVisible();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Edit/ }));
+
+    expect(screen.getByRole("textbox")).toBeVisible();
+  });
+
   it("does not autosave a free-text field on blur when nothing changed", async () => {
     const user = userEvent.setup();
     const autosave = vi.fn();

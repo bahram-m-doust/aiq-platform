@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { CheckIcon, AlertCircleIcon, LoaderIcon } from "lucide-react";
+import {
+  CheckIcon,
+  AlertCircleIcon,
+  LoaderIcon,
+  PencilIcon,
+} from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -16,6 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { autosaveIntakeAnswerAction } from "@/features/intake/actions";
 import {
+  isIntakeAnswerComplete,
   parseQuestionOptions,
   resolveQuestionInputKind,
 } from "@/features/intake/schemas";
@@ -116,6 +122,9 @@ export function QuestionRenderer({
   // Baseline of the last persisted value, so blur doesn't re-save an
   // unchanged field (e.g. focusing then leaving without typing).
   const [savedValue, setSavedValue] = useState<IntakeAnswerValue>(value);
+  // Hybrid edit model: answered questions collapse to a read-only view with
+  // an Edit button. Answers still autosave under the hood (on blur / change).
+  const [isEditing, setIsEditing] = useState(() => !isIntakeAnswerComplete(value));
   const kind = resolveQuestionInputKind(question.inputType);
   const options = useMemo(
     () => parseQuestionOptions(question.validationSchema),
@@ -158,6 +167,36 @@ export function QuestionRenderer({
   function handleTextBlur() {
     if (valueToString(localValue) === valueToString(savedValue)) return;
     save(localValue);
+  }
+
+  // Collapse the question back to its read-only view. Text fields have already
+  // autosaved on blur (clicking Done blurs the field first); choice controls
+  // save on change — so Done only needs to switch the view.
+  function handleDone() {
+    setIsEditing(false);
+  }
+
+  // Human-readable rendering of the current answer for the read-only view.
+  function formatDisplay(): string | null {
+    if (kind === "checkbox") {
+      if (localValue === true) return "Yes";
+      if (localValue === false) return "No";
+      return null;
+    }
+    if (kind === "multi_select") {
+      const values = valueToStringArray(localValue);
+      if (values.length === 0) return null;
+      return values
+        .map((v) => options.find((o) => o.value === v)?.label ?? v)
+        .join(", ");
+    }
+    if (kind === "select" || kind === "radio") {
+      const v = typeof localValue === "string" ? localValue : "";
+      if (!v) return null;
+      return options.find((o) => o.value === v)?.label ?? v;
+    }
+    const text = valueToString(localValue).trim();
+    return text.length > 0 ? text : null;
   }
 
   function renderControl() {
@@ -308,11 +347,57 @@ export function QuestionRenderer({
         ) : null}
       </div>
 
-      <div className="mt-3">{renderControl()}</div>
+      {isEditing ? (
+        <>
+          <div className="mt-3">{renderControl()}</div>
 
-      <div className="mt-2 flex min-h-[20px] items-center" id={statusId} role="status" aria-live="polite">
-        <SaveIndicator isPending={isPending} onRetry={retry} status={status} />
-      </div>
+          <div className="mt-2 flex min-h-[28px] items-center justify-between gap-2">
+            <span id={statusId} role="status" aria-live="polite">
+              <SaveIndicator
+                isPending={isPending}
+                onRetry={retry}
+                status={status}
+              />
+            </span>
+            <button
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] text-[var(--bv-ink-2)] transition-colors hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+              onClick={handleDone}
+              style={{ borderColor: "var(--bv-line)" }}
+              type="button"
+            >
+              <CheckIcon className="size-3.5" />
+              Done
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div
+            className="mt-3 rounded-[12px] border px-3.5 py-2.5 text-[13.5px] leading-6 whitespace-pre-wrap"
+            style={{
+              background: "var(--bv-card-soft)",
+              borderColor: "var(--bv-line)",
+              color: formatDisplay()
+                ? "var(--bv-ink-2)"
+                : "var(--bv-ink-4)",
+            }}
+          >
+            {formatDisplay() ?? "No answer yet"}
+          </div>
+
+          <div className="mt-2 flex items-center justify-end">
+            <button
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] text-[var(--bv-ink-2)] transition-colors hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+              onClick={() => setIsEditing(true)}
+              style={{ borderColor: "var(--bv-line)" }}
+              type="button"
+            >
+              <PencilIcon className="size-3.5" />
+              Edit
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
