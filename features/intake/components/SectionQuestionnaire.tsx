@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, CheckCircleIcon } from "lucide-react";
+import { ArrowLeftIcon, CheckCircleIcon, LockIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   calculateIntakeCompletion,
   isIntakeAnswerComplete,
+  isIntakeSessionLocked,
 } from "@/features/intake/schemas";
 import { QuestionRenderer } from "@/features/intake/components/QuestionRenderer";
 import type {
@@ -19,6 +20,16 @@ import type {
   IntakeSession,
 } from "@/features/intake/types";
 import { cn } from "@/lib/utils";
+
+function formatAnswerValue(value: IntakeAnswerValue) {
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.join(", ") : "No answer recorded";
+  }
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string" && value.trim().length > 0) return value;
+  return "No answer recorded";
+}
 
 export function SectionQuestionnaire({
   section,
@@ -36,6 +47,7 @@ export function SectionQuestionnaire({
   allSections: IntakeSectionWithQuestions[];
 }) {
   const [answers, setAnswers] = useState<IntakeAnswerMap>(initialAnswers);
+  const locked = isIntakeSessionLocked(session);
   const completion = useMemo(
     () => calculateIntakeCompletion({ sections: allSections, answers }),
     [answers, allSections],
@@ -136,6 +148,17 @@ export function SectionQuestionnaire({
             </span>
           </div>
 
+          {locked && (
+            <div
+              className="mb-3 flex items-center gap-2 rounded-[12px] border border-dashed px-3.5 py-2.5 text-[13px] text-[var(--bv-ink-2)]"
+              style={{ borderColor: "var(--bv-line-2)" }}
+            >
+              <LockIcon className="size-3.5 shrink-0" />
+              This questionnaire is submitted and locked — answers are shown for
+              reference only.
+            </div>
+          )}
+
           {/* Section nav pills */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
             {allSections.map((s, i) => {
@@ -196,13 +219,35 @@ export function SectionQuestionnaire({
                   </span>
                 </div>
                 <div className="px-5 pb-5">
-                  <QuestionRenderer
-                    key={question.id}
-                    onSaved={handleSaved}
-                    question={question}
-                    sessionId={session.id}
-                    value={answers[question.id] ?? null}
-                  />
+                  {locked ? (
+                    <div className="space-y-2">
+                      <h2 className="text-[15px] font-medium leading-6">
+                        {question.questionText}
+                      </h2>
+                      {question.helpText && (
+                        <p className="text-[13px] text-[var(--bv-ink-3)]">
+                          {question.helpText}
+                        </p>
+                      )}
+                      <div
+                        className="mt-1 rounded-[12px] border px-3.5 py-2.5 text-[13.5px] leading-6 whitespace-pre-wrap text-[var(--bv-ink-2)]"
+                        style={{
+                          background: "var(--bv-card-soft)",
+                          borderColor: "var(--bv-line)",
+                        }}
+                      >
+                        {formatAnswerValue(answers[question.id] ?? null)}
+                      </div>
+                    </div>
+                  ) : (
+                    <QuestionRenderer
+                      key={question.id}
+                      onSaved={handleSaved}
+                      question={question}
+                      sessionId={session.id}
+                      value={answers[question.id] ?? null}
+                    />
+                  )}
                 </div>
               </div>
             ))
