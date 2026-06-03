@@ -135,7 +135,7 @@ export function SectionQuestionnaire({
           )}
 
           <div className="mt-5 overflow-x-auto pb-1 scrollbar-hide">
-            <div className="inline-flex items-center rounded-lg bg-muted p-[3px]">
+            <div className="inline-flex items-center gap-1 rounded-lg bg-muted p-[3px]">
               {allSections.map((item) => {
                 const isActive = item.id === section.id;
                 const questionIds = item.questions.map((question) => question.id);
@@ -149,12 +149,15 @@ export function SectionQuestionnaire({
                   <Link
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      // Tabs / Trigger — base
-                      "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 py-1 text-sm font-medium whitespace-nowrap text-foreground outline-none transition-[color,background-color,box-shadow]",
-                      // Focus state — border + ring matching the component
+                      // Tabs / Trigger — every tab uses the active surface (white + radius)
+                      "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border bg-background px-2.5 py-1 text-sm font-medium whitespace-nowrap text-foreground outline-none transition-[color,background-color,box-shadow]",
+                      // Keyboard focus accessibility
                       "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                      // Active state — white surface + sm shadow
-                      isActive && "bg-background shadow-sm",
+                      isActive
+                        ? // Current page — focus state: #a3a3a3 border + 3px ring at 50%
+                          "border-ring ring-[3px] ring-ring/50"
+                        : // Other tabs — default active look: transparent stroke + sm shadow
+                          "border-transparent shadow-sm",
                     )}
                     href={`/dashboard/questionnaire/${item.key}`}
                     key={item.id}
