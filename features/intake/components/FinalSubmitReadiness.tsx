@@ -3,9 +3,10 @@
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowRightIcon, CheckCircleIcon, SparklesIcon } from "lucide-react";
+import { CheckCircleIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { DSButton } from "@/components/ds/Button";
 import {
   Dialog,
@@ -83,34 +84,9 @@ export function FinalSubmitReadiness({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button
-          className="group relative inline-flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-[14px] px-5 py-3 text-[14px] font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
-          disabled={disabled}
-          style={{
-            background:
-              "linear-gradient(135deg, var(--bv-brand) 0%, var(--bv-brand-mid) 60%, var(--bv-brand-deep) 100%)",
-            color: "var(--bv-brand-ink)",
-            boxShadow:
-              "0 8px 28px -10px var(--bv-brand-tint-32), 0 0 0 1px var(--bv-brand-mid)",
-            animation: "ds-glow-pulse 2.4s var(--bv-ease) infinite",
-            opacity: disabled ? 0.6 : 1,
-          }}
-          type="button"
-        >
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-            style={{
-              background:
-                "linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)",
-              backgroundSize: "200% 200%",
-              animation: "bv-shimmer 2s linear infinite",
-            }}
-          />
-          <SparklesIcon className="relative size-4" />
-          <span className="relative">Approve &amp; Lock</span>
-          <ArrowRightIcon className="relative size-4 transition-transform duration-300 group-hover:translate-x-0.5" />
-        </button>
+        <Button className="h-10 w-full" disabled={disabled} type="button">
+          Approve &amp; Lock
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
