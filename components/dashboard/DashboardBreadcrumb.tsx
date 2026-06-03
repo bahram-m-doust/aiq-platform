@@ -17,9 +17,9 @@ import {
 // Friendly labels for known route segments. Unknown segments (dynamic ids,
 // slugs) fall back to a humanized version of the segment.
 const SEGMENT_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
   agents: "Agents",
-  brain: "Brain",
+  brain: "Brand Integrated Brain",
+  roadmap: "Build Roadmap",
   documents: "Documents",
   questionnaire: "Questionnaires",
   intake: "Intake",
@@ -46,15 +46,18 @@ export function DashboardBreadcrumb() {
 
   if (segments[0] !== "dashboard") return null;
 
-  // "Dashboard" is the root crumb (links home); deeper segments follow.
-  const crumbs = segments.map((segment, index) => {
-    const href = `/${segments.slice(0, index + 1).join("/")}`;
+  // The /dashboard prefix is just a redirect shell — start crumbs beneath it.
+  const rest = segments.slice(1);
+  if (rest.length === 0) return null;
+
+  const crumbs = rest.map((segment, index) => {
+    const href = `/dashboard/${rest.slice(0, index + 1).join("/")}`;
     return {
       key: `${segment}-${index}`,
       // Override (real label) wins, then the known-segment map, then humanize.
       label: labelOverrides[href] ?? humanizeSegment(segment),
       href,
-      isLast: index === segments.length - 1,
+      isLast: index === rest.length - 1,
     };
   });
 

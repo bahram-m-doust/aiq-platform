@@ -89,7 +89,7 @@ export function Sidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" className="gap-2">
-              <Link href="/dashboard">
+              <Link href="/home">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
                   {brandIconUrl ? (
                     <Image
