@@ -53,6 +53,18 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
   const progressByKey = new Map(
     completion.sections.map((s) => [s.sectionKey, s]),
   );
+  const incompleteSections = sections
+    .map((section) => {
+      const sectionProgress = progressByKey.get(section.key);
+      const total = sectionProgress?.totalQuestions ?? section.questions.length;
+      const answered = sectionProgress?.answeredQuestions ?? 0;
+      return { section, remaining: total - answered };
+    })
+    .filter((entry) => entry.remaining > 0);
+  const totalRemaining = incompleteSections.reduce(
+    (sum, entry) => sum + entry.remaining,
+    0,
+  );
   const overallColor = "green" as const;
 
   return (
@@ -135,7 +147,11 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
             return (
               <Link
                 className="group block overflow-hidden rounded-xl border bg-[var(--bv-card)] p-5 transition-all duration-200 hover:border-[var(--bv-line-2)] hover:shadow-sm"
-                href={`/dashboard/questionnaire/${section.key}`}
+                href={
+                  state === "done"
+                    ? `/dashboard/questionnaire/${section.key}`
+                    : `/dashboard/questionnaire/${section.key}?validate=1`
+                }
                 key={section.id}
                 style={{ borderColor: "var(--bv-line)" }}
               >
@@ -186,11 +202,32 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
               completion={completion}
               sessionId={session.id}
             />
-            {completion.completionPercent < 100 && (
-              <p className="mt-3 text-center text-[12px] text-[var(--bv-ink-4)]">
-                Complete all {sections.length} sections to submit your
-                questionnaire.
-              </p>
+            {completion.completionPercent < 100 && incompleteSections.length > 0 && (
+              <div
+                className="mt-4 rounded-[12px] border px-4 py-3.5"
+                style={{ borderColor: "var(--bv-line-2)", background: "var(--bv-card)" }}
+              >
+                <p className="text-[13px] font-medium text-[var(--bv-ink)]">
+                  {totalRemaining}{" "}
+                  {totalRemaining === 1 ? "question" : "questions"} still need an
+                  answer before you can submit.
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {incompleteSections.map(({ section, remaining }) => (
+                    <li key={section.id}>
+                      <Link
+                        className="inline-flex items-center gap-2 text-[13px] text-[var(--bv-ink-2)] underline-offset-2 transition-colors hover:text-[var(--bv-ink)] hover:underline"
+                        href={`/dashboard/questionnaire/${section.key}?validate=1`}
+                      >
+                        <span className="font-medium">{section.title}</span>
+                        <span className="text-[var(--bv-ink-3)]">
+                          — {remaining} unanswered
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         )}

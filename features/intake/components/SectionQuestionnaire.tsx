@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, CheckCircleIcon, LockIcon } from "lucide-react";
@@ -37,6 +37,7 @@ export function SectionQuestionnaire({
   session,
   answers: initialAnswers,
   allSections,
+  autoValidate = false,
 }: {
   section: IntakeSectionWithQuestions;
   session: IntakeSession;
@@ -44,6 +45,7 @@ export function SectionQuestionnaire({
   completion: IntakeCompletion;
   brandName: string;
   allSections: IntakeSectionWithQuestions[];
+  autoValidate?: boolean;
 }) {
   const locked = isIntakeSessionLocked(session);
   const { answers, enqueueAnswer, retryQuestion, saveStates } =
@@ -72,7 +74,22 @@ export function SectionQuestionnaire({
   const sectionIndex = allSections.findIndex((item) => item.id === section.id) + 1;
 
   const router = useRouter();
-  const [showErrors, setShowErrors] = useState(false);
+  const [showErrors, setShowErrors] = useState(autoValidate);
+
+  // Arrived here from the overview's "fix this" link — highlight the gaps and
+  // jump to the first unanswered question.
+  useEffect(() => {
+    if (!autoValidate) return;
+    const firstEmpty = section.questions.find(
+      (question) => !isIntakeAnswerComplete(displayedAnswers[question.id] ?? null),
+    );
+    if (firstEmpty) {
+      document
+        .getElementById(`question-card-${firstEmpty.id}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoValidate]);
 
   function handleFinish() {
     const emptyQuestions = section.questions.filter(
