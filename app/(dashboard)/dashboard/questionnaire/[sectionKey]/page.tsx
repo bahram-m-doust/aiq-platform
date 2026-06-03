@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { SetBreadcrumbLabels } from "@/components/dashboard/breadcrumb-labels";
 import { SectionQuestionnaire } from "@/features/intake/components/SectionQuestionnaire";
 import { getIntakePageData } from "@/features/intake/queries";
 import { requireUserProfile } from "@/features/auth/queries";
@@ -36,13 +37,20 @@ export default async function QuestionnaireSectionPage({
   }
 
   return (
-    <SectionQuestionnaire
-      allSections={data.sections}
-      answers={data.answers}
-      brandName={data.access.brandName}
-      completion={data.completion}
-      section={selectedSection}
-      session={data.session}
-    />
+    <>
+      <SetBreadcrumbLabels
+        labels={{
+          [`/dashboard/questionnaire/${sectionKey}`]: selectedSection.title,
+        }}
+      />
+      <SectionQuestionnaire
+        allSections={data.sections}
+        answers={data.answers}
+        brandName={data.access.brandName}
+        completion={data.completion}
+        section={selectedSection}
+        session={data.session}
+      />
+    </>
   );
 }

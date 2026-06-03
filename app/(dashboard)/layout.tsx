@@ -1,5 +1,6 @@
 import { cache } from "react";
 
+import { BreadcrumbLabelsProvider } from "@/components/dashboard/breadcrumb-labels";
 import { DashboardNavbar } from "@/components/dashboard/DashboardNavbar";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -77,10 +78,12 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <Sidebar {...sidebarProps} />
-      <SidebarInset>
-        <DashboardNavbar logoutAction={logout} userName={displayName} />
-        <div className="flex-1 overflow-x-hidden p-4">{children}</div>
-      </SidebarInset>
+      <BreadcrumbLabelsProvider>
+        <SidebarInset>
+          <DashboardNavbar logoutAction={logout} userName={displayName} />
+          <div className="flex-1 overflow-x-hidden p-4">{children}</div>
+        </SidebarInset>
+      </BreadcrumbLabelsProvider>
     </SidebarProvider>
   );
 }

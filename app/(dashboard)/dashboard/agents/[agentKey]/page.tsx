@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { SetBreadcrumbLabels } from "@/components/dashboard/breadcrumb-labels";
 import { PageShell } from "@/components/ds/PageShell";
 import { AgentDetail } from "@/features/agents/catalog/components/AgentDetail";
 import { canActivateAgentRole } from "@/features/agents/catalog/schema";
@@ -51,6 +52,9 @@ export default async function AgentCatalogDetailPage({
       subtitle={detail.agent.description}
       title={detail.agent.name}
     >
+      <SetBreadcrumbLabels
+        labels={{ [`/dashboard/agents/${agentKey}`]: detail.agent.name }}
+      />
       <AgentDetail
         access={detail.workspace.access}
         agent={detail.agent}
