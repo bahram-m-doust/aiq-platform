@@ -224,7 +224,11 @@ export function QuestionRenderer({
       handleTextBlur();
     }
 
-    setIsEditing(false);
+    // Only collapse to the read-only "done" view when there is an actual
+    // answer. An empty Done must keep the field in edit mode.
+    if (isIntakeAnswerComplete(currentValue)) {
+      setIsEditing(false);
+    }
   }
 
   function formatDisplay(): string | null {

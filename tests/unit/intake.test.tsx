@@ -335,6 +335,26 @@ describe("intake UI components", () => {
     expect(screen.getByRole("textbox")).toBeVisible();
   });
 
+  it("keeps a question in edit mode when Done is clicked with an empty answer", async () => {
+    const user = userEvent.setup();
+    render(
+      <QuestionRenderer
+        autosaveAction={vi.fn()}
+        question={question}
+        sessionId="session-1"
+        value={null}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Done/ }));
+
+    expect(screen.getByRole("textbox")).toBeVisible();
+    expect(screen.getByRole("button", { name: /Done/ })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /Edit/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("does not autosave a free-text field on blur when nothing changed", async () => {
     const user = userEvent.setup();
     const autosave = vi.fn();
