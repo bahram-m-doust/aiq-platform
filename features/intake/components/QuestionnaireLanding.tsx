@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeftIcon, ArrowRightIcon, LockIcon } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { FinalSubmitReadiness } from "@/features/intake/components/FinalSubmitReadiness";
 import {
@@ -129,8 +130,12 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
             const answered = progress?.answeredQuestions ?? 0;
             const percent = progress?.completionPercent ?? 0;
             const state = sectionState(progress);
-            const barColor: "green" | "orange" | "muted" =
-              state === "done" ? "green" : state === "in-progress" ? "orange" : "muted";
+            const barColor: "green-soft" | "orange" | "muted" =
+              state === "done"
+                ? "green-soft"
+                : state === "in-progress"
+                  ? "orange"
+                  : "muted";
 
             return (
               <Link
@@ -150,13 +155,9 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
                           {section.title}
                         </h2>
                       </div>
-                      <span
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider whitespace-nowrap"
-                        style={STATE_STYLE[state]}
-                      >
-                        <span className="inline-block size-[5px] rounded-full bg-current" />
+                      <Badge variant="outline" style={STATE_STYLE[state]}>
                         {STATE_LABEL[state]}
-                      </span>
+                      </Badge>
                     </div>
 
                     {section.description && (
