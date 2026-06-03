@@ -8,6 +8,7 @@ import {
   UserIcon,
 } from "lucide-react";
 
+import { DashboardBreadcrumb } from "@/components/dashboard/DashboardBreadcrumb";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,6 +39,7 @@ export function DashboardNavbar({ userName, logoutAction }: DashboardNavbarProps
             Dashboard
             <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
           </button>
+          <DashboardBreadcrumb />
         </div>
 
         {/* Right: notifications + profile */}
