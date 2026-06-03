@@ -75,7 +75,7 @@ export function SectionQuestionnaire({
       className="min-h-svh px-4 py-6 sm:px-6 sm:py-8"
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
-      <div className="mx-auto max-w-[944px]">
+      <div className="mx-auto max-w-[1052px]">
         <div className="mb-6 flex items-center justify-between">
           <Link
             className="inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-3.5 py-2 text-[13px] text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)]"
@@ -156,9 +156,11 @@ export function SectionQuestionnaire({
                     href={`/dashboard/questionnaire/${item.key}`}
                     key={item.id}
                   >
-                    {isComplete && (
-                      <CheckCircleIcon className="size-3.5 text-emerald-500" />
-                    )}
+                    <span className="flex size-3.5 shrink-0 items-center justify-center">
+                      {isComplete && (
+                        <CheckCircleIcon className="size-3.5 text-emerald-500" />
+                      )}
+                    </span>
                     {item.title}
                   </Link>
                 );
