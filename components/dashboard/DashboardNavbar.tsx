@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  BellIcon,
-  ChevronDownIcon,
-  ChevronsUpDownIcon,
-  LogOutIcon,
-  UserIcon,
-} from "lucide-react";
+import { BellIcon, ChevronDownIcon, LogOutIcon, UserIcon } from "lucide-react";
 
 import { DashboardBreadcrumb } from "@/components/dashboard/DashboardBreadcrumb";
 import { Button } from "@/components/ui/button";
@@ -29,16 +23,9 @@ export function DashboardNavbar({ userName, logoutAction }: DashboardNavbarProps
   return (
     <header className="flex h-[68px] shrink-0 items-center gap-2 border-b border-border px-6">
       <div className="flex flex-1 items-center justify-between gap-4">
-        {/* Left: workspace switcher */}
+        {/* Left: sidebar toggle + breadcrumb */}
         <div className="flex items-center gap-2">
           <SidebarTrigger className="-ml-1" />
-          <button
-            className="flex items-center gap-2 rounded-md text-sm font-medium text-foreground"
-            type="button"
-          >
-            Dashboard
-            <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
-          </button>
           <DashboardBreadcrumb />
         </div>
 
