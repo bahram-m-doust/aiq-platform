@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, CheckCircleIcon, LockIcon } from "lucide-react";
 
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -69,6 +70,28 @@ export function SectionQuestionnaire({
     sectionTotal > 0 ? Math.round((sectionAnswered / sectionTotal) * 100) : 0;
 
   const sectionIndex = allSections.findIndex((item) => item.id === section.id) + 1;
+
+  const router = useRouter();
+  const [showErrors, setShowErrors] = useState(false);
+
+  function handleFinish() {
+    const emptyQuestions = section.questions.filter(
+      (question) => !isIntakeAnswerComplete(displayedAnswers[question.id] ?? null),
+    );
+
+    // Unanswered questions in this section — flag them in place instead of
+    // navigating away.
+    if (emptyQuestions.length > 0) {
+      setShowErrors(true);
+      document
+        .getElementById(`question-card-${emptyQuestions[0].id}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+
+    // This section is complete — head to the overview to finish the rest.
+    router.push("/dashboard/questionnaire");
+  }
 
   return (
     <div
@@ -176,6 +199,7 @@ export function SectionQuestionnaire({
             section.questions.map((question, index) => (
               <div
                 className="rounded-lg border border-border bg-card px-6 py-5 shadow-xs"
+                id={`question-card-${question.id}`}
                 key={question.id}
               >
                 <div className="flex items-center justify-between font-mono text-xs text-muted-foreground">
@@ -205,6 +229,7 @@ export function SectionQuestionnaire({
                       onQueuedChange={enqueueAnswer}
                       onRetryQueuedSave={retryQuestion}
                       question={question}
+                      requiredError={showErrors}
                       saveState={saveStates[question.id]}
                       sessionId={session.id}
                       value={displayedAnswers[question.id] ?? null}
@@ -238,15 +263,21 @@ export function SectionQuestionnaire({
                 -&gt;
               </span>
             </Link>
-          ) : (
+          ) : completion.completionPercent === 100 ? (
             <Link
               className="inline-flex items-center rounded-full border border-[var(--bv-line)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] hover:shadow-md"
               href="/dashboard/questionnaire"
             >
-              {completion.completionPercent === 100
-                ? "Review & submit"
-                : "Finish questionnaire"}
+              Review &amp; submit
             </Link>
+          ) : (
+            <button
+              className="inline-flex items-center rounded-full border border-[var(--bv-line)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] hover:shadow-md"
+              onClick={handleFinish}
+              type="button"
+            >
+              Finish questionnaire
+            </button>
           )}
         </div>
       </div>

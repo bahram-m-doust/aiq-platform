@@ -113,6 +113,7 @@ export function QuestionRenderer({
   onQueuedChange,
   saveState,
   onRetryQueuedSave,
+  requiredError = false,
   autosaveAction = autosaveIntakeAnswerAction,
 }: {
   sessionId: string;
@@ -126,6 +127,7 @@ export function QuestionRenderer({
   ) => void;
   saveState?: AutosaveQuestionState;
   onRetryQueuedSave?: (questionId: string) => void;
+  requiredError?: boolean;
   autosaveAction?: AutosaveAction;
 }) {
   const [localValue, setLocalValue] = useState<IntakeAnswerValue>(value);
@@ -150,6 +152,9 @@ export function QuestionRenderer({
   const currentValue = usesQueuedAutosave ? value : localValue;
   const displayedStatus = saveState?.status ?? status;
   const displayedMessage = saveState?.message ?? message;
+  // Flagged by the parent on a finish attempt when this required answer is empty.
+  const showRequiredError =
+    requiredError && !isIntakeAnswerComplete(currentValue);
 
   function queueValue(nextValue: IntakeAnswerValue, flush = false) {
     onQueuedChange?.(question.id, nextValue, { flush });
@@ -380,7 +385,7 @@ export function QuestionRenderer({
       return (
         <Textarea
           aria-describedby={statusId}
-          aria-invalid={displayedStatus === "error"}
+          aria-invalid={displayedStatus === "error" || showRequiredError}
           dir={detectDir(currentValue)}
           id={controlId}
           onBlur={handleTextBlur}
@@ -394,7 +399,7 @@ export function QuestionRenderer({
     return (
       <Input
         aria-describedby={statusId}
-        aria-invalid={displayedStatus === "error"}
+        aria-invalid={displayedStatus === "error" || showRequiredError}
         dir={detectDir(currentValue)}
         id={controlId}
         onBlur={handleTextBlur}
@@ -425,6 +430,12 @@ export function QuestionRenderer({
       {isEditing ? (
         <>
           <div className="mt-3">{renderControl()}</div>
+
+          {showRequiredError && (
+            <p className="mt-1.5 text-xs text-destructive">
+              This question needs an answer.
+            </p>
+          )}
 
           <div className="mt-2 flex min-h-[28px] items-center justify-between gap-2">
             <span aria-live="polite" id={statusId} role="status">
