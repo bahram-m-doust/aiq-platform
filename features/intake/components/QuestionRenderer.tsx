@@ -409,16 +409,14 @@ export function QuestionRenderer({
   return (
     <div>
       <div className="space-y-1.5">
-        <div className="flex items-start justify-between gap-2">
-          <Label className="text-sm font-medium leading-relaxed" htmlFor={controlId}>
-            {question.questionText}
-          </Label>
-          <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
-            Required
-          </span>
-        </div>
+        <Label
+          className="text-sm font-medium leading-relaxed text-foreground"
+          htmlFor={controlId}
+        >
+          {question.questionText}
+        </Label>
         {question.helpText ? (
-          <p className="text-xs leading-relaxed text-[var(--bv-ink-3)]">
+          <p className="text-sm leading-relaxed text-muted-foreground">
             {question.helpText}
           </p>
         ) : null}

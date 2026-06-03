@@ -169,48 +169,33 @@ export function SectionQuestionnaire({
 
         <div className="space-y-4">
           {section.questions.length === 0 ? (
-            <div
-              className="rounded-xl border p-6 text-center text-sm text-[var(--bv-ink-3)]"
-              style={{
-                background: "var(--bv-card)",
-                borderColor: "var(--bv-line)",
-              }}
-            >
+            <div className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted-foreground shadow-xs">
               No questions configured for this section yet.
             </div>
           ) : (
             section.questions.map((question, index) => (
               <div
-                className="overflow-hidden rounded-xl border"
+                className="rounded-lg border border-border bg-card px-6 py-5 shadow-xs"
                 key={question.id}
-                style={{
-                  background: "var(--bv-card)",
-                  borderColor: "var(--bv-line)",
-                }}
               >
-                <div className="px-5 pt-4 pb-1">
-                  <span className="font-mono text-[10px] text-[var(--bv-ink-4)]">
+                <div className="flex items-center justify-between font-mono text-xs text-muted-foreground">
+                  <span>
                     {sectionIndex}.{String(index + 1).padStart(2, "0")}
                   </span>
+                  {question.isRequired && <span>REQUIRED</span>}
                 </div>
-                <div className="px-5 pb-5">
+                <div className="mt-3">
                   {locked ? (
                     <div className="space-y-2">
-                      <h2 className="text-[15px] font-medium leading-6">
+                      <h2 className="text-sm font-medium leading-snug text-foreground">
                         {question.questionText}
                       </h2>
                       {question.helpText && (
-                        <p className="text-[13px] text-[var(--bv-ink-3)]">
+                        <p className="text-sm text-muted-foreground">
                           {question.helpText}
                         </p>
                       )}
-                      <div
-                        className="mt-1 rounded-[12px] border px-3.5 py-2.5 text-[13.5px] leading-6 whitespace-pre-wrap text-[var(--bv-ink-2)]"
-                        style={{
-                          background: "var(--bv-card-soft)",
-                          borderColor: "var(--bv-line)",
-                        }}
-                      >
+                      <div className="mt-1 rounded-md border border-input bg-muted/40 px-3 py-2 text-sm leading-6 whitespace-pre-wrap text-foreground shadow-xs">
                         {formatAnswerValue(displayedAnswers[question.id] ?? null)}
                       </div>
                     </div>
