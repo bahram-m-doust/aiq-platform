@@ -813,7 +813,10 @@ export function BrandBuildView({
                 intakeSessionId !== null &&
                 intakeSessionId !== undefined &&
                 intakeCompletion.totalQuestions > 0 &&
-                intakeCompletion.completionPercent === 100;
+                intakeCompletion.completionPercent === 100 &&
+                // Approve & Lock only once every sub-step of the phase is done,
+                // not just the questionnaire.
+                p.substeps.every((s) => s.state === "done");
               // Unlock animation when phase becomes "active" or "complete" right after previous phase finished
               const justUnlocked = idx > 0 && info.phaseState !== "locked" && progress.phases[idx - 1].status === "complete";
 
