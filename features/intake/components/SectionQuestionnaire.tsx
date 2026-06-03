@@ -128,8 +128,8 @@ export function SectionQuestionnaire({
             </div>
           )}
 
-          <div className="mt-5 overflow-x-auto pb-1 scrollbar-hide">
-            <div className="inline-flex items-center gap-1 rounded-2xl bg-muted p-3">
+          <div className="mt-5">
+            <div className="flex items-center gap-1 overflow-x-auto rounded-2xl bg-muted p-3 scrollbar-hide">
               {allSections.map((item) => {
                 const isActive = item.id === section.id;
                 const questionIds = item.questions.map((question) => question.id);
@@ -143,8 +143,8 @@ export function SectionQuestionnaire({
                   <Link
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      // Tabs / Trigger — base
-                      "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap outline-none transition-[color,background-color,box-shadow]",
+                      // Tabs / Trigger — base (grow to fill the frame evenly)
+                      "inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap outline-none transition-[color,background-color,box-shadow]",
                       // Keyboard focus accessibility
                       "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
                       isActive
