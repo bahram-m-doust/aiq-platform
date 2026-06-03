@@ -53,8 +53,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
   const progressByKey = new Map(
     completion.sections.map((s) => [s.sectionKey, s]),
   );
-  const overallColor: "green" | "orange" =
-    completion.completionPercent === 100 ? "green" : "orange";
+  const overallColor = "green" as const;
 
   return (
     <div
@@ -130,12 +129,8 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
             const answered = progress?.answeredQuestions ?? 0;
             const percent = progress?.completionPercent ?? 0;
             const state = sectionState(progress);
-            const barColor: "green-soft" | "orange" | "muted" =
-              state === "done"
-                ? "green-soft"
-                : state === "in-progress"
-                  ? "orange"
-                  : "muted";
+            const barColor: "green-soft" | "muted" =
+              state === "not-started" ? "muted" : "green-soft";
 
             return (
               <Link
