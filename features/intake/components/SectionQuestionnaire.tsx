@@ -78,12 +78,8 @@ export function SectionQuestionnaire({
       <div className="mx-auto max-w-[944px]">
         <div className="mb-6 flex items-center justify-between">
           <Link
-            className="inline-flex items-center gap-2 rounded-full border bg-white px-3.5 py-2 text-[13px] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-3.5 py-2 text-[13px] text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)]"
             href="/dashboard/questionnaire"
-            style={{
-              borderColor: "var(--bv-line)",
-              color: "var(--bv-ink-2)",
-            }}
           >
             <ArrowLeftIcon className="size-3.5" />
             All sections
@@ -118,7 +114,7 @@ export function SectionQuestionnaire({
             <div className="mb-1.5 text-right font-mono text-[11.5px] text-[var(--bv-ink-2)]">
               {sectionPercent}%
             </div>
-            <ProgressBar color="orange" value={sectionPercent} />
+            <ProgressBar color="green" value={sectionPercent} />
           </div>
 
           {locked && (
@@ -249,15 +245,13 @@ export function SectionQuestionnaire({
 
           {sectionIndex < allSections.length ? (
             <Link
-              className="inline-flex items-center gap-2 rounded-full border bg-white px-4 py-2 text-[13px] font-medium shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+              className="group inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] hover:shadow-md"
               href={`/dashboard/questionnaire/${allSections[sectionIndex].key}`}
-              style={{
-                borderColor: "var(--bv-line)",
-                color: "var(--bv-ink-2)",
-              }}
             >
               Next: {allSections[sectionIndex].title}
-              <span className="text-[var(--bv-ink-4)]">-&gt;</span>
+              <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
+                -&gt;
+              </span>
             </Link>
           ) : (
             <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
