@@ -218,7 +218,7 @@
 }
 /* Focus indicators */
 :focus-visible {
-  outline: 2px solid var(--bv-accent);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
