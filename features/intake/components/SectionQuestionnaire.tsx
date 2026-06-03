@@ -134,8 +134,8 @@ export function SectionQuestionnaire({
             </div>
           )}
 
-          <div className="mt-5 overflow-x-auto pb-1 scrollbar-hide">
-            <div className="inline-flex items-center gap-1 rounded-2xl bg-muted p-1.5">
+          <div className="mt-5 overflow-x-auto px-0.5 py-1 scrollbar-hide">
+            <div className="inline-flex items-center gap-1">
               {allSections.map((item) => {
                 const isActive = item.id === section.id;
                 const questionIds = item.questions.map((question) => question.id);
