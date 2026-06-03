@@ -75,7 +75,7 @@ export function SectionQuestionnaire({
       className="min-h-svh px-4 py-6 sm:px-6 sm:py-8"
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
-      <div className="mx-auto max-w-[780px]">
+      <div className="mx-auto max-w-[1000px]">
         <div className="mb-6 flex items-center justify-between">
           <Link
             className="inline-flex items-center gap-2 rounded-full border bg-white px-3.5 py-2 text-[13px] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
