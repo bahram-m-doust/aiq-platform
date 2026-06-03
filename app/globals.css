@@ -222,6 +222,14 @@
   outline-offset: 2px;
 }
 
+/* Form fields use the subtle gray ring (from the component) instead of
+   the brand outline */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
 /* Scrollbar hide utility */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
