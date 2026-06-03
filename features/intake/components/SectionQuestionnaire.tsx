@@ -134,34 +134,39 @@ export function SectionQuestionnaire({
             </div>
           )}
 
-          <div className="mt-5 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-            {allSections.map((item) => {
-              const isActive = item.id === section.id;
-              const questionIds = item.questions.map((question) => question.id);
-              const answered = questionIds.filter((id) =>
-                isIntakeAnswerComplete(displayedAnswers[id] ?? null),
-              ).length;
-              const isComplete =
-                answered === item.questions.length && item.questions.length > 0;
+          <div className="mt-5 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="inline-flex items-center rounded-lg bg-muted p-[3px]">
+              {allSections.map((item) => {
+                const isActive = item.id === section.id;
+                const questionIds = item.questions.map((question) => question.id);
+                const answered = questionIds.filter((id) =>
+                  isIntakeAnswerComplete(displayedAnswers[id] ?? null),
+                ).length;
+                const isComplete =
+                  answered === item.questions.length && item.questions.length > 0;
 
-              return (
-                <Link
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-all",
-                    isActive
-                      ? "border-[var(--bv-c1-b)] bg-orange-50 font-medium text-[var(--bv-c1-b)]"
-                      : "border-[var(--bv-line)] bg-white text-[var(--bv-ink-3)] hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink-2)]",
-                  )}
-                  href={`/dashboard/questionnaire/${item.key}`}
-                  key={item.id}
-                >
-                  {isComplete && (
-                    <CheckCircleIcon className="size-3 text-emerald-500" />
-                  )}
-                  {item.title}
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      // Tabs / Trigger — base
+                      "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 py-1 text-sm font-medium whitespace-nowrap text-foreground outline-none transition-[color,background-color,box-shadow]",
+                      // Focus state — border + ring matching the component
+                      "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                      // Active state — white surface + sm shadow
+                      isActive && "bg-background shadow-sm",
+                    )}
+                    href={`/dashboard/questionnaire/${item.key}`}
+                    key={item.id}
+                  >
+                    {isComplete && (
+                      <CheckCircleIcon className="size-3.5 text-emerald-500" />
+                    )}
+                    {item.title}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
 
