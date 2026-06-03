@@ -10,7 +10,6 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   InfinityIcon,
-  MessagesSquareIcon,
   PlusIcon,
   Settings2Icon,
   SquareUserIcon,
@@ -61,7 +60,6 @@ const primaryNav = [
 ];
 
 const secondaryNav = [
-  { href: "/dashboard", label: "Community", icon: MessagesSquareIcon },
   { href: "/dashboard/documents", label: "Documents", icon: BookOpenIcon },
   { href: "/dashboard/settings", label: "Settings", icon: Settings2Icon },
 ];
