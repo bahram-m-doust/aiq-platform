@@ -156,11 +156,9 @@ export function SectionQuestionnaire({
                     href={`/dashboard/questionnaire/${item.key}`}
                     key={item.id}
                   >
-                    <span className="flex size-3.5 shrink-0 items-center justify-center">
-                      {isComplete && (
-                        <CheckCircleIcon className="size-3.5 text-emerald-500" />
-                      )}
-                    </span>
+                    {isComplete && (
+                      <CheckCircleIcon className="size-3.5 text-emerald-500" />
+                    )}
                     {item.title}
                   </Link>
                 );
