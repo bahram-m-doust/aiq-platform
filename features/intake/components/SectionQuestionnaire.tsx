@@ -254,9 +254,24 @@ export function SectionQuestionnaire({
               </span>
             </Link>
           ) : (
-            <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
-              Last section - {completion.completionPercent}% overall
-            </span>
+            <Link
+              className="group inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] hover:shadow-md"
+              href="/dashboard/questionnaire"
+            >
+              {completion.completionPercent === 100 ? (
+                <>
+                  <CheckCircleIcon className="size-4 text-emerald-500" />
+                  Review &amp; submit
+                </>
+              ) : (
+                <>
+                  Finish questionnaire
+                  <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
+                    -&gt;
+                  </span>
+                </>
+              )}
+            </Link>
           )}
         </div>
       </div>
