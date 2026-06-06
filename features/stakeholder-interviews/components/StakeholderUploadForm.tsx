@@ -55,14 +55,20 @@ export function StakeholderUploadForm({
           <div className="space-y-2">
             <Label htmlFor="stakeholder-brand">Brand</Label>
             <select
-              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               id="stakeholder-brand"
               name="brand_id"
               required
             >
-              <option value="">Select a brand…</option>
+              <option className="bg-background text-foreground" value="">
+                Select a brand…
+              </option>
               {brands.map((brand) => (
-                <option key={brand.id} value={brand.id}>
+                <option
+                  className="bg-background text-foreground"
+                  key={brand.id}
+                  value={brand.id}
+                >
                   {brand.name}
                 </option>
               ))}
