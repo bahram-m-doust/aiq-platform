@@ -100,6 +100,7 @@ export default async function StakeholderInterviewsPage() {
           <PdfAnnotator
             canApprove={workspace.canReview}
             canResolve={workspace.canReview}
+            currentUserId={profile.id}
             editable={editable}
             initialAnnotations={workspace.annotations}
             isApproved={isApproved}

@@ -15,8 +15,10 @@ import {
 } from "@/features/stakeholder-interviews/schema";
 import {
   addStakeholderAnnotation,
+  deleteStakeholderAnnotation,
   setStakeholderAnnotationResolved,
   setStakeholderReportStatus,
+  updateStakeholderAnnotation,
   uploadStakeholderReport,
 } from "@/features/stakeholder-interviews/services";
 import type {
@@ -106,6 +108,7 @@ export async function addStakeholderAnnotationAction(
     posX: input.posX,
     posY: input.posY,
     body: value,
+    parentId: input.parentId ?? null,
   });
   revalidateStakeholderPaths();
 
@@ -133,6 +136,47 @@ export async function resolveStakeholderAnnotationAction(
     annotationId,
     reportId: report.id,
     resolved,
+  });
+  revalidateStakeholderPaths();
+  return { ok: true };
+}
+
+export async function editStakeholderAnnotationAction(
+  annotationId: string,
+  body: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const reviewer = await requireClientReviewer(CLIENT_PATH);
+  if (!reviewer) return { ok: false, message: "Not allowed." };
+
+  const { value, error } = validateAnnotationBody(body);
+  if (!value) return { ok: false, message: error ?? "Enter a comment." };
+
+  const report = await getStakeholderReportRowByBrand(reviewer.brandId);
+  if (!report) return { ok: false, message: "Report not found." };
+
+  await updateStakeholderAnnotation({
+    annotationId,
+    reportId: report.id,
+    authorId: reviewer.profileId,
+    body: value,
+  });
+  revalidateStakeholderPaths();
+  return { ok: true };
+}
+
+export async function deleteStakeholderAnnotationAction(
+  annotationId: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const reviewer = await requireClientReviewer(CLIENT_PATH);
+  if (!reviewer) return { ok: false, message: "Not allowed." };
+
+  const report = await getStakeholderReportRowByBrand(reviewer.brandId);
+  if (!report) return { ok: false, message: "Report not found." };
+
+  await deleteStakeholderAnnotation({
+    annotationId,
+    reportId: report.id,
+    authorId: reviewer.profileId,
   });
   revalidateStakeholderPaths();
   return { ok: true };

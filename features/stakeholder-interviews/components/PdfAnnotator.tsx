@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useTransition,
@@ -13,8 +14,11 @@ import {
   ChevronRightIcon,
   CheckIcon,
   Loader2Icon,
-  MessagesSquareIcon,
   MessageSquarePlusIcon,
+  MessagesSquareIcon,
+  PencilIcon,
+  ReplyIcon,
+  Trash2Icon,
   XIcon,
 } from "lucide-react";
 
@@ -23,6 +27,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   addStakeholderAnnotationAction,
   approveStakeholderReportAction,
+  deleteStakeholderAnnotationAction,
+  editStakeholderAnnotationAction,
   resolveStakeholderAnnotationAction,
 } from "@/features/stakeholder-interviews/actions";
 import type { StakeholderAnnotation } from "@/features/stakeholder-interviews/types";
@@ -43,9 +49,14 @@ function formatCommentDate(value: string | null): string {
   });
 }
 
+function authorLabel(annotation: StakeholderAnnotation): string {
+  return annotation.authorName ?? annotation.authorEmail ?? "Reviewer";
+}
+
 export function PdfAnnotator({
   signedUrl,
   reportId,
+  currentUserId,
   initialAnnotations,
   editable,
   canResolve,
@@ -54,6 +65,7 @@ export function PdfAnnotator({
 }: {
   signedUrl: string;
   reportId: string;
+  currentUserId: string;
   initialAnnotations: StakeholderAnnotation[];
   editable: boolean;
   canResolve: boolean;
@@ -87,6 +99,32 @@ export function PdfAnnotator({
   const [showComments, setShowComments] = useState(false);
   const [isSaving, startSaving] = useTransition();
   const [isApproving, startApproving] = useTransition();
+
+  // Comment thread editing state (sidebar).
+  const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState("");
+  const [isMutating, startMutating] = useTransition();
+
+  // Root comments (pinned on the PDF) and their replies.
+  const rootAnnotations = useMemo(
+    () => annotations.filter((item) => !item.parentId),
+    [annotations],
+  );
+  const repliesByParent = useMemo(() => {
+    const map = new Map<string, StakeholderAnnotation[]>();
+    for (const item of annotations) {
+      if (!item.parentId) continue;
+      const list = map.get(item.parentId) ?? [];
+      list.push(item);
+      map.set(item.parentId, list);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
+    }
+    return map;
+  }, [annotations]);
 
   function goToAnnotation(annotation: StakeholderAnnotation) {
     const idx = contentPages.indexOf(annotation.page);
@@ -218,7 +256,8 @@ export function PdfAnnotator({
     const onResize = () => void renderPage();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [renderPage, contentPages.length]);
+    // Re-render when the sidebar toggles (the PDF column changes width).
+  }, [renderPage, contentPages.length, showComments]);
 
   function handleOverlayClick(event: React.MouseEvent<HTMLDivElement>) {
     if (!editable || !size) return;
@@ -248,6 +287,59 @@ export function PdfAnnotator({
         setAnnotations((current) => [...current, result.annotation]);
         setDraft(null);
         setDraftBody("");
+        setShowComments(true);
+      }
+    });
+  }
+
+  function saveReply(root: StakeholderAnnotation) {
+    const body = replyBody.trim();
+    if (!body) return;
+    startMutating(async () => {
+      const result = await addStakeholderAnnotationAction({
+        reportId,
+        page: root.page,
+        posX: root.posX,
+        posY: root.posY,
+        body,
+        parentId: root.id,
+      });
+      if (result.ok) {
+        setAnnotations((current) => [...current, result.annotation]);
+        setReplyTo(null);
+        setReplyBody("");
+      }
+    });
+  }
+
+  function saveEdit(annotation: StakeholderAnnotation) {
+    const body = editBody.trim();
+    if (!body) return;
+    startMutating(async () => {
+      const result = await editStakeholderAnnotationAction(annotation.id, body);
+      if (result.ok) {
+        setAnnotations((current) =>
+          current.map((item) =>
+            item.id === annotation.id ? { ...item, body } : item,
+          ),
+        );
+        setEditingId(null);
+        setEditBody("");
+      }
+    });
+  }
+
+  function deleteAnnotation(annotation: StakeholderAnnotation) {
+    startMutating(async () => {
+      const result = await deleteStakeholderAnnotationAction(annotation.id);
+      if (result.ok) {
+        setAnnotations((current) =>
+          current.filter(
+            (item) =>
+              item.id !== annotation.id && item.parentId !== annotation.id,
+          ),
+        );
+        if (openPin === annotation.id) setOpenPin(null);
       }
     });
   }
@@ -263,10 +355,17 @@ export function PdfAnnotator({
     void resolveStakeholderAnnotationAction(annotation.id, next);
   }
 
-  const pageAnnotations = annotations.filter(
+  // Only root comments are pinned on the page; replies live in the sidebar.
+  const pagePins = rootAnnotations.filter(
     (item) => item.page === currentPdfPage,
   );
   const totalPages = contentPages.length;
+
+  function startEditing(annotation: StakeholderAnnotation) {
+    setEditingId(annotation.id);
+    setEditBody(annotation.body);
+    setReplyTo(null);
+  }
 
   if (loadError) {
     return (
@@ -275,6 +374,12 @@ export function PdfAnnotator({
       </div>
     );
   }
+
+  const sortedRoots = [...rootAnnotations].sort(
+    (a, b) =>
+      a.page - b.page ||
+      (a.createdAt ?? "").localeCompare(b.createdAt ?? ""),
+  );
 
   return (
     <div className="space-y-3">
@@ -286,7 +391,8 @@ export function PdfAnnotator({
           variant="outline"
         >
           <MessagesSquareIcon />
-          Show all comments ({annotations.length})
+          {showComments ? "Hide comments" : "Show all comments"} (
+          {rootAnnotations.length})
         </Button>
         {editable ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -296,227 +402,460 @@ export function PdfAnnotator({
         ) : null}
       </div>
 
-      {showComments ? (
-        <div className="rounded-lg border border-border bg-card shadow-xs">
-          <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-            <span className="text-sm font-medium">
-              Comments ({annotations.length})
-            </span>
-            <Button
-              aria-label="Close comments"
-              onClick={() => setShowComments(false)}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <XIcon />
-            </Button>
-          </div>
-          {annotations.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-              No comments yet.
-            </p>
-          ) : (
-            <ul className="max-h-72 divide-y divide-border overflow-y-auto">
-              {[...annotations]
-                .sort(
-                  (a, b) =>
-                    a.page - b.page ||
-                    (a.createdAt ?? "").localeCompare(b.createdAt ?? ""),
-                )
-                .map((annotation) => {
-                  const displayPage =
-                    contentPages.indexOf(annotation.page) + 1 ||
-                    annotation.page;
-                  return (
-                    <li key={annotation.id}>
+      <div className="flex items-start gap-4">
+        {/* PDF column */}
+        <div className="min-w-0 flex-1 space-y-3">
+          <div className="w-full" ref={containerRef}>
+            <div className="relative mx-auto w-fit rounded-lg border border-border bg-muted/30 shadow-xs">
+              <canvas className="block rounded-lg" ref={canvasRef} />
+
+              {size ? (
+                <div
+                  aria-label="PDF annotation layer"
+                  className={cn(
+                    "absolute inset-0",
+                    editable ? "cursor-crosshair" : "cursor-default",
+                  )}
+                  onClick={handleOverlayClick}
+                  style={{ width: size.width, height: size.height }}
+                >
+                  {pagePins.map((annotation, index) => (
+                    <div
+                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                      key={annotation.id}
+                      style={{
+                        left: annotation.posX * size.width,
+                        top: annotation.posY * size.height,
+                      }}
+                    >
                       <button
-                        className="flex w-full flex-col items-start gap-1 px-4 py-3 text-left transition-colors hover:bg-muted/50"
-                        onClick={() => goToAnnotation(annotation)}
+                        className={cn(
+                          "flex size-6 items-center justify-center rounded-full border text-[11px] font-semibold shadow-sm transition-transform hover:scale-110",
+                          annotation.resolved
+                            ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+                            : "border-amber-300 bg-amber-100 text-amber-800",
+                        )}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenPin((current) =>
+                            current === annotation.id ? null : annotation.id,
+                          );
+                          setShowComments(true);
+                        }}
                         type="button"
                       >
-                        <div className="flex w-full items-center justify-between gap-2">
-                          <span className="text-sm font-medium text-foreground">
-                            {annotation.authorName ??
-                              annotation.authorEmail ??
-                              "Reviewer"}
-                          </span>
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {formatCommentDate(annotation.createdAt)}
-                          </span>
-                        </div>
-                        <p className="line-clamp-3 text-sm whitespace-pre-wrap text-muted-foreground">
-                          {annotation.body}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="rounded bg-muted px-1.5 py-0.5">
-                            Page {displayPage}
-                          </span>
-                          {annotation.resolved ? (
-                            <span className="text-emerald-600">Resolved</span>
+                        {index + 1}
+                      </button>
+
+                      {openPin === annotation.id ? (
+                        <div
+                          className="absolute left-1/2 top-7 z-10 w-64 -translate-x-1/2 rounded-lg border border-border bg-popover p-3 text-left shadow-md"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <p className="text-sm whitespace-pre-wrap text-foreground">
+                            {annotation.body}
+                          </p>
+                          {canResolve ? (
+                            <button
+                              className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                              onClick={() => toggleResolve(annotation)}
+                              type="button"
+                            >
+                              <CheckIcon className="size-3" />
+                              {annotation.resolved
+                                ? "Mark unresolved"
+                                : "Mark resolved"}
+                            </button>
+                          ) : annotation.resolved ? (
+                            <p className="mt-2 text-xs text-emerald-600">
+                              Resolved
+                            </p>
                           ) : null}
                         </div>
-                      </button>
+                      ) : null}
+                    </div>
+                  ))}
+
+                  {draft && draft.page === currentPdfPage ? (
+                    <div
+                      className="absolute z-20 w-64 -translate-x-1/2 rounded-lg border border-border bg-popover p-3 shadow-md"
+                      onClick={(event) => event.stopPropagation()}
+                      style={{
+                        left: draft.x * size.width,
+                        top: draft.y * size.height + 10,
+                      }}
+                    >
+                      <Textarea
+                        autoFocus
+                        className="min-h-20 text-sm"
+                        onChange={(event) => setDraftBody(event.target.value)}
+                        placeholder="Add your comment…"
+                        value={draftBody}
+                      />
+                      <div className="mt-2 flex justify-end gap-2">
+                        <Button
+                          onClick={() => setDraft(null)}
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          disabled={!draftBody.trim() || isSaving}
+                          onClick={saveDraft}
+                          size="sm"
+                          type="button"
+                        >
+                          {isSaving ? (
+                            <Loader2Icon className="animate-spin" />
+                          ) : null}
+                          Comment
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <Button
+              disabled={pageIndex <= 0}
+              onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <ChevronLeftIcon />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {totalPages
+                ? `Page ${pageIndex + 1} / ${totalPages}`
+                : "Loading…"}
+            </span>
+            {pageIndex < totalPages - 1 ? (
+              <Button
+                onClick={() =>
+                  setPageIndex((i) => Math.min(totalPages - 1, i + 1))
+                }
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Next
+                <ChevronRightIcon />
+              </Button>
+            ) : canApprove && !isApproved ? (
+              <Button
+                disabled={isApproving}
+                onClick={approve}
+                size="sm"
+                type="button"
+              >
+                {isApproving ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : null}
+                Approve &amp; continue
+              </Button>
+            ) : (
+              <span aria-hidden className="w-[92px]" />
+            )}
+          </div>
+        </div>
+
+        {/* Comments sidebar */}
+        {showComments ? (
+          <aside className="sticky top-4 w-80 shrink-0 self-start rounded-lg border border-border bg-card shadow-xs">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+              <span className="text-sm font-medium">
+                Comments ({rootAnnotations.length})
+              </span>
+              <Button
+                aria-label="Close comments"
+                onClick={() => setShowComments(false)}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <XIcon />
+              </Button>
+            </div>
+
+            {sortedRoots.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+                No comments yet.
+              </p>
+            ) : (
+              <ul className="max-h-[70svh] divide-y divide-border overflow-y-auto">
+                {sortedRoots.map((root) => {
+                  const displayPage =
+                    contentPages.indexOf(root.page) + 1 || root.page;
+                  const replies = repliesByParent.get(root.id) ?? [];
+                  const isActive = openPin === root.id;
+                  return (
+                    <li
+                      className={cn(
+                        "px-4 py-3 transition-colors",
+                        isActive ? "bg-muted/40" : "",
+                      )}
+                      key={root.id}
+                    >
+                      <CommentBlock
+                        annotation={root}
+                        canResolve={canResolve}
+                        currentUserId={currentUserId}
+                        editBody={editBody}
+                        editable={editable}
+                        editingId={editingId}
+                        isMutating={isMutating}
+                        onCancelEdit={() => {
+                          setEditingId(null);
+                          setEditBody("");
+                        }}
+                        onDelete={() => deleteAnnotation(root)}
+                        onEditBodyChange={setEditBody}
+                        onSaveEdit={() => saveEdit(root)}
+                        onSelect={() => goToAnnotation(root)}
+                        onStartEdit={() => startEditing(root)}
+                        onToggleResolve={() => toggleResolve(root)}
+                        pageLabel={`Page ${displayPage}`}
+                      />
+
+                      {replies.length > 0 ? (
+                        <ul className="mt-3 space-y-3 border-l border-border pl-3">
+                          {replies.map((reply) => (
+                            <li key={reply.id}>
+                              <CommentBlock
+                                annotation={reply}
+                                canResolve={false}
+                                currentUserId={currentUserId}
+                                editBody={editBody}
+                                editable={editable}
+                                editingId={editingId}
+                                isMutating={isMutating}
+                                isReply
+                                onCancelEdit={() => {
+                                  setEditingId(null);
+                                  setEditBody("");
+                                }}
+                                onDelete={() => deleteAnnotation(reply)}
+                                onEditBodyChange={setEditBody}
+                                onSaveEdit={() => saveEdit(reply)}
+                                onStartEdit={() => startEditing(reply)}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+
+                      {editable ? (
+                        replyTo === root.id ? (
+                          <div className="mt-3">
+                            <Textarea
+                              autoFocus
+                              className="min-h-16 text-sm"
+                              onChange={(event) =>
+                                setReplyBody(event.target.value)
+                              }
+                              placeholder="Write a reply…"
+                              value={replyBody}
+                            />
+                            <div className="mt-2 flex justify-end gap-2">
+                              <Button
+                                onClick={() => {
+                                  setReplyTo(null);
+                                  setReplyBody("");
+                                }}
+                                size="sm"
+                                type="button"
+                                variant="ghost"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                disabled={!replyBody.trim() || isMutating}
+                                onClick={() => saveReply(root)}
+                                size="sm"
+                                type="button"
+                              >
+                                {isMutating ? (
+                                  <Loader2Icon className="animate-spin" />
+                                ) : null}
+                                Reply
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                              setReplyTo(root.id);
+                              setReplyBody("");
+                              setEditingId(null);
+                            }}
+                            type="button"
+                          >
+                            <ReplyIcon className="size-3.5" />
+                            Reply
+                          </button>
+                        )
+                      ) : null}
                     </li>
                   );
                 })}
-            </ul>
+              </ul>
+            )}
+          </aside>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function CommentBlock({
+  annotation,
+  currentUserId,
+  editable,
+  canResolve,
+  isReply = false,
+  editingId,
+  editBody,
+  isMutating,
+  pageLabel,
+  onSelect,
+  onStartEdit,
+  onEditBodyChange,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
+  onToggleResolve,
+}: {
+  annotation: StakeholderAnnotation;
+  currentUserId: string;
+  editable: boolean;
+  canResolve: boolean;
+  isReply?: boolean;
+  editingId: string | null;
+  editBody: string;
+  isMutating: boolean;
+  pageLabel?: string;
+  onSelect?: () => void;
+  onStartEdit: () => void;
+  onEditBodyChange: (value: string) => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
+  onDelete: () => void;
+  onToggleResolve?: () => void;
+}) {
+  const isOwn = annotation.authorId === currentUserId;
+  const isEditing = editingId === annotation.id;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={cn(
+            "font-medium text-foreground",
+            isReply ? "text-xs" : "text-sm",
           )}
-        </div>
-      ) : null}
+        >
+          {authorLabel(annotation)}
+        </span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {formatCommentDate(annotation.createdAt)}
+        </span>
+      </div>
 
-      <div className="w-full" ref={containerRef}>
-        <div className="relative mx-auto w-fit rounded-lg border border-border bg-muted/30 shadow-xs">
-          <canvas className="block rounded-lg" ref={canvasRef} />
-
-          {size ? (
-            <div
-              aria-label="PDF annotation layer"
-              className={cn(
-                "absolute inset-0",
-                editable ? "cursor-crosshair" : "cursor-default",
-              )}
-              onClick={handleOverlayClick}
-              style={{ width: size.width, height: size.height }}
+      {isEditing ? (
+        <div className="mt-2">
+          <Textarea
+            autoFocus
+            className="min-h-16 text-sm"
+            onChange={(event) => onEditBodyChange(event.target.value)}
+            value={editBody}
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <Button
+              onClick={onCancelEdit}
+              size="sm"
+              type="button"
+              variant="ghost"
             >
-            {pageAnnotations.map((annotation, index) => (
-              <div
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                key={annotation.id}
-                style={{
-                  left: annotation.posX * size.width,
-                  top: annotation.posY * size.height,
-                }}
+              Cancel
+            </Button>
+            <Button
+              disabled={!editBody.trim() || isMutating}
+              onClick={onSaveEdit}
+              size="sm"
+              type="button"
+            >
+              {isMutating ? <Loader2Icon className="animate-spin" /> : null}
+              Save
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {onSelect ? (
+            <button
+              className="mt-1 block w-full text-left"
+              onClick={onSelect}
+              type="button"
+            >
+              <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+                {annotation.body}
+              </p>
+            </button>
+          ) : (
+            <p className="mt-1 text-sm whitespace-pre-wrap text-muted-foreground">
+              {annotation.body}
+            </p>
+          )}
+
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+            {pageLabel ? (
+              <span className="rounded bg-muted px-1.5 py-0.5">{pageLabel}</span>
+            ) : null}
+            {annotation.resolved ? (
+              <span className="text-emerald-600">Resolved</span>
+            ) : null}
+            {canResolve && onToggleResolve ? (
+              <button
+                className="inline-flex items-center gap-1 hover:text-foreground"
+                onClick={onToggleResolve}
+                type="button"
               >
+                <CheckIcon className="size-3" />
+                {annotation.resolved ? "Unresolve" : "Resolve"}
+              </button>
+            ) : null}
+            {editable && isOwn ? (
+              <>
                 <button
-                  className={cn(
-                    "flex size-6 items-center justify-center rounded-full border text-[11px] font-semibold shadow-sm transition-transform hover:scale-110",
-                    annotation.resolved
-                      ? "border-emerald-300 bg-emerald-100 text-emerald-700"
-                      : "border-amber-300 bg-amber-100 text-amber-800",
-                  )}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setOpenPin((current) =>
-                      current === annotation.id ? null : annotation.id,
-                    );
-                  }}
+                  className="inline-flex items-center gap-1 hover:text-foreground"
+                  onClick={onStartEdit}
                   type="button"
                 >
-                  {index + 1}
+                  <PencilIcon className="size-3" />
+                  Edit
                 </button>
-
-                {openPin === annotation.id ? (
-                  <div
-                    className="absolute left-1/2 top-7 z-10 w-64 -translate-x-1/2 rounded-lg border border-border bg-popover p-3 text-left shadow-md"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <p className="text-sm whitespace-pre-wrap text-foreground">
-                      {annotation.body}
-                    </p>
-                    {canResolve ? (
-                      <button
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() => toggleResolve(annotation)}
-                        type="button"
-                      >
-                        <CheckIcon className="size-3" />
-                        {annotation.resolved
-                          ? "Mark unresolved"
-                          : "Mark resolved"}
-                      </button>
-                    ) : annotation.resolved ? (
-                      <p className="mt-2 text-xs text-emerald-600">Resolved</p>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            ))}
-
-            {draft && draft.page === currentPdfPage ? (
-              <div
-                className="absolute z-20 w-64 -translate-x-1/2 rounded-lg border border-border bg-popover p-3 shadow-md"
-                onClick={(event) => event.stopPropagation()}
-                style={{
-                  left: draft.x * size.width,
-                  top: draft.y * size.height + 10,
-                }}
-              >
-                <Textarea
-                  autoFocus
-                  className="min-h-20 text-sm"
-                  onChange={(event) => setDraftBody(event.target.value)}
-                  placeholder="Add your comment…"
-                  value={draftBody}
-                />
-                <div className="mt-2 flex justify-end gap-2">
-                  <Button
-                    onClick={() => setDraft(null)}
-                    size="sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    disabled={!draftBody.trim() || isSaving}
-                    onClick={saveDraft}
-                    size="sm"
-                    type="button"
-                  >
-                    {isSaving ? (
-                      <Loader2Icon className="animate-spin" />
-                    ) : null}
-                    Comment
-                  </Button>
-                </div>
-              </div>
+                <button
+                  className="inline-flex items-center gap-1 hover:text-destructive"
+                  disabled={isMutating}
+                  onClick={onDelete}
+                  type="button"
+                >
+                  <Trash2Icon className="size-3" />
+                  Delete
+                </button>
+              </>
             ) : null}
           </div>
-        ) : null}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          disabled={pageIndex <= 0}
-          onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <ChevronLeftIcon />
-          Previous
-        </Button>
-        <span className="text-sm text-muted-foreground">
-          {totalPages ? `Page ${pageIndex + 1} / ${totalPages}` : "Loading…"}
-        </span>
-        {pageIndex < totalPages - 1 ? (
-          <Button
-            onClick={() =>
-              setPageIndex((i) => Math.min(totalPages - 1, i + 1))
-            }
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Next
-            <ChevronRightIcon />
-          </Button>
-        ) : canApprove && !isApproved ? (
-          <Button
-            disabled={isApproving}
-            onClick={approve}
-            size="sm"
-            type="button"
-          >
-            {isApproving ? <Loader2Icon className="animate-spin" /> : null}
-            Approve &amp; continue
-          </Button>
-        ) : (
-          <span aria-hidden className="w-[92px]" />
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }

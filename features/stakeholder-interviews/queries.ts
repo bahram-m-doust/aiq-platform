@@ -31,6 +31,7 @@ type FileRow = {
 type AnnotationRow = {
   id: string;
   report_id: string;
+  parent_id?: string | null;
   author_id: string | null;
   page: number;
   pos_x: number | string;
@@ -189,9 +190,7 @@ export async function getStakeholderInterviewWorkspace({
       : Promise.resolve({ data: null, error: null }),
     admin
       .from("stakeholder_interview_annotations")
-      .select(
-        "id, report_id, author_id, page, pos_x, pos_y, body, resolved, created_at",
-      )
+      .select("*")
       .eq("report_id", reportRow.id)
       .order("created_at", { ascending: true }),
   ]);
@@ -235,6 +234,7 @@ export async function getStakeholderInterviewWorkspace({
     return {
       id: row.id,
       reportId: row.report_id,
+      parentId: row.parent_id ?? null,
       authorId: row.author_id,
       authorName: profile?.full_name ?? null,
       authorEmail: profile?.email ?? null,

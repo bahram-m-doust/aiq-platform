@@ -96,6 +96,7 @@ export async function addStakeholderAnnotation({
   posX,
   posY,
   body,
+  parentId,
 }: {
   reportId: string;
   profileId: string;
@@ -103,18 +104,24 @@ export async function addStakeholderAnnotation({
   posX: number;
   posY: number;
   body: string;
+  parentId?: string | null;
 }): Promise<StakeholderAnnotation> {
   const admin = createAdminClient();
+  const insert: Record<string, unknown> = {
+    report_id: reportId,
+    author_id: profileId,
+    page,
+    pos_x: normalizePosition(posX),
+    pos_y: normalizePosition(posY),
+    body,
+  };
+  // Only set parent_id for replies (keeps root inserts working even if the
+  // 0022 migration hasn't run yet).
+  if (parentId) insert.parent_id = parentId;
+
   const { data, error } = await admin
     .from("stakeholder_interview_annotations")
-    .insert({
-      report_id: reportId,
-      author_id: profileId,
-      page,
-      pos_x: normalizePosition(posX),
-      pos_y: normalizePosition(posY),
-      body,
-    })
+    .insert(insert)
     .select(
       "id, report_id, author_id, page, pos_x, pos_y, body, resolved, created_at",
     )
@@ -135,6 +142,7 @@ export async function addStakeholderAnnotation({
   return {
     id: row.id,
     reportId: row.report_id,
+    parentId: parentId ?? null,
     authorId: row.author_id,
     authorName: null,
     authorEmail: null,
@@ -145,6 +153,46 @@ export async function addStakeholderAnnotation({
     resolved: row.resolved,
     createdAt: row.created_at,
   };
+}
+
+export async function updateStakeholderAnnotation({
+  annotationId,
+  reportId,
+  authorId,
+  body,
+}: {
+  annotationId: string;
+  reportId: string;
+  authorId: string;
+  body: string;
+}): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("stakeholder_interview_annotations")
+    .update({ body, updated_at: new Date().toISOString() })
+    .eq("id", annotationId)
+    .eq("report_id", reportId)
+    .eq("author_id", authorId);
+  if (error) throw error;
+}
+
+export async function deleteStakeholderAnnotation({
+  annotationId,
+  reportId,
+  authorId,
+}: {
+  annotationId: string;
+  reportId: string;
+  authorId: string;
+}): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("stakeholder_interview_annotations")
+    .delete()
+    .eq("id", annotationId)
+    .eq("report_id", reportId)
+    .eq("author_id", authorId);
+  if (error) throw error;
 }
 
 export async function setStakeholderAnnotationResolved({

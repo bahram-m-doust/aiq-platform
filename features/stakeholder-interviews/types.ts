@@ -21,6 +21,7 @@ export type StakeholderInterviewFile = {
 export type StakeholderAnnotation = {
   id: string;
   reportId: string;
+  parentId: string | null;
   authorId: string | null;
   authorName: string | null;
   authorEmail: string | null;
@@ -67,6 +68,7 @@ export type AddAnnotationInput = {
   posX: number;
   posY: number;
   body: string;
+  parentId?: string | null;
 };
 
 export type AddAnnotationResult =
