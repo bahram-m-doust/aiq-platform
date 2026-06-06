@@ -386,15 +386,15 @@ export function PdfAnnotator({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-start gap-4">
+      {editable ? (
+        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+          <MessageSquarePlusIcon className="size-3.5" />
+          Click anywhere on the page to add a comment
+        </span>
+      ) : null}
+      <div className="flex items-start gap-6">
         {/* PDF column */}
-        <div className="min-w-0 flex-1 space-y-3">
-          {editable ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <MessageSquarePlusIcon className="size-3.5" />
-              Click anywhere on the page to add a comment
-            </span>
-          ) : null}
+        <div className="min-w-0 flex-1 space-y-4">
           <div className="w-full" ref={containerRef}>
             <div className="relative mx-auto w-fit rounded-lg border border-border bg-muted/30 shadow-xs">
               <canvas className="block rounded-lg" ref={canvasRef} />
@@ -558,20 +558,19 @@ export function PdfAnnotator({
 
         {/* Comments sidebar */}
         {showComments ? (
-          <aside className="sticky top-4 w-80 shrink-0 self-start rounded-lg border border-border bg-card shadow-xs">
-            <div className="border-b border-border px-3 pt-2 pb-3">
-              <div className="flex justify-end">
-                <Button
-                  aria-label="Close comments"
-                  onClick={() => setShowComments(false)}
-                  size="icon-sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  <XIcon />
-                </Button>
-              </div>
-              <div className="flex items-center justify-between px-1">
+          <aside className="sticky top-4 w-80 shrink-0 self-start overflow-hidden rounded-lg border border-border bg-card shadow-xs">
+            <div className="relative border-b border-border px-3 py-3">
+              <Button
+                aria-label="Close comments"
+                className="absolute right-2 top-2"
+                onClick={() => setShowComments(false)}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <XIcon />
+              </Button>
+              <div className="flex items-center justify-between gap-2 pr-8">
                 <span className="inline-flex items-center gap-2 text-sm font-medium">
                   <MessagesSquareIcon className="size-4" />
                   comments
