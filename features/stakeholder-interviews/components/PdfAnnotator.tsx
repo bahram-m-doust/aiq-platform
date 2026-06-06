@@ -380,6 +380,9 @@ export function PdfAnnotator({
       a.page - b.page ||
       (a.createdAt ?? "").localeCompare(b.createdAt ?? ""),
   );
+  const unresolvedCount = rootAnnotations.filter(
+    (item) => !item.resolved,
+  ).length;
 
   return (
     <div className="space-y-3">
@@ -569,19 +572,27 @@ export function PdfAnnotator({
         {/* Comments sidebar */}
         {showComments ? (
           <aside className="sticky top-4 w-80 shrink-0 self-start rounded-lg border border-border bg-card shadow-xs">
-            <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-              <span className="text-sm font-medium">
-                Comments ({rootAnnotations.length})
-              </span>
-              <Button
-                aria-label="Close comments"
-                onClick={() => setShowComments(false)}
-                size="icon-sm"
-                type="button"
-                variant="ghost"
-              >
-                <XIcon />
-              </Button>
+            <div className="border-b border-border px-3 pt-2 pb-3">
+              <div className="flex justify-end">
+                <Button
+                  aria-label="Close comments"
+                  onClick={() => setShowComments(false)}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <XIcon />
+                </Button>
+              </div>
+              <div className="flex items-center justify-between px-1">
+                <span className="inline-flex items-center gap-2 text-sm font-medium">
+                  <MessagesSquareIcon className="size-4" />
+                  comments
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {unresolvedCount} unresolved
+                </span>
+              </div>
             </div>
 
             {sortedRoots.length === 0 ? (
@@ -589,7 +600,7 @@ export function PdfAnnotator({
                 No comments yet.
               </p>
             ) : (
-              <ul className="max-h-[70svh] divide-y divide-border overflow-y-auto">
+              <ul className="max-h-[70svh] space-y-3 overflow-y-auto p-3">
                 {sortedRoots.map((root) => {
                   const displayPage =
                     contentPages.indexOf(root.page) + 1 || root.page;
@@ -598,8 +609,10 @@ export function PdfAnnotator({
                   return (
                     <li
                       className={cn(
-                        "px-4 py-3 transition-colors",
-                        isActive ? "bg-muted/40" : "",
+                        "rounded-lg border border-border p-3 transition-colors",
+                        isActive
+                          ? "border-foreground/20 bg-muted/40"
+                          : "",
                       )}
                       key={root.id}
                     >
