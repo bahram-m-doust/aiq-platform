@@ -28,15 +28,6 @@ import { cn } from "@/lib/utils";
 
 type Draft = { page: number; x: number; y: number } | null;
 
-// Custom mouse cursor for the annotation layer: the comment (square-plus)
-// icon instead of the default crosshair. White fill gives it contrast on the
-// PDF; hotspot is the centre of the plus.
-const COMMENT_CURSOR_SVG =
-  "<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='white' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='3'/><path d='M8 12h8'/><path d='M12 8v8'/></svg>";
-const COMMENT_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
-  COMMENT_CURSOR_SVG,
-)}") 14 14, crosshair`;
-
 export function PdfAnnotator({
   signedUrl,
   reportId,
@@ -281,13 +272,12 @@ export function PdfAnnotator({
           {size ? (
             <div
               aria-label="PDF annotation layer"
-              className="absolute inset-0"
+              className={cn(
+                "absolute inset-0",
+                editable ? "cursor-crosshair" : "cursor-default",
+              )}
               onClick={handleOverlayClick}
-              style={{
-                width: size.width,
-                height: size.height,
-                cursor: editable ? COMMENT_CURSOR : "default",
-              }}
+              style={{ width: size.width, height: size.height }}
             >
             {pageAnnotations.map((annotation, index) => (
               <div
