@@ -679,6 +679,16 @@ export function BrandBuildView({
     (phase: PhaseProgress, substep: SubstepProgress, state: SubstepState) => {
       if (state === "locked") return;
       if (phase.key === "questionnaires") {
+        if (substep.id === "stakeholder-interviews") {
+          window.location.href =
+            "/dashboard/brain/roadmap/stakeholder-interviews";
+          return;
+        }
+        if (substep.id === "futures-research") {
+          // Futures Research page is not built yet — open the detail sheet.
+          setDetail({ phase, substep, state });
+          return;
+        }
         window.location.href = "/dashboard/questionnaire";
         return;
       }
