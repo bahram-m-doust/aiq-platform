@@ -13,7 +13,9 @@ import {
   ChevronRightIcon,
   CheckIcon,
   Loader2Icon,
+  MessagesSquareIcon,
   MessageSquarePlusIcon,
+  XIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,19 @@ import type { StakeholderAnnotation } from "@/features/stakeholder-interviews/ty
 import { cn } from "@/lib/utils";
 
 type Draft = { page: number; x: number; y: number } | null;
+
+function formatCommentDate(value: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export function PdfAnnotator({
   signedUrl,
@@ -69,8 +84,15 @@ export function PdfAnnotator({
   const [draft, setDraft] = useState<Draft>(null);
   const [draftBody, setDraftBody] = useState("");
   const [openPin, setOpenPin] = useState<string | null>(null);
+  const [showComments, setShowComments] = useState(false);
   const [isSaving, startSaving] = useTransition();
   const [isApproving, startApproving] = useTransition();
+
+  function goToAnnotation(annotation: StakeholderAnnotation) {
+    const idx = contentPages.indexOf(annotation.page);
+    if (idx >= 0) setPageIndex(idx);
+    setOpenPin(annotation.id);
+  }
 
   function approve() {
     startApproving(async () => {
@@ -256,12 +278,90 @@ export function PdfAnnotator({
 
   return (
     <div className="space-y-3">
-      {editable ? (
-        <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between gap-3">
+        <Button
+          onClick={() => setShowComments((value) => !value)}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <MessagesSquareIcon />
+          Show all comments ({annotations.length})
+        </Button>
+        {editable ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <MessageSquarePlusIcon className="size-3.5" />
             Click anywhere on the page to add a comment
           </span>
+        ) : null}
+      </div>
+
+      {showComments ? (
+        <div className="rounded-lg border border-border bg-card shadow-xs">
+          <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+            <span className="text-sm font-medium">
+              Comments ({annotations.length})
+            </span>
+            <Button
+              aria-label="Close comments"
+              onClick={() => setShowComments(false)}
+              size="icon-sm"
+              type="button"
+              variant="ghost"
+            >
+              <XIcon />
+            </Button>
+          </div>
+          {annotations.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+              No comments yet.
+            </p>
+          ) : (
+            <ul className="max-h-72 divide-y divide-border overflow-y-auto">
+              {[...annotations]
+                .sort(
+                  (a, b) =>
+                    a.page - b.page ||
+                    (a.createdAt ?? "").localeCompare(b.createdAt ?? ""),
+                )
+                .map((annotation) => {
+                  const displayPage =
+                    contentPages.indexOf(annotation.page) + 1 ||
+                    annotation.page;
+                  return (
+                    <li key={annotation.id}>
+                      <button
+                        className="flex w-full flex-col items-start gap-1 px-4 py-3 text-left transition-colors hover:bg-muted/50"
+                        onClick={() => goToAnnotation(annotation)}
+                        type="button"
+                      >
+                        <div className="flex w-full items-center justify-between gap-2">
+                          <span className="text-sm font-medium text-foreground">
+                            {annotation.authorName ??
+                              annotation.authorEmail ??
+                              "Reviewer"}
+                          </span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {formatCommentDate(annotation.createdAt)}
+                          </span>
+                        </div>
+                        <p className="line-clamp-3 text-sm whitespace-pre-wrap text-muted-foreground">
+                          {annotation.body}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="rounded bg-muted px-1.5 py-0.5">
+                            Page {displayPage}
+                          </span>
+                          {annotation.resolved ? (
+                            <span className="text-emerald-600">Resolved</span>
+                          ) : null}
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+            </ul>
+          )}
         </div>
       ) : null}
 

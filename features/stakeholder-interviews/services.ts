@@ -136,6 +136,7 @@ export async function addStakeholderAnnotation({
     id: row.id,
     reportId: row.report_id,
     authorId: row.author_id,
+    authorName: null,
     authorEmail: null,
     page: row.page,
     posX: Number(row.pos_x),

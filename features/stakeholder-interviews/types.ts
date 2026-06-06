@@ -22,6 +22,7 @@ export type StakeholderAnnotation = {
   id: string;
   reportId: string;
   authorId: string | null;
+  authorName: string | null;
   authorEmail: string | null;
   page: number;
   posX: number;

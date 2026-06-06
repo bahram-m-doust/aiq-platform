@@ -73,7 +73,12 @@ async function requireClientReviewer(returnTo: string) {
   ) {
     return null;
   }
-  return { profileId: profile.id, brandId: access.brandId };
+  return {
+    profileId: profile.id,
+    brandId: access.brandId,
+    authorName: profile.full_name ?? null,
+    authorEmail: profile.email ?? null,
+  };
 }
 
 export async function addStakeholderAnnotationAction(
@@ -104,7 +109,14 @@ export async function addStakeholderAnnotationAction(
   });
   revalidateStakeholderPaths();
 
-  return { ok: true, annotation };
+  return {
+    ok: true,
+    annotation: {
+      ...annotation,
+      authorName: reviewer.authorName,
+      authorEmail: reviewer.authorEmail,
+    },
+  };
 }
 
 export async function resolveStakeholderAnnotationAction(

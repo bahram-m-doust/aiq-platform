@@ -199,20 +199,53 @@ export async function getStakeholderInterviewWorkspace({
   if (annotationsResult.error) throw annotationsResult.error;
 
   const fileRow = (fileResult.data as FileRow | null) ?? null;
-  const annotations: StakeholderAnnotation[] = (
-    (annotationsResult.data ?? []) as AnnotationRow[]
-  ).map((row) => ({
-    id: row.id,
-    reportId: row.report_id,
-    authorId: row.author_id,
-    authorEmail: null,
-    page: row.page,
-    posX: Number(row.pos_x),
-    posY: Number(row.pos_y),
-    body: row.body,
-    resolved: row.resolved,
-    createdAt: row.created_at,
-  }));
+  const annotationRows = (annotationsResult.data ?? []) as AnnotationRow[];
+
+  const authorIds = [
+    ...new Set(
+      annotationRows
+        .map((row) => row.author_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const profileById = new Map<
+    string,
+    { full_name: string | null; email: string | null }
+  >();
+  if (authorIds.length > 0) {
+    const { data: profiles, error: profilesError } = await admin
+      .from("users_profile")
+      .select("id, full_name, email")
+      .in("id", authorIds);
+    if (profilesError) throw profilesError;
+    for (const profile of (profiles ?? []) as Array<{
+      id: string;
+      full_name: string | null;
+      email: string | null;
+    }>) {
+      profileById.set(profile.id, {
+        full_name: profile.full_name,
+        email: profile.email,
+      });
+    }
+  }
+
+  const annotations: StakeholderAnnotation[] = annotationRows.map((row) => {
+    const profile = row.author_id ? profileById.get(row.author_id) : undefined;
+    return {
+      id: row.id,
+      reportId: row.report_id,
+      authorId: row.author_id,
+      authorName: profile?.full_name ?? null,
+      authorEmail: profile?.email ?? null,
+      page: row.page,
+      posX: Number(row.pos_x),
+      posY: Number(row.pos_y),
+      body: row.body,
+      resolved: row.resolved,
+      createdAt: row.created_at,
+    };
+  });
 
   const report: StakeholderInterviewReport = {
     id: reportRow.id,
