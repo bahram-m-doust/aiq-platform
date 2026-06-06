@@ -51,6 +51,16 @@ function toStatus(value: string): StakeholderReportStatus {
   return "PENDING_UPLOAD";
 }
 
+// Postgres "undefined_table" — the migration hasn't been applied yet. Treat it
+// as "no report" so the roadmap and review page degrade gracefully.
+function isMissingTableError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: string }).code === "42P01"
+  );
+}
+
 export type StakeholderAdminBrandRow = {
   brandId: string;
   brandName: string;
@@ -70,7 +80,9 @@ export async function getStakeholderAdminOverview(): Promise<
       .select("brand_id, status, uploaded_at, file_id"),
   ]);
   if (brandsResult.error) throw brandsResult.error;
-  if (reportsResult.error) throw reportsResult.error;
+  if (reportsResult.error && !isMissingTableError(reportsResult.error)) {
+    throw reportsResult.error;
+  }
 
   const reportByBrand = new Map(
     (
@@ -126,7 +138,10 @@ export async function getStakeholderReportRowByBrand(
     .select("id, brand_id, file_id, status, uploaded_at, approved_at")
     .eq("brand_id", brandId)
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    if (isMissingTableError(error)) return null;
+    throw error;
+  }
   return (data as ReportRow | null) ?? null;
 }
 
