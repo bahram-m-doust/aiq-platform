@@ -96,7 +96,7 @@ export function PdfAnnotator({
   const [draft, setDraft] = useState<Draft>(null);
   const [draftBody, setDraftBody] = useState("");
   const [openPin, setOpenPin] = useState<string | null>(null);
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(true);
   const [isSaving, startSaving] = useTransition();
   const [isApproving, startApproving] = useTransition();
 
@@ -386,28 +386,15 @@ export function PdfAnnotator({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          onClick={() => setShowComments((value) => !value)}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <MessagesSquareIcon />
-          {showComments ? "Hide comments" : "Show all comments"} (
-          {rootAnnotations.length})
-        </Button>
-        {editable ? (
-          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MessageSquarePlusIcon className="size-3.5" />
-            Click anywhere on the page to add a comment
-          </span>
-        ) : null}
-      </div>
-
       <div className="flex items-start gap-4">
         {/* PDF column */}
         <div className="min-w-0 flex-1 space-y-3">
+          {editable ? (
+            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MessageSquarePlusIcon className="size-3.5" />
+              Click anywhere on the page to add a comment
+            </span>
+          ) : null}
           <div className="w-full" ref={containerRef}>
             <div className="relative mx-auto w-fit rounded-lg border border-border bg-muted/30 shadow-xs">
               <canvas className="block rounded-lg" ref={canvasRef} />
