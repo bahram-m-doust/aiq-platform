@@ -6,7 +6,6 @@ import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { requireUserProfile } from "@/features/auth/queries";
 import { PdfAnnotator } from "@/features/stakeholder-interviews/components/PdfAnnotator";
-import { ReviewDecisionPanel } from "@/features/stakeholder-interviews/components/ReviewDecisionPanel";
 import { stakeholderReportStatusLabels } from "@/features/stakeholder-interviews/schema";
 import { getStakeholderInterviewWorkspace } from "@/features/stakeholder-interviews/queries";
 
@@ -98,21 +97,15 @@ export default async function StakeholderInterviewsPage() {
         ) : null}
 
         {hasPdf && workspace.report && workspace.signedUrl ? (
-          <>
-            <PdfAnnotator
-              canResolve={workspace.canReview}
-              editable={editable}
-              initialAnnotations={workspace.annotations}
-              reportId={workspace.report.id}
-              signedUrl={workspace.signedUrl}
-            />
-
-            {workspace.canReview && !isApproved ? (
-              <div className="mt-6 border-t border-dashed border-[var(--bv-line-dashed)] pt-5">
-                <ReviewDecisionPanel />
-              </div>
-            ) : null}
-          </>
+          <PdfAnnotator
+            canApprove={workspace.canReview}
+            canResolve={workspace.canReview}
+            editable={editable}
+            initialAnnotations={workspace.annotations}
+            isApproved={isApproved}
+            reportId={workspace.report.id}
+            signedUrl={workspace.signedUrl}
+          />
         ) : (
           <div
             className="rounded-xl border border-dashed px-6 py-12 text-center"

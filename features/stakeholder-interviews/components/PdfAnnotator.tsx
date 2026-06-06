@@ -7,6 +7,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -19,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   addStakeholderAnnotationAction,
+  approveStakeholderReportAction,
   resolveStakeholderAnnotationAction,
 } from "@/features/stakeholder-interviews/actions";
 import type { StakeholderAnnotation } from "@/features/stakeholder-interviews/types";
@@ -32,13 +34,18 @@ export function PdfAnnotator({
   initialAnnotations,
   editable,
   canResolve,
+  canApprove,
+  isApproved,
 }: {
   signedUrl: string;
   reportId: string;
   initialAnnotations: StakeholderAnnotation[];
   editable: boolean;
   canResolve: boolean;
+  canApprove: boolean;
+  isApproved: boolean;
 }) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,6 +63,14 @@ export function PdfAnnotator({
   const [draftBody, setDraftBody] = useState("");
   const [openPin, setOpenPin] = useState<string | null>(null);
   const [isSaving, startSaving] = useTransition();
+  const [isApproving, startApproving] = useTransition();
+
+  function approve() {
+    startApproving(async () => {
+      const result = await approveStakeholderReportAction();
+      if (result.ok) router.refresh();
+    });
+  }
 
   // Load the PDF once.
   useEffect(() => {
@@ -173,37 +188,14 @@ export function PdfAnnotator({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            size="icon-sm"
-            type="button"
-            variant="outline"
-          >
-            <ChevronLeftIcon />
-          </Button>
-          <span className="min-w-20 text-center text-sm text-muted-foreground">
-            {numPages ? `Page ${page} / ${numPages}` : "Loading…"}
-          </span>
-          <Button
-            disabled={numPages === 0 || page >= numPages}
-            onClick={() => setPage((p) => Math.min(numPages, p + 1))}
-            size="icon-sm"
-            type="button"
-            variant="outline"
-          >
-            <ChevronRightIcon />
-          </Button>
-        </div>
-        {editable ? (
+      {editable ? (
+        <div className="flex items-center justify-end">
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <MessageSquarePlusIcon className="size-3.5" />
             Click anywhere on the page to add a comment
           </span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <div className="w-full" ref={containerRef}>
         <div className="relative mx-auto w-fit rounded-lg border border-border bg-muted/30 shadow-xs">
@@ -315,6 +307,45 @@ export function PdfAnnotator({
           </div>
         ) : null}
         </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <Button
+          disabled={page <= 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          <ChevronLeftIcon />
+          Previous
+        </Button>
+        <span className="text-sm text-muted-foreground">
+          {numPages ? `Page ${page} / ${numPages}` : "Loading…"}
+        </span>
+        {page < numPages ? (
+          <Button
+            onClick={() => setPage((p) => Math.min(numPages, p + 1))}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Next
+            <ChevronRightIcon />
+          </Button>
+        ) : canApprove && !isApproved ? (
+          <Button
+            disabled={isApproving}
+            onClick={approve}
+            size="sm"
+            type="button"
+          >
+            {isApproving ? <Loader2Icon className="animate-spin" /> : null}
+            Approve &amp; continue
+          </Button>
+        ) : (
+          <span aria-hidden className="w-[92px]" />
+        )}
       </div>
     </div>
   );

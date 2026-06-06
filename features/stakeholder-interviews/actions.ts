@@ -126,37 +126,26 @@ export async function resolveStakeholderAnnotationAction(
   return { ok: true };
 }
 
-export async function decideStakeholderReportAction(
-  _prevState: StakeholderActionState,
-  formData: FormData,
-): Promise<StakeholderActionState> {
+export async function approveStakeholderReportAction(): Promise<{
+  ok: boolean;
+  message?: string;
+}> {
   const reviewer = await requireClientReviewer(CLIENT_PATH);
   if (!reviewer) {
-    return { status: "error", message: "You cannot review this report." };
-  }
-
-  const decision = String(formData.get("decision") ?? "");
-  if (decision !== "APPROVED" && decision !== "CHANGES_REQUESTED") {
-    return { status: "error", message: "Unknown decision." };
+    return { ok: false, message: "You cannot review this report." };
   }
 
   const report = await getStakeholderReportRowByBrand(reviewer.brandId);
   if (!report || !report.file_id) {
-    return { status: "error", message: "There is no report to review yet." };
+    return { ok: false, message: "There is no report to review yet." };
   }
 
   await setStakeholderReportStatus({
     brandId: reviewer.brandId,
     profileId: reviewer.profileId,
-    status: decision,
+    status: "APPROVED",
   });
   revalidateStakeholderPaths();
 
-  return {
-    status: "success",
-    message:
-      decision === "APPROVED"
-        ? "Stakeholder interviews approved. Futures Research is now unlocked."
-        : "Change request sent to the Bextudio team.",
-  };
+  return { ok: true };
 }
