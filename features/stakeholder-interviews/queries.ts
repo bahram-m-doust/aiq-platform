@@ -51,6 +51,72 @@ function toStatus(value: string): StakeholderReportStatus {
   return "PENDING_UPLOAD";
 }
 
+export type StakeholderAdminBrandRow = {
+  brandId: string;
+  brandName: string;
+  status: StakeholderReportStatus | "NONE";
+  fileName: string | null;
+  uploadedAt: string | null;
+};
+
+export async function getStakeholderAdminOverview(): Promise<
+  StakeholderAdminBrandRow[]
+> {
+  const admin = createAdminClient();
+  const [brandsResult, reportsResult] = await Promise.all([
+    admin.from("brands").select("id, name").order("name", { ascending: true }),
+    admin
+      .from("stakeholder_interview_reports")
+      .select("brand_id, status, uploaded_at, file_id"),
+  ]);
+  if (brandsResult.error) throw brandsResult.error;
+  if (reportsResult.error) throw reportsResult.error;
+
+  const reportByBrand = new Map(
+    (
+      (reportsResult.data ?? []) as Array<{
+        brand_id: string;
+        status: string;
+        uploaded_at: string | null;
+        file_id: string | null;
+      }>
+    ).map((row) => [row.brand_id, row]),
+  );
+
+  const fileIds = [...reportByBrand.values()]
+    .map((row) => row.file_id)
+    .filter((id): id is string => Boolean(id));
+  const fileNames = new Map<string, string>();
+  if (fileIds.length > 0) {
+    const { data, error } = await admin
+      .from("files")
+      .select("id, original_name")
+      .in("id", fileIds);
+    if (error) throw error;
+    for (const file of (data ?? []) as Array<{
+      id: string;
+      original_name: string;
+    }>) {
+      fileNames.set(file.id, file.original_name);
+    }
+  }
+
+  return ((brandsResult.data ?? []) as Array<{ id: string; name: string }>).map(
+    (brand) => {
+      const report = reportByBrand.get(brand.id);
+      return {
+        brandId: brand.id,
+        brandName: brand.name,
+        status: report ? toStatus(report.status) : "NONE",
+        fileName: report?.file_id
+          ? (fileNames.get(report.file_id) ?? null)
+          : null,
+        uploadedAt: report?.uploaded_at ?? null,
+      };
+    },
+  );
+}
+
 export async function getStakeholderReportRowByBrand(
   brandId: string,
 ): Promise<ReportRow | null> {
