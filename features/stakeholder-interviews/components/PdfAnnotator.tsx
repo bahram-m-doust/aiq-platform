@@ -51,8 +51,10 @@ export function PdfAnnotator({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfRef = useRef<any>(null);
 
-  const [numPages, setNumPages] = useState(0);
-  const [page, setPage] = useState(1);
+  // Actual PDF page numbers that have content (blank pages are skipped from
+  // the dashboard view). `pageIndex` indexes into this list.
+  const [contentPages, setContentPages] = useState<number[]>([]);
+  const [pageIndex, setPageIndex] = useState(0);
   const [size, setSize] = useState<{ width: number; height: number } | null>(
     null,
   );
@@ -85,8 +87,32 @@ export function PdfAnnotator({
         const doc = await pdfjs.getDocument({ data }).promise;
         if (cancelled) return;
         pdfRef.current = doc;
-        setNumPages(doc.numPages);
-        setPage(1);
+
+        // Keep only pages that actually have content (text or images), so the
+        // dashboard view drops blank pages / empty filler pages.
+        const ops = pdfjs.OPS;
+        const imageOps = new Set([
+          ops.paintImageXObject,
+          ops.paintInlineImageXObject,
+          ops.paintImageMaskXObject,
+        ]);
+        const withContent: number[] = [];
+        for (let i = 1; i <= doc.numPages; i += 1) {
+          const pdfPage = await doc.getPage(i);
+          const textContent = await pdfPage.getTextContent();
+          const hasText = textContent.items.some(
+            (item) => "str" in item && item.str.trim().length > 0,
+          );
+          let hasImage = false;
+          if (!hasText) {
+            const opList = await pdfPage.getOperatorList();
+            hasImage = opList.fnArray.some((fn: number) => imageOps.has(fn));
+          }
+          if (hasText || hasImage) withContent.push(i);
+          if (cancelled) return;
+        }
+        setContentPages(withContent.length > 0 ? withContent : [1]);
+        setPageIndex(0);
       } catch (error) {
         if (!cancelled) {
           setLoadError(
@@ -100,6 +126,8 @@ export function PdfAnnotator({
     };
   }, [signedUrl]);
 
+  const currentPdfPage = contentPages[pageIndex] ?? 1;
+
   // Render the current page whenever it (or the container width) changes.
   const renderPage = useCallback(async () => {
     const doc = pdfRef.current;
@@ -107,9 +135,10 @@ export function PdfAnnotator({
     const container = containerRef.current;
     if (!doc || !canvas || !container) return;
 
-    const pdfPage = await doc.getPage(page);
+    const pdfPage = await doc.getPage(currentPdfPage);
     const base = pdfPage.getViewport({ scale: 1 });
-    const width = Math.min(container.clientWidth, 1100);
+    // Cap the render width so the text reads at a comfortable, smaller size.
+    const width = Math.min(container.clientWidth, 720);
     const scale = width / base.width;
     const viewport = pdfPage.getViewport({ scale });
     const ratio = window.devicePixelRatio || 1;
@@ -124,14 +153,14 @@ export function PdfAnnotator({
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     await pdfPage.render({ canvasContext: ctx, viewport }).promise;
     setSize({ width: viewport.width, height: viewport.height });
-  }, [page]);
+  }, [currentPdfPage]);
 
   useEffect(() => {
     void renderPage();
     const onResize = () => void renderPage();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [renderPage, numPages]);
+  }, [renderPage, contentPages.length]);
 
   function handleOverlayClick(event: React.MouseEvent<HTMLDivElement>) {
     if (!editable || !size) return;
@@ -143,7 +172,7 @@ export function PdfAnnotator({
     const rect = event.currentTarget.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width;
     const y = (event.clientY - rect.top) / rect.height;
-    setDraft({ page, x, y });
+    setDraft({ page: currentPdfPage, x, y });
     setDraftBody("");
   }
 
@@ -176,7 +205,10 @@ export function PdfAnnotator({
     void resolveStakeholderAnnotationAction(annotation.id, next);
   }
 
-  const pageAnnotations = annotations.filter((item) => item.page === page);
+  const pageAnnotations = annotations.filter(
+    (item) => item.page === currentPdfPage,
+  );
+  const totalPages = contentPages.length;
 
   if (loadError) {
     return (
@@ -265,7 +297,7 @@ export function PdfAnnotator({
               </div>
             ))}
 
-            {draft && draft.page === page ? (
+            {draft && draft.page === currentPdfPage ? (
               <div
                 className="absolute z-20 w-64 -translate-x-1/2 rounded-lg border border-border bg-popover p-3 shadow-md"
                 onClick={(event) => event.stopPropagation()}
@@ -311,8 +343,8 @@ export function PdfAnnotator({
 
       <div className="flex items-center justify-between gap-3">
         <Button
-          disabled={page <= 1}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={pageIndex <= 0}
+          onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
           size="sm"
           type="button"
           variant="outline"
@@ -321,11 +353,13 @@ export function PdfAnnotator({
           Previous
         </Button>
         <span className="text-sm text-muted-foreground">
-          {numPages ? `Page ${page} / ${numPages}` : "Loading…"}
+          {totalPages ? `Page ${pageIndex + 1} / ${totalPages}` : "Loading…"}
         </span>
-        {page < numPages ? (
+        {pageIndex < totalPages - 1 ? (
           <Button
-            onClick={() => setPage((p) => Math.min(numPages, p + 1))}
+            onClick={() =>
+              setPageIndex((i) => Math.min(totalPages - 1, i + 1))
+            }
             size="sm"
             type="button"
             variant="outline"
