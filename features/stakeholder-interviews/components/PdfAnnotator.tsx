@@ -50,6 +50,11 @@ export function PdfAnnotator({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfRef = useRef<any>(null);
+  // Per-page vertical content bounds (PDF user-space Y), used to trim the
+  // empty top/bottom margins of low-content pages.
+  const cropRef = useRef<Map<number, { minY: number; maxY: number }>>(
+    new Map(),
+  );
 
   // Actual PDF page numbers that have content (blank pages are skipped from
   // the dashboard view). `pageIndex` indexes into this list.
@@ -109,6 +114,19 @@ export function PdfAnnotator({
             hasImage = opList.fnArray.some((fn: number) => imageOps.has(fn));
           }
           if (hasText || hasImage) withContent.push(i);
+
+          if (hasText) {
+            let minY = Infinity;
+            let maxY = -Infinity;
+            for (const item of textContent.items) {
+              if (!("str" in item) || !item.str.trim()) continue;
+              const y = item.transform[5];
+              const h = item.height || 0;
+              if (y - h * 0.3 < minY) minY = y - h * 0.3;
+              if (y + h > maxY) maxY = y + h;
+            }
+            if (minY < maxY) cropRef.current.set(i, { minY, maxY });
+          }
           if (cancelled) return;
         }
         setContentPages(withContent.length > 0 ? withContent : [1]);
@@ -140,19 +158,37 @@ export function PdfAnnotator({
     // Cap the render width so the text reads at a comfortable, smaller size.
     const width = Math.min(container.clientWidth, 720);
     const scale = width / base.width;
-    const viewport = pdfPage.getViewport({ scale });
     const ratio = window.devicePixelRatio || 1;
 
-    canvas.width = Math.floor(viewport.width * ratio);
-    canvas.height = Math.floor(viewport.height * ratio);
-    canvas.style.width = `${viewport.width}px`;
-    canvas.style.height = `${viewport.height}px`;
+    // Trim empty top/bottom margins on low-content pages.
+    const crop = cropRef.current.get(currentPdfPage);
+    const pad = 24;
+    let viewport: { width: number; height: number };
+    let cssWidth = width;
+    let cssHeight: number;
+    if (crop) {
+      const minY = Math.max(0, crop.minY - pad);
+      const maxY = Math.min(base.height, crop.maxY + pad);
+      const topCrop = (base.height - maxY) * scale;
+      cssHeight = (maxY - minY) * scale;
+      viewport = pdfPage.getViewport({ scale, offsetY: -topCrop });
+    } else {
+      const full = pdfPage.getViewport({ scale });
+      viewport = full;
+      cssWidth = full.width;
+      cssHeight = full.height;
+    }
+
+    canvas.width = Math.floor(cssWidth * ratio);
+    canvas.height = Math.floor(cssHeight * ratio);
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     await pdfPage.render({ canvasContext: ctx, viewport }).promise;
-    setSize({ width: viewport.width, height: viewport.height });
+    setSize({ width: cssWidth, height: cssHeight });
   }, [currentPdfPage]);
 
   useEffect(() => {
