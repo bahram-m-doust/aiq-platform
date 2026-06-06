@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
 import { uploadStakeholderReportAction } from "@/features/stakeholder-interviews/actions";
 import { initialStakeholderActionState } from "@/features/stakeholder-interviews/schema";
@@ -54,25 +61,18 @@ export function StakeholderUploadForm({
 
           <div className="space-y-2">
             <Label htmlFor="stakeholder-brand">Brand</Label>
-            <select
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              id="stakeholder-brand"
-              name="brand_id"
-              required
-            >
-              <option className="bg-background text-foreground" value="">
-                Select a brand…
-              </option>
-              {brands.map((brand) => (
-                <option
-                  className="bg-background text-foreground"
-                  key={brand.id}
-                  value={brand.id}
-                >
-                  {brand.name}
-                </option>
-              ))}
-            </select>
+            <Select name="brand_id" required>
+              <SelectTrigger className="w-full" id="stakeholder-brand">
+                <SelectValue placeholder="Select a brand…" />
+              </SelectTrigger>
+              <SelectContent className="dark">
+                {brands.map((brand) => (
+                  <SelectItem key={brand.id} value={brand.id}>
+                    {brand.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
