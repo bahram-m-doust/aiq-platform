@@ -3,10 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { requireUserProfile } from "@/features/auth/queries";
 import { PdfAnnotator } from "@/features/stakeholder-interviews/components/PdfAnnotator";
-import { stakeholderReportStatusLabels } from "@/features/stakeholder-interviews/schema";
 import { getStakeholderInterviewWorkspace } from "@/features/stakeholder-interviews/queries";
 
 export const metadata: Metadata = {
@@ -34,30 +32,21 @@ export default async function StakeholderInterviewsPage() {
     workspace.canReview &&
     (status === "CLIENT_REVIEW" || status === "CHANGES_REQUESTED");
 
-  const badgeStyle = isApproved
-    ? { color: "#157a52", borderColor: "rgba(43,199,138,0.28)", background: "rgba(43,199,138,0.12)" }
-    : status === "CHANGES_REQUESTED"
-      ? { color: "#996100", borderColor: "rgba(255,178,35,0.32)", background: "rgba(255,178,35,0.14)" }
-      : { color: "var(--bv-ink-3)", borderColor: "var(--bv-line-2)", background: "#fff" };
-
   return (
     <div
       className="min-h-svh px-4 py-6 sm:px-6 sm:py-8"
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
       <div className="w-full">
-        <div className="mb-6 flex items-center gap-3">
+        <div className="mb-6 md:hidden">
           {/* Back pill only on mobile — desktop relies on the header breadcrumb */}
           <Link
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-3.5 py-2 text-[13px] text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] md:hidden"
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-3.5 py-2 text-[13px] text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)]"
             href="/dashboard/brain/roadmap"
           >
             <ArrowLeftIcon className="size-3.5" />
             Build roadmap
           </Link>
-          <Badge className="ml-auto" variant="outline" style={badgeStyle}>
-            {stakeholderReportStatusLabels[status]}
-          </Badge>
         </div>
 
         <div className="mb-7">
