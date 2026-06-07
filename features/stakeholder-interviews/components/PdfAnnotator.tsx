@@ -441,6 +441,36 @@ export function PdfAnnotator({
             </div>
           ) : null}
 
+          {totalPages > 1 ? (
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                aria-label="Previous page"
+                disabled={pageIndex <= 0}
+                onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+                size="icon"
+                type="button"
+                variant="outline"
+              >
+                <ChevronLeftIcon />
+              </Button>
+              <span className="min-w-[84px] text-center text-sm text-muted-foreground tabular-nums">
+                {pageIndex + 1} / {totalPages}
+              </span>
+              <Button
+                aria-label="Next page"
+                disabled={pageIndex >= totalPages - 1}
+                onClick={() =>
+                  setPageIndex((i) => Math.min(totalPages - 1, i + 1))
+                }
+                size="icon"
+                type="button"
+                variant="outline"
+              >
+                <ChevronRightIcon />
+              </Button>
+            </div>
+          ) : null}
+
           {loadError ? (
             <div className="rounded-[10px] border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
               {loadError}
@@ -571,36 +601,6 @@ export function PdfAnnotator({
               </div>
             </div>
           )}
-
-          {totalPages > 1 ? (
-            <div className="flex items-center justify-center gap-3">
-              <Button
-                disabled={pageIndex <= 0}
-                onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <ChevronLeftIcon />
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {pageIndex + 1} / {totalPages}
-              </span>
-              <Button
-                disabled={pageIndex >= totalPages - 1}
-                onClick={() =>
-                  setPageIndex((i) => Math.min(totalPages - 1, i + 1))
-                }
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                Next
-                <ChevronRightIcon />
-              </Button>
-            </div>
-          ) : null}
 
           {isApproved ? (
             <div className="flex flex-col items-center gap-3 pt-2 sm:flex-row sm:justify-center">
