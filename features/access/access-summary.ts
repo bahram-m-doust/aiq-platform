@@ -10,6 +10,7 @@ export const noBrandAccessSummary: BrandAccessSummary = {
   brandName: null,
   membershipRole: null,
   planName: null,
+  credits: 0,
 };
 
 function parseTime(value: string | null) {
@@ -67,6 +68,7 @@ export function resolveBrandAccessSummary({
         brandName: membership.brandName,
         membershipRole: membership.role,
         planName: entitlement.planName,
+        credits: entitlement.credits,
       };
     }
   }

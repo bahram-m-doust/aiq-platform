@@ -46,6 +46,7 @@ type SidebarProps = {
   fullName: string | null;
   role: string | null;
   planName: string | null;
+  credits: number;
   agents: SidebarAgent[];
 };
 
@@ -62,7 +63,7 @@ const secondaryNav = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings2Icon },
 ];
 
-export function Sidebar({ role, planName, agents }: SidebarProps) {
+export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -236,7 +237,7 @@ export function Sidebar({ role, planName, agents }: SidebarProps) {
               <ChevronRightIcon className="size-4" />
             </button>
           </div>
-          <CreditCounter />
+          <CreditCounter credits={credits} />
         </div>
       </SidebarFooter>
     </SidebarRoot>

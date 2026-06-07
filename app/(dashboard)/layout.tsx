@@ -62,6 +62,7 @@ export default async function DashboardLayout({
         fullName: profile.full_name,
         role: profile.global_role,
         planName: accessSummary.planName,
+        credits: accessSummary.credits,
         agents: agents.map((a) => ({
           key: a.key,
           name: defByKey.get(a.key)?.name ?? a.name,

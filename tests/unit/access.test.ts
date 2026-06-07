@@ -26,6 +26,7 @@ describe("brand access summary", () => {
           startsAt: "2026-01-01T00:00:00.000Z",
           expiresAt: null,
           planName: "BASIC",
+          credits: 1000,
         },
       ],
     });
@@ -36,6 +37,7 @@ describe("brand access summary", () => {
       brandName: "Bextudio",
       membershipRole: "OWNER",
       planName: "BASIC",
+      credits: 1000,
     });
   });
 
@@ -56,6 +58,7 @@ describe("brand access summary", () => {
           startsAt: "2026-01-01T00:00:00.000Z",
           expiresAt: "2026-02-01T00:00:00.000Z",
           planName: "BASIC",
+          credits: 0,
         },
       ],
     });
@@ -73,6 +76,7 @@ describe("brand access summary", () => {
           startsAt: "2026-06-01T00:00:00.000Z",
           expiresAt: null,
           planName: "BASIC",
+          credits: 0,
         },
         now,
       ),
@@ -86,6 +90,7 @@ describe("brand access summary", () => {
           startsAt: "2026-01-01T00:00:00.000Z",
           expiresAt: "2026-05-01T00:00:00.000Z",
           planName: "BASIC",
+          credits: 0,
         },
         now,
       ),

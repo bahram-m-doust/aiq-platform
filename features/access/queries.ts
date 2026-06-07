@@ -18,6 +18,7 @@ type BrandRecord = {
 
 type PlanRecord = {
   name: string | null;
+  credits: number | null;
 };
 
 type MembershipRow = {
@@ -75,7 +76,7 @@ export const getBrandAccessSummaryForProfile = cache(async (profileId: string) =
   const brandIds = memberships.map((membership) => membership.brandId);
   const { data: entitlementData, error: entitlementError } = await admin
     .from("brand_entitlements")
-    .select("brand_id, status, starts_at, expires_at, plans(name)")
+    .select("brand_id, status, starts_at, expires_at, plans(name, credits)")
     .in("brand_id", brandIds)
     .eq("status", "ACTIVE");
 
@@ -93,6 +94,7 @@ export const getBrandAccessSummaryForProfile = cache(async (profileId: string) =
         startsAt: entitlement.starts_at,
         expiresAt: entitlement.expires_at,
         planName: plan?.name ?? null,
+        credits: plan?.credits ?? 0,
       };
     },
   );
