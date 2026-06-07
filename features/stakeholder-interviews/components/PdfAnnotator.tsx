@@ -459,21 +459,19 @@ export function PdfAnnotator({
                             <p className="whitespace-pre-wrap text-sm text-foreground">
                               {annotation.body}
                             </p>
-                            {canResolve ? (
+                            {annotation.resolved ? (
+                              <p className="mt-2 text-xs text-[#008a2e]">
+                                Solved
+                              </p>
+                            ) : canResolve ? (
                               <button
                                 className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                                 onClick={() => toggleResolve(annotation)}
                                 type="button"
                               >
                                 <CheckIcon className="size-3" />
-                                {annotation.resolved
-                                  ? "Mark unsolved"
-                                  : "Mark solved"}
+                                Mark solved
                               </button>
-                            ) : annotation.resolved ? (
-                              <p className="mt-2 text-xs text-[#008a2e]">
-                                Solved
-                              </p>
                             ) : null}
                           </div>
                         ) : null}
@@ -813,10 +811,10 @@ function CommentBlock({
                   Reply
                 </DropdownMenuItem>
               ) : null}
-              {canResolve && onToggleResolve ? (
+              {canResolve && onToggleResolve && !annotation.resolved ? (
                 <DropdownMenuItem onSelect={() => onToggleResolve()}>
                   <CheckIcon />
-                  {annotation.resolved ? "Mark unsolved" : "Mark solved"}
+                  Mark solved
                 </DropdownMenuItem>
               ) : null}
               {canEdit ? (
@@ -831,7 +829,6 @@ function CommentBlock({
                   <DropdownMenuItem
                     disabled={isMutating}
                     onSelect={() => onDelete()}
-                    variant="destructive"
                   >
                     <Trash2Icon />
                     Delete
