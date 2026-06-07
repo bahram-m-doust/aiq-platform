@@ -386,7 +386,7 @@ export function PdfAnnotator({
 
   return (
     <div className="px-2 pt-[15px]">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <div className="flex w-full max-w-[1024px] flex-col gap-6 lg:flex-row lg:items-start">
         {/* Left column — header, hint, PDF, approve */}
         <div className="flex min-w-0 flex-1 flex-col gap-4 lg:max-w-[756px]">
           <StakeholderHeader status={status} />
@@ -405,11 +405,10 @@ export function PdfAnnotator({
               {loadError}
             </div>
           ) : (
-            <div
-              className="w-full overflow-hidden rounded-[10px] border border-border bg-card p-3 shadow-xs"
-              ref={containerRef}
-            >
-              <div className="relative mx-auto w-fit">
+            <div className="w-full overflow-hidden rounded-[10px] border border-border bg-card shadow-xs">
+              <div className="p-3">
+                <div className="w-full" ref={containerRef}>
+                  <div className="relative mx-auto w-fit">
                 <canvas className="block rounded-[6px]" ref={canvasRef} />
 
                 {size ? (
@@ -519,12 +518,16 @@ export function PdfAnnotator({
                       </div>
                     ) : null}
                   </div>
-                ) : (
-                  <div className="flex h-[479px] w-[700px] max-w-full items-center justify-center text-sm text-muted-foreground">
-                    <Loader2Icon className="mr-2 size-4 animate-spin" />
-                    Loading report…
+                ) : null}
                   </div>
-                )}
+
+                  {!size ? (
+                    <div className="flex h-[479px] w-full items-center justify-center text-sm text-muted-foreground">
+                      <Loader2Icon className="mr-2 size-4 animate-spin" />
+                      Loading report…
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           )}
