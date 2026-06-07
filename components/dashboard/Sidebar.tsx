@@ -45,6 +45,7 @@ type SidebarProps = {
   email: string;
   fullName: string | null;
   role: string | null;
+  planName: string | null;
   agents: SidebarAgent[];
 };
 
@@ -61,7 +62,7 @@ const secondaryNav = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings2Icon },
 ];
 
-export function Sidebar({ role, agents }: SidebarProps) {
+export function Sidebar({ role, planName, agents }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -82,10 +83,10 @@ export function Sidebar({ role, agents }: SidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" className="gap-2">
               <Link href="/">
-                <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-foreground text-background">
+                <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-white">
                   <Image
                     alt="Bextudio"
-                    className="size-full object-contain"
+                    className="size-full object-contain p-0.5"
                     height={32}
                     src="/square-sign.png"
                     unoptimized
@@ -225,7 +226,7 @@ export function Sidebar({ role, agents }: SidebarProps) {
         <div className="overflow-hidden rounded-lg border border-border bg-background shadow-xs">
           <div className="flex items-center border-b border-border py-2.5 pl-2.5">
             <p className="flex-1 text-sm font-medium text-card-foreground">
-              Basic Plan
+              {planName ?? "Free plan"}
             </p>
             <button
               className="flex h-9 items-center gap-1 rounded-md py-2 pr-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"

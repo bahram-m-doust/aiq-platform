@@ -61,6 +61,7 @@ export default async function DashboardLayout({
         email: user.email ?? profile.email,
         fullName: profile.full_name,
         role: profile.global_role,
+        planName: accessSummary.planName,
         agents: agents.map((a) => ({
           key: a.key,
           name: defByKey.get(a.key)?.name ?? a.name,
