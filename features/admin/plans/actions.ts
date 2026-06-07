@@ -3,17 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { requirePlatformOwner } from "@/features/auth/queries";
+import type { PlanFormState } from "@/features/admin/plans/form-state";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-export type PlanFormState = {
-  status: "idle" | "success" | "error";
-  message: string;
-};
-
-export const initialPlanFormState: PlanFormState = {
-  status: "idle",
-  message: "",
-};
 
 function parseCommonFields(formData: FormData):
   | { ok: true; values: {

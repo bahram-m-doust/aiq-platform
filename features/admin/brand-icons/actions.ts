@@ -4,17 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { requirePlatformOwner } from "@/features/auth/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { BrandIconUploadFormState } from "@/features/admin/brand-icons/form-state";
 import { uploadBrandIcon } from "@/features/admin/brand-icons/storage";
-
-export type BrandIconUploadFormState = {
-  status: "idle" | "success" | "error";
-  message: string;
-};
-
-export const initialBrandIconUploadFormState: BrandIconUploadFormState = {
-  status: "idle",
-  message: "",
-};
 
 const maxIconBytes = 2 * 1024 * 1024;
 

@@ -5,10 +5,8 @@ import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  createPlanAction,
-  initialPlanFormState,
-} from "@/features/admin/plans/actions";
+import { createPlanAction } from "@/features/admin/plans/actions";
+import { initialPlanFormState } from "@/features/admin/plans/form-state";
 
 function SubmitButton() {
   const { pending } = useFormStatus();

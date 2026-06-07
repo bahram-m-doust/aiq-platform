@@ -43,8 +43,8 @@ import {
 import {
   adminDeleteBrandApiKeyAction,
   adminSetBrandApiKeyAction,
-  initialApiKeyFormState,
 } from "@/features/brands/api-key-actions";
+import { initialApiKeyFormState } from "@/features/brands/api-key-form-state";
 import type { AdminBrandOption } from "@/features/documents/admin-queries";
 import {
   initialAdminDocumentReviewState,
