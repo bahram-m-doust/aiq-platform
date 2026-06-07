@@ -34,7 +34,9 @@ test("renders the generic not found page", async ({ page }) => {
 
   expect(response?.status()).toBe(404);
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Return home" })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Back to dashboard" }),
+  ).toBeVisible();
   await expect(
     page.locator(
       "[data-nextjs-dialog], .vite-error-overlay, #webpack-dev-server-client-overlay",

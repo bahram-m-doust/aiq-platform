@@ -177,6 +177,7 @@ describe("intake autosave queue", () => {
       },
     });
 
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     fireEvent.change(screen.getByLabelText("Company overview"), {
       target: { value: "Changed" },
     });
@@ -274,6 +275,8 @@ describe("intake autosave queue", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Submit/ })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /Approve & Lock/ }),
+    ).toBeDisabled();
   });
 });

@@ -1,6 +1,8 @@
 import { cache } from "react";
 
+import { DashboardNavbar } from "@/components/dashboard/DashboardNavbar";
 import { Sidebar } from "@/components/dashboard/Sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { brandIconPublicUrl } from "@/features/admin/brand-icons/storage";
 import { logout } from "@/features/auth/actions";
@@ -28,6 +30,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   let sidebarProps = null;
+  let displayName = "";
 
   try {
     const { user, profile } = await requireUserProfile("/login");
@@ -48,6 +51,7 @@ export default async function DashboardLayout({
         catalogAgentDefinitions.map((d) => [d.key, d]),
       );
 
+      displayName = profile.full_name ?? user.email ?? profile.email;
       sidebarProps = {
         email: user.email ?? profile.email,
         fullName: profile.full_name,
@@ -71,9 +75,12 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-svh" style={{ background: "var(--bv-bg)" }}>
-      <Sidebar {...sidebarProps} logoutAction={logout} />
-      <main className="flex-1 overflow-x-hidden">{children}</main>
-    </div>
+    <SidebarProvider>
+      <Sidebar {...sidebarProps} />
+      <SidebarInset>
+        <DashboardNavbar logoutAction={logout} userName={displayName} />
+        <div className="flex-1 overflow-x-hidden p-4">{children}</div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

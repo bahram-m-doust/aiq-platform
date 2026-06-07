@@ -7,6 +7,7 @@ import {
   buildIntakeFinalSubmitBeforeAudit,
   buildIntakeSnapshotJson,
   calculateIntakeCompletion,
+  canApproveIntakeRole,
   extractStoredAnswerValue,
   flattenIntakeQuestions,
   isIntakeAnswerComplete,
@@ -855,6 +856,12 @@ export async function finalSubmitIntake({
 
   if (!access) {
     finalSubmitError("You do not have permission to submit this intake.");
+  }
+
+  if (!canApproveIntakeRole(access.membershipRole)) {
+    finalSubmitError(
+      "Only the brand Owner can approve and lock the questionnaire.",
+    );
   }
 
   const sections = await getIntakeSectionsWithQuestions();

@@ -1,18 +1,18 @@
 import type {
-  BrandFileRecord,
-  BrandFileRole,
-  FileStatus,
-  FileUploadInput,
-  FileVisibility,
-} from "@/features/files/types";
-import { fileStatuses, fileVisibilities } from "@/features/files/types";
+  BrandDocumentRecord,
+  BrandDocumentRole,
+  DocumentStatus,
+  DocumentUploadInput,
+  DocumentVisibility,
+} from "@/features/documents/types";
+import { documentStatuses, documentVisibilities } from "@/features/documents/types";
 
-export const initialFileUploadFormState = {
+export const initialDocumentUploadFormState = {
   status: "idle",
   message: "",
 } as const;
 
-export const fileVisibilityLabels: Record<FileVisibility, string> = {
+export const documentVisibilityLabels: Record<DocumentVisibility, string> = {
   OWNER_ONLY: "Owner only",
   BRAND_TEAM: "Brand team",
   HELIO_INTERNAL: "Helio internal",
@@ -20,7 +20,7 @@ export const fileVisibilityLabels: Record<FileVisibility, string> = {
   AGENT_VISIBLE: "Agent visible",
 };
 
-export const fileStatusLabels: Record<FileStatus, string> = {
+export const documentStatusLabels: Record<DocumentStatus, string> = {
   UPLOADED: "Uploaded",
   PENDING_OWNER_APPROVAL: "Pending owner approval",
   OWNER_APPROVED: "Owner approved",
@@ -37,23 +37,23 @@ const ownerUploadVisibilities = [
   "OWNER_ONLY",
   "BRAND_TEAM",
   "CLIENT_REVIEW",
-] as const satisfies readonly FileVisibility[];
+] as const satisfies readonly DocumentVisibility[];
 
 const specialistUploadVisibilities = [
   "BRAND_TEAM",
-] as const satisfies readonly FileVisibility[];
+] as const satisfies readonly DocumentVisibility[];
 
-export function isFileVisibility(value: string): value is FileVisibility {
-  return fileVisibilities.includes(value as FileVisibility);
+export function isDocumentVisibility(value: string): value is DocumentVisibility {
+  return documentVisibilities.includes(value as DocumentVisibility);
 }
 
-export function isFileStatus(value: string): value is FileStatus {
-  return fileStatuses.includes(value as FileStatus);
+export function isDocumentStatus(value: string): value is DocumentStatus {
+  return documentStatuses.includes(value as DocumentStatus);
 }
 
-export function isBrandFileRole(
+export function isBrandDocumentRole(
   value: string | null | undefined,
-): value is BrandFileRole {
+): value is BrandDocumentRole {
   return (
     value === "OWNER" ||
     value === "EXECUTIVE_MANAGER" ||
@@ -61,23 +61,23 @@ export function isBrandFileRole(
   );
 }
 
-export function canUploadFileRole(role: string | null | undefined) {
-  return isBrandFileRole(role);
+export function canUploadDocumentRole(role: string | null | undefined) {
+  return isBrandDocumentRole(role);
 }
 
-export function canApproveSpecialistFileRole(
+export function canApproveSpecialistDocumentRole(
   role: string | null | undefined,
 ) {
   return role === "OWNER" || role === "EXECUTIVE_MANAGER";
 }
 
-export function getUploadVisibilityOptions(role: BrandFileRole) {
+export function getUploadVisibilityOptions(role: BrandDocumentRole) {
   return role === "BRAND_SPECIALIST"
     ? [...specialistUploadVisibilities]
     : [...ownerUploadVisibilities];
 }
 
-export function defaultUploadVisibility(role: BrandFileRole): FileVisibility {
+export function defaultUploadVisibility(role: BrandDocumentRole): DocumentVisibility {
   return role === "BRAND_SPECIALIST" ? "BRAND_TEAM" : "OWNER_ONLY";
 }
 
@@ -114,29 +114,29 @@ export function buildStoragePath({
   return `${brandId}/${fileId}/${sanitizeFileName(originalName)}`;
 }
 
-export function statusForUploadedFile(role: BrandFileRole): FileStatus {
+export function statusForUploadedDocument(role: BrandDocumentRole): DocumentStatus {
   return role === "BRAND_SPECIALIST" ? "PENDING_OWNER_APPROVAL" : "UPLOADED";
 }
 
-export function validateFileUploadFormData({
+export function validateDocumentUploadFormData({
   formData,
   role,
 }: {
   formData: FormData;
-  role: BrandFileRole;
-}): { data: FileUploadInput | null; error: string | null } {
+  role: BrandDocumentRole;
+}): { data: DocumentUploadInput | null; error: string | null } {
   const file = formData.get("file");
   const rawVisibility =
     readString(formData, "visibility") || defaultUploadVisibility(role);
-  const allowedVisibilities: readonly FileVisibility[] =
+  const allowedVisibilities: readonly DocumentVisibility[] =
     getUploadVisibilityOptions(role);
 
   if (!isUploadFile(file) || file.size <= 0) {
-    return { data: null, error: "Choose a file to upload." };
+    return { data: null, error: "Choose a document to upload." };
   }
 
-  if (!isFileVisibility(rawVisibility)) {
-    return { data: null, error: "Choose a valid file visibility." };
+  if (!isDocumentVisibility(rawVisibility)) {
+    return { data: null, error: "Choose a valid document visibility." };
   }
 
   if (!allowedVisibilities.includes(rawVisibility)) {
@@ -155,13 +155,13 @@ export function validateFileUploadFormData({
   };
 }
 
-export function canListFile({
+export function canListDocument({
   file,
   role,
   profileId,
 }: {
-  file: BrandFileRecord;
-  role: BrandFileRole;
+  file: BrandDocumentRecord;
+  role: BrandDocumentRole;
   profileId: string;
 }) {
   if (file.visibility === "HELIO_INTERNAL") {
@@ -169,31 +169,31 @@ export function canListFile({
   }
 
   if (file.visibility === "OWNER_ONLY") {
-    return canApproveSpecialistFileRole(role);
+    return canApproveSpecialistDocumentRole(role);
   }
 
   if (file.status === "PENDING_OWNER_APPROVAL") {
-    return canApproveSpecialistFileRole(role) || file.uploadedBy === profileId;
+    return canApproveSpecialistDocumentRole(role) || file.uploadedBy === profileId;
   }
 
   if (file.status === "OWNER_REJECTED" || file.status === "ARCHIVED") {
-    return canApproveSpecialistFileRole(role) || file.uploadedBy === profileId;
+    return canApproveSpecialistDocumentRole(role) || file.uploadedBy === profileId;
   }
 
   if (file.visibility === "AGENT_VISIBLE") {
-    return file.status === "RAG_APPROVED" && canApproveSpecialistFileRole(role);
+    return file.status === "RAG_APPROVED" && canApproveSpecialistDocumentRole(role);
   }
 
   return file.visibility === "BRAND_TEAM" || file.visibility === "CLIENT_REVIEW";
 }
 
-export function canDownloadFile({
+export function canDownloadDocument({
   file,
   role,
   profileId,
 }: {
-  file: BrandFileRecord;
-  role: BrandFileRole;
+  file: BrandDocumentRecord;
+  role: BrandDocumentRole;
   profileId: string;
 }) {
   if (file.status === "OWNER_REJECTED" || file.status === "ARCHIVED") {
@@ -201,11 +201,11 @@ export function canDownloadFile({
   }
 
   if (file.status === "PENDING_OWNER_APPROVAL") {
-    return canApproveSpecialistFileRole(role) || file.uploadedBy === profileId;
+    return canApproveSpecialistDocumentRole(role) || file.uploadedBy === profileId;
   }
 
   if (file.visibility === "OWNER_ONLY") {
-    return canApproveSpecialistFileRole(role);
+    return canApproveSpecialistDocumentRole(role);
   }
 
   if (file.visibility === "HELIO_INTERNAL") {
@@ -213,26 +213,26 @@ export function canDownloadFile({
   }
 
   if (file.visibility === "AGENT_VISIBLE") {
-    return file.status === "RAG_APPROVED" && canApproveSpecialistFileRole(role);
+    return file.status === "RAG_APPROVED" && canApproveSpecialistDocumentRole(role);
   }
 
   return file.visibility === "BRAND_TEAM" || file.visibility === "CLIENT_REVIEW";
 }
 
-export function canReviewSpecialistFile({
+export function canReviewSpecialistDocument({
   file,
   role,
 }: {
-  file: BrandFileRecord;
-  role: BrandFileRole;
+  file: BrandDocumentRecord;
+  role: BrandDocumentRole;
 }) {
   return (
-    canApproveSpecialistFileRole(role) &&
+    canApproveSpecialistDocumentRole(role) &&
     file.status === "PENDING_OWNER_APPROVAL"
   );
 }
 
-export function toFileAuditMetadata(file: BrandFileRecord) {
+export function toDocumentAuditMetadata(file: BrandDocumentRecord) {
   return {
     file_id: file.id,
     brand_id: file.brandId,

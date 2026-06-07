@@ -3,13 +3,13 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import type { UserProfile } from "@/features/auth/types";
-import { buildStoragePath } from "@/features/files/schema";
+import { buildStoragePath } from "@/features/documents/schema";
 import {
   createPrivateFileSignedDownloadUrl,
   removePrivateFile,
   signedDownloadUrlTtlSeconds,
   uploadPrivateFile,
-} from "@/features/files/storage";
+} from "@/features/documents/storage";
 import {
   artifactColumns,
   getAdminModuleDetail,

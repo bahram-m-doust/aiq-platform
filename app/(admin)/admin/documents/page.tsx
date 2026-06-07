@@ -3,15 +3,15 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { requirePlatformOwner } from "@/features/auth/queries";
-import { AdminFilesConsole } from "@/features/files/components/AdminFilesConsole";
+import { AdminDocumentsConsole } from "@/features/documents/components/AdminDocumentsConsole";
 import { hasBrandApiKey } from "@/features/brands/api-keys";
 import {
   getAdminBrandOptions,
-  getFilesForBrand,
-} from "@/features/files/admin-queries";
+  getDocumentsForBrand,
+} from "@/features/documents/admin-queries";
 
 export const metadata: Metadata = {
-  title: "Admin Files | Bextudio Platform",
+  title: "Admin Documents | Bextudio Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -24,12 +24,12 @@ function readSearchString(
   return typeof value === "string" ? value.trim() : "";
 }
 
-export default async function AdminFilesPage({
+export default async function AdminDocumentsPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { profile } = await requirePlatformOwner("/admin/files");
+  const { profile } = await requirePlatformOwner("/admin/documents");
   const params = (await searchParams) ?? {};
   const requestedBrandId = readSearchString(params, "brand_id");
   const brands = await getAdminBrandOptions();
@@ -38,7 +38,7 @@ export default async function AdminFilesPage({
     : null;
   const [files, brandHasKey] = selectedBrandId
     ? await Promise.all([
-        getFilesForBrand({ brandId: selectedBrandId }),
+        getDocumentsForBrand({ brandId: selectedBrandId }),
         hasBrandApiKey(selectedBrandId),
       ])
     : [[], false];
@@ -63,7 +63,7 @@ export default async function AdminFilesPage({
           </Button>
         </div>
 
-        <AdminFilesConsole
+        <AdminDocumentsConsole
           brands={brands}
           files={files}
           hasApiKey={brandHasKey}

@@ -3,7 +3,11 @@ export type CatalogAgentKey =
   | "IMAGE_GENERATOR"
   | "VIDEO_GENERATOR"
   | "CAMPAIGN_MAKER"
-  | "BRAND_DIGITAL_ACTIVATION";
+  | "BRAND_DIGITAL_ACTIVATION"
+  | "AVATAR"
+  | "DETAIL_DESIGN"
+  | "SECURE_CHAT"
+  | "BEXLOGIX";
 
 export type CatalogAgentDisplayState =
   | "LOCKED_BY_PLAN"

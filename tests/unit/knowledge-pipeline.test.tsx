@@ -17,7 +17,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit/logAudit";
 import { generateIntakeDocx as mockedGenerateIntakeDocx } from "@/features/intake/docx-generator";
 import { createIntakeKnowledgeFile } from "@/features/intake/intake-knowledge";
-import { adminPromoteFileToRag } from "@/features/files/admin-services";
+import { adminPromoteDocumentToRag } from "@/features/documents/admin-services";
 import {
   isRagApprovedSyncEligible,
   isRagSyncDisplayEligible,
@@ -344,7 +344,7 @@ describe("createIntakeKnowledgeFile", () => {
   });
 });
 
-describe("adminPromoteFileToRag", () => {
+describe("adminPromoteDocumentToRag", () => {
   const fileRow = {
     id: "file-1",
     brand_id: "brand-1",
@@ -401,7 +401,7 @@ describe("adminPromoteFileToRag", () => {
   it("updates file status and upserts knowledge_file", async () => {
     const { updateBuilder, upsertBuilder } = setupFileExists("UPLOADED");
 
-    await adminPromoteFileToRag({ fileId: "file-1", actor: actor() });
+    await adminPromoteDocumentToRag({ fileId: "file-1", actor: actor() });
 
     expect(updateBuilder.update).toHaveBeenCalledWith({
       status: "RAG_APPROVED",
@@ -421,14 +421,14 @@ describe("adminPromoteFileToRag", () => {
     setupFileExists("ARCHIVED");
 
     await expect(
-      adminPromoteFileToRag({ fileId: "file-1", actor: actor() }),
-    ).rejects.toThrow("Cannot promote an archived file to RAG.");
+      adminPromoteDocumentToRag({ fileId: "file-1", actor: actor() }),
+    ).rejects.toThrow("Cannot promote an archived document to RAG.");
   });
 
   it("is idempotent for already-RAG_APPROVED files", async () => {
     setupFileExists("RAG_APPROVED");
 
-    const result = await adminPromoteFileToRag({
+    const result = await adminPromoteDocumentToRag({
       fileId: "file-1",
       actor: actor(),
     });
@@ -440,7 +440,7 @@ describe("adminPromoteFileToRag", () => {
   it("logs audit with action admin_file_rag_promoted", async () => {
     setupFileExists("UPLOADED");
 
-    await adminPromoteFileToRag({ fileId: "file-1", actor: actor() });
+    await adminPromoteDocumentToRag({ fileId: "file-1", actor: actor() });
 
     expect(mockedLogAudit).toHaveBeenCalledWith(
       expect.objectContaining({

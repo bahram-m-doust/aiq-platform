@@ -1,6 +1,6 @@
 import "server-only";
 
-import { downloadPrivateFile } from "@/features/files/storage";
+import { downloadPrivateFile } from "@/features/documents/storage";
 import { chunkText } from "@/features/rag/chunker";
 import { embedTexts } from "@/features/rag/embeddings";
 import { extractTextFromFile } from "@/features/rag/text-extractor";

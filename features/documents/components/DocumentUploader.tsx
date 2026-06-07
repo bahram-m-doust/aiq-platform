@@ -15,19 +15,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
-import { uploadFileAction } from "@/features/files/actions";
+import { uploadDocumentAction } from "@/features/documents/actions";
 import {
   defaultUploadVisibility,
-  fileVisibilityLabels,
+  documentVisibilityLabels,
   getUploadVisibilityOptions,
-  initialFileUploadFormState,
-} from "@/features/files/schema";
-import type { FileAccessContext } from "@/features/files/types";
+  initialDocumentUploadFormState,
+} from "@/features/documents/schema";
+import type { DocumentAccessContext } from "@/features/documents/types";
 
-export function FileUploader({ access }: { access: FileAccessContext }) {
+export function DocumentUploader({ access }: { access: DocumentAccessContext }) {
   const [state, formAction] = useActionState(
-    uploadFileAction,
-    initialFileUploadFormState,
+    uploadDocumentAction,
+    initialDocumentUploadFormState,
   );
   const visibilityOptions = getUploadVisibilityOptions(access.membershipRole);
   const defaultVisibility = defaultUploadVisibility(access.membershipRole);
@@ -37,10 +37,10 @@ export function FileUploader({ access }: { access: FileAccessContext }) {
       <DSCardHeader>
         <h2 className="ds-h2 flex items-center gap-2">
           <UploadIcon className="size-4" />
-          Upload file
+          Upload document
         </h2>
         <p className="ds-body mt-1">
-          Store files securely for {access.brandName}. Downloads always require a signed URL.
+          Store documents securely for {access.brandName}. Downloads always require a signed URL.
         </p>
       </DSCardHeader>
       <DSCardBody>
@@ -58,7 +58,7 @@ export function FileUploader({ access }: { access: FileAccessContext }) {
 
           <div className="grid gap-4 md:grid-cols-[1fr_240px]">
             <div className="space-y-2">
-              <Label htmlFor="file">File</Label>
+              <Label htmlFor="file">Document</Label>
               <Input id="file" name="file" required type="file" />
             </div>
 
@@ -71,7 +71,7 @@ export function FileUploader({ access }: { access: FileAccessContext }) {
                 <SelectContent>
                   {visibilityOptions.map((visibility) => (
                     <SelectItem key={visibility} value={visibility}>
-                      {fileVisibilityLabels[visibility]}
+                      {documentVisibilityLabels[visibility]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -87,7 +87,7 @@ export function FileUploader({ access }: { access: FileAccessContext }) {
           ) : null}
 
           <div className="flex justify-end">
-            <SubmitButton idleLabel="Upload file" pendingLabel="Uploading" />
+            <SubmitButton idleLabel="Upload document" pendingLabel="Uploading" />
           </div>
         </form>
       </DSCardBody>

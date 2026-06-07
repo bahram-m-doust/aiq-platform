@@ -29,7 +29,7 @@ export async function adminSetBrandApiKeyAction(
   _prev: ApiKeyFormState,
   formData: FormData,
 ): Promise<ApiKeyFormState> {
-  const { profile } = await requirePlatformOwner("/admin/files");
+  const { profile } = await requirePlatformOwner("/admin/documents");
   const brandId = readString(formData, "brand_id");
   const apiKey = readString(formData, "api_key");
 
@@ -52,7 +52,7 @@ export async function adminSetBrandApiKeyAction(
       actorId: profile.id,
     });
     clearBrandClientCache(brandId);
-    revalidatePath("/admin/files");
+    revalidatePath("/admin/documents");
     return { status: "success", message: "API key saved for this brand." };
   } catch (error) {
     logServerError({
@@ -68,7 +68,7 @@ export async function adminDeleteBrandApiKeyAction(
   _prev: ApiKeyFormState,
   formData: FormData,
 ): Promise<ApiKeyFormState> {
-  const { profile } = await requirePlatformOwner("/admin/files");
+  const { profile } = await requirePlatformOwner("/admin/documents");
   const brandId = readString(formData, "brand_id");
 
   if (!brandId) {
@@ -78,7 +78,7 @@ export async function adminDeleteBrandApiKeyAction(
   try {
     await deleteBrandApiKey({ brandId, actorId: profile.id });
     clearBrandClientCache(brandId);
-    revalidatePath("/admin/files");
+    revalidatePath("/admin/documents");
     return { status: "success", message: "Brand API key removed. Using global key." };
   } catch (error) {
     logServerError({

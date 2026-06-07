@@ -4,27 +4,27 @@ import { randomUUID } from "node:crypto";
 
 import {
   buildStoragePath,
-  canDownloadFile,
-  canReviewSpecialistFile,
-  canUploadFileRole,
-  statusForUploadedFile,
-  toFileAuditMetadata,
-  validateFileUploadFormData,
-} from "@/features/files/schema";
+  canDownloadDocument,
+  canReviewSpecialistDocument,
+  canUploadDocumentRole,
+  statusForUploadedDocument,
+  toDocumentAuditMetadata,
+  validateDocumentUploadFormData,
+} from "@/features/documents/schema";
 import {
-  getBrandFileById,
-  getFileAccessContextForProfile,
-} from "@/features/files/queries";
+  getBrandDocumentById,
+  getDocumentAccessContextForProfile,
+} from "@/features/documents/queries";
 import {
   createPrivateFileSignedDownloadUrl,
   removePrivateFile,
   signedDownloadUrlTtlSeconds,
   uploadPrivateFile,
-} from "@/features/files/storage";
+} from "@/features/documents/storage";
 import type {
-  BrandFileRecord,
-  FileReviewDecision,
-} from "@/features/files/types";
+  BrandDocumentRecord,
+  DocumentReviewDecision,
+} from "@/features/documents/types";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -35,7 +35,7 @@ function fileServiceError(message: string): never {
   throw new DomainError(CODE, message);
 }
 
-export function isFileServiceError(error: unknown): error is DomainError {
+export function isDocumentServiceError(error: unknown): error is DomainError {
   return isDomainErrorWithCode(error, CODE);
 }
 
@@ -52,7 +52,7 @@ async function insertFileAuditLog({
   actorRole: string | null;
   brandId: string;
   action: "file_uploaded" | "file_downloaded" | "specialist_file_approved";
-  file: BrandFileRecord;
+  file: BrandDocumentRecord;
   beforeJson?: Record<string, unknown> | null;
   afterJson: Record<string, unknown>;
 }) {
@@ -96,31 +96,31 @@ async function uploaderIsBrandSpecialist({
   return Boolean(data);
 }
 
-export async function uploadBrandFileFromFormData({
+export async function uploadBrandDocumentFromFormData({
   formData,
   profileId,
 }: {
   formData: FormData;
   profileId: string;
 }) {
-  const access = await getFileAccessContextForProfile(profileId);
+  const access = await getDocumentAccessContextForProfile(profileId);
 
-  if (!access || !canUploadFileRole(access.membershipRole)) {
-    fileServiceError("You do not have permission to upload files.");
+  if (!access || !canUploadDocumentRole(access.membershipRole)) {
+    fileServiceError("You do not have permission to upload documents.");
   }
 
-  const validation = validateFileUploadFormData({
+  const validation = validateDocumentUploadFormData({
     formData,
     role: access.membershipRole,
   });
 
   if (validation.error || !validation.data) {
-    fileServiceError(validation.error ?? "File upload details are invalid.");
+    fileServiceError(validation.error ?? "Document upload details are invalid.");
   }
 
   const fileId = randomUUID();
   const file = validation.data.file;
-  const status = statusForUploadedFile(access.membershipRole);
+  const status = statusForUploadedDocument(access.membershipRole);
   const storagePath = buildStoragePath({
     brandId: access.brandId,
     fileId,
@@ -172,7 +172,7 @@ export async function uploadBrandFileFromFormData({
     uploadedBy: data.uploaded_by,
     uploadedByEmail: null,
     createdAt: data.created_at,
-  } satisfies BrandFileRecord;
+  } satisfies BrandDocumentRecord;
 
   await insertFileAuditLog({
     actorUserId: profileId,
@@ -181,7 +181,7 @@ export async function uploadBrandFileFromFormData({
     action: "file_uploaded",
     file: record,
     afterJson: {
-      file: toFileAuditMetadata(record),
+      file: toDocumentAuditMetadata(record),
       specialist_upload_pending: status === "PENDING_OWNER_APPROVAL",
     },
   });
@@ -189,33 +189,33 @@ export async function uploadBrandFileFromFormData({
   return record;
 }
 
-export async function createSignedDownloadUrlForFile({
+export async function createSignedDownloadUrlForDocument({
   fileId,
   profileId,
 }: {
   fileId: string;
   profileId: string;
 }) {
-  const access = await getFileAccessContextForProfile(profileId);
+  const access = await getDocumentAccessContextForProfile(profileId);
 
   if (!access) {
-    fileServiceError("You do not have permission to download this file.");
+    fileServiceError("You do not have permission to download this document.");
   }
 
-  const file = await getBrandFileById(fileId);
+  const file = await getBrandDocumentById(fileId);
 
   if (!file || file.brandId !== access.brandId) {
-    fileServiceError("File could not be found.");
+    fileServiceError("Document could not be found.");
   }
 
   if (
-    !canDownloadFile({
+    !canDownloadDocument({
       file,
       role: access.membershipRole,
       profileId,
     })
   ) {
-    fileServiceError("You do not have permission to download this file.");
+    fileServiceError("You do not have permission to download this document.");
   }
 
   const signedUrl = await createPrivateFileSignedDownloadUrl({
@@ -230,7 +230,7 @@ export async function createSignedDownloadUrlForFile({
     action: "file_downloaded",
     file,
     afterJson: {
-      file: toFileAuditMetadata(file),
+      file: toDocumentAuditMetadata(file),
       signed_url_expires_in_seconds: signedDownloadUrlTtlSeconds,
     },
   });
@@ -238,34 +238,34 @@ export async function createSignedDownloadUrlForFile({
   return { signedUrl, file };
 }
 
-export async function reviewSpecialistFile({
+export async function reviewSpecialistDocument({
   fileId,
   profileId,
   decision,
 }: {
   fileId: string;
   profileId: string;
-  decision: FileReviewDecision;
+  decision: DocumentReviewDecision;
 }) {
-  const access = await getFileAccessContextForProfile(profileId);
+  const access = await getDocumentAccessContextForProfile(profileId);
 
   if (!access) {
-    fileServiceError("You do not have permission to review this file.");
+    fileServiceError("You do not have permission to review this document.");
   }
 
-  const file = await getBrandFileById(fileId);
+  const file = await getBrandDocumentById(fileId);
 
   if (!file || file.brandId !== access.brandId) {
-    fileServiceError("File could not be found.");
+    fileServiceError("Document could not be found.");
   }
 
   if (
-    !canReviewSpecialistFile({
+    !canReviewSpecialistDocument({
       file,
       role: access.membershipRole,
     })
   ) {
-    fileServiceError("You do not have permission to review this file.");
+    fileServiceError("You do not have permission to review this document.");
   }
 
   const specialistUpload = await uploaderIsBrandSpecialist({
@@ -296,13 +296,13 @@ export async function reviewSpecialistFile({
   }
 
   if (!data) {
-    fileServiceError("File review could not be completed.");
+    fileServiceError("Document review could not be completed.");
   }
 
   const reviewedFile = {
     ...file,
     status: nextStatus,
-  } satisfies BrandFileRecord;
+  } satisfies BrandDocumentRecord;
 
   await insertFileAuditLog({
     actorUserId: profileId,
@@ -311,10 +311,10 @@ export async function reviewSpecialistFile({
     action: "specialist_file_approved",
     file: reviewedFile,
     beforeJson: {
-      file: toFileAuditMetadata(file),
+      file: toDocumentAuditMetadata(file),
     },
     afterJson: {
-      file: toFileAuditMetadata(reviewedFile),
+      file: toDocumentAuditMetadata(reviewedFile),
       decision,
     },
   });

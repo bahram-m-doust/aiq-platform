@@ -8,7 +8,10 @@ import { requireUserProfile } from "@/features/auth/queries";
 import { getBrandBuildProgress } from "@/features/dashboard/build-progress";
 import { BrandBuildView } from "@/features/dashboard/components/BrandBuildView";
 import { getIntakePageData } from "@/features/intake/queries";
-import { isIntakeSessionLocked } from "@/features/intake/schemas";
+import {
+  canApproveIntakeRole,
+  isIntakeSessionLocked,
+} from "@/features/intake/schemas";
 
 export const metadata: Metadata = {
   title: "Dashboard | Bextudio Platform",
@@ -56,11 +59,15 @@ export default async function DashboardPage({
     const intakeLocked = intakeData
       ? isIntakeSessionLocked(intakeData.session)
       : false;
+    const intakeCanApprove = intakeData
+      ? canApproveIntakeRole(intakeData.access.membershipRole)
+      : false;
 
     return (
-      <div style={{ background: "var(--bv-bg)", color: "var(--bv-ink)" }}>
+      <div style={{ color: "var(--bv-ink)" }}>
         <BrandBuildView
           email={email}
+          intakeCanApprove={intakeCanApprove}
           intakeCompletion={intakeLocked ? null : intakeCompletion}
           intakeSessionId={intakeLocked ? null : intakeSessionId}
           progress={buildProgress}

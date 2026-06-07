@@ -4,24 +4,24 @@ import { redirect } from "next/navigation";
 import { PageShell } from "@/components/ds/PageShell";
 import { PaginationControls } from "@/components/PaginationControls";
 import { requireUserProfile } from "@/features/auth/queries";
-import { FileList } from "@/features/files/components/FileList";
-import { FileUploader } from "@/features/files/components/FileUploader";
-import { getBrandFilesWorkspace } from "@/features/files/queries";
+import { DocumentList } from "@/features/documents/components/DocumentList";
+import { DocumentUploader } from "@/features/documents/components/DocumentUploader";
+import { getBrandDocumentsWorkspace } from "@/features/documents/queries";
 import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
-  title: "Files | Bextudio Platform",
+  title: "Documents | Bextudio Platform",
 };
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardFilesPage({
+export default async function DashboardDocumentsPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { profile } = await requireUserProfile("/dashboard/files");
-  const workspace = await getBrandFilesWorkspace(
+  const { profile } = await requireUserProfile("/dashboard/documents");
+  const workspace = await getBrandDocumentsWorkspace(
     profile.id,
     paginationInputFromSearchParams((await searchParams) ?? {}),
   );
@@ -32,18 +32,18 @@ export default async function DashboardFilesPage({
 
   return (
     <PageShell
-      eyebrow="Secure Files"
-      subtitle="Upload, review and share files for your brand workspace. All transfers use signed URLs."
-      title="Brand File Workspace"
+      eyebrow="Secure Documents"
+      subtitle="Upload, review and share documents for your brand workspace. All transfers use signed URLs."
+      title="Brand Document Workspace"
     >
-      <FileUploader access={workspace.access} />
-      <FileList
+      <DocumentUploader access={workspace.access} />
+      <DocumentList
         access={workspace.access}
         files={workspace.files}
         profileId={profile.id}
       />
       <PaginationControls
-        basePath="/dashboard/files"
+        basePath="/dashboard/documents"
         pagination={workspace.pagination}
       />
     </PageShell>

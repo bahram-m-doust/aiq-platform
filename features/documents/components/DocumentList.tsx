@@ -3,19 +3,19 @@ import { DownloadIcon, FileIcon, ShieldCheckIcon, ShieldXIcon } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
 import {
-  approveSpecialistFileAction,
+  approveSpecialistDocumentAction,
   createSignedDownloadUrlAction,
-  rejectSpecialistFileAction,
-} from "@/features/files/actions";
+  rejectSpecialistDocumentAction,
+} from "@/features/documents/actions";
 import {
-  canDownloadFile,
-  canReviewSpecialistFile,
-} from "@/features/files/schema";
+  canDownloadDocument,
+  canReviewSpecialistDocument,
+} from "@/features/documents/schema";
 import type {
-  BrandFileRecord,
-  FileAccessContext,
-} from "@/features/files/types";
-import { FileAccessBadge } from "@/features/files/components/FileAccessBadge";
+  BrandDocumentRecord,
+  DocumentAccessContext,
+} from "@/features/documents/types";
+import { DocumentAccessBadge } from "@/features/documents/components/DocumentAccessBadge";
 
 function formatSize(sizeBytes: number | null) {
   if (!sizeBytes || sizeBytes <= 0) {
@@ -41,13 +41,13 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-export function FileList({
+export function DocumentList({
   access,
   files,
   profileId,
 }: {
-  access: FileAccessContext;
-  files: BrandFileRecord[];
+  access: DocumentAccessContext;
+  files: BrandDocumentRecord[];
   profileId: string;
 }) {
   if (files.length === 0) {
@@ -66,9 +66,9 @@ export function FileList({
             <FileIcon className="size-6" />
           </div>
           <div className="space-y-1.5">
-            <h2 className="ds-h3">No files yet</h2>
+            <h2 className="ds-h3">No documents yet</h2>
             <p className="ds-body max-w-md mx-auto">
-              Upload your first file using the form above. All files are stored privately.
+              Upload your first document using the form above. All documents are stored privately.
             </p>
           </div>
         </div>
@@ -79,19 +79,19 @@ export function FileList({
   return (
     <DSCard>
       <DSCardHeader>
-        <h2 className="ds-h2">Files</h2>
+        <h2 className="ds-h2">Documents</h2>
         <p className="ds-body mt-1">
           Files are stored privately. Download creates a short-lived signed URL.
         </p>
       </DSCardHeader>
       <DSCardBody className="space-y-4">
         {files.map((file) => {
-          const canDownload = canDownloadFile({
+          const canDownload = canDownloadDocument({
             file,
             role: access.membershipRole,
             profileId,
           });
-          const canReview = canReviewSpecialistFile({
+          const canReview = canReviewSpecialistDocument({
             file,
             role: access.membershipRole,
           });
@@ -113,7 +113,7 @@ export function FileList({
                     {file.uploadedByEmail ? ` by ${file.uploadedByEmail}` : ""}
                   </p>
                 </div>
-                <FileAccessBadge
+                <DocumentAccessBadge
                   status={file.status}
                   visibility={file.visibility}
                 />
@@ -132,14 +132,14 @@ export function FileList({
 
                 {canReview ? (
                   <>
-                    <form action={approveSpecialistFileAction}>
+                    <form action={approveSpecialistDocumentAction}>
                       <input name="file_id" type="hidden" value={file.id} />
                       <Button type="submit" variant="outline">
                         <ShieldCheckIcon className="size-4" />
                         Approve
                       </Button>
                     </form>
-                    <form action={rejectSpecialistFileAction}>
+                    <form action={rejectSpecialistDocumentAction}>
                       <input name="file_id" type="hidden" value={file.id} />
                       <Button type="submit" variant="destructive">
                         <ShieldXIcon className="size-4" />

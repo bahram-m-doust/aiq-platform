@@ -1,4 +1,4 @@
-import type { FileStatus, FileVisibility } from "@/features/files/types";
+import type { DocumentStatus, DocumentVisibility } from "@/features/documents/types";
 import type { PaginationState } from "@/lib/pagination";
 
 export const canonicalModuleTypes = [
@@ -87,8 +87,8 @@ export type ModuleFileRecord = {
   originalName: string;
   mimeType: string | null;
   sizeBytes: number | null;
-  visibility: FileVisibility;
-  status: FileStatus;
+  visibility: DocumentVisibility;
+  status: DocumentStatus;
   uploadedBy: string | null;
   uploadedByEmail: string | null;
   createdAt: string | null;

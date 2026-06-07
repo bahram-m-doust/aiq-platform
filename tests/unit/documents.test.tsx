@@ -1,44 +1,44 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/features/files/actions", () => ({
-  uploadFileAction: vi.fn(),
+vi.mock("@/features/documents/actions", () => ({
+  uploadDocumentAction: vi.fn(),
   createSignedDownloadUrlAction: vi.fn(),
-  approveSpecialistFileAction: vi.fn(),
-  rejectSpecialistFileAction: vi.fn(),
+  approveSpecialistDocumentAction: vi.fn(),
+  rejectSpecialistDocumentAction: vi.fn(),
 }));
 
-import { FileList } from "@/features/files/components/FileList";
-import { FileUploader } from "@/features/files/components/FileUploader";
+import { DocumentList } from "@/features/documents/components/DocumentList";
+import { DocumentUploader } from "@/features/documents/components/DocumentUploader";
 import {
   buildStoragePath,
-  canDownloadFile,
-  canReviewSpecialistFile,
+  canDownloadDocument,
+  canReviewSpecialistDocument,
   getUploadVisibilityOptions,
   sanitizeFileName,
-  statusForUploadedFile,
-  toFileAuditMetadata,
-  validateFileUploadFormData,
-} from "@/features/files/schema";
+  statusForUploadedDocument,
+  toDocumentAuditMetadata,
+  validateDocumentUploadFormData,
+} from "@/features/documents/schema";
 import type {
-  BrandFileRecord,
-  FileAccessContext,
-} from "@/features/files/types";
+  BrandDocumentRecord,
+  DocumentAccessContext,
+} from "@/features/documents/types";
 import { formData } from "@/tests/helpers/formData";
 
-const ownerAccess: FileAccessContext = {
+const ownerAccess: DocumentAccessContext = {
   brandId: "brand-1",
   brandName: "Helio",
   membershipRole: "OWNER",
   planName: "ADVANCED",
 };
 
-const specialistAccess: FileAccessContext = {
+const specialistAccess: DocumentAccessContext = {
   ...ownerAccess,
   membershipRole: "BRAND_SPECIALIST",
 };
 
-function brandFile(overrides: Partial<BrandFileRecord> = {}): BrandFileRecord {
+function brandFile(overrides: Partial<BrandDocumentRecord> = {}): BrandDocumentRecord {
   return {
     id: "file-1",
     brandId: "brand-1",
@@ -57,10 +57,10 @@ function brandFile(overrides: Partial<BrandFileRecord> = {}): BrandFileRecord {
 
 describe("file upload validation and paths", () => {
   it("sets Specialist uploads to pending Owner approval", () => {
-    expect(statusForUploadedFile("BRAND_SPECIALIST")).toBe(
+    expect(statusForUploadedDocument("BRAND_SPECIALIST")).toBe(
       "PENDING_OWNER_APPROVAL",
     );
-    expect(statusForUploadedFile("OWNER")).toBe("UPLOADED");
+    expect(statusForUploadedDocument("OWNER")).toBe("UPLOADED");
   });
 
   it("limits upload visibility choices by role", () => {
@@ -78,11 +78,11 @@ describe("file upload validation and paths", () => {
     const file = new File(["hello"], "Customer Brief.pdf", {
       type: "application/pdf",
     });
-    const valid = validateFileUploadFormData({
+    const valid = validateDocumentUploadFormData({
       formData: formData({ file, visibility: "BRAND_TEAM" }),
       role: "BRAND_SPECIALIST",
     });
-    const invalid = validateFileUploadFormData({
+    const invalid = validateDocumentUploadFormData({
       formData: formData({ file, visibility: "OWNER_ONLY" }),
       role: "BRAND_SPECIALIST",
     });
@@ -114,21 +114,21 @@ describe("file permissions and audit metadata", () => {
     });
 
     expect(
-      canDownloadFile({
+      canDownloadDocument({
         file: pending,
         role: "OWNER",
         profileId: "owner-1",
       }),
     ).toBe(true);
     expect(
-      canDownloadFile({
+      canDownloadDocument({
         file: pending,
         role: "BRAND_SPECIALIST",
         profileId: "specialist-1",
       }),
     ).toBe(true);
     expect(
-      canDownloadFile({
+      canDownloadDocument({
         file: pending,
         role: "BRAND_SPECIALIST",
         profileId: "other-specialist",
@@ -140,14 +140,14 @@ describe("file permissions and audit metadata", () => {
     const ownerOnly = brandFile({ visibility: "OWNER_ONLY" });
 
     expect(
-      canDownloadFile({
+      canDownloadDocument({
         file: ownerOnly,
         role: "OWNER",
         profileId: "owner-1",
       }),
     ).toBe(true);
     expect(
-      canDownloadFile({
+      canDownloadDocument({
         file: ownerOnly,
         role: "BRAND_SPECIALIST",
         profileId: "specialist-1",
@@ -157,13 +157,13 @@ describe("file permissions and audit metadata", () => {
 
   it("allows Owner review only while a Specialist upload is pending", () => {
     expect(
-      canReviewSpecialistFile({
+      canReviewSpecialistDocument({
         file: brandFile({ status: "PENDING_OWNER_APPROVAL" }),
         role: "OWNER",
       }),
     ).toBe(true);
     expect(
-      canReviewSpecialistFile({
+      canReviewSpecialistDocument({
         file: brandFile({ status: "PENDING_OWNER_APPROVAL" }),
         role: "BRAND_SPECIALIST",
       }),
@@ -171,7 +171,7 @@ describe("file permissions and audit metadata", () => {
   });
 
   it("builds safe audit metadata without signed URLs", () => {
-    const audit = toFileAuditMetadata(brandFile());
+    const audit = toDocumentAuditMetadata(brandFile());
     const auditJson = JSON.stringify(audit);
 
     expect(audit).toMatchObject({
@@ -186,16 +186,16 @@ describe("file permissions and audit metadata", () => {
 
 describe("file components", () => {
   it("renders the uploader for an Owner", () => {
-    render(<FileUploader access={ownerAccess} />);
+    render(<DocumentUploader access={ownerAccess} />);
 
-    expect(screen.getByRole("button", { name: "Upload file" })).toBeVisible();
-    expect(screen.getByLabelText("File")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Upload document" })).toBeVisible();
+    expect(screen.getByLabelText("Document")).toBeVisible();
     expect(screen.getByLabelText("Visibility")).toBeVisible();
   });
 
   it("renders file list actions for pending Specialist uploads", () => {
     render(
-      <FileList
+      <DocumentList
         access={ownerAccess}
         files={[
           brandFile({
@@ -215,7 +215,7 @@ describe("file components", () => {
   });
 
   it("renders Specialist upload guidance", () => {
-    render(<FileUploader access={specialistAccess} />);
+    render(<DocumentUploader access={specialistAccess} />);
 
     expect(
       screen.getByText(/held for Owner approval/),

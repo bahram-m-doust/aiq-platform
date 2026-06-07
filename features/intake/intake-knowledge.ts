@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { generateIntakeDocx } from "@/features/intake/docx-generator";
 import type { IntakeSnapshotJson } from "@/features/intake/types";
-import { privateFilesBucket } from "@/features/files/storage";
+import { privateFilesBucket } from "@/features/documents/storage";
 import { logAudit } from "@/lib/audit/logAudit";
 import { createAdminClient } from "@/lib/supabase/admin";
 

@@ -39,11 +39,11 @@ vi.mock("@/features/invitations/services", () => ({
   validateJoinBrandBeforeRedeem: vi.fn(),
 }));
 
-vi.mock("@/features/files/services", () => ({
-  createSignedDownloadUrlForFile: vi.fn(),
-  isFileServiceError: vi.fn(() => false),
-  reviewSpecialistFile: vi.fn(),
-  uploadBrandFileFromFormData: vi.fn(),
+vi.mock("@/features/documents/services", () => ({
+  createSignedDownloadUrlForDocument: vi.fn(),
+  isDocumentServiceError: vi.fn(() => false),
+  reviewSpecialistDocument: vi.fn(),
+  uploadBrandDocumentFromFormData: vi.fn(),
 }));
 
 vi.mock("@/features/agents/brain/openai", () => ({
@@ -79,8 +79,8 @@ import { runAgentAction } from "@/features/agents/runs/actions";
 import { redeemDashboardAccessKeyAction } from "@/features/access/actions";
 import { login } from "@/features/auth/actions";
 import { requireUserProfile } from "@/features/auth/queries";
-import { uploadFileAction } from "@/features/files/actions";
-import { uploadBrandFileFromFormData } from "@/features/files/services";
+import { uploadDocumentAction } from "@/features/documents/actions";
+import { uploadBrandDocumentFromFormData } from "@/features/documents/services";
 import { createSpecialistInvitationAction } from "@/features/invitations/actions";
 import { createSpecialistInvitation } from "@/features/invitations/services";
 import {
@@ -161,7 +161,7 @@ describe("action rate limits", () => {
   });
 
   it("stops file upload before storage work", async () => {
-    const result = await uploadFileAction(
+    const result = await uploadDocumentAction(
       { status: "idle", message: "" },
       formData({
         file: new File(["hello"], "brief.pdf", { type: "application/pdf" }),
@@ -173,7 +173,7 @@ describe("action rate limits", () => {
       status: "error",
       message: RATE_LIMITED_MESSAGE,
     });
-    expect(uploadBrandFileFromFormData).not.toHaveBeenCalled();
+    expect(uploadBrandDocumentFromFormData).not.toHaveBeenCalled();
   });
 
   it("stops Brand Brain and agent runs before OpenAI work", async () => {

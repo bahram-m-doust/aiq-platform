@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import Link from "next/link";
 
 import type {
   BrandBuildProgress,
@@ -122,6 +121,19 @@ function PhaseGlyph({ kind }: { kind: string }) {
         />
       </svg>
     );
+  if (kind === "palette")
+    return (
+      <svg aria-hidden="true" height="18" viewBox="0 0 24 24" width="18">
+        <path
+          d="M12 3a9 9 0 0 0 0 18c1.1 0 2-.9 2-2 0-.52-.2-1-.54-1.36-.33-.36-.53-.83-.53-1.34 0-1.1.9-2 2-2h1.6A4.97 4.97 0 0 0 21 9.5C21 5.9 16.97 3 12 3z"
+          {...sProps}
+        />
+        <circle cx="7.5" cy="10.5" fill="white" r="1" stroke="none" />
+        <circle cx="10.5" cy="7.5" fill="white" r="1" stroke="none" />
+        <circle cx="14.5" cy="7.5" fill="white" r="1" stroke="none" />
+        <circle cx="16.5" cy="10.5" fill="white" r="1" stroke="none" />
+      </svg>
+    );
   return null;
 }
 
@@ -157,12 +169,14 @@ const TONE_GRADIENTS: Record<number, string> = {
   1: "linear-gradient(150deg, var(--bv-c1-a), var(--bv-c1-b))",
   2: "linear-gradient(150deg, var(--bv-c2-a), var(--bv-c2-b))",
   3: "linear-gradient(150deg, var(--bv-c3-a), var(--bv-c3-b))",
+  4: "linear-gradient(150deg, var(--bv-c4-a), var(--bv-c4-b))",
 };
 
 const BAR_GRADIENTS: Record<number, string> = {
   1: "linear-gradient(90deg, var(--bv-c1-a), var(--bv-c1-b))",
   2: "linear-gradient(90deg, var(--bv-c2-a), var(--bv-c2-b))",
   3: "linear-gradient(90deg, var(--bv-c3-a), var(--bv-c3-b))",
+  4: "linear-gradient(90deg, var(--bv-c4-a), var(--bv-c4-b))",
 };
 
 function PhaseCard({
@@ -191,18 +205,19 @@ function PhaseCard({
 
   return (
     <div
-      className="group/card relative w-full overflow-hidden rounded-[20px] border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+      className="group/card relative w-full overflow-hidden rounded-[8px] border transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
       style={{
         background: "var(--bv-card)",
         borderColor: isReadyToSubmit ? "var(--bv-brand-mid)" : "var(--bv-line)",
         animation: cardAnimation,
-        boxShadow: "var(--bv-shadow-card)",
-        maxWidth: 560,
+        boxShadow:
+          "0px 6px 6px rgba(148,163,184,0.15), 0px 0px 1px rgba(148,163,184,0.7)",
+        maxWidth: 600,
       }}
     >
       {phaseState === "active" && (
         <div
-          className="absolute inset-x-0 top-0 h-0.5 opacity-90"
+          className="absolute inset-x-0 top-0 z-[1] h-0.5 opacity-90"
           style={{
             background: `linear-gradient(90deg, transparent, var(--bv-accent), transparent)`,
           }}
@@ -212,53 +227,59 @@ function PhaseCard({
       <button
         aria-controls={`${phase.key}-panel`}
         aria-expanded={open}
-        className="block w-full cursor-pointer border-0 bg-transparent p-4 text-left"
+        className="block w-full cursor-pointer border-0 bg-transparent p-0 text-left"
         onClick={onToggle}
         type="button"
       >
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <span
-            className="grid size-[30px] place-items-center rounded-lg text-white"
-            style={{
-              background: TONE_GRADIENTS[tone],
-              boxShadow:
-                "0 3px 10px -3px rgba(15,15,20,0.25), inset 0 1px 0 rgba(255,255,255,0.35)",
-            }}
-          >
-            <PhaseGlyph kind={phase.iconKind} />
-          </span>
-          <span className="flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
+        {/* card header */}
+        <div className="flex flex-col gap-2 px-6 pb-4 pt-6">
+          <div className="flex items-center justify-between gap-3">
             <span
-              className="inline-block size-[5px] rounded-full"
+              className="grid size-8 place-items-center rounded-md text-white"
               style={{
-                background:
-                  phaseState === "complete"
-                    ? "#2bc78a"
-                    : phaseState === "active"
-                      ? "var(--bv-accent)"
-                      : "var(--bv-ink-4)",
+                background: TONE_GRADIENTS[tone],
                 boxShadow:
-                  phaseState === "active"
-                    ? "0 0 0 3px var(--bv-accent-tint)"
-                    : undefined,
+                  "0 3px 10px -3px rgba(15,15,20,0.25), inset 0 1px 0 rgba(255,255,255,0.35)",
               }}
-            />
-            Phase {String(phase.phase).padStart(2, "0")}
-          </span>
+            >
+              <PhaseGlyph kind={phase.iconKind} />
+            </span>
+            <span className="flex items-center gap-1.5 text-[12px] font-medium tracking-[-0.006em] text-[var(--bv-ink-3)]">
+              <span
+                className="inline-block size-[5px] rounded-full"
+                style={{
+                  background:
+                    phaseState === "complete"
+                      ? "#2bc78a"
+                      : phaseState === "active"
+                        ? "var(--bv-accent)"
+                        : "var(--bv-ink-4)",
+                  boxShadow:
+                    phaseState === "active"
+                      ? "0 0 0 3px var(--bv-accent-tint)"
+                      : undefined,
+                }}
+              />
+              PHASE {String(phase.phase).padStart(2, "0")}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <h2 className="text-[14px] font-semibold leading-5 tracking-[-0.006em] text-[var(--bv-ink)]">
+              {isReadyToSubmit ? "Ready to Submit" : phase.title}
+            </h2>
+            <p className="text-[12px] leading-4 text-[var(--bv-ink-3)]">
+              {isReadyToSubmit
+                ? "All inputs captured. Lock the foundation and pass to Strategy."
+                : phase.description}
+            </p>
+          </div>
         </div>
 
-        <h2 className="mb-1 text-[17px] font-semibold tracking-[-0.014em] text-[var(--bv-ink)]">
-          {isReadyToSubmit ? "Ready to Submit" : phase.title}
-        </h2>
-        <p className="mb-3 text-[13px] leading-relaxed text-[var(--bv-ink-2)]">
-          {isReadyToSubmit
-            ? "All inputs captured. Lock the foundation and pass to Strategy."
-            : phase.description}
-        </p>
-
-        <div className="mb-2.5 flex items-center gap-3">
+        {/* card content — progress */}
+        <div className="flex items-center justify-between gap-4 px-6 pb-5 pt-2">
           <span
-            className="flex-1 h-1.5 overflow-hidden rounded-full"
+            className="h-2 flex-1 overflow-hidden rounded-full"
             style={{ background: "rgba(15,15,20,0.06)" }}
           >
             <span
@@ -274,26 +295,32 @@ function PhaseCard({
               }}
             />
           </span>
-          <span className="min-w-[38px] text-right font-mono text-[11.5px] text-[var(--bv-ink-2)]">
+          <span className="text-[12px] font-medium text-[var(--bv-ink-3)]">
             {phase.percent}%
           </span>
         </div>
 
-        <div className="flex items-center justify-between gap-2.5 border-t border-dashed pt-2.5" style={{ borderColor: "var(--bv-line-dashed)" }}>
-          <span className="text-xs text-[var(--bv-ink-3)]">
+        {/* card footer */}
+        <div
+          className="flex items-center justify-between gap-3 border-t border-dashed px-6 py-4"
+          style={{ borderColor: "var(--bv-line-dashed)" }}
+        >
+          <span className="text-[12px] leading-4">
             {isReadyToSubmit ? (
               <>
-                <strong className="font-medium text-[var(--bv-ink-2)]">
+                <strong className="font-medium text-[var(--bv-ink)]">
                   {phase.stepsDone} / {phase.stepsTotal}
                 </strong>{" "}
-                answered
+                <span className="text-[var(--bv-ink-3)]">answered</span>
               </>
             ) : (
               <>
-                {phase.teamVerb} by the{" "}
-                <strong className="font-medium text-[var(--bv-ink-2)]">
+                <span className="text-[var(--bv-ink-3)]">
+                  {phase.teamVerb} by the{" "}
+                </span>
+                <span className="font-medium text-[var(--bv-ink)]">
                   {phase.team}
-                </strong>
+                </span>
               </>
             )}
           </span>
@@ -304,7 +331,7 @@ function PhaseCard({
               transitionTimingFunction: "var(--bv-ease)",
             }}
           >
-            <Chevron />
+            <Chevron size={16} />
           </span>
         </div>
       </button>
@@ -366,7 +393,9 @@ function PhaseCard({
                 <div className="flex items-center justify-between">
                   {effectiveState === "locked" ? (
                     <span className="text-[10px] text-[var(--bv-ink-4)]">
-                      Unlocks after Phase {String(phase.phase - 1).padStart(2, "0")}
+                      {isLocked
+                        ? `Unlocks after Phase ${String(phase.phase - 1).padStart(2, "0")}`
+                        : "Coming soon"}
                     </span>
                   ) : <span />}
                   <StatePill state={effectiveState} />
@@ -486,7 +515,7 @@ function DetailPage({
               This step is locked until the previous phase wraps. The team picks
               this up once{" "}
               <strong className="text-[var(--bv-ink)]">
-                {phase.phase === 2 ? "Phase 01" : "Phase 02"}
+                {`Phase ${String(phase.phase - 1).padStart(2, "0")}`}
               </strong>{" "}
               is delivered.
             </div>
@@ -582,11 +611,13 @@ export function BrandBuildView({
   email,
   intakeCompletion,
   intakeSessionId,
+  intakeCanApprove = false,
 }: {
   progress: BrandBuildProgress;
   email: string;
   intakeCompletion?: IntakeCompletion | null;
   intakeSessionId?: string | null;
+  intakeCanApprove?: boolean;
 }) {
   const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({});
   const [detail, setDetail] = useState<{
@@ -648,7 +679,7 @@ export function BrandBuildView({
     (phase: PhaseProgress, substep: SubstepProgress, state: SubstepState) => {
       if (state === "locked") return;
       if (phase.key === "questionnaires") {
-        window.location.href = `/dashboard/questionnaire/${substep.id}`;
+        window.location.href = "/dashboard/questionnaire";
         return;
       }
       if (phase.key === "strategies") {
@@ -667,126 +698,64 @@ export function BrandBuildView({
 
   return (
     <div
-      className="mx-auto max-w-[1180px] px-4 pb-16 pt-6 sm:px-7 sm:pb-24 sm:pt-10"
+      className="w-full px-6 pb-16 pt-6 sm:pb-24"
       style={{ color: "var(--bv-ink)" }}
     >
-      {/* ── Welcome ── */}
-      <div className="mb-8">
-        <h1 className="text-[clamp(24px,3vw,32px)] font-semibold tracking-[-0.02em] text-[var(--bv-ink)]">
-          Welcome to {progress.brandName} City
-        </h1>
-      </div>
-
-      {/* ── Top Bar ── */}
-      <div className="mb-14 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            className="relative size-8 rounded-[9px]"
-            style={{
-              background: "linear-gradient(135deg, #0e0e14, #2a2a36)",
-              boxShadow:
-                "0 2px 6px rgba(15,15,20,0.18), inset 0 0 0 1px rgba(255,255,255,0.05)",
-            }}
-          >
-            <div
-              className="absolute inset-[7px] rounded"
-              style={{
-                background:
-                  "linear-gradient(135deg, #ff8a5b, #2a7cff 60%, #2bc78a)",
-                opacity: 0.92,
-              }}
-            />
-          </div>
-          <div>
-            <div className="text-[15px] font-semibold tracking-[-0.012em]">
-              Brand Brain
-            </div>
-            <div className="mt-px font-mono text-[11.5px] tracking-wider text-[var(--bv-ink-3)]">
-              bextudio · build view
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 text-[12.5px] text-[var(--bv-ink-3)]">
+      {/* ── Roadmap intro ── */}
+      <section className="mb-12 w-[calc(50%+328px)] max-w-full">
+        <span className="mb-3.5 inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
           <span
-            className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 font-mono text-[11px] tracking-wider text-[var(--bv-ink-2)] shadow-sm"
-            style={{ borderColor: "var(--bv-line)" }}
-          >
-            <span
-              className="size-1.5 rounded-full"
-              style={{
-                background: "#2bc78a",
-                boxShadow: "0 0 0 4px rgba(43,199,138,0.18)",
-                animation: "bv-live-pulse 1.8s var(--bv-ease) infinite",
-              }}
-            />
-            Live
-          </span>
-        </div>
-      </div>
+            className="inline-block h-px w-[18px]"
+            style={{ background: "var(--bv-line-2)" }}
+          />
+          Brand Brain · build roadmap
+        </span>
+        <h2 className="mb-3 text-[clamp(20px,2.6vw,26px)] font-semibold leading-[1.15] tracking-[-0.02em] text-[var(--bv-ink)]">
+          Building your Brand Brain, together
+        </h2>
+        <p className="text-[15px] leading-relaxed text-[var(--bv-ink-2)]">
+          This roadmap is how we build your{" "}
+          <strong className="font-medium text-[var(--bv-ink)]">
+            Brand Brain
+          </strong>{" "}
+          — a brand-aware AI that thinks, writes, and decides the way your
+          brand would. It comes together as a partnership: you bring the raw
+          signal and direction, and the{" "}
+          <strong className="font-medium text-[var(--bv-ink)]">
+            Bextudio
+          </strong>{" "}
+          team turns it into strategy, aesthetics, and a trained brand model.
+          Each phase below is completed hand in hand and unlocks the next, so
+          they move in order — every phase builds on the one before it.
+        </p>
+      </section>
 
-      {/* ── Panel ── */}
+      {/* ── Build content ── */}
       <div
-        className="relative overflow-hidden rounded-[20px] border px-4 pb-8 pt-7 sm:rounded-[28px] sm:px-7 sm:pb-11 sm:pt-9"
-        style={{
-          background: "var(--bv-panel)",
-          borderColor: "var(--bv-panel-edge)",
-          boxShadow: "var(--bv-shadow-panel)",
-          animation: "bv-fade-in 600ms var(--bv-ease)",
-        }}
+        className="mx-auto w-full max-w-[656px]"
+        style={{ animation: "bv-fade-in 600ms var(--bv-ease)" }}
       >
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: `radial-gradient(700px 360px at 50% -20%, rgba(255,255,255,0.95), transparent 65%),
-                         radial-gradient(900px 600px at 100% 100%, rgba(231,232,240,0.4), transparent 60%)`,
-          }}
-        />
-
-        <div className="relative z-10">
-          {/* Hub */}
-          <div className="mb-7 flex w-full items-center justify-center">
-            <div
-              className="relative inline-flex items-center gap-3 rounded-full border bg-white px-5 py-3 pl-3"
-              style={{
-                borderColor: "var(--bv-line)",
-                boxShadow: "var(--bv-shadow-hub)",
-              }}
-            >
-              {activePhase ? (
-                <span
+        {/* Hub */}
+          <div className="mb-16 pl-14 max-sm:pl-9">
+            <div className="flex w-full max-w-[600px] items-center justify-center">
+            <div className="relative inline-flex items-center gap-3.5 rounded-[8px] border border-border bg-card py-2 pl-[14px] pr-[22px] shadow-lg">
+              {!activePhase && (
+                <svg
                   aria-hidden="true"
-                  className="size-9 rounded-full"
-                  style={{
-                    background: `conic-gradient(from 0deg, rgba(0,229,217,0) 0deg, rgba(0,229,217,0.85) 270deg, rgba(0,229,217,0) 360deg), #ffffff`,
-                    mask: `radial-gradient(circle at 50% 50%, transparent 13px, #000 13.5px, #000 17px, transparent 17.5px)`,
-                    WebkitMask: `radial-gradient(circle at 50% 50%, transparent 13px, #000 13.5px, #000 17px, transparent 17.5px)`,
-                    animation: "bv-spin 1.6s linear infinite",
-                  }}
-                />
-              ) : (
-                <span
-                  aria-hidden="true"
-                  className="flex size-9 items-center justify-center rounded-full"
-                  style={{
-                    background: "var(--bv-panel)",
-                    color: "var(--bv-ink-3)",
-                  }}
+                  className="shrink-0"
+                  fill="none"
+                  height="15"
+                  stroke="#2bc78a"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                  viewBox="0 0 24 24"
+                  width="15"
                 >
-                  <svg
-                    fill="none"
-                    height="14"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2.5"
-                    viewBox="0 0 24 24"
-                    width="14"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </span>
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               )}
-              <span className="text-[15px] font-medium tracking-[-0.01em] whitespace-nowrap">
+              <span className="text-[15px] font-medium tracking-[-0.01em] whitespace-nowrap text-[var(--bv-ink)]">
                 {activePhase ? (
                   <>
                     Building{" "}
@@ -801,6 +770,16 @@ export function BrandBuildView({
                   </>
                 )}
               </span>
+              {activePhase && (
+                <span
+                  className="border-l pl-[15px] font-mono text-[10.5px] uppercase tracking-[0.07em] whitespace-nowrap text-[var(--bv-ink-3)]"
+                  style={{ borderColor: "var(--bv-line)" }}
+                >
+                  {activePhase.percent}% · {activePhase.stepsDone}/
+                  {activePhase.stepsTotal}
+                </span>
+              )}
+            </div>
             </div>
           </div>
 
@@ -840,7 +819,7 @@ export function BrandBuildView({
 
               return (
                 <div
-                  className="relative mb-3 last:mb-0"
+                  className="relative mb-16 last:mb-0"
                   key={p.key}
                 >
                   <div
@@ -898,6 +877,7 @@ export function BrandBuildView({
                     submitSlot={
                       isPhase1ReadyToSubmit && intakeCompletion && intakeSessionId ? (
                         <FinalSubmitReadiness
+                          canApprove={intakeCanApprove}
                           completion={intakeCompletion}
                           sessionId={intakeSessionId}
                         />
@@ -909,26 +889,6 @@ export function BrandBuildView({
             })}
           </div>
         </div>
-      </div>
-
-      {/* ── Caption ── */}
-      <section className="max-w-[720px] px-1 pt-10">
-        <span className="mb-3.5 inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
-          <span
-            className="inline-block h-px w-[18px]"
-            style={{ background: "var(--bv-line-2)" }}
-          />
-          Brand Brain · build roadmap
-        </span>
-        <h2 className="mb-3.5 text-[clamp(22px,2.8vw,30px)] font-semibold leading-[1.1] tracking-[-0.024em] text-[var(--bv-ink)]">
-          Three phases. One brand-aware brain.
-        </h2>
-        <p className="max-w-[560px] text-base leading-relaxed text-[var(--bv-ink-2)]">
-          Brand Brain is built in sequence — first the brand tells us who it is,
-          then strategy makes it operable, then the AI team makes it speak.
-        </p>
-      </section>
-
       {/* ── Detail overlay ── */}
       {detail && (
         <DetailPage

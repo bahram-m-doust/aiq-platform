@@ -316,6 +316,77 @@ describe("intake UI components", () => {
     expect(screen.getByText("Use concise executive language.")).toBeVisible();
   });
 
+  it("collapses an answered question to read-only with an Edit affordance", async () => {
+    const user = userEvent.setup();
+    render(
+      <QuestionRenderer
+        autosaveAction={vi.fn()}
+        question={question}
+        sessionId="session-1"
+        value="An existing answer"
+      />,
+    );
+
+    expect(screen.getByText("An existing answer")).toBeVisible();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Edit/ }));
+
+    expect(screen.getByRole("textbox")).toBeVisible();
+  });
+
+  it("does not autosave a free-text field on blur when nothing changed", async () => {
+    const user = userEvent.setup();
+    const autosave = vi.fn();
+    render(
+      <QuestionRenderer
+        autosaveAction={autosave}
+        question={question}
+        sessionId="session-1"
+        value={null}
+      />,
+    );
+
+    const field = screen.getByLabelText(
+      "What is the strategic role of the company?",
+    );
+    await user.click(field);
+    await user.tab();
+
+    expect(autosave).not.toHaveBeenCalled();
+  });
+
+  it("autosaves a free-text field on blur after a real change", async () => {
+    const user = userEvent.setup();
+    const autosave = vi.fn().mockResolvedValue({
+      ok: true,
+      questionId: "question-1",
+      value: "A considered answer",
+      completionPercent: 50,
+    });
+    render(
+      <QuestionRenderer
+        autosaveAction={autosave}
+        question={question}
+        sessionId="session-1"
+        value={null}
+      />,
+    );
+
+    const field = screen.getByLabelText(
+      "What is the strategic role of the company?",
+    );
+    await user.click(field);
+    await user.type(field, "A considered answer");
+    await user.tab();
+
+    expect(autosave).toHaveBeenCalledWith({
+      sessionId: "session-1",
+      questionId: "question-1",
+      value: "A considered answer",
+    });
+  });
+
   it("hides Submit below 100 percent and shows at 100", () => {
     const { rerender, container } = render(
       <FinalSubmitReadiness completion={completion()} sessionId="session-1" />,
@@ -343,7 +414,9 @@ describe("intake UI components", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Submit/ })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: /Approve & Lock/ }),
+    ).toBeEnabled();
   });
 
   it("shows the final submit confirmation copy in the modal", async () => {
@@ -368,12 +441,40 @@ describe("intake UI components", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Submit/ }));
+    await user.click(screen.getByRole("button", { name: /Approve & Lock/ }));
 
     expect(screen.getByText(finalSubmitConfirmationCopy)).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Confirm" }),
     ).toBeVisible();
+  });
+
+  it("hides the approve button for non-owners and shows an awaiting note", () => {
+    render(
+      <FinalSubmitReadiness
+        canApprove={false}
+        completion={completion({
+          answeredQuestions: 2,
+          completionPercent: 100,
+          sections: [
+            {
+              sectionId: "section-1",
+              sectionKey: "COMPANY",
+              title: "Company",
+              totalQuestions: 2,
+              answeredQuestions: 2,
+              completionPercent: 100,
+            },
+          ],
+        })}
+        sessionId="session-1"
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /Approve & Lock/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/awaiting your brand/i)).toBeVisible();
   });
 
   it("renders locked intake answers without editable controls", () => {

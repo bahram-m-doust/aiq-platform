@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { AlertCircleIcon, CheckIcon, LoaderIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  CheckIcon,
+  LoaderIcon,
+  PencilIcon,
+} from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -20,6 +25,7 @@ import type {
   AutosaveQuestionStatus,
 } from "@/features/intake/components/useIntakeAutosaveQueue";
 import {
+  isIntakeAnswerComplete,
   parseQuestionOptions,
   resolveQuestionInputKind,
 } from "@/features/intake/schemas";
@@ -49,7 +55,8 @@ function detectDir(value: IntakeAnswerValue): "rtl" | "ltr" {
   const text = typeof value === "string" ? value : "";
   if (!text) return "ltr";
 
-  const rtlPattern = /[\u0590-\u05ff\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb1d-\ufdff\ufe70-\ufeff]/;
+  const rtlPattern =
+    /[\u0590-\u05ff\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb1d-\ufdff\ufe70-\ufeff]/;
   return rtlPattern.test(text) ? "rtl" : "ltr";
 }
 
@@ -125,8 +132,13 @@ export function QuestionRenderer({
   const [status, setStatus] = useState<AutosaveQuestionStatus>("idle");
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [lastSavedValue, setLastSavedValue] =
-    useState<IntakeAnswerValue | null>(null);
+  const [lastSavedValue, setLastSavedValue] = useState<
+    IntakeAnswerValue | undefined
+  >(undefined);
+  const [savedValue, setSavedValue] = useState<IntakeAnswerValue>(value);
+  const [isEditing, setIsEditing] = useState(
+    () => !isIntakeAnswerComplete(value),
+  );
   const kind = resolveQuestionInputKind(question.inputType);
   const options = useMemo(
     () => parseQuestionOptions(question.validationSchema),
@@ -134,22 +146,23 @@ export function QuestionRenderer({
   );
   const controlId = `question-${question.id}`;
   const statusId = `${controlId}-status`;
-  const displayedStatus = saveState?.status ?? status;
-  const displayedMessage = saveState?.message ?? message;
   const usesQueuedAutosave = Boolean(onQueuedChange);
   const currentValue = usesQueuedAutosave ? value : localValue;
+  const displayedStatus = saveState?.status ?? status;
+  const displayedMessage = saveState?.message ?? message;
 
   function queueValue(nextValue: IntakeAnswerValue, flush = false) {
     onQueuedChange?.(question.id, nextValue, { flush });
   }
 
   function save(nextValue: IntakeAnswerValue) {
+    setLastSavedValue(nextValue);
+
     if (onQueuedChange) {
       queueValue(nextValue);
       return;
     }
 
-    setLastSavedValue(nextValue);
     startTransition(async () => {
       const result = await autosaveAction({
         sessionId,
@@ -164,6 +177,7 @@ export function QuestionRenderer({
       }
 
       setLocalValue(result.value);
+      setSavedValue(result.value);
       setStatus("saved");
       setMessage("");
       onSaved?.(question.id, result.value);
@@ -176,7 +190,7 @@ export function QuestionRenderer({
       return;
     }
 
-    if (lastSavedValue !== null) {
+    if (lastSavedValue !== undefined) {
       save(lastSavedValue);
     }
   }
@@ -188,6 +202,57 @@ export function QuestionRenderer({
     } else {
       setLocalValue(nextValue);
     }
+  }
+
+  function handleTextBlur() {
+    if (onQueuedChange) {
+      queueValue(currentValue, true);
+      return;
+    }
+
+    if (valueToString(localValue) === valueToString(savedValue)) return;
+    save(localValue);
+  }
+
+  function handleDone() {
+    if (
+      kind === "text" ||
+      kind === "textarea" ||
+      kind === "url" ||
+      kind === "number"
+    ) {
+      handleTextBlur();
+    }
+
+    setIsEditing(false);
+  }
+
+  function formatDisplay(): string | null {
+    if (kind === "checkbox") {
+      if (currentValue === true) return "Yes";
+      if (currentValue === false) return "No";
+      return null;
+    }
+
+    if (kind === "multi_select") {
+      const values = valueToStringArray(currentValue);
+      if (values.length === 0) return null;
+      return values
+        .map((item) => options.find((option) => option.value === item)?.label ?? item)
+        .join(", ");
+    }
+
+    if (kind === "select" || kind === "radio") {
+      const selectedValue = typeof currentValue === "string" ? currentValue : "";
+      if (!selectedValue) return null;
+      return (
+        options.find((option) => option.value === selectedValue)?.label ??
+        selectedValue
+      );
+    }
+
+    const text = valueToString(currentValue).trim();
+    return text.length > 0 ? text : null;
   }
 
   function renderControl() {
@@ -218,7 +283,11 @@ export function QuestionRenderer({
 
     if (kind === "radio") {
       return (
-        <div className="grid gap-2" role="radiogroup" aria-describedby={statusId}>
+        <div
+          aria-describedby={statusId}
+          className="grid gap-2"
+          role="radiogroup"
+        >
           {options.map((option) => (
             <label
               className="flex items-center gap-2 text-sm"
@@ -272,7 +341,7 @@ export function QuestionRenderer({
       const selectedValues = valueToStringArray(currentValue);
 
       return (
-        <div className="grid gap-2" aria-describedby={statusId}>
+        <div aria-describedby={statusId} className="grid gap-2">
           {options.map((option) => {
             const checked = selectedValues.includes(option.value);
 
@@ -287,7 +356,7 @@ export function QuestionRenderer({
                     const nextValues =
                       nextChecked === true
                         ? [...selectedValues, option.value]
-                        : selectedValues.filter((v) => v !== option.value);
+                        : selectedValues.filter((item) => item !== option.value);
 
                     if (!onQueuedChange) {
                       setLocalValue(nextValues);
@@ -310,13 +379,7 @@ export function QuestionRenderer({
           aria-invalid={displayedStatus === "error"}
           dir={detectDir(currentValue)}
           id={controlId}
-          onBlur={() => {
-            if (onQueuedChange) {
-              queueValue(currentValue, true);
-            } else {
-              save(currentValue);
-            }
-          }}
+          onBlur={handleTextBlur}
           onChange={(event) => setTextValue(event.target.value)}
           placeholder="Enter a considered response"
           value={valueToString(currentValue)}
@@ -330,13 +393,7 @@ export function QuestionRenderer({
         aria-invalid={displayedStatus === "error"}
         dir={detectDir(currentValue)}
         id={controlId}
-        onBlur={() => {
-          if (onQueuedChange) {
-            queueValue(currentValue, true);
-          } else {
-            save(currentValue);
-          }
-        }}
+        onBlur={handleTextBlur}
         onChange={(event) => setTextValue(event.target.value)}
         placeholder="Enter your response"
         type={kind}
@@ -363,16 +420,66 @@ export function QuestionRenderer({
         ) : null}
       </div>
 
-      <div className="mt-3">{renderControl()}</div>
+      {isEditing ? (
+        <>
+          <div className="mt-3">{renderControl()}</div>
 
-      <div className="mt-2 flex min-h-[20px] items-center" id={statusId} role="status" aria-live="polite">
-        <SaveIndicator
-          isPending={isPending && !usesQueuedAutosave}
-          message={displayedMessage}
-          onRetry={retry}
-          status={displayedStatus}
-        />
-      </div>
+          <div className="mt-2 flex min-h-[28px] items-center justify-between gap-2">
+            <span aria-live="polite" id={statusId} role="status">
+              <SaveIndicator
+                isPending={isPending && !usesQueuedAutosave}
+                message={displayedMessage}
+                onRetry={retry}
+                status={displayedStatus}
+              />
+            </span>
+            <button
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] text-[var(--bv-ink-2)] transition-colors hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+              onClick={handleDone}
+              style={{ borderColor: "var(--bv-line)" }}
+              type="button"
+            >
+              <CheckIcon className="size-3.5" />
+              Done
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div
+            className="mt-3 rounded-[12px] border px-3.5 py-2.5 text-[13.5px] leading-6 whitespace-pre-wrap"
+            style={{
+              background: "var(--bv-card-soft)",
+              borderColor: "var(--bv-line)",
+              color: formatDisplay()
+                ? "var(--bv-ink-2)"
+                : "var(--bv-ink-4)",
+            }}
+          >
+            {formatDisplay() ?? "No answer yet"}
+          </div>
+
+          <div className="mt-2 flex min-h-[28px] items-center justify-between gap-2">
+            <span aria-live="polite" id={statusId} role="status">
+              <SaveIndicator
+                isPending={isPending && !usesQueuedAutosave}
+                message={displayedMessage}
+                onRetry={retry}
+                status={displayedStatus}
+              />
+            </span>
+            <button
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] text-[var(--bv-ink-2)] transition-colors hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+              onClick={() => setIsEditing(true)}
+              style={{ borderColor: "var(--bv-line)" }}
+              type="button"
+            >
+              <PencilIcon className="size-3.5" />
+              Edit
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

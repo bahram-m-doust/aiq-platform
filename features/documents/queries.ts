@@ -2,18 +2,18 @@ import "server-only";
 
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import {
-  canListFile,
-  isBrandFileRole,
-  isFileStatus,
-  isFileVisibility,
-} from "@/features/files/schema";
+  canListDocument,
+  isBrandDocumentRole,
+  isDocumentStatus,
+  isDocumentVisibility,
+} from "@/features/documents/schema";
 import type {
-  BrandFileRecord,
-  BrandFilesWorkspace,
-  FileAccessContext,
-  FileStatus,
-  FileVisibility,
-} from "@/features/files/types";
+  BrandDocumentRecord,
+  BrandDocumentsWorkspace,
+  DocumentAccessContext,
+  DocumentStatus,
+  DocumentVisibility,
+} from "@/features/documents/types";
 import {
   type PaginationInput,
   paginatedRows,
@@ -39,12 +39,12 @@ type ProfileRow = {
   email: string;
 };
 
-function safeVisibility(value: string): FileVisibility {
-  return isFileVisibility(value) ? value : "HELIO_INTERNAL";
+function safeVisibility(value: string): DocumentVisibility {
+  return isDocumentVisibility(value) ? value : "HELIO_INTERNAL";
 }
 
-function safeStatus(value: string): FileStatus {
-  return isFileStatus(value) ? value : "UPLOADED";
+function safeStatus(value: string): DocumentStatus {
+  return isDocumentStatus(value) ? value : "UPLOADED";
 }
 
 function toSizeBytes(value: number | string | null) {
@@ -60,13 +60,13 @@ function toSizeBytes(value: number | string | null) {
   return null;
 }
 
-export function toBrandFileRecord({
+export function toBrandDocumentRecord({
   row,
   uploaderEmail,
 }: {
   row: FileRow;
   uploaderEmail?: string | null;
-}): BrandFileRecord {
+}): BrandDocumentRecord {
   return {
     id: row.id,
     brandId: row.brand_id,
@@ -82,16 +82,16 @@ export function toBrandFileRecord({
   };
 }
 
-export async function getFileAccessContextForProfile(
+export async function getDocumentAccessContextForProfile(
   profileId: string,
-): Promise<FileAccessContext | null> {
+): Promise<DocumentAccessContext | null> {
   const accessSummary = await getBrandAccessSummaryForProfile(profileId);
 
   if (
     accessSummary.status !== "ACTIVE_ACCESS" ||
     !accessSummary.brandId ||
     !accessSummary.brandName ||
-    !isBrandFileRole(accessSummary.membershipRole)
+    !isBrandDocumentRole(accessSummary.membershipRole)
   ) {
     return null;
   }
@@ -104,7 +104,7 @@ export async function getFileAccessContextForProfile(
   };
 }
 
-export async function getBrandFileById(fileId: string) {
+export async function getBrandDocumentById(fileId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("files")
@@ -119,15 +119,15 @@ export async function getBrandFileById(fileId: string) {
   }
 
   return data
-    ? toBrandFileRecord({ row: data as unknown as FileRow })
+    ? toBrandDocumentRecord({ row: data as unknown as FileRow })
     : null;
 }
 
-export async function getBrandFilesWorkspace(
+export async function getBrandDocumentsWorkspace(
   profileId: string,
   paginationInput?: PaginationInput,
-): Promise<BrandFilesWorkspace | null> {
-  const access = await getFileAccessContextForProfile(profileId);
+): Promise<BrandDocumentsWorkspace | null> {
+  const access = await getDocumentAccessContextForProfile(profileId);
 
   if (!access) {
     return null;
@@ -173,7 +173,7 @@ export async function getBrandFilesWorkspace(
   );
   const files = rows
     .map((row) =>
-      toBrandFileRecord({
+      toBrandDocumentRecord({
         row,
         uploaderEmail: row.uploaded_by
           ? emailsById.get(row.uploaded_by) ?? null
@@ -181,7 +181,7 @@ export async function getBrandFilesWorkspace(
       }),
     )
     .filter((file) =>
-      canListFile({
+      canListDocument({
         file,
         role: access.membershipRole,
         profileId,

@@ -22,7 +22,7 @@ import type {
   ModuleRecord,
   ModuleReviewRecord,
 } from "@/features/modules/types";
-import { isFileStatus, isFileVisibility } from "@/features/files/schema";
+import { isDocumentStatus, isDocumentVisibility } from "@/features/documents/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   type PaginationInput,
@@ -172,11 +172,11 @@ export function getLatestModuleArtifact(artifacts: ModuleArtifactRecord[]) {
 }
 
 function safeFileVisibility(value: string) {
-  return isFileVisibility(value) ? value : "HELIO_INTERNAL";
+  return isDocumentVisibility(value) ? value : "HELIO_INTERNAL";
 }
 
 function safeFileStatus(value: string) {
-  return isFileStatus(value) ? value : "UPLOADED";
+  return isDocumentStatus(value) ? value : "UPLOADED";
 }
 
 function toModuleRecord({
