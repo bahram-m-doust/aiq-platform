@@ -46,15 +46,16 @@ export default async function StakeholderInterviewsPage() {
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
       <div className="w-full">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex items-center gap-3">
+          {/* Back pill only on mobile — desktop relies on the header breadcrumb */}
           <Link
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-3.5 py-2 text-[13px] text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)]"
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-3.5 py-2 text-[13px] text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] md:hidden"
             href="/dashboard/brain/roadmap"
           >
             <ArrowLeftIcon className="size-3.5" />
             Build roadmap
           </Link>
-          <Badge variant="outline" style={badgeStyle}>
+          <Badge className="ml-auto" variant="outline" style={badgeStyle}>
             {stakeholderReportStatusLabels[status]}
           </Badge>
         </div>
