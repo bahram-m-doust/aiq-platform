@@ -499,7 +499,7 @@ export function PdfAnnotator({
                             onClick={() => setDraft(null)}
                             size="sm"
                             type="button"
-                            variant="ghost"
+                            variant="outline"
                           >
                             Cancel
                           </Button>
@@ -508,6 +508,7 @@ export function PdfAnnotator({
                             onClick={saveDraft}
                             size="sm"
                             type="button"
+                            variant="outline"
                           >
                             {isSaving ? (
                               <Loader2Icon className="animate-spin" />
@@ -701,7 +702,7 @@ export function PdfAnnotator({
                                 }}
                                 size="sm"
                                 type="button"
-                                variant="ghost"
+                                variant="outline"
                               >
                                 Cancel
                               </Button>
@@ -710,6 +711,7 @@ export function PdfAnnotator({
                                 onClick={() => saveReply(root)}
                                 size="sm"
                                 type="button"
+                                variant="outline"
                               >
                                 {isMutating ? (
                                   <Loader2Icon className="animate-spin" />
@@ -853,7 +855,7 @@ function CommentBlock({
               onClick={onCancelEdit}
               size="sm"
               type="button"
-              variant="ghost"
+              variant="outline"
             >
               Cancel
             </Button>
@@ -862,6 +864,7 @@ function CommentBlock({
               onClick={onSaveEdit}
               size="sm"
               type="button"
+              variant="outline"
             >
               {isMutating ? <Loader2Icon className="animate-spin" /> : null}
               Save
