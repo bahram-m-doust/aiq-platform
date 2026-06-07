@@ -9,7 +9,6 @@ import {
   BrainCircuitIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  InfinityIcon,
   PlusIcon,
   Settings2Icon,
   SquareUserIcon,
@@ -46,14 +45,12 @@ type SidebarProps = {
   email: string;
   fullName: string | null;
   role: string | null;
-  brandName: string | null;
-  brandIconUrl?: string | null;
   agents: SidebarAgent[];
 };
 
 const primaryNav = [
   {
-    href: "/dashboard/brain",
+    href: "/dashboard",
     label: "Brand Integrated Brain",
     icon: BrainCircuitIcon,
   },
@@ -64,17 +61,12 @@ const secondaryNav = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings2Icon },
 ];
 
-export function Sidebar({
-  role,
-  brandName,
-  brandIconUrl,
-  agents,
-}: SidebarProps) {
+export function Sidebar({ role, agents }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
     href === "/dashboard"
-      ? pathname === "/dashboard"
+      ? pathname === "/dashboard" || pathname.startsWith("/dashboard/brain")
       : pathname.startsWith(href);
 
   const agentsOpen = pathname.startsWith("/dashboard/agents");
@@ -89,24 +81,18 @@ export function Sidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" className="gap-2">
-              <Link href="/home">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
-                  {brandIconUrl ? (
-                    <Image
-                      alt={brandName ?? "Brand"}
-                      className="size-full rounded-lg object-cover"
-                      height={32}
-                      src={brandIconUrl}
-                      unoptimized
-                      width={32}
-                    />
-                  ) : (
-                    <InfinityIcon className="size-5" />
-                  )}
+              <Link href="/">
+                <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-foreground text-background">
+                  <Image
+                    alt="Bextudio"
+                    className="size-full object-contain"
+                    height={32}
+                    src="/square-sign.png"
+                    unoptimized
+                    width={32}
+                  />
                 </span>
-                <span className="truncate text-sm font-semibold">
-                  {brandName ?? "Bextudio"}
-                </span>
+                <span className="truncate text-sm font-semibold">Bextudio</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

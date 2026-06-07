@@ -22,7 +22,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   roadmap: "Build Roadmap",
   documents: "Documents",
   questionnaire: "Questionnaires",
-  intake: "Intake",
   settings: "Settings",
   modules: "Modules",
   invitations: "Invitations",
