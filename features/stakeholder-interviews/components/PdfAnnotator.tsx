@@ -16,13 +16,19 @@ import {
   Loader2Icon,
   MessageSquarePlusIcon,
   MessagesSquareIcon,
+  PanelRightCloseIcon,
+  PanelRightOpenIcon,
   PencilIcon,
   ReplyIcon,
   Trash2Icon,
-  XIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 import {
   addStakeholderAnnotationAction,
@@ -556,28 +562,47 @@ export function PdfAnnotator({
           </div>
         </div>
 
-        {/* Comments sidebar */}
-        {showComments ? (
-          <aside className="sticky top-4 w-80 shrink-0 self-start overflow-hidden rounded-lg border border-border bg-card shadow-xs">
-            <div className="relative border-b border-border px-3 py-3">
-              <Button
-                aria-label="Close comments"
-                className="absolute right-2 top-2"
-                onClick={() => setShowComments(false)}
-                size="icon-sm"
+        {/* Comments sidebar (collapsible) */}
+        <Collapsible
+          className="sticky top-4 shrink-0 self-start"
+          onOpenChange={setShowComments}
+          open={showComments}
+        >
+          {/* Collapsed rail — click to expand */}
+          {!showComments ? (
+            <CollapsibleTrigger asChild>
+              <button
+                aria-label="Show comments"
+                className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-3 text-sm font-medium shadow-xs transition-colors hover:bg-muted/50"
                 type="button"
-                variant="ghost"
               >
-                <XIcon />
-              </Button>
-              <div className="flex items-center justify-between gap-2 pr-8">
-                <span className="inline-flex items-center gap-2 text-sm font-medium">
-                  <MessagesSquareIcon className="size-4" />
-                  comments
-                </span>
+                <PanelRightOpenIcon className="size-4" />
+                <MessagesSquareIcon className="size-4" />
+                <span>{rootAnnotations.length}</span>
+              </button>
+            </CollapsibleTrigger>
+          ) : null}
+
+          <CollapsibleContent className="w-80 overflow-hidden rounded-lg border border-border bg-card shadow-xs">
+            <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5">
+              <span className="inline-flex items-center gap-2 text-sm font-medium">
+                <MessagesSquareIcon className="size-4" />
+                comments
+              </span>
+              <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">
                   {unresolvedCount} unresolved
                 </span>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    aria-label="Collapse comments"
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <PanelRightCloseIcon />
+                  </Button>
+                </CollapsibleTrigger>
               </div>
             </div>
 
@@ -707,8 +732,8 @@ export function PdfAnnotator({
                 })}
               </ul>
             )}
-          </aside>
-        ) : null}
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );
