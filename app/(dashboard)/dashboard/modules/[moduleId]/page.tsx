@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { SetBreadcrumbLabels } from "@/components/dashboard/breadcrumb-labels";
 import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
 import { PageShell } from "@/components/ds/PageShell";
 import { requireUserProfile } from "@/features/auth/queries";
@@ -40,6 +41,9 @@ export default async function DashboardModuleDetailPage({
       subtitle={`${data.module.moduleTypeLabel} · ${data.access.brandName}`}
       title={data.module.title}
     >
+      <SetBreadcrumbLabels
+        labels={{ [`/dashboard/modules/${moduleId}`]: data.module.title }}
+      />
       <DSCard>
         <DSCardHeader>
           <div className="flex items-start justify-between gap-3">

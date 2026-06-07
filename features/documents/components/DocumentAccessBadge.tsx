@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import type { DocumentStatus, DocumentVisibility } from "@/features/documents/types";
 import {
   documentStatusLabels,
@@ -12,13 +13,9 @@ export function DocumentAccessBadge({
   status: DocumentStatus;
 }) {
   return (
-    <div className="flex flex-wrap gap-2 text-xs">
-      <span className="rounded-md border border-border px-2 py-1 font-medium">
-        {documentVisibilityLabels[visibility]}
-      </span>
-      <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">
-        {documentStatusLabels[status]}
-      </span>
+    <div className="flex flex-wrap gap-2">
+      <Badge variant="outline">{documentVisibilityLabels[visibility]}</Badge>
+      <Badge variant="secondary">{documentStatusLabels[status]}</Badge>
     </div>
   );
 }

@@ -4,6 +4,7 @@ const colorClasses = {
   orange: "bg-orange-500",
   blue: "bg-blue-500",
   green: "bg-emerald-500",
+  "green-soft": "bg-[#2bc78a]/45",
   muted: "bg-muted-foreground/30",
 };
 

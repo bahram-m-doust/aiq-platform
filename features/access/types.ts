@@ -6,6 +6,7 @@ export type BrandAccessSummary = {
   brandName: string | null;
   membershipRole: string | null;
   planName: string | null;
+  credits: number;
 };
 
 export type AccessKeyRedemptionFormState = {
@@ -31,6 +32,7 @@ export type BrandAccessEntitlement = {
   startsAt: string | null;
   expiresAt: string | null;
   planName: string | null;
+  credits: number;
 };
 
 export const entitlementSources = [

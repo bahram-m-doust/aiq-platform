@@ -9,8 +9,6 @@ import {
   BrainCircuitIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  InfinityIcon,
-  MessagesSquareIcon,
   PlusIcon,
   Settings2Icon,
   SquareUserIcon,
@@ -47,36 +45,30 @@ type SidebarProps = {
   email: string;
   fullName: string | null;
   role: string | null;
-  brandName: string | null;
-  brandIconUrl?: string | null;
+  planName: string | null;
+  credits: number;
   agents: SidebarAgent[];
 };
 
 const primaryNav = [
   {
-    href: "/dashboard/brain",
+    href: "/dashboard",
     label: "Brand Integrated Brain",
     icon: BrainCircuitIcon,
   },
 ];
 
 const secondaryNav = [
-  { href: "/dashboard", label: "Community", icon: MessagesSquareIcon },
   { href: "/dashboard/documents", label: "Documents", icon: BookOpenIcon },
   { href: "/dashboard/settings", label: "Settings", icon: Settings2Icon },
 ];
 
-export function Sidebar({
-  role,
-  brandName,
-  brandIconUrl,
-  agents,
-}: SidebarProps) {
+export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
     href === "/dashboard"
-      ? pathname === "/dashboard"
+      ? pathname === "/dashboard" || pathname.startsWith("/dashboard/brain")
       : pathname.startsWith(href);
 
   const agentsOpen = pathname.startsWith("/dashboard/agents");
@@ -91,24 +83,18 @@ export function Sidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" className="gap-2">
-              <Link href="/dashboard">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  {brandIconUrl ? (
-                    <Image
-                      alt={brandName ?? "Brand"}
-                      className="size-full rounded-lg object-cover"
-                      height={32}
-                      src={brandIconUrl}
-                      unoptimized
-                      width={32}
-                    />
-                  ) : (
-                    <InfinityIcon className="size-5" />
-                  )}
+              <Link href="/">
+                <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-white">
+                  <Image
+                    alt="Bextudio"
+                    className="size-full object-contain p-0.5"
+                    height={32}
+                    src="/square-sign.png"
+                    unoptimized
+                    width={32}
+                  />
                 </span>
-                <span className="truncate text-sm font-semibold">
-                  {brandName ?? "Bextudio"}
-                </span>
+                <span className="truncate text-sm font-semibold">Bextudio</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -241,7 +227,7 @@ export function Sidebar({
         <div className="overflow-hidden rounded-lg border border-border bg-background shadow-xs">
           <div className="flex items-center border-b border-border py-2.5 pl-2.5">
             <p className="flex-1 text-sm font-medium text-card-foreground">
-              Basic Plan
+              {planName ?? "Free plan"}
             </p>
             <button
               className="flex h-9 items-center gap-1 rounded-md py-2 pr-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -251,7 +237,7 @@ export function Sidebar({
               <ChevronRightIcon className="size-4" />
             </button>
           </div>
-          <CreditCounter />
+          <CreditCounter credits={credits} />
         </div>
       </SidebarFooter>
     </SidebarRoot>

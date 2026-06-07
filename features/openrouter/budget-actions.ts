@@ -3,18 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import { requirePlatformOwner } from "@/features/auth/queries";
+import type { BudgetFormState } from "@/features/openrouter/budget-form-state";
 import { logServerError } from "@/lib/logging/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-export type BudgetFormState = {
-  status: "idle" | "success" | "error";
-  message: string;
-};
-
-export const initialBudgetFormState: BudgetFormState = {
-  status: "idle",
-  message: "",
-};
 
 function readString(formData: FormData, key: string): string {
   const value = formData.get(key);

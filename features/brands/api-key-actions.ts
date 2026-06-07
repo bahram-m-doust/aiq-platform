@@ -8,17 +8,8 @@ import {
   setBrandApiKey,
 } from "@/features/brands/api-keys";
 import { clearBrandClientCache } from "@/lib/openrouter/client";
+import type { ApiKeyFormState } from "@/features/brands/api-key-form-state";
 import { logServerError } from "@/lib/logging/server";
-
-type ApiKeyFormState =
-  | { status: "idle"; message: string }
-  | { status: "error"; message: string }
-  | { status: "success"; message: string };
-
-export const initialApiKeyFormState: ApiKeyFormState = {
-  status: "idle",
-  message: "",
-};
 
 function readString(formData: FormData, key: string): string {
   const value = formData.get(key);

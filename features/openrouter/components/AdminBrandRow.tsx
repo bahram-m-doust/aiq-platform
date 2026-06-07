@@ -9,12 +9,10 @@ import { Input } from "@/components/ui/input";
 import {
   adminDeleteBrandApiKeyAction,
   adminSetBrandApiKeyAction,
-  initialApiKeyFormState,
 } from "@/features/brands/api-key-actions";
-import {
-  initialBudgetFormState,
-  setBrandBudgetAction,
-} from "@/features/openrouter/budget-actions";
+import { initialApiKeyFormState } from "@/features/brands/api-key-form-state";
+import { setBrandBudgetAction } from "@/features/openrouter/budget-actions";
+import { initialBudgetFormState } from "@/features/openrouter/budget-form-state";
 
 function ApiKeyForm({ brandId }: { brandId: string }) {
   const [state, formAction] = useActionState(

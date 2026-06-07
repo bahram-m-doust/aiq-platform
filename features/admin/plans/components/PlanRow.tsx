@@ -5,10 +5,8 @@ import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  initialPlanFormState,
-  updatePlanAction,
-} from "@/features/admin/plans/actions";
+import { updatePlanAction } from "@/features/admin/plans/actions";
+import { initialPlanFormState } from "@/features/admin/plans/form-state";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -25,6 +23,7 @@ export type PlanRowData = {
   price: number | null;
   currency: string | null;
   duration_days: number | null;
+  credits: number | null;
   is_active: boolean;
 };
 
@@ -37,7 +36,7 @@ export function PlanRow({ plan }: { plan: PlanRowData }) {
   return (
     <form
       action={formAction}
-      className="grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-[1.6fr_1fr_0.7fr_1fr_auto_auto] sm:items-end"
+      className="grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-[1.4fr_0.9fr_0.6fr_0.9fr_0.9fr_auto_auto] sm:items-end"
     >
       <input name="id" type="hidden" value={plan.id} />
 
@@ -81,6 +80,19 @@ export function PlanRow({ plan }: { plan: PlanRowData }) {
           defaultValue={plan.duration_days ?? ""}
           min="1"
           name="duration_days"
+          step="1"
+          type="number"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] font-mono uppercase tracking-wide text-muted-foreground">
+          Credits
+        </span>
+        <Input
+          defaultValue={plan.credits ?? 0}
+          min="0"
+          name="credits"
           step="1"
           type="number"
         />

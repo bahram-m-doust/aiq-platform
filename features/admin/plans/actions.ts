@@ -3,17 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { requirePlatformOwner } from "@/features/auth/queries";
+import type { PlanFormState } from "@/features/admin/plans/form-state";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-export type PlanFormState = {
-  status: "idle" | "success" | "error";
-  message: string;
-};
-
-export const initialPlanFormState: PlanFormState = {
-  status: "idle",
-  message: "",
-};
 
 function parseCommonFields(formData: FormData):
   | { ok: true; values: {
@@ -21,6 +12,7 @@ function parseCommonFields(formData: FormData):
       price: number | null;
       currency: string;
       duration_days: number | null;
+      credits: number;
       is_active: boolean;
     } }
   | { ok: false; message: string } {
@@ -28,6 +20,7 @@ function parseCommonFields(formData: FormData):
   const priceRaw = String(formData.get("price") ?? "").trim();
   const currency = String(formData.get("currency") ?? "USD").trim().toUpperCase();
   const durationRaw = String(formData.get("duration_days") ?? "").trim();
+  const creditsRaw = String(formData.get("credits") ?? "").trim();
   const is_active = formData.get("is_active") === "on";
 
   if (!name) return { ok: false, message: "Name is required." };
@@ -52,7 +45,16 @@ function parseCommonFields(formData: FormData):
     duration_days = parsed;
   }
 
-  return { ok: true, values: { name, price, currency, duration_days, is_active } };
+  let credits = 0;
+  if (creditsRaw) {
+    const parsed = Number(creditsRaw);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      return { ok: false, message: "Credits must be a non-negative whole number." };
+    }
+    credits = parsed;
+  }
+
+  return { ok: true, values: { name, price, currency, duration_days, credits, is_active } };
 }
 
 export async function createPlanAction(

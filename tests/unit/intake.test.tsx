@@ -300,7 +300,7 @@ describe("intake completion", () => {
 });
 
 describe("intake UI components", () => {
-  it("renders a question with required executive context", () => {
+  it("renders a question with executive context", () => {
     render(
       <QuestionRenderer
         question={question}
@@ -312,7 +312,6 @@ describe("intake UI components", () => {
     expect(
       screen.getByLabelText("What is the strategic role of the company?"),
     ).toBeVisible();
-    expect(screen.getByText("Required")).toBeVisible();
     expect(screen.getByText("Use concise executive language.")).toBeVisible();
   });
 
@@ -333,6 +332,26 @@ describe("intake UI components", () => {
     await user.click(screen.getByRole("button", { name: /Edit/ }));
 
     expect(screen.getByRole("textbox")).toBeVisible();
+  });
+
+  it("keeps a question in edit mode when Done is clicked with an empty answer", async () => {
+    const user = userEvent.setup();
+    render(
+      <QuestionRenderer
+        autosaveAction={vi.fn()}
+        question={question}
+        sessionId="session-1"
+        value={null}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Done/ }));
+
+    expect(screen.getByRole("textbox")).toBeVisible();
+    expect(screen.getByRole("button", { name: /Done/ })).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /Edit/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("does not autosave a free-text field on blur when nothing changed", async () => {

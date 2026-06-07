@@ -30,7 +30,7 @@ export default async function AdminPlansPage() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("plans")
-    .select("id, name, price, currency, duration_days, is_active")
+    .select("id, name, price, currency, duration_days, credits, is_active")
     .order("price", { ascending: true, nullsFirst: true });
 
   if (error) {

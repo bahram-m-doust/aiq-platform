@@ -5,10 +5,8 @@ import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  createPlanAction,
-  initialPlanFormState,
-} from "@/features/admin/plans/actions";
+import { createPlanAction } from "@/features/admin/plans/actions";
+import { initialPlanFormState } from "@/features/admin/plans/form-state";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -35,7 +33,7 @@ export function CreatePlanForm() {
   return (
     <form
       action={formAction}
-      className="grid gap-3 sm:grid-cols-[1.6fr_1fr_0.7fr_1fr_auto_auto] sm:items-end"
+      className="grid gap-3 sm:grid-cols-[1.4fr_0.9fr_0.6fr_0.9fr_0.9fr_auto_auto] sm:items-end"
       ref={formRef}
     >
       <label className="flex flex-col gap-1">
@@ -69,6 +67,13 @@ export function CreatePlanForm() {
           Duration (days)
         </span>
         <Input min="1" name="duration_days" placeholder="30" step="1" type="number" />
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-[10px] font-mono uppercase tracking-wide text-muted-foreground">
+          Credits
+        </span>
+        <Input min="0" name="credits" placeholder="1000" step="1" type="number" />
       </label>
 
       <label className="flex items-center gap-2 pb-2 text-sm">

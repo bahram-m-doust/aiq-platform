@@ -1,5 +1,6 @@
 import { cache } from "react";
 
+import { BreadcrumbLabelsProvider } from "@/components/dashboard/breadcrumb-labels";
 import { DashboardNavbar } from "@/components/dashboard/DashboardNavbar";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -31,6 +32,8 @@ export default async function DashboardLayout({
 }) {
   let sidebarProps = null;
   let displayName = "";
+  let brandName: string | null = null;
+  let brandIconUrl: string | null = null;
 
   try {
     const { user, profile } = await requireUserProfile("/login");
@@ -41,7 +44,7 @@ export default async function DashboardLayout({
     const accessSummary = await accessSummaryPromise;
 
     if (accessSummary.status === "ACTIVE_ACCESS") {
-      const [catalogWorkspace, brandIconUrl] = await Promise.all([
+      const [catalogWorkspace, resolvedBrandIconUrl] = await Promise.all([
         catalogWorkspacePromise,
         accessSummary.brandId ? getBrandIconUrl(accessSummary.brandId) : null,
       ]);
@@ -52,12 +55,14 @@ export default async function DashboardLayout({
       );
 
       displayName = profile.full_name ?? user.email ?? profile.email;
+      brandName = accessSummary.brandName;
+      brandIconUrl = resolvedBrandIconUrl;
       sidebarProps = {
         email: user.email ?? profile.email,
         fullName: profile.full_name,
         role: profile.global_role,
-        brandName: accessSummary.brandName,
-        brandIconUrl,
+        planName: accessSummary.planName,
+        credits: accessSummary.credits,
         agents: agents.map((a) => ({
           key: a.key,
           name: defByKey.get(a.key)?.name ?? a.name,
@@ -77,10 +82,17 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <Sidebar {...sidebarProps} />
-      <SidebarInset>
-        <DashboardNavbar logoutAction={logout} userName={displayName} />
-        <div className="flex-1 overflow-x-hidden p-4">{children}</div>
-      </SidebarInset>
+      <BreadcrumbLabelsProvider>
+        <SidebarInset>
+          <DashboardNavbar
+            brandIconUrl={brandIconUrl}
+            brandName={brandName}
+            logoutAction={logout}
+            userName={displayName}
+          />
+          <div className="flex-1 overflow-x-hidden p-4">{children}</div>
+        </SidebarInset>
+      </BreadcrumbLabelsProvider>
     </SidebarProvider>
   );
 }

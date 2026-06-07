@@ -1,0 +1,92 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+
+import { Badge } from "@/components/ui/badge";
+import { requireUserProfile } from "@/features/auth/queries";
+import { canViewAdminModulesRole } from "@/features/modules/schema";
+import { StakeholderUploadForm } from "@/features/stakeholder-interviews/components/StakeholderUploadForm";
+import { getStakeholderAdminOverview } from "@/features/stakeholder-interviews/queries";
+import { stakeholderReportStatusLabels } from "@/features/stakeholder-interviews/schema";
+
+export const metadata: Metadata = {
+  title: "Stakeholder Interviews | Bextudio Platform",
+};
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminStakeholderInterviewsPage() {
+  const { profile } = await requireUserProfile("/admin/stakeholder-interviews");
+
+  if (!canViewAdminModulesRole(profile.global_role)) {
+    redirect("/dashboard");
+  }
+
+  const overview = await getStakeholderAdminOverview();
+  const brands = overview.map((row) => ({
+    id: row.brandId,
+    name: row.brandName,
+  }));
+
+  return (
+    <main className="min-h-svh bg-background px-6 py-10 text-foreground">
+      <section className="mx-auto w-full max-w-4xl space-y-8">
+        <div>
+          <p className="font-mono text-sm uppercase tracking-[0.2em] text-muted-foreground">
+            Brand Research · Step 02
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-normal">
+            Stakeholder Interviews
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Upload the interview-analysis PDF for a brand. Uploading sends it to
+            the client for review; they annotate and approve it to unlock
+            Futures Research.
+          </p>
+        </div>
+
+        <StakeholderUploadForm brands={brands} />
+
+        <div className="overflow-hidden rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 text-muted-foreground">
+              <tr>
+                <th className="px-4 py-2.5 text-left font-medium">Brand</th>
+                <th className="px-4 py-2.5 text-left font-medium">Status</th>
+                <th className="px-4 py-2.5 text-left font-medium">File</th>
+              </tr>
+            </thead>
+            <tbody>
+              {overview.map((row) => (
+                <tr className="border-t border-border" key={row.brandId}>
+                  <td className="px-4 py-2.5 font-medium">{row.brandName}</td>
+                  <td className="px-4 py-2.5">
+                    {row.status === "NONE" ? (
+                      <span className="text-muted-foreground">Not started</span>
+                    ) : (
+                      <Badge variant="secondary">
+                        {stakeholderReportStatusLabels[row.status]}
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-muted-foreground">
+                    {row.fileName ?? "—"}
+                  </td>
+                </tr>
+              ))}
+              {overview.length === 0 ? (
+                <tr className="border-t border-border">
+                  <td
+                    className="px-4 py-6 text-center text-muted-foreground"
+                    colSpan={3}
+                  >
+                    No brands yet.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  );
+}

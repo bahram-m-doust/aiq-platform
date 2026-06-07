@@ -679,6 +679,16 @@ export function BrandBuildView({
     (phase: PhaseProgress, substep: SubstepProgress, state: SubstepState) => {
       if (state === "locked") return;
       if (phase.key === "questionnaires") {
+        if (substep.id === "stakeholder-interviews") {
+          window.location.href =
+            "/dashboard/brain/roadmap/stakeholder-interviews";
+          return;
+        }
+        if (substep.id === "futures-research") {
+          // Futures Research page is not built yet — open the detail sheet.
+          setDetail({ phase, substep, state });
+          return;
+        }
         window.location.href = "/dashboard/questionnaire";
         return;
       }
@@ -813,7 +823,10 @@ export function BrandBuildView({
                 intakeSessionId !== null &&
                 intakeSessionId !== undefined &&
                 intakeCompletion.totalQuestions > 0 &&
-                intakeCompletion.completionPercent === 100;
+                intakeCompletion.completionPercent === 100 &&
+                // Approve & Lock only once every sub-step of the phase is done,
+                // not just the questionnaire.
+                p.substeps.every((s) => s.state === "done");
               // Unlock animation when phase becomes "active" or "complete" right after previous phase finished
               const justUnlocked = idx > 0 && info.phaseState !== "locked" && progress.phases[idx - 1].status === "complete";
 
