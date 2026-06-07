@@ -13,22 +13,17 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CheckIcon,
+  DownloadIcon,
   Loader2Icon,
   MessageSquarePlusIcon,
   MessagesSquareIcon,
-  PanelRightCloseIcon,
-  PanelRightOpenIcon,
   PencilIcon,
   ReplyIcon,
   Trash2Icon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 import {
   addStakeholderAnnotationAction,
@@ -392,12 +387,37 @@ export function PdfAnnotator({
 
   return (
     <div className="space-y-3">
-      {editable ? (
-        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MessageSquarePlusIcon className="size-3.5" />
-          Click anywhere on the page to add a comment
-        </span>
-      ) : null}
+      {/* Top toolbar — right aligned, Linear style */}
+      <div className="flex items-center justify-between gap-3">
+        {editable ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MessageSquarePlusIcon className="size-3.5" />
+            Click anywhere on the page to add a comment
+          </span>
+        ) : (
+          <span />
+        )}
+        <div className="flex items-center gap-1.5">
+          <Button asChild size="sm" title="Download PDF" variant="outline">
+            <a download href={signedUrl} rel="noreferrer">
+              <DownloadIcon />
+              Download PDF
+            </a>
+          </Button>
+          <Button
+            aria-pressed={showComments}
+            onClick={() => setShowComments((value) => !value)}
+            size="sm"
+            title={showComments ? "Hide comments" : "Show comments"}
+            type="button"
+            variant={showComments ? "secondary" : "outline"}
+          >
+            <MessagesSquareIcon />
+            Comments ({rootAnnotations.length})
+          </Button>
+        </div>
+      </div>
+
       <div className="flex items-start gap-6">
         {/* PDF column */}
         <div className="min-w-0 flex-1 space-y-4">
@@ -562,48 +582,21 @@ export function PdfAnnotator({
           </div>
         </div>
 
-        {/* Comments sidebar (collapsible) */}
+        {/* Comments sidebar (collapsible, toggled from the toolbar) */}
         <Collapsible
           className="sticky top-4 shrink-0 self-start"
           onOpenChange={setShowComments}
           open={showComments}
         >
-          {/* Collapsed rail — click to expand */}
-          {!showComments ? (
-            <CollapsibleTrigger asChild>
-              <button
-                aria-label="Show comments"
-                className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-3 text-sm font-medium shadow-xs transition-colors hover:bg-muted/50"
-                type="button"
-              >
-                <PanelRightOpenIcon className="size-4" />
-                <MessagesSquareIcon className="size-4" />
-                <span>{rootAnnotations.length}</span>
-              </button>
-            </CollapsibleTrigger>
-          ) : null}
-
           <CollapsibleContent className="w-80 overflow-hidden rounded-lg border border-border bg-card shadow-xs">
             <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5">
               <span className="inline-flex items-center gap-2 text-sm font-medium">
                 <MessagesSquareIcon className="size-4" />
                 comments
               </span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {unresolvedCount} unresolved
-                </span>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    aria-label="Collapse comments"
-                    size="icon-sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <PanelRightCloseIcon />
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
+              <span className="text-xs text-muted-foreground">
+                {unresolvedCount} unresolved
+              </span>
             </div>
 
             {sortedRoots.length === 0 ? (
