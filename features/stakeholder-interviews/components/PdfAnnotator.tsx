@@ -538,7 +538,7 @@ export function PdfAnnotator({
                             onClick={() => setDraft(null)}
                             size="sm"
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                           >
                             Cancel
                           </Button>
@@ -741,7 +741,7 @@ export function PdfAnnotator({
                                 }}
                                 size="sm"
                                 type="button"
-                                variant="outline"
+                                variant="ghost"
                               >
                                 Cancel
                               </Button>
@@ -894,7 +894,7 @@ function CommentBlock({
               onClick={onCancelEdit}
               size="sm"
               type="button"
-              variant="outline"
+              variant="ghost"
             >
               Cancel
             </Button>
