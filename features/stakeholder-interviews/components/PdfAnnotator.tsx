@@ -386,9 +386,11 @@ export function PdfAnnotator({
 
   return (
     <div className="px-2 pt-[15px]">
-      <div className="flex w-full max-w-[1024px] flex-col gap-6 lg:flex-row lg:items-start">
-        {/* Left column — header, hint, PDF, approve */}
-        <div className="flex min-w-0 flex-1 flex-col gap-4 lg:max-w-[756px]">
+      <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
+        {/* Left column — header, hint, PDF, approve. Centered in the space
+            that remains beside the right-anchored comments rail. */}
+        <div className="flex min-w-0 flex-1 lg:justify-center">
+          <div className="flex w-full flex-col gap-4 lg:max-w-[756px]">
           <StakeholderHeader status={status} />
 
           {editable ? (
@@ -584,6 +586,7 @@ export function PdfAnnotator({
               </button>
             </div>
           ) : null}
+          </div>
         </div>
 
         {/* Right column — comments */}
