@@ -798,7 +798,7 @@ function CommentBlock({
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="Comment actions"
-                className="-mr-1 -mt-1 flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="-mr-1 -mt-1 flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                 type="button"
               >
                 <EllipsisIcon className="size-4" />
