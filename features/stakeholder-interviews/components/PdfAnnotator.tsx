@@ -89,6 +89,11 @@ export function PdfAnnotator({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfRef = useRef<any>(null);
+  // In-flight pdf.js render task. A new render must cancel and await the
+  // previous one, otherwise pdf.js throws "Cannot use the same canvas during
+  // multiple render() operations" (e.g. on resize or comment-panel toggles).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderTaskRef = useRef<any>(null);
   // Per-page vertical content bounds (PDF user-space Y), used to trim the
   // empty top/bottom margins of low-content pages.
   const cropRef = useRef<Map<number, { minY: number; maxY: number }>>(
@@ -251,23 +256,57 @@ export function PdfAnnotator({
       cssHeight = full.height;
     }
 
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Ensure any previous render on this canvas has fully settled before
+    // starting a new one.
+    if (renderTaskRef.current) {
+      const prev = renderTaskRef.current;
+      prev.cancel();
+      try {
+        await prev.promise;
+      } catch {
+        // ignore cancellation
+      }
+      renderTaskRef.current = null;
+    }
+
     canvas.width = Math.floor(cssWidth * ratio);
     canvas.height = Math.floor(cssHeight * ratio);
     canvas.style.width = `${cssWidth}px`;
     canvas.style.height = `${cssHeight}px`;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    await pdfPage.render({ canvasContext: ctx, viewport }).promise;
+    const task = pdfPage.render({ canvasContext: ctx, viewport });
+    renderTaskRef.current = task;
+    try {
+      await task.promise;
+    } catch (err) {
+      if ((err as Error)?.name === "RenderingCancelledException") return;
+      throw err;
+    }
+    if (renderTaskRef.current === task) renderTaskRef.current = null;
     setSize({ width: cssWidth, height: cssHeight });
   }, [currentPdfPage]);
 
   useEffect(() => {
     void renderPage();
-    const onResize = () => void renderPage();
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    const onResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => void renderPage(), 150);
+    };
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    return () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      window.removeEventListener("resize", onResize);
+      // Cancel any in-flight render so it doesn't touch a stale canvas.
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+        renderTaskRef.current = null;
+      }
+    };
     // Re-render when the sidebar toggles (the PDF column changes width).
   }, [renderPage, contentPages.length, showComments]);
 
