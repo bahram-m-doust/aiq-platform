@@ -388,7 +388,7 @@ export function PdfAnnotator({
   return (
     <div className="space-y-3">
       {/* Top toolbar — right aligned, Linear style */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {editable ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <MessageSquarePlusIcon className="size-3.5" />
@@ -418,7 +418,7 @@ export function PdfAnnotator({
         </div>
       </div>
 
-      <div className="flex items-start gap-6">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         {/* PDF column */}
         <div className="min-w-0 flex-1 space-y-4">
           <div className="w-full" ref={containerRef}>
@@ -584,11 +584,11 @@ export function PdfAnnotator({
 
         {/* Comments sidebar (collapsible, toggled from the toolbar) */}
         <Collapsible
-          className="sticky top-4 shrink-0 self-start"
+          className="shrink-0 self-stretch lg:sticky lg:top-4 lg:self-start"
           onOpenChange={setShowComments}
           open={showComments}
         >
-          <CollapsibleContent className="w-80 overflow-hidden rounded-lg border border-border bg-card shadow-xs">
+          <CollapsibleContent className="w-full overflow-hidden rounded-lg border border-border bg-card shadow-xs lg:w-80">
             <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5">
               <span className="inline-flex items-center gap-2 text-sm font-medium">
                 <MessagesSquareIcon className="size-4" />
