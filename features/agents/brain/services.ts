@@ -2,8 +2,10 @@ import "server-only";
 
 import type { UserProfile } from "@/features/auth/types";
 import {
+  buildBrandBrainMessages,
   createBrandBrainResponse,
   getBrandBrainModel,
+  retrieveBrandBrainContext,
 } from "@/features/agents/brain/llm";
 import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
 import {
@@ -12,6 +14,8 @@ import {
 } from "@/features/agents/brain/schema";
 import type {
   BrandBrainChatMessage,
+  BrandBrainDisplaySource,
+  BrandBrainRetrievedSource,
   BrandBrainRunResult,
 } from "@/features/agents/brain/types";
 import { assertWithinBudget, recordRunUsage } from "@/features/openrouter/usage";
@@ -111,6 +115,58 @@ async function insertAgentRunAudit({
   });
 }
 
+// Shared persistence tail for both the blocking and streaming code paths: store
+// the run, meter usage/cost, and write the (content-free) audit entry.
+export async function finalizeBrandBrainRun({
+  profile,
+  brandId,
+  agentId,
+  model,
+  prompt,
+  answer,
+  responseId,
+  retrievedSources,
+  usage,
+  latencyMs,
+}: {
+  profile: UserProfile;
+  brandId: string;
+  agentId: string;
+  model: string;
+  prompt: string;
+  answer: string;
+  responseId: string;
+  retrievedSources: BrandBrainRetrievedSource[];
+  usage: { promptTokens: number; completionTokens: number; costCents: number };
+  latencyMs: number;
+}): Promise<string> {
+  const runId = await insertAgentRun({
+    brandId,
+    agentId,
+    userId: profile.id,
+    prompt,
+    answer,
+    responseId,
+    model,
+    retrievedSources,
+    latencyMs,
+  });
+
+  await recordRunUsage({
+    runId,
+    brandId,
+    kind: "TEXT",
+    model,
+    promptTokens: usage.promptTokens,
+    completionTokens: usage.completionTokens,
+    costCents: usage.costCents,
+  });
+
+  await insertAgentRunAudit({ profile, brandId, agentId, runId, model });
+
+  return runId;
+}
+
 export async function runBrandBrain({
   profile,
   prompt,
@@ -143,34 +199,17 @@ export async function runBrandBrain({
     brainError("Brand Brain did not return an answer.");
   }
 
-  const runId = await insertAgentRun({
-    brandId: access.brandId,
-    agentId: agent.id,
-    userId: profile.id,
-    prompt,
-    answer: response.answer,
-    responseId: response.responseId,
-    model,
-    retrievedSources: response.retrievedSources,
-    latencyMs,
-  });
-
-  await recordRunUsage({
-    runId,
-    brandId: access.brandId,
-    kind: "TEXT",
-    model: response.usage.model,
-    promptTokens: response.usage.promptTokens,
-    completionTokens: response.usage.completionTokens,
-    costCents: response.usage.costCents,
-  });
-
-  await insertAgentRunAudit({
+  const runId = await finalizeBrandBrainRun({
     profile,
     brandId: access.brandId,
     agentId: agent.id,
-    runId,
     model,
+    prompt,
+    answer: response.answer,
+    responseId: response.responseId,
+    retrievedSources: response.retrievedSources,
+    usage: response.usage,
+    latencyMs,
   });
 
   return {
@@ -178,5 +217,51 @@ export async function runBrandBrain({
     answer: response.answer,
     sources: response.displaySources,
     model,
+  };
+}
+
+export type BrandBrainStreamPlan = {
+  brandId: string;
+  agentId: string;
+  model: string;
+  messages: { role: "system" | "user" | "assistant"; content: string }[];
+  retrievedSources: BrandBrainRetrievedSource[];
+  displaySources: BrandBrainDisplaySource[];
+  startedAt: number;
+};
+
+// Gate, retrieve, and assemble everything the streaming route needs before it
+// opens the token stream. Mirrors runBrandBrain's preconditions (readiness +
+// budget) so the streaming path enforces the same access rules.
+export async function prepareBrandBrainStream({
+  profile,
+  prompt,
+  history,
+}: {
+  profile: UserProfile;
+  prompt: string;
+  history: BrandBrainChatMessage[];
+}): Promise<BrandBrainStreamPlan> {
+  const workspace = await getBrandBrainWorkspace(profile.id);
+  const { access, agent, readiness } = workspace;
+
+  if (!access || !agent || !readiness.isReady) {
+    brainError(readiness.message);
+  }
+
+  await assertWithinBudget(access.brandId);
+
+  const model = getBrandBrainModel();
+  const { context, retrievedSources, displaySources } =
+    await retrieveBrandBrainContext({ prompt, brandId: access.brandId });
+
+  return {
+    brandId: access.brandId,
+    agentId: agent.id,
+    model,
+    messages: buildBrandBrainMessages({ context, history, prompt }),
+    retrievedSources,
+    displaySources,
+    startedAt: Date.now(),
   };
 }

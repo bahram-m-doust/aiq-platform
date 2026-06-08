@@ -67,3 +67,21 @@ export type BrandBrainChatFormState = {
   sources?: BrandBrainDisplaySource[];
   runId?: string;
 };
+
+// A persisted turn rehydrated from agent_runs so the conversation survives a
+// page reload. User turns carry no sources; assistant turns carry the sources
+// that grounded the original answer.
+export type BrandBrainConversationMessage = {
+  id: string;
+  role: BrandBrainChatRole;
+  content: string;
+  sources: BrandBrainDisplaySource[] | null;
+};
+
+// NDJSON protocol streamed from the Brand Brain route to the chat client: token
+// deltas, then a terminal event carrying the persisted run id and its sources,
+// or an error.
+export type BrandBrainStreamEvent =
+  | { type: "delta"; text: string }
+  | { type: "done"; runId: string; sources: BrandBrainDisplaySource[] }
+  | { type: "error"; message: string };

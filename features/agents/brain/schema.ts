@@ -57,12 +57,10 @@ export function canUseBrandBrainRole(
   return role === "OWNER" || role === "EXECUTIVE_MANAGER";
 }
 
-export function validateBrandBrainPromptFormData(formData: FormData): {
+function validatePromptString(prompt: string): {
   prompt: string | null;
   error: string | null;
 } {
-  const prompt = readString(formData, "prompt");
-
   if (!prompt) {
     return { prompt: null, error: "Enter a question for Brand Brain." };
   }
@@ -75,6 +73,21 @@ export function validateBrandBrainPromptFormData(formData: FormData): {
   }
 
   return { prompt, error: null };
+}
+
+export function validateBrandBrainPromptFormData(formData: FormData): {
+  prompt: string | null;
+  error: string | null;
+} {
+  return validatePromptString(readString(formData, "prompt"));
+}
+
+// JSON-body equivalent used by the streaming route handler.
+export function validateBrandBrainPrompt(value: unknown): {
+  prompt: string | null;
+  error: string | null;
+} {
+  return validatePromptString(typeof value === "string" ? value.trim() : "");
 }
 
 function toChatMessage(value: unknown): BrandBrainChatMessage | null {
@@ -92,8 +105,23 @@ function toChatMessage(value: unknown): BrandBrainChatMessage | null {
   return { role, content: content.slice(0, brandBrainPromptMaxLength) };
 }
 
-// History arrives as untrusted JSON from the browser; parse defensively and cap
-// it to the memory window so a crafted payload can't balloon the model context.
+// History arrives as untrusted input from the browser; normalize defensively and
+// cap it to the memory window so a crafted payload can't balloon the model
+// context.
+export function normalizeBrandBrainHistory(
+  value: unknown,
+): BrandBrainChatMessage[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const messages = value
+    .map(toChatMessage)
+    .filter((message): message is BrandBrainChatMessage => message !== null);
+
+  return messages.slice(-brandBrainHistoryMaxMessages);
+}
+
 export function parseBrandBrainHistory(
   formData: FormData,
 ): BrandBrainChatMessage[] {
@@ -110,15 +138,7 @@ export function parseBrandBrainHistory(
     return [];
   }
 
-  if (!Array.isArray(parsed)) {
-    return [];
-  }
-
-  const messages = parsed
-    .map(toChatMessage)
-    .filter((message): message is BrandBrainChatMessage => message !== null);
-
-  return messages.slice(-brandBrainHistoryMaxMessages);
+  return normalizeBrandBrainHistory(parsed);
 }
 
 function readiness({

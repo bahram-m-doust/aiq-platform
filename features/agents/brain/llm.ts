@@ -55,6 +55,72 @@ export function getBrandBrainModel(): string {
   return getOpenRouterModel();
 }
 
+// Retrieval keys off the latest question only; prior turns are supplied to the
+// model purely as conversational memory so follow-ups stay grounded in the
+// freshly retrieved context rather than drifting onto earlier topics.
+export async function retrieveBrandBrainContext({
+  prompt,
+  brandId,
+}: {
+  prompt: string;
+  brandId: string;
+}) {
+  const chunks = await searchBrandKnowledge({
+    brandId,
+    query: prompt,
+    topK: 5,
+  });
+
+  const retrievedSources = toRetrievedSources(chunks);
+
+  return {
+    context: buildContextBlock(chunks),
+    retrievedSources,
+    displaySources: toBrandBrainDisplaySources(retrievedSources),
+  };
+}
+
+type ChatMessageParam = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+export function buildBrandBrainMessages({
+  context,
+  history,
+  prompt,
+}: {
+  context: string;
+  history: BrandBrainChatMessage[];
+  prompt: string;
+}): ChatMessageParam[] {
+  return [
+    { role: "system", content: BRAIN_SYSTEM_PROMPT + context },
+    ...history.map((message) => ({
+      role: message.role,
+      content: message.content,
+    })),
+    { role: "user", content: prompt },
+  ];
+}
+
+export function computeBrainUsage({
+  model,
+  promptTokens,
+  completionTokens,
+}: {
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+}) {
+  return {
+    promptTokens,
+    completionTokens,
+    costCents: computeTextCostCents({ model, promptTokens, completionTokens }),
+    model,
+  };
+}
+
 export async function createBrandBrainResponse({
   prompt,
   brandId,
@@ -66,46 +132,48 @@ export async function createBrandBrainResponse({
   history?: BrandBrainChatMessage[];
   model?: string;
 }) {
-  // Retrieval keys off the latest question; the prior turns are supplied to the
-  // model purely as conversational memory so follow-ups stay grounded in the
-  // freshly retrieved context rather than drifting onto earlier topics.
-  const chunks = await searchBrandKnowledge({
-    brandId,
-    query: prompt,
-    topK: 5,
-  });
-
-  const context = buildContextBlock(chunks);
+  const { context, retrievedSources, displaySources } =
+    await retrieveBrandBrainContext({ prompt, brandId });
 
   const client = await getOpenRouterClientForBrand(brandId);
   const completion = await client.chat.completions.create({
     model,
-    messages: [
-      { role: "system", content: BRAIN_SYSTEM_PROMPT + context },
-      ...history.map((message) => ({
-        role: message.role,
-        content: message.content,
-      })),
-      { role: "user", content: prompt },
-    ],
+    messages: buildBrandBrainMessages({ context, history, prompt }),
   });
 
   const answer = completion.choices[0]?.message?.content?.trim() ?? "";
-  const retrievedSources = toRetrievedSources(chunks);
-
-  const promptTokens = completion.usage?.prompt_tokens ?? 0;
-  const completionTokens = completion.usage?.completion_tokens ?? 0;
-  const costCents = computeTextCostCents({
-    model,
-    promptTokens,
-    completionTokens,
-  });
 
   return {
     responseId: completion.id ?? `pgvector-${Date.now()}`,
     answer,
     retrievedSources,
-    displaySources: toBrandBrainDisplaySources(retrievedSources),
-    usage: { promptTokens, completionTokens, costCents, model },
+    displaySources,
+    usage: computeBrainUsage({
+      model,
+      promptTokens: completion.usage?.prompt_tokens ?? 0,
+      completionTokens: completion.usage?.completion_tokens ?? 0,
+    }),
   };
+}
+
+// Opens a token stream against the brand-scoped client. `include_usage` asks
+// OpenRouter to append a final chunk carrying token counts so the caller can
+// price the run after the answer finishes streaming.
+export async function openBrandBrainStream({
+  brandId,
+  model,
+  messages,
+}: {
+  brandId: string;
+  model: string;
+  messages: ChatMessageParam[];
+}) {
+  const client = await getOpenRouterClientForBrand(brandId);
+
+  return client.chat.completions.create({
+    model,
+    messages,
+    stream: true,
+    stream_options: { include_usage: true },
+  });
 }

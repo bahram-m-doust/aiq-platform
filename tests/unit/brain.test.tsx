@@ -32,9 +32,11 @@ import {
   brandBrainHistoryMaxMessages,
   canUseBrandBrainRole,
   extractBrandBrainSources,
+  normalizeBrandBrainHistory,
   parseBrandBrainHistory,
   resolveBrandBrainReadiness,
   toAgentRunAuditMetadata,
+  validateBrandBrainPrompt,
   validateBrandBrainPromptFormData,
 } from "@/features/agents/brain/schema";
 import { runBrandBrain } from "@/features/agents/brain/services";
@@ -213,6 +215,38 @@ describe("Brand Brain rules", () => {
     expect(parsed).toHaveLength(brandBrainHistoryMaxMessages);
     expect(parsed[parsed.length - 1]?.content).toBe(
       `q${overflow.length - 1}`,
+    );
+  });
+
+  it("validates and normalizes JSON-body prompts and history for the stream route", () => {
+    expect(validateBrandBrainPrompt("  Positioning?  ")).toEqual({
+      prompt: "Positioning?",
+      error: null,
+    });
+    expect(validateBrandBrainPrompt(42).error).toBe(
+      "Enter a question for Brand Brain.",
+    );
+
+    expect(
+      normalizeBrandBrainHistory([
+        { role: "user", content: "  Hi  " },
+        { role: "assistant", content: "Hello." },
+        { role: "system", content: "drop me" },
+        { role: "user", content: "" },
+      ]),
+    ).toEqual([
+      { role: "user", content: "Hi" },
+      { role: "assistant", content: "Hello." },
+    ]);
+
+    expect(normalizeBrandBrainHistory("not-an-array")).toEqual([]);
+
+    const overflow = Array.from(
+      { length: brandBrainHistoryMaxMessages + 3 },
+      (_, index) => ({ role: "user" as const, content: `q${index}` }),
+    );
+    expect(normalizeBrandBrainHistory(overflow)).toHaveLength(
+      brandBrainHistoryMaxMessages,
     );
   });
 
