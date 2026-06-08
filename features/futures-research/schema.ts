@@ -34,6 +34,14 @@ export function isFuturesResearchPdf(file: File): boolean {
   );
 }
 
+export function isFuturesResearchStoryline(file: File): boolean {
+  return (
+    file.type.toLowerCase() === "text/html" ||
+    file.name.toLowerCase().endsWith(".html") ||
+    file.name.toLowerCase().endsWith(".htm")
+  );
+}
+
 export function validateAnnotationBody(body: string): {
   value: string | null;
   error: string | null;

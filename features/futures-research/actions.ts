@@ -8,6 +8,7 @@ import { getFuturesResearchReportRowByBrand } from "@/features/futures-research/
 import {
   canReviewFuturesResearchRole,
   isFuturesResearchPdf,
+  isFuturesResearchStoryline,
   validateAnnotationBody,
 } from "@/features/futures-research/schema";
 import {
@@ -17,6 +18,7 @@ import {
   setFuturesResearchReportStatus,
   updateFuturesResearchAnnotation,
   uploadFuturesResearchReport,
+  uploadFuturesResearchStoryline,
 } from "@/features/futures-research/services";
 import type {
   AddAnnotationInput,
@@ -61,6 +63,36 @@ export async function uploadFuturesResearchReportAction(
   revalidatePath("/admin/futures-research");
 
   return { status: "success", message: "Report sent for client review." };
+}
+
+export async function uploadFuturesResearchStorylineAction(
+  _prevState: FuturesResearchActionState,
+  formData: FormData,
+): Promise<FuturesResearchActionState> {
+  const { profile } = await requireUserProfile("/admin");
+
+  if (!canViewAdminModulesRole(profile.global_role)) {
+    return { status: "error", message: "You cannot upload this storyline." };
+  }
+
+  const brandId = String(formData.get("brand_id") ?? "").trim();
+  const file = formData.get("file");
+
+  if (!brandId) {
+    return { status: "error", message: "Select a brand." };
+  }
+  if (!(file instanceof File) || file.size <= 0) {
+    return { status: "error", message: "Choose an HTML file to upload." };
+  }
+  if (!isFuturesResearchStoryline(file)) {
+    return { status: "error", message: "The storyline must be an HTML file." };
+  }
+
+  await uploadFuturesResearchStoryline({ brandId, profileId: profile.id, file });
+  revalidateFuturesResearchPaths();
+  revalidatePath("/admin/futures-research");
+
+  return { status: "success", message: "Storyline attached for the client." };
 }
 
 async function requireClientReviewer(returnTo: string) {

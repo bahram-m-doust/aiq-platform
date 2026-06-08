@@ -87,6 +87,61 @@ export async function uploadFuturesResearchReport({
   }
 }
 
+export async function uploadFuturesResearchStoryline({
+  brandId,
+  profileId,
+  file,
+}: {
+  brandId: string;
+  profileId: string;
+  file: File;
+}): Promise<void> {
+  const reportId = await ensureReport(brandId);
+
+  const fileId = randomUUID();
+  const storagePath = buildStoragePath({
+    brandId,
+    fileId,
+    originalName: file.name,
+  });
+
+  await uploadPrivateFile({
+    storagePath,
+    file,
+    mimeType: "text/html",
+  });
+
+  const admin = createAdminClient();
+  const { error: fileError } = await admin.from("files").insert({
+    id: fileId,
+    brand_id: brandId,
+    storage_path: storagePath,
+    original_name: file.name,
+    mime_type: "text/html",
+    size_bytes: file.size,
+    visibility: "CLIENT_REVIEW",
+    status: "CLIENT_REVIEW",
+    uploaded_by: profileId,
+  });
+  if (fileError) {
+    await removePrivateFile(storagePath);
+    throw fileError;
+  }
+
+  const { error: reportError } = await admin
+    .from("futures_research_reports")
+    .update({
+      storyline_file_id: fileId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", reportId)
+    .eq("brand_id", brandId);
+  if (reportError) {
+    await removePrivateFile(storagePath);
+    throw reportError;
+  }
+}
+
 export async function addFuturesResearchAnnotation({
   reportId,
   profileId,

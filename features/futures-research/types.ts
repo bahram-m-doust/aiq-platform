@@ -38,6 +38,7 @@ export type FuturesResearchReport = {
   brandId: string;
   status: FuturesResearchReportStatus;
   file: FuturesResearchFile | null;
+  storylineFileId: string | null;
   uploadedAt: string | null;
   approvedAt: string | null;
 };

@@ -15,6 +15,7 @@ type ReportRow = {
   id: string;
   brand_id: string;
   file_id: string | null;
+  storyline_file_id: string | null;
   status: string;
   uploaded_at: string | null;
   approved_at: string | null;
@@ -136,7 +137,9 @@ export async function getFuturesResearchReportRowByBrand(
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("futures_research_reports")
-    .select("id, brand_id, file_id, status, uploaded_at, approved_at")
+    .select(
+      "id, brand_id, file_id, storyline_file_id, status, uploaded_at, approved_at",
+    )
     .eq("brand_id", brandId)
     .maybeSingle();
   if (error) {
@@ -144,6 +147,32 @@ export async function getFuturesResearchReportRowByBrand(
     throw error;
   }
   return (data as ReportRow | null) ?? null;
+}
+
+// Resolves the stored Storyline HTML for a brand's report, authorized by
+// brand ownership. Used by the streaming route that serves the file inline.
+export async function getFuturesResearchStorylineFile({
+  brandId,
+  reportId,
+}: {
+  brandId: string;
+  reportId: string;
+}): Promise<{ storagePath: string; mimeType: string | null } | null> {
+  const reportRow = await getFuturesResearchReportRowByBrand(brandId);
+  if (!reportRow || reportRow.id !== reportId || !reportRow.storyline_file_id) {
+    return null;
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("files")
+    .select("storage_path, mime_type")
+    .eq("id", reportRow.storyline_file_id)
+    .maybeSingle();
+  if (error) throw error;
+  const row = data as { storage_path: string; mime_type: string | null } | null;
+  if (!row) return null;
+  return { storagePath: row.storage_path, mimeType: row.mime_type };
 }
 
 export async function getFuturesResearchWorkspace({
@@ -260,6 +289,7 @@ export async function getFuturesResearchWorkspace({
           sizeBytes: fileRow.size_bytes,
         }
       : null,
+    storylineFileId: reportRow.storyline_file_id,
     uploadedAt: reportRow.uploaded_at,
     approvedAt: reportRow.approved_at,
   };

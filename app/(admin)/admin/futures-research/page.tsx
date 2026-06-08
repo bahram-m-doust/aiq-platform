@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { requireUserProfile } from "@/features/auth/queries";
+import { FuturesResearchStorylineUploadForm } from "@/features/futures-research/components/FuturesResearchStorylineUploadForm";
 import { FuturesResearchUploadForm } from "@/features/futures-research/components/FuturesResearchUploadForm";
 import { getFuturesResearchAdminOverview } from "@/features/futures-research/queries";
 import { futuresResearchReportStatusLabels } from "@/features/futures-research/schema";
@@ -45,6 +46,8 @@ export default async function AdminFuturesResearchPage() {
         </div>
 
         <FuturesResearchUploadForm brands={brands} />
+
+        <FuturesResearchStorylineUploadForm brands={brands} />
 
         <div className="overflow-hidden rounded-lg border border-border">
           <table className="w-full text-sm">
