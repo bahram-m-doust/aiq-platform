@@ -523,7 +523,7 @@ async function runImageGeneratorAgent({
   }
 
   const admin = createAdminClient();
-  await admin
+  const { error: outputError } = await admin
     .from("agent_runs")
     .update({
       output: {
@@ -535,6 +535,9 @@ async function runImageGeneratorAgent({
       },
     })
     .eq("id", runId);
+  if (outputError) {
+    throw outputError;
+  }
 
   await recordRunUsage({
     runId,

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored, minified third-party assets (e.g. pdf.js worker).
+    "public/**",
   ]),
 ]);
 

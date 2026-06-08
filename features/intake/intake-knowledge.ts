@@ -68,10 +68,12 @@ export async function createIntakeKnowledgeFile({
 
   if (knowledgeError) throw knowledgeError;
 
-  await admin
+  const { error: snapshotError } = await admin
     .from("intake_snapshots")
     .update({ generated_docx_file_id: fileId })
     .eq("id", snapshotId);
+
+  if (snapshotError) throw snapshotError;
 
   await logAudit({
     actorUserId: profileId,

@@ -52,10 +52,13 @@ export async function recordRunUsage({
   }
 
   if (runId) {
-    await admin
+    const { error: runError } = await admin
       .from("agent_runs")
       .update({ cost: safeCost / 100 })
       .eq("id", runId);
+    if (runError) {
+      throw wrapSupabaseError(runError, "agent_runs.cost update failed");
+    }
   }
 }
 
