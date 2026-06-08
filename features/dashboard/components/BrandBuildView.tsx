@@ -608,13 +608,11 @@ function DetailPage({
 
 export function BrandBuildView({
   progress,
-  email,
   intakeCompletion,
   intakeSessionId,
   intakeCanApprove = false,
 }: {
   progress: BrandBuildProgress;
-  email: string;
   intakeCompletion?: IntakeCompletion | null;
   intakeSessionId?: string | null;
   intakeCanApprove?: boolean;

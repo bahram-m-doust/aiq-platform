@@ -66,7 +66,6 @@ export default async function BrandBrainRoadmapPage({
     return (
       <div style={{ color: "var(--bv-ink)" }}>
         <BrandBuildView
-          email={email}
           intakeCanApprove={intakeCanApprove}
           intakeCompletion={intakeLocked ? null : intakeCompletion}
           intakeSessionId={intakeLocked ? null : intakeSessionId}
