@@ -4,6 +4,12 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
 
+vi.mock("@/features/agents/runs/image-storage", () => ({
+  createAgentImageSignedUrls: vi.fn((paths: string[]) =>
+    Promise.resolve(paths.map((path) => `signed://${path}`)),
+  ),
+}));
+
 import { getBrandBrainConversation } from "@/features/agents/brain/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -85,6 +91,45 @@ describe("getBrandBrainConversation", () => {
         role: "assistant",
         content: "Three risks stand out.",
         sources: [{ fileName: "risks.pdf", score: 0.71 }],
+      },
+    ]);
+  });
+
+  it("rehydrates an image run with signed URLs and the optimized prompt", async () => {
+    mockRows([
+      {
+        id: "run-img",
+        input: { prompt: "A hero banner", mode: "image" },
+        output: {
+          answer: "Generated 1 image(s).",
+          image_prompt: "On-brand hero banner, teal palette",
+          image_paths: ["brand-1/run-img/0.png"],
+        },
+        retrieved_sources: [{ fileName: "brand.pdf", score: 0.8 }],
+        created_at: "2026-01-03T00:00:00Z",
+      },
+    ]);
+
+    const messages = await getBrandBrainConversation({
+      brandId: "brand-1",
+      agentId: "agent-1",
+      userId: "user-1",
+    });
+
+    expect(messages).toEqual([
+      {
+        id: "run-img-q",
+        role: "user",
+        content: "A hero banner",
+        sources: null,
+      },
+      {
+        id: "run-img-a",
+        role: "assistant",
+        content: "Generated 1 image(s).",
+        sources: [{ fileName: "brand.pdf", score: 0.8 }],
+        images: ["signed://brand-1/run-img/0.png"],
+        imagePrompt: "On-brand hero banner, teal palette",
       },
     ]);
   });

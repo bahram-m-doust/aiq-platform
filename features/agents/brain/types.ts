@@ -70,13 +70,29 @@ export type BrandBrainChatFormState = {
 
 // A persisted turn rehydrated from agent_runs so the conversation survives a
 // page reload. User turns carry no sources; assistant turns carry the sources
-// that grounded the original answer.
+// that grounded the original answer. Image turns additionally carry signed image
+// URLs and the optimized prompt that produced them.
 export type BrandBrainConversationMessage = {
   id: string;
   role: BrandBrainChatRole;
   content: string;
   sources: BrandBrainDisplaySource[] | null;
+  images?: string[] | null;
+  imagePrompt?: string | null;
 };
+
+export type BrandBrainImageRunResult = {
+  runId: string;
+  optimizedPrompt: string;
+  images: string[];
+  sources: BrandBrainDisplaySource[];
+};
+
+// Return shape of the image-mode server action (imperatively called from the
+// chat client; image generation completes in one shot, it is not streamed).
+export type BrandBrainImageState =
+  | { status: "success"; runId: string; images: string[]; imagePrompt: string; sources: BrandBrainDisplaySource[] }
+  | { status: "error"; message: string };
 
 // NDJSON protocol streamed from the Brand Brain route to the chat client: token
 // deltas, then a terminal event carrying the persisted run id and its sources,

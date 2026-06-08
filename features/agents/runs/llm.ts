@@ -106,11 +106,13 @@ export async function rewritePromptForImage({
   brandPrompt,
   model,
   brandContext,
+  instruction = "",
 }: {
   brandId: string;
   brandPrompt: string;
   model: string;
   brandContext: string;
+  instruction?: string;
 }) {
   const client = await getOpenRouterClientForBrand(brandId);
   const completion = await client.chat.completions.create({
@@ -122,6 +124,7 @@ export async function rewritePromptForImage({
           "You convert a user's request into ONE tight, visual image-generation prompt for a text-to-image model. " +
           "Use the supplied brand knowledge to keep style, palette, and tone on-brand. " +
           "Output ONLY the prompt text — no preamble, no markdown, no quotes. Keep it under 100 words." +
+          (instruction ? `\n\nBrand instruction:\n${instruction}` : "") +
           (brandContext ? `\n\n${brandContext}` : ""),
       },
       { role: "user", content: brandPrompt },

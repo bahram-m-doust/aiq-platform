@@ -1,7 +1,7 @@
 # Brand Brain & Agents — Architecture / System Design
 
-> Status: **Phase A (dynamic brand instruction) implemented.** Phases B–D
-> pending.
+> Status: **Phases A (dynamic brand instruction) and C (in-chat image mode)
+> implemented.** Phases B and D pending.
 > Decisions locked: per-brand **and** per-agent instructions · explicit
 > Text/Image mode switch · admin-only editing · empty default + starter
 > template · 8000-char single live field · images persisted in-thread.
@@ -217,9 +217,15 @@ flowchart TD
 - **Phase B — Unify prompts**
   - move `runs/prompts.ts` agents onto the same layered composition; retire
     hardcoded brand text; delete dead `file_search` parser.
-- **Phase C — In-chat Image mode**
-  - Text/Image switch in `BrainChat`; wire image turns to the two-stage
-    pipeline; render + persist images in the thread.
+- **Phase C — In-chat Image mode** ✅ implemented
+  - Text/Image switch in `BrainChat` · `generateBrandBrainImageAction` (one-shot,
+    not streamed) → `runBrandBrainImage` reuses the two-stage pipeline
+    (`rewritePromptForImage` with the brand instruction + RAG, then
+    `generateImage`), persists under the Brand Brain agent with `image_paths`,
+    meters TEXT + IMAGE usage, audits · images stored in `agent-images` and
+    rehydrated in-thread via signed URLs in `getBrandBrainConversation` ·
+    separate `brain.image` rate-limit bucket · gated by Brain readiness + budget
+    (no separate IMAGE_GENERATOR entitlement).
 - **Phase D — Video**
   - storyboard/brief now; real asset generation later (separate provider work).
 

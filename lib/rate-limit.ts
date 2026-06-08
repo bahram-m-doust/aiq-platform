@@ -21,7 +21,8 @@ export type RateLimitBucket =
   | "file.upload"
   | "agent.activate"
   | "agent.run"
-  | "brain.run";
+  | "brain.run"
+  | "brain.image";
 
 export type RateLimitResult = {
   allowed: boolean;

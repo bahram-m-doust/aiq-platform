@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import {
   AlertCircleIcon,
   BrainIcon,
+  ImageIcon,
   LoaderIcon,
+  MessageSquareIcon,
   RefreshCwIcon,
   SendIcon,
   UserIcon,
@@ -20,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { generateBrandBrainImageAction } from "@/features/agents/brain/actions";
 import { brandBrainPromptMaxLength } from "@/features/agents/brain/schema";
 import type {
   BrandBrainAccess,
@@ -29,11 +32,16 @@ import type {
   BrandBrainStreamEvent,
 } from "@/features/agents/brain/types";
 
+type ChatMode = "text" | "image";
+
 type ChatMessage = {
   id: string;
   role: BrandBrainChatRole;
   content: string;
   sources: BrandBrainDisplaySource[] | null;
+  images?: string[] | null;
+  imagePrompt?: string | null;
+  pending?: boolean;
 };
 
 type HistoryTurn = { role: BrandBrainChatRole; content: string };
@@ -73,7 +81,9 @@ function MessageBubble({
   isStreaming: boolean;
 }) {
   const isUser = message.role === "user";
-  const showTyping = !isUser && isStreaming && message.content.length === 0;
+  const hasImages = !!message.images && message.images.length > 0;
+  const showTyping =
+    !isUser && !message.pending && !hasImages && isStreaming && message.content.length === 0;
 
   return (
     <div className="flex gap-3">
@@ -88,16 +98,42 @@ function MessageBubble({
         className={
           isUser
             ? "flex-1 rounded-lg border border-border bg-muted/40 p-4"
-            : "flex-1 space-y-4 rounded-lg border border-border bg-[var(--bv-card-soft)] p-4"
+            : "flex-1 space-y-3 rounded-lg border border-border bg-[var(--bv-card-soft)] p-4"
         }
       >
-        {showTyping ? (
+        {message.pending ? (
+          <p className="flex items-center gap-2 text-sm text-[var(--bv-ink-3)]">
+            <LoaderIcon className="size-4 animate-spin" />
+            Generating image...
+          </p>
+        ) : showTyping ? (
           <TypingDots />
-        ) : (
+        ) : message.content ? (
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--bv-ink-2)]">
             {message.content}
           </p>
-        )}
+        ) : null}
+
+        {hasImages ? (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {message.images!.map((src, index) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt={message.imagePrompt ?? "Generated image"}
+                className="w-full rounded-lg border border-border"
+                key={`${message.id}-img-${index}`}
+                src={src}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {!isUser && message.imagePrompt ? (
+          <p className="text-xs italic text-[var(--bv-ink-4)]">
+            Prompt: {message.imagePrompt}
+          </p>
+        ) : null}
+
         {!isUser && message.sources && message.sources.length > 0 ? (
           <div
             className="space-y-1.5 border-t border-dashed pt-3"
@@ -136,16 +172,24 @@ export function BrainChat({
       role: message.role,
       content: message.content,
       sources: message.sources,
+      images: message.images ?? null,
+      imagePrompt: message.imagePrompt ?? null,
     })),
   );
   const [input, setInput] = useState("");
+  const [mode, setMode] = useState<ChatMode>("text");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isImagePending, setIsImagePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isBusy = isStreaming || isImagePending;
+
   const idRef = useRef(0);
-  const lastRequestRef = useRef<{ prompt: string; history: HistoryTurn[] } | null>(
-    null,
-  );
+  const lastRequestRef = useRef<{
+    mode: ChatMode;
+    prompt: string;
+    history: HistoryTurn[];
+  } | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
 
   function nextId() {
@@ -164,7 +208,7 @@ export function BrainChat({
     if (node) {
       node.scrollTop = node.scrollHeight;
     }
-  }, [messages, isStreaming]);
+  }, [messages, isBusy]);
 
   async function runStream(
     prompt: string,
@@ -234,10 +278,8 @@ export function BrainChat({
     }
   }
 
-  async function send(prompt: string, history: HistoryTurn[]) {
-    lastRequestRef.current = { prompt, history };
+  async function sendText(prompt: string, history: HistoryTurn[]) {
     const assistantId = nextId();
-
     setError(null);
     setIsStreaming(true);
     setMessages((prev) => [
@@ -249,8 +291,6 @@ export function BrainChat({
     try {
       await runStream(prompt, history, assistantId);
     } catch (caught) {
-      // Drop an answer-less placeholder so it neither lingers nor pollutes the
-      // memory of the next request; keep partial answers that did arrive.
       setMessages((prev) =>
         prev.filter(
           (message) => message.id !== assistantId || message.content.length > 0,
@@ -266,6 +306,57 @@ export function BrainChat({
     }
   }
 
+  async function sendImage(prompt: string) {
+    const assistantId = nextId();
+    setError(null);
+    setIsImagePending(true);
+    setMessages((prev) => [
+      ...prev,
+      { id: nextId(), role: "user", content: prompt, sources: null },
+      {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        sources: null,
+        images: null,
+        pending: true,
+      },
+    ]);
+
+    try {
+      const result = await generateBrandBrainImageAction(prompt);
+      if (result.status === "error") {
+        throw new Error(result.message);
+      }
+      updateMessage(assistantId, (message) => ({
+        ...message,
+        pending: false,
+        content: "",
+        images: result.images,
+        imagePrompt: result.imagePrompt,
+        sources: result.sources,
+      }));
+    } catch (caught) {
+      setMessages((prev) => prev.filter((message) => message.id !== assistantId));
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Brand Brain could not generate an image.",
+      );
+    } finally {
+      setIsImagePending(false);
+    }
+  }
+
+  function dispatch(requestMode: ChatMode, prompt: string, history: HistoryTurn[]) {
+    lastRequestRef.current = { mode: requestMode, prompt, history };
+    if (requestMode === "image") {
+      void sendImage(prompt);
+    } else {
+      void sendText(prompt, history);
+    }
+  }
+
   function snapshotHistory(): HistoryTurn[] {
     return messages
       .filter((message) => message.content.length > 0)
@@ -275,17 +366,17 @@ export function BrainChat({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const prompt = input.trim();
-    if (!prompt || isStreaming) return;
+    if (!prompt || isBusy) return;
 
-    const history = snapshotHistory();
+    const history = mode === "text" ? snapshotHistory() : [];
     setInput("");
-    void send(prompt, history);
+    dispatch(mode, prompt, history);
   }
 
   function handleRetry() {
-    if (!lastRequestRef.current || isStreaming) return;
-    const { prompt, history } = lastRequestRef.current;
-    void send(prompt, history);
+    if (!lastRequestRef.current || isBusy) return;
+    const { mode: lastMode, prompt, history } = lastRequestRef.current;
+    dispatch(lastMode, prompt, history);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -295,7 +386,8 @@ export function BrainChat({
     }
   }
 
-  const isEmpty = messages.length === 0 && !isStreaming && !error;
+  const isEmpty = messages.length === 0 && !isBusy && !error;
+  const isImageMode = mode === "image";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -331,7 +423,8 @@ export function BrainChat({
                   <p className="ds-h3">Ask anything about {access.brandName}</p>
                   <p className="ds-caption max-w-md">
                     Brand Brain remembers the conversation, searches your
-                    knowledge base, and responds with sources.
+                    knowledge base, and can answer in text or generate on-brand
+                    images.
                   </p>
                 </div>
               </div>
@@ -351,7 +444,7 @@ export function BrainChat({
                   <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-destructive">
-                      Unable to process question
+                      Unable to process request
                     </p>
                     <p className="text-xs text-[var(--bv-ink-3)]">{error}</p>
                     <Button
@@ -371,6 +464,33 @@ export function BrainChat({
           </div>
 
           <form className="space-y-3" onSubmit={handleSubmit}>
+            <div className="inline-flex rounded-lg border border-border p-0.5">
+              <button
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  isImageMode
+                    ? "text-muted-foreground"
+                    : "bg-muted text-foreground"
+                }`}
+                onClick={() => setMode("text")}
+                type="button"
+              >
+                <MessageSquareIcon className="size-3.5" />
+                Text
+              </button>
+              <button
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                  isImageMode
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground"
+                }`}
+                onClick={() => setMode("image")}
+                type="button"
+              >
+                <ImageIcon className="size-3.5" />
+                Image
+              </button>
+            </div>
+
             <div className="space-y-2">
               <Label className="sr-only" htmlFor="brand-brain-prompt">
                 Question
@@ -381,20 +501,29 @@ export function BrainChat({
                 name="prompt"
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask Brand Brain for a strategic summary, implication, or recommendation."
+                placeholder={
+                  isImageMode
+                    ? "Describe the on-brand image you want Brand Brain to create."
+                    : "Ask Brand Brain for a strategic summary, implication, or recommendation."
+                }
                 rows={3}
                 value={input}
               />
             </div>
             <Button
               className="gap-2"
-              disabled={isStreaming || input.trim().length === 0}
+              disabled={isBusy || input.trim().length === 0}
               type="submit"
             >
-              {isStreaming ? (
+              {isBusy ? (
                 <>
                   <LoaderIcon className="size-4 animate-spin" />
-                  Thinking...
+                  {isImageMode ? "Generating..." : "Thinking..."}
+                </>
+              ) : isImageMode ? (
+                <>
+                  <ImageIcon className="size-4" />
+                  Generate image
                 </>
               ) : (
                 <>

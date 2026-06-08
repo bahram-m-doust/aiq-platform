@@ -12,6 +12,7 @@ import type {
   BrandBrainDisplaySource,
   BrandBrainWorkspace,
 } from "@/features/agents/brain/types";
+import { createAgentImageSignedUrls } from "@/features/agents/runs/image-storage";
 import { cacheSharedConfig } from "@/lib/cache/shared";
 import { CACHE_TAGS } from "@/lib/cache/tags";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -243,8 +244,15 @@ export async function getBrandBrainConversation({
   const messages: BrandBrainConversationMessage[] = [];
 
   for (const row of rows) {
+    const output = isRecord(row.output) ? row.output : null;
     const prompt = isRecord(row.input) ? readString(row.input.prompt) : "";
-    const answer = isRecord(row.output) ? readString(row.output.answer) : "";
+    const answer = output ? readString(output.answer) : "";
+    const imagePaths =
+      output && Array.isArray(output.image_paths)
+        ? output.image_paths.filter(
+            (path): path is string => typeof path === "string",
+          )
+        : [];
 
     if (prompt) {
       messages.push({
@@ -255,7 +263,24 @@ export async function getBrandBrainConversation({
       });
     }
 
-    if (answer) {
+    if (imagePaths.length > 0) {
+      // Sign per run; a failure to mint URLs shouldn't drop the whole thread.
+      let images: string[] = [];
+      try {
+        images = await createAgentImageSignedUrls(imagePaths);
+      } catch {
+        images = [];
+      }
+
+      messages.push({
+        id: `${row.id}-a`,
+        role: "assistant",
+        content: answer || "Generated image.",
+        sources: toDisplaySources(row.retrieved_sources),
+        images,
+        imagePrompt: output ? readString(output.image_prompt) || null : null,
+      });
+    } else if (answer) {
       messages.push({
         id: `${row.id}-a`,
         role: "assistant",
