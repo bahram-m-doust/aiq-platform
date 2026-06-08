@@ -9,6 +9,7 @@ import {
   BrainCircuitIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  HomeIcon,
   PlusIcon,
   Settings2Icon,
   SquareUserIcon,
@@ -53,6 +54,11 @@ type SidebarProps = {
 const primaryNav = [
   {
     href: "/dashboard",
+    label: "Home",
+    icon: HomeIcon,
+  },
+  {
+    href: "/dashboard/brain",
     label: "Brand Integrated Brain",
     icon: BrainCircuitIcon,
   },
@@ -68,7 +74,7 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
 
   const isActive = (href: string) =>
     href === "/dashboard"
-      ? pathname === "/dashboard" || pathname.startsWith("/dashboard/brain")
+      ? pathname === "/dashboard"
       : pathname.startsWith(href);
 
   const agentsOpen = pathname.startsWith("/dashboard/agents");
