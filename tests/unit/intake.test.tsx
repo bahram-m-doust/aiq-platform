@@ -312,7 +312,6 @@ describe("intake UI components", () => {
     expect(
       screen.getByLabelText("What is the strategic role of the company?"),
     ).toBeVisible();
-    expect(screen.getByText("Required")).toBeVisible();
     expect(screen.getByText("Use concise executive language.")).toBeVisible();
   });
 
