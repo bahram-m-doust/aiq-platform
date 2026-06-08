@@ -61,15 +61,7 @@ export function DashboardBreadcrumb() {
   const rest = segments.slice(1);
   if (rest.length === 0) return null;
 
-  // Always anchor with a clickable "Dashboard" root so every page has a real,
-  // navigable breadcrumb trail (this replaces per-page back buttons).
   const crumbs = [
-    {
-      key: "dashboard-home",
-      label: "Dashboard",
-      href: "/dashboard",
-      isLast: false,
-    },
     // Inject any parent crumbs for routes that sit deeper than their URL.
     ...(PARENT_TRAIL[rest[0]] ?? []).map((crumb, index) => ({
       key: `parent-${index}`,
