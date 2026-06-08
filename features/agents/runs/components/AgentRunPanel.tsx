@@ -10,6 +10,7 @@ import {
   SparklesIcon,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { DSCard, DSCardBody } from "@/components/ds/Card";
 import type { AgentCatalogItem } from "@/features/agents/catalog/types";
 import {
@@ -54,23 +55,19 @@ function ComposerSubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   const isDisabled = pending || disabled;
   return (
-    <button
-      type="submit"
-      disabled={isDisabled}
+    <Button
       aria-label={pending ? "Running" : "Send"}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-transform duration-200 enabled:hover:scale-105 disabled:opacity-50"
-      style={{
-        background:
-          "linear-gradient(135deg, var(--bv-brand), var(--bv-brand-deep))",
-        boxShadow: "0 6px 16px var(--bv-brand-tint-32)",
-      }}
+      className="shrink-0 rounded-full"
+      disabled={isDisabled}
+      size="icon-lg"
+      type="submit"
     >
       {pending ? (
         <Loader2Icon className="size-4 animate-spin" />
       ) : (
         <ArrowUpIcon className="size-4" strokeWidth={2.4} />
       )}
-    </button>
+    </Button>
   );
 }
 

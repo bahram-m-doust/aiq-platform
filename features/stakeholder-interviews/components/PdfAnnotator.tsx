@@ -612,7 +612,7 @@ export function PdfAnnotator({
           ) : canApprove ? (
             <div className="flex justify-center pt-2">
               <Button
-                className="h-10 min-w-[166px]"
+                className="min-w-[166px]"
                 disabled={isApproving}
                 onClick={approve}
                 size="lg"

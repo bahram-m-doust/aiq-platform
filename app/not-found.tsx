@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
+
 export default function NotFound() {
   return (
     <main
@@ -51,17 +53,9 @@ export default function NotFound() {
         </p>
 
         <div className="mt-9 flex justify-center">
-          <Link
-            href="/dashboard"
-            className="inline-flex h-11 items-center justify-center rounded-full px-7 text-sm font-medium text-white transition-transform duration-200 hover:scale-[1.02] active:scale-[0.99]"
-            style={{
-              background:
-                "linear-gradient(90deg, var(--bv-brand), var(--bv-brand-mid))",
-              boxShadow: "0 8px 24px var(--bv-brand-glow)",
-            }}
-          >
-            Back to dashboard
-          </Link>
+          <Button asChild className="rounded-full px-7" size="lg">
+            <Link href="/dashboard">Back to dashboard</Link>
+          </Button>
         </div>
       </section>
     </main>

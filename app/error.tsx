@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+
 export default function Error({
   error,
   reset,
@@ -71,28 +73,22 @@ export default function Error({
         </p>
 
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <button
-            type="button"
+          <Button
+            className="w-full rounded-full px-7 sm:w-auto"
             onClick={reset}
-            className="inline-flex h-11 w-full items-center justify-center rounded-full px-7 text-sm font-medium text-white transition-transform duration-200 hover:scale-[1.02] active:scale-[0.99] sm:w-auto"
-            style={{
-              background:
-                "linear-gradient(90deg, var(--bv-brand), var(--bv-brand-mid))",
-              boxShadow: "0 8px 24px var(--bv-brand-glow)",
-            }}
+            size="lg"
+            type="button"
           >
             Try again
-          </button>
-          <Link
-            href={backHref}
-            className="inline-flex h-11 w-full items-center justify-center rounded-full border px-7 text-sm font-medium transition-colors sm:w-auto"
-            style={{
-              borderColor: "var(--bv-line)",
-              color: "var(--bv-ink-2)",
-            }}
+          </Button>
+          <Button
+            asChild
+            className="w-full rounded-full px-7 sm:w-auto"
+            size="lg"
+            variant="outline"
           >
-            {backLabel}
-          </Link>
+            <Link href={backHref}>{backLabel}</Link>
+          </Button>
         </div>
 
         {error.digest ? (

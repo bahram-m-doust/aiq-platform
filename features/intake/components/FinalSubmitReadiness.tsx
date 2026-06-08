@@ -84,7 +84,7 @@ export function FinalSubmitReadiness({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="h-10 w-full" disabled={disabled} type="button">
+        <Button className="w-full" disabled={disabled} size="lg" type="button">
           Approve &amp; Lock
         </Button>
       </DialogTrigger>
