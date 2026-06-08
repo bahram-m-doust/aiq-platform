@@ -10,7 +10,10 @@ import {
   brandBrainProvider,
   toAgentRunAuditMetadata,
 } from "@/features/agents/brain/schema";
-import type { BrandBrainRunResult } from "@/features/agents/brain/types";
+import type {
+  BrandBrainChatMessage,
+  BrandBrainRunResult,
+} from "@/features/agents/brain/types";
 import { assertWithinBudget, recordRunUsage } from "@/features/openrouter/usage";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
@@ -111,9 +114,11 @@ async function insertAgentRunAudit({
 export async function runBrandBrain({
   profile,
   prompt,
+  history = [],
 }: {
   profile: UserProfile;
   prompt: string;
+  history?: BrandBrainChatMessage[];
 }): Promise<BrandBrainRunResult> {
   const workspace = await getBrandBrainWorkspace(profile.id);
   const { access, agent, readiness } = workspace;
@@ -128,6 +133,7 @@ export async function runBrandBrain({
   const startedAt = Date.now();
   const response = await createBrandBrainResponse({
     prompt,
+    history,
     brandId: access.brandId,
     model,
   });

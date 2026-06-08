@@ -1,5 +1,6 @@
 import type {
   BrandBrainChatFormState,
+  BrandBrainChatMessage,
   BrandBrainReadiness,
   BrandBrainReadinessStatus,
   BrandBrainRetrievedSource,
@@ -10,6 +11,12 @@ import type { BrandAccessSummary } from "@/features/access/types";
 export const brandBrainAgentKey = "BRAND_INTEGRATOR_BRAIN";
 export const brandBrainProvider = "OPENROUTER";
 export const brandBrainPromptMaxLength = 2000;
+
+// Conversation memory window. The client sends prior turns with each request so
+// follow-up questions ("expand on that") stay coherent; we cap how many turns
+// reach the model to bound token cost and keep retrieval focused on the latest
+// question.
+export const brandBrainHistoryMaxMessages = 10;
 
 export const initialBrandBrainChatFormState: BrandBrainChatFormState = {
   status: "idle",
@@ -68,6 +75,50 @@ export function validateBrandBrainPromptFormData(formData: FormData): {
   }
 
   return { prompt, error: null };
+}
+
+function toChatMessage(value: unknown): BrandBrainChatMessage | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const role = value.role;
+  const content = typeof value.content === "string" ? value.content.trim() : "";
+
+  if ((role !== "user" && role !== "assistant") || !content) {
+    return null;
+  }
+
+  return { role, content: content.slice(0, brandBrainPromptMaxLength) };
+}
+
+// History arrives as untrusted JSON from the browser; parse defensively and cap
+// it to the memory window so a crafted payload can't balloon the model context.
+export function parseBrandBrainHistory(
+  formData: FormData,
+): BrandBrainChatMessage[] {
+  const raw = formData.get("history");
+
+  if (typeof raw !== "string" || !raw) {
+    return [];
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  const messages = parsed
+    .map(toChatMessage)
+    .filter((message): message is BrandBrainChatMessage => message !== null);
+
+  return messages.slice(-brandBrainHistoryMaxMessages);
 }
 
 function readiness({

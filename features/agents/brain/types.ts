@@ -1,5 +1,12 @@
 export type BrandBrainRole = "OWNER" | "EXECUTIVE_MANAGER";
 
+export type BrandBrainChatRole = "user" | "assistant";
+
+export type BrandBrainChatMessage = {
+  role: BrandBrainChatRole;
+  content: string;
+};
+
 export type BrandBrainAccess = {
   brandId: string;
   brandName: string;

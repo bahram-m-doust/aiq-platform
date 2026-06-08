@@ -3,6 +3,7 @@
 import { requireUserProfile } from "@/features/auth/queries";
 import { isLLMBrainConfigError } from "@/features/agents/brain/llm";
 import {
+  parseBrandBrainHistory,
   validateBrandBrainPromptFormData,
 } from "@/features/agents/brain/schema";
 import {
@@ -43,10 +44,13 @@ export async function askBrandBrainAction(
     return errorState(RATE_LIMITED_MESSAGE);
   }
 
+  const history = parseBrandBrainHistory(formData);
+
   try {
     const result = await runBrandBrain({
       profile,
       prompt: validation.prompt,
+      history,
     });
 
     return {

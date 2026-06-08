@@ -3,7 +3,10 @@ import "server-only";
 import {
   toBrandBrainDisplaySources,
 } from "@/features/agents/brain/schema";
-import type { BrandBrainRetrievedSource } from "@/features/agents/brain/types";
+import type {
+  BrandBrainChatMessage,
+  BrandBrainRetrievedSource,
+} from "@/features/agents/brain/types";
 import { searchBrandKnowledge } from "@/features/rag/vector-search";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import {
@@ -55,12 +58,17 @@ export function getBrandBrainModel(): string {
 export async function createBrandBrainResponse({
   prompt,
   brandId,
+  history = [],
   model = getBrandBrainModel(),
 }: {
   prompt: string;
   brandId: string;
+  history?: BrandBrainChatMessage[];
   model?: string;
 }) {
+  // Retrieval keys off the latest question; the prior turns are supplied to the
+  // model purely as conversational memory so follow-ups stay grounded in the
+  // freshly retrieved context rather than drifting onto earlier topics.
   const chunks = await searchBrandKnowledge({
     brandId,
     query: prompt,
@@ -74,6 +82,10 @@ export async function createBrandBrainResponse({
     model,
     messages: [
       { role: "system", content: BRAIN_SYSTEM_PROMPT + context },
+      ...history.map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
       { role: "user", content: prompt },
     ],
   });

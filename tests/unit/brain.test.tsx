@@ -29,8 +29,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { BrainChat } from "@/features/agents/brain/components/BrainChat";
 import { BrainLockedState } from "@/features/agents/brain/components/BrainLockedState";
 import {
+  brandBrainHistoryMaxMessages,
   canUseBrandBrainRole,
   extractBrandBrainSources,
+  parseBrandBrainHistory,
   resolveBrandBrainReadiness,
   toAgentRunAuditMetadata,
   validateBrandBrainPromptFormData,
@@ -174,6 +176,43 @@ describe("Brand Brain rules", () => {
     ).toEqual({ prompt: "Strategy?", error: null });
     expect(validateBrandBrainPromptFormData(new FormData()).error).toBe(
       "Enter a question for Brand Brain.",
+    );
+  });
+
+  it("parses conversation history defensively and caps the memory window", () => {
+    const valid = [
+      { role: "user", content: "  What is the positioning?  " },
+      { role: "assistant", content: "It is premium." },
+      { role: "system", content: "ignored role" },
+      { role: "user", content: "" },
+      { role: "user", content: 42 },
+      "not-an-object",
+    ];
+
+    expect(
+      parseBrandBrainHistory(
+        formData({ history: JSON.stringify(valid) }),
+      ),
+    ).toEqual([
+      { role: "user", content: "What is the positioning?" },
+      { role: "assistant", content: "It is premium." },
+    ]);
+
+    expect(parseBrandBrainHistory(new FormData())).toEqual([]);
+    expect(
+      parseBrandBrainHistory(formData({ history: "not json" })),
+    ).toEqual([]);
+
+    const overflow = Array.from(
+      { length: brandBrainHistoryMaxMessages + 4 },
+      (_, index) => ({ role: "user", content: `q${index}` }),
+    );
+    const parsed = parseBrandBrainHistory(
+      formData({ history: JSON.stringify(overflow) }),
+    );
+    expect(parsed).toHaveLength(brandBrainHistoryMaxMessages);
+    expect(parsed[parsed.length - 1]?.content).toBe(
+      `q${overflow.length - 1}`,
     );
   });
 
