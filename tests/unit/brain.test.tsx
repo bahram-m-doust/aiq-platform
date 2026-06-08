@@ -365,11 +365,17 @@ describe("Brand Brain service", () => {
         Promise.resolve({ data: value, error: null }),
       ),
     };
+    const instructionBuilder = {
+      select: vi.fn(() => instructionBuilder),
+      eq: vi.fn(() => instructionBuilder),
+      or: vi.fn(() => Promise.resolve({ data: [], error: null })),
+    };
     const from = vi.fn((table: string) => {
       if (table === "agent_runs") return agentRunBuilder;
       if (table === "audit_logs") return auditBuilder;
       if (table === "brands") return brandsBuilder;
       if (table === "agent_run_usage") return usageBuilder;
+      if (table === "brand_agent_settings") return instructionBuilder;
       throw new Error(`Unexpected table ${table}`);
     });
 

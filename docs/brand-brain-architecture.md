@@ -1,10 +1,10 @@
 # Brand Brain & Agents — Architecture / System Design
 
-> Status: **Design approved, not yet implemented.**
+> Status: **Phase A (dynamic brand instruction) implemented.** Phases B–D
+> pending.
 > Decisions locked: per-brand **and** per-agent instructions · explicit
-> Text/Image mode switch · finalize design before coding.
-> This document is the reference we build against; no schema or code from the
-> "dynamic instruction / image-in-chat" phases has been applied yet.
+> Text/Image mode switch · admin-only editing · empty default + starter
+> template · 8000-char single live field · images persisted in-thread.
 
 ---
 
@@ -206,10 +206,14 @@ flowchart TD
 
 ## 6. Phased roadmap
 
-- **Phase A — Dynamic Brand Instruction** ← next when we build
-  - migration `0024` · instruction read in `prepareBrandBrainStream` ·
-    layered composition · admin UI (per-brand, per-agent + brand-wide default)
-    · seed brand-wide default from today's hardcoded text.
+- **Phase A — Dynamic Brand Instruction** ✅ implemented
+  - migration `0024_brand_agent_settings` · `getBrandAgentInstruction` read in
+    `prepareBrandBrainStream` + `runBrandBrain` · layered composition
+    (`BRAIN_ROLE_PROMPT` + instruction + `BRAIN_SAFETY_GUARD` + context via
+    `joinPromptLayers`) · admin UI at `/admin/agent-instructions` (brand picker,
+    brand-wide default + per-agent slots, 8000-char cap, Starter Template,
+    enable toggle) · audit action `brand_instruction_updated` · brand-wide
+    default left empty (zero behavior change until an admin writes one).
 - **Phase B — Unify prompts**
   - move `runs/prompts.ts` agents onto the same layered composition; retire
     hardcoded brand text; delete dead `file_search` parser.

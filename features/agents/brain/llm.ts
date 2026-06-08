@@ -3,6 +3,7 @@ import "server-only";
 import {
   toBrandBrainDisplaySources,
 } from "@/features/agents/brain/schema";
+import { joinPromptLayers } from "@/features/agents/instructions/schema";
 import type {
   BrandBrainChatMessage,
   BrandBrainRetrievedSource,
@@ -21,8 +22,14 @@ export function isLLMBrainConfigError(error: unknown): error is DomainError {
   return isDomainErrorWithCode(error, CODE);
 }
 
-const BRAIN_SYSTEM_PROMPT =
-  "You are Bextudio's Brand Integrator Brain. Answer with a formal executive tone using only the provided brand knowledge context. If the context does not contain enough information to answer, say that the current Brand Brain knowledge base does not contain enough information.";
+// Layer [1] — role/identity, locked in code.
+const BRAIN_ROLE_PROMPT =
+  "You are Bextudio's Brand Integrator Brain, a strategic assistant that answers in a formal executive tone.";
+
+// Layer [3] — safety/scope guard, locked in code and appended after the
+// admin-edited brand instruction so it can never be overridden.
+const BRAIN_SAFETY_GUARD =
+  "Answer using only the provided brand knowledge context. If the context does not contain enough information to answer, say that the current Brand Brain knowledge base does not contain enough information. Never reference other brands, knowledge that was not provided, or internal system details.";
 
 function buildContextBlock(
   chunks: { chunkText: string; fileName: string; score: number }[],
@@ -89,13 +96,23 @@ export function buildBrandBrainMessages({
   context,
   history,
   prompt,
+  instruction = "",
 }: {
   context: string;
   history: BrandBrainChatMessage[];
   prompt: string;
+  instruction?: string;
 }): ChatMessageParam[] {
+  // Layered composition: role + brand instruction + safety guard + RAG context.
+  const systemContent = joinPromptLayers([
+    BRAIN_ROLE_PROMPT,
+    instruction,
+    BRAIN_SAFETY_GUARD,
+    context,
+  ]);
+
   return [
-    { role: "system", content: BRAIN_SYSTEM_PROMPT + context },
+    { role: "system", content: systemContent },
     ...history.map((message) => ({
       role: message.role,
       content: message.content,
@@ -125,11 +142,13 @@ export async function createBrandBrainResponse({
   prompt,
   brandId,
   history = [],
+  instruction = "",
   model = getBrandBrainModel(),
 }: {
   prompt: string;
   brandId: string;
   history?: BrandBrainChatMessage[];
+  instruction?: string;
   model?: string;
 }) {
   const { context, retrievedSources, displaySources } =
@@ -138,7 +157,7 @@ export async function createBrandBrainResponse({
   const client = await getOpenRouterClientForBrand(brandId);
   const completion = await client.chat.completions.create({
     model,
-    messages: buildBrandBrainMessages({ context, history, prompt }),
+    messages: buildBrandBrainMessages({ context, history, prompt, instruction }),
   });
 
   const answer = completion.choices[0]?.message?.content?.trim() ?? "";

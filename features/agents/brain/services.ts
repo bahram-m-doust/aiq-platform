@@ -8,6 +8,7 @@ import {
   retrieveBrandBrainContext,
 } from "@/features/agents/brain/llm";
 import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
+import { getBrandAgentInstruction } from "@/features/agents/instructions/queries";
 import {
   brandBrainProvider,
   toAgentRunAuditMetadata,
@@ -185,11 +186,16 @@ export async function runBrandBrain({
 
   await assertWithinBudget(access.brandId);
 
+  const instruction = await getBrandAgentInstruction({
+    brandId: access.brandId,
+    agentId: agent.id,
+  });
   const model = getBrandBrainModel();
   const startedAt = Date.now();
   const response = await createBrandBrainResponse({
     prompt,
     history,
+    instruction,
     brandId: access.brandId,
     model,
   });
@@ -251,6 +257,10 @@ export async function prepareBrandBrainStream({
 
   await assertWithinBudget(access.brandId);
 
+  const instruction = await getBrandAgentInstruction({
+    brandId: access.brandId,
+    agentId: agent.id,
+  });
   const model = getBrandBrainModel();
   const { context, retrievedSources, displaySources } =
     await retrieveBrandBrainContext({ prompt, brandId: access.brandId });
@@ -259,7 +269,7 @@ export async function prepareBrandBrainStream({
     brandId: access.brandId,
     agentId: agent.id,
     model,
-    messages: buildBrandBrainMessages({ context, history, prompt }),
+    messages: buildBrandBrainMessages({ context, history, prompt, instruction }),
     retrievedSources,
     displaySources,
     startedAt: Date.now(),

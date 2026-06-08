@@ -12,6 +12,7 @@ import {
   ScrollTextIcon,
   ShieldCheckIcon,
   BrainIcon,
+  MessageSquareTextIcon,
   TagIcon,
 } from "lucide-react";
 
@@ -250,6 +251,17 @@ export default async function AdminPage() {
                 <Link href="/admin/rag">
                   <BrainIcon className="size-4" />
                   RAG Approval Queue
+                </Link>
+              </Button>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/agent-instructions">
+                  <MessageSquareTextIcon className="size-4" />
+                  Agent Instructions
                 </Link>
               </Button>
               <Button
