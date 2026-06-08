@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 
+import { Button } from "@/components/ui/button";
 import type {
   BrandBuildProgress,
   PhaseProgress,
@@ -455,14 +456,9 @@ function DetailPage({
 
       <div className="relative z-10 mx-auto max-w-[980px] px-7 pb-24 pt-9">
         <div className="mb-9 flex items-center justify-between">
-          <button
-            className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-white px-3.5 py-2 text-[13px] text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-            onClick={onBack}
-            style={{ borderColor: "var(--bv-line)" }}
-            type="button"
-          >
+          <Button onClick={onBack} size="sm" type="button" variant="outline">
             <BackArrow /> Back to roadmap
-          </button>
+          </Button>
           <span className="font-mono text-[11px] tracking-wider text-[var(--bv-ink-3)]">
             <kbd className="rounded border border-[var(--bv-line-2)] bg-white px-1.5 py-0.5 font-mono text-[10px] text-[var(--bv-ink-2)]">
               Esc

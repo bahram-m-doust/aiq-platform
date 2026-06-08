@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, CheckCircleIcon, LockIcon } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   calculateIntakeCompletion,
@@ -117,13 +118,12 @@ export function SectionQuestionnaire({
     >
       <div className="mx-auto max-w-[1057px]">
         <div className="mb-6 flex items-center justify-between">
-          <Link
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-3.5 py-2 text-[13px] text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)]"
-            href="/dashboard/questionnaire"
-          >
-            <ArrowLeftIcon className="size-3.5" />
-            All sections
-          </Link>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/dashboard/questionnaire">
+              <ArrowLeftIcon className="size-3.5" />
+              All sections
+            </Link>
+          </Button>
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
             Section {sectionIndex} of {allSections.length} - {sectionAnswered}/
             {sectionTotal} answered
@@ -271,30 +271,24 @@ export function SectionQuestionnaire({
           </Link>
 
           {sectionIndex < allSections.length ? (
-            <Link
-              className="group inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] hover:shadow-md"
-              href={`/dashboard/questionnaire/${allSections[sectionIndex].key}`}
-            >
-              Next: {allSections[sectionIndex].title}
-              <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
-                -&gt;
-              </span>
-            </Link>
+            <Button asChild className="group" variant="outline">
+              <Link
+                href={`/dashboard/questionnaire/${allSections[sectionIndex].key}`}
+              >
+                Next: {allSections[sectionIndex].title}
+                <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
+                  -&gt;
+                </span>
+              </Link>
+            </Button>
           ) : completion.completionPercent === 100 ? (
-            <Link
-              className="inline-flex items-center rounded-full border border-[var(--bv-line)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] hover:shadow-md"
-              href="/dashboard/questionnaire"
-            >
-              Review &amp; submit
-            </Link>
+            <Button asChild variant="outline">
+              <Link href="/dashboard/questionnaire">Review &amp; submit</Link>
+            </Button>
           ) : (
-            <button
-              className="inline-flex items-center rounded-full border border-[var(--bv-line)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] hover:shadow-md"
-              onClick={handleFinish}
-              type="button"
-            >
+            <Button onClick={handleFinish} type="button" variant="outline">
               Finish questionnaire
-            </button>
+            </Button>
           )}
         </div>
       </div>

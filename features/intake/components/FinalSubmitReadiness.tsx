@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircleIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { DSButton } from "@/components/ds/Button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -30,9 +30,9 @@ function ConfirmSubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <DSButton disabled={pending} type="submit" variant="brand">
+    <Button disabled={pending} type="submit">
       {pending ? "Submitting..." : "Confirm"}
-    </DSButton>
+    </Button>
   );
 }
 
@@ -83,9 +83,9 @@ export function FinalSubmitReadiness({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <DSButton disabled={disabled} size="lg" type="button" variant="brand">
+        <Button disabled={disabled} size="lg" type="button">
           Approve &amp; Lock
-        </DSButton>
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -101,9 +101,9 @@ export function FinalSubmitReadiness({
           ) : null}
           <DialogFooter>
             <DialogClose asChild>
-              <DSButton type="button" variant="outline">
+              <Button type="button" variant="outline">
                 Cancel
-              </DSButton>
+              </Button>
             </DialogClose>
             <ConfirmSubmitButton />
           </DialogFooter>

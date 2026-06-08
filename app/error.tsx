@@ -73,7 +73,7 @@ export default function Error({
 
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Button
-            className="w-full rounded-full px-7 sm:w-auto"
+            className="w-full sm:w-auto"
             onClick={reset}
             size="lg"
             type="button"
@@ -82,7 +82,7 @@ export default function Error({
           </Button>
           <Button
             asChild
-            className="w-full rounded-full px-7 sm:w-auto"
+            className="w-full sm:w-auto"
             size="lg"
             variant="outline"
           >
