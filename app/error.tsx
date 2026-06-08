@@ -41,8 +41,7 @@ export default function Error({
           <span
             className="flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-semibold text-white"
             style={{
-              background:
-                "linear-gradient(135deg, var(--bv-brand), var(--bv-brand-deep))",
+              background: "var(--bv-brand-mid)",
               boxShadow: "0 8px 24px var(--bv-brand-glow)",
             }}
           >

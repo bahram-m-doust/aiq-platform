@@ -45,8 +45,7 @@ function BrainAvatar() {
     <div
       className="flex size-8 shrink-0 items-center justify-center rounded-lg"
       style={{
-        background:
-          "linear-gradient(135deg, var(--bv-brand-tint-16), var(--bv-brand-tint-8))",
+        background: "var(--bv-brand-tint-16)",
         color: "var(--bv-brand-deep)",
         boxShadow: "0 0 0 1px var(--bv-brand-tint-16)",
       }}
@@ -321,8 +320,7 @@ export function BrainChat({
                 <div
                   className="flex size-14 items-center justify-center rounded-2xl"
                   style={{
-                    background:
-                      "linear-gradient(135deg, var(--bv-brand-tint-16), var(--bv-brand-tint-8))",
+                    background: "var(--bv-brand-tint-16)",
                     color: "var(--bv-brand-deep)",
                     boxShadow: "0 0 0 1px var(--bv-brand-tint-16)",
                   }}

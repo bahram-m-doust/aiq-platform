@@ -311,8 +311,7 @@ function EmptyState({
         aria-hidden
         className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl text-white"
         style={{
-          background:
-            "linear-gradient(135deg, var(--bv-brand), var(--bv-brand-deep))",
+          background: "var(--bv-brand-mid)",
           boxShadow: "0 8px 20px var(--bv-brand-tint-32)",
         }}
       >

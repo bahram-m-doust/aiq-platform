@@ -166,17 +166,17 @@ function StatePill({ state }: { state: SubstepState }) {
 /* ── Phase Card ── */
 
 const TONE_GRADIENTS: Record<number, string> = {
-  1: "linear-gradient(150deg, var(--bv-c1-a), var(--bv-c1-b))",
-  2: "linear-gradient(150deg, var(--bv-c2-a), var(--bv-c2-b))",
-  3: "linear-gradient(150deg, var(--bv-c3-a), var(--bv-c3-b))",
-  4: "linear-gradient(150deg, var(--bv-c4-a), var(--bv-c4-b))",
+  1: "var(--bv-c1-b)",
+  2: "var(--bv-c2-b)",
+  3: "var(--bv-c3-b)",
+  4: "var(--bv-c4-b)",
 };
 
 const BAR_GRADIENTS: Record<number, string> = {
-  1: "linear-gradient(90deg, var(--bv-c1-a), var(--bv-c1-b))",
-  2: "linear-gradient(90deg, var(--bv-c2-a), var(--bv-c2-b))",
-  3: "linear-gradient(90deg, var(--bv-c3-a), var(--bv-c3-b))",
-  4: "linear-gradient(90deg, var(--bv-c4-a), var(--bv-c4-b))",
+  1: "var(--bv-c1-b)",
+  2: "var(--bv-c2-b)",
+  3: "var(--bv-c3-b)",
+  4: "var(--bv-c4-b)",
 };
 
 function PhaseCard({
@@ -219,7 +219,7 @@ function PhaseCard({
         <div
           className="absolute inset-x-0 top-0 z-[1] h-0.5 opacity-90"
           style={{
-            background: `linear-gradient(90deg, transparent, var(--bv-accent), transparent)`,
+            background: "var(--bv-accent)",
           }}
         />
       )}
@@ -289,7 +289,7 @@ function PhaseCard({
                 background: isLocked
                   ? "var(--bv-ink-4)"
                   : isReadyToSubmit
-                    ? "linear-gradient(90deg, var(--bv-brand), var(--bv-brand-mid))"
+                    ? "var(--bv-brand-mid)"
                     : BAR_GRADIENTS[tone],
                 transitionTimingFunction: "var(--bv-ease)",
               }}
@@ -355,8 +355,6 @@ function PhaseCard({
         style={{
           maxHeight: open ? 1600 : 0,
           borderTopColor: open ? "var(--bv-line)" : "transparent",
-          background:
-            "linear-gradient(180deg, rgba(15,15,20,0.012), transparent 40px)",
           transitionTimingFunction: "var(--bv-ease)",
         }}
       >
@@ -452,10 +450,7 @@ function DetailPage({
     >
       <div
         className="pointer-events-none fixed inset-0"
-        style={{
-          background: `radial-gradient(900px 600px at 100% -10%, rgba(255,255,255,0.95), transparent 60%),
-                       radial-gradient(800px 600px at -10% 100%, rgba(225,225,232,0.5), transparent 60%)`,
-        }}
+        style={{ background: "var(--bv-bg)" }}
       />
 
       <div className="relative z-10 mx-auto max-w-[980px] px-7 pb-24 pt-9">
@@ -805,7 +800,7 @@ export function BrandBuildView({
                 className="absolute inset-x-0 top-0 rounded-sm transition-all duration-700"
                 style={{
                   height: `${spineFillPct}%`,
-                  background: `linear-gradient(to bottom, var(--bv-brand), var(--bv-brand-mid))`,
+                  background: "var(--bv-brand-mid)",
                   boxShadow: "0 0 16px var(--bv-brand-tint-32)",
                   transitionTimingFunction: "var(--bv-ease)",
                 }}
@@ -838,7 +833,7 @@ export function BrandBuildView({
                     style={{
                       background:
                         info.phaseState === "complete"
-                          ? `linear-gradient(140deg, var(--bv-brand), var(--bv-brand-mid))`
+                          ? "var(--bv-brand-mid)"
                           : info.phaseState === "active"
                             ? "#fff"
                             : info.nextUp

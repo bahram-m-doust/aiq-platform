@@ -47,8 +47,7 @@ export const DSButton = forwardRef<
       style={
         variant === "brand"
           ? {
-              background:
-                "linear-gradient(135deg, var(--bv-brand) 0%, var(--bv-brand-mid) 60%, var(--bv-brand-deep) 100%)",
+              background: "var(--bv-brand-mid)",
               ...style,
             }
           : variant === "outline"
