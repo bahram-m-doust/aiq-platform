@@ -611,17 +611,18 @@ export function PdfAnnotator({
             </div>
           ) : canApprove ? (
             <div className="flex justify-center pt-2">
-              <button
-                className="inline-flex h-10 min-w-[166px] items-center justify-center gap-2 rounded-md bg-[#1da9b9] px-4 text-sm font-semibold tracking-[-0.084px] text-white transition-colors hover:bg-[#1796a5] disabled:opacity-60"
+              <Button
+                className="h-10 min-w-[166px]"
                 disabled={isApproving}
                 onClick={approve}
+                size="lg"
                 type="button"
               >
                 {isApproving ? (
                   <Loader2Icon className="size-4 animate-spin" />
                 ) : null}
                 Approve
-              </button>
+              </Button>
             </div>
           ) : null}
           </div>
