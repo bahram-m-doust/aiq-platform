@@ -166,42 +166,31 @@ function AgentCard({ agent }: { agent: AgentCatalogItem }) {
   const Icon = AGENT_ICONS[agent.key] ?? SparklesIcon;
   return (
     <Link
-      className="group relative block overflow-hidden rounded-xl border bg-[var(--bv-card)] p-5 transition-all duration-200 hover:-translate-y-0.5"
+      className="group relative flex aspect-square flex-col justify-between overflow-hidden rounded-xl border bg-[var(--bv-card)] p-5 transition-all duration-200 hover:-translate-y-0.5"
       href={`/dashboard/agents/${agent.slug}`}
       style={{
         borderColor: "var(--bv-line)",
         boxShadow: "var(--bv-shadow-card)",
       }}
     >
-      <div className="flex items-start gap-4">
-        <span
-          className="flex size-11 shrink-0 items-center justify-center rounded-xl"
-          style={{
-            background: "var(--bv-brand-tint-16)",
-            color: "var(--bv-brand-deep)",
-          }}
-        >
-          <Icon className="size-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="ds-h3 truncate">{agent.name}</h3>
-            <ArrowRightIcon className="size-4 shrink-0 text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5" />
-          </div>
-          <p className="mt-1 text-[13px] leading-relaxed text-[var(--bv-ink-3)]">
-            {agent.description}
-          </p>
-          <span
-            className="mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
-            style={{
-              background: "var(--bv-brand-tint-8)",
-              color: "var(--bv-brand-deep)",
-            }}
-          >
-            <BrainCircuitIcon className="size-3.5" />
-            Connected to the Brain
-          </span>
-        </div>
+      <span
+        className="flex size-11 shrink-0 items-center justify-center rounded-xl"
+        style={{
+          background: "var(--bv-brand-tint-16)",
+          color: "var(--bv-brand-deep)",
+        }}
+      >
+        <Icon className="size-5" />
+      </span>
+      <div className="space-y-1.5">
+        <h3 className="ds-h3">{agent.name}</h3>
+        <p className="line-clamp-3 text-[13px] leading-relaxed text-[var(--bv-ink-3)]">
+          {agent.description}
+        </p>
+      </div>
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--bv-brand-deep)]">
+        <BrainCircuitIcon className="size-3.5 shrink-0" />
+        <span>Connected to the Brain</span>
       </div>
     </Link>
   );
@@ -274,7 +263,7 @@ export function DashboardLanding({
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {featured.map((agent) => (
               <AgentCard agent={agent} key={agent.key} />
             ))}
