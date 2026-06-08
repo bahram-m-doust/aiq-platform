@@ -198,8 +198,9 @@ flowchart TD
    client reads/writes it.
 5. **Budget + rate-limit + audit** apply identically to text and image runs
    (shared gate). Image runs meter `IMAGE` usage.
-6. **Who can edit Instructions:** platform admins (and/or brand owners) only —
-   enforced in the admin route, audited via `updated_by` + `audit_logs`.
+6. **Who can edit Instructions:** **platform admins only** (v1) — enforced in
+   the admin route, audited via `updated_by` + `audit_logs`. Instruction capped
+   at **8,000 chars**.
 
 ---
 
@@ -220,11 +221,33 @@ flowchart TD
 
 ---
 
-## 7. Open questions (to settle before/within Phase A)
+## 7. Resolved decisions (settled before Phase A)
 
-1. **Edit rights:** platform admin only, or brand owners too?
-2. **Brand-wide default seed:** copy the current `BRAIN_SYSTEM_PROMPT` into the
-   `agent_id = NULL` row on first save, or leave empty (role+guard only)?
-3. **Instruction length cap** and whether to support draft vs published.
-4. **Image mode persistence:** store generated images in the same `agent_runs`
-   thread so they rehydrate alongside text turns? (recommended: yes.)
+1. **Edit rights — platform admin only.** Brand owners do **not** edit
+   Instructions in v1. Enforced in the admin route; every write audited via
+   `updated_by` + `audit_logs`.
+2. **Brand-wide default seed — leave empty.** The current `BRAIN_SYSTEM_PROMPT`
+   is Role + Safety, which now live in code layers [1]/[3]; seeding it into the
+   editable layer [2] would duplicate and blur those. Default empty ⇒ **zero
+   behavior change** for existing brands (role + guard only). The admin UI
+   ships a **Starter Template** ("Insert template" button) focused purely on
+   brand voice / persona / do's & don'ts — never role or safety.
+3. **Length & lifecycle — 8,000-char cap, single live field, no draft/publish
+   in v1.** ~2k tokens is enough for a full brand-voice doc without diluting
+   context or inflating cost. Save = live; traceability/rollback come from
+   `updated_by` + `updated_at` + `audit_logs`. The table is shaped so a future
+   `status` / `published_instruction` column is a **non-breaking** add if an
+   approval workflow is ever needed.
+4. **Image persistence — yes, in the same thread.** Generated images are stored
+   as `agent_runs` (output references the stored PNG path / signed URL) so the
+   conversation rehydration surfaces image turns inline alongside text turns,
+   surviving reloads (extends `getBrandBrainConversation` to map image runs to
+   an assistant message carrying an image attachment).
+
+## 8. Future considerations (explicitly deferred)
+
+- Draft → review → publish workflow for Instructions (if approvals are needed).
+- Implicit tool-calling image generation (auto-detect intent) as an upgrade over
+  the explicit Text/Image switch.
+- Real video **asset** generation (separate provider integration).
+- Per-brand owner self-service editing, once admin-only is proven.
