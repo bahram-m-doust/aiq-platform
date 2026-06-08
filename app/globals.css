@@ -146,18 +146,18 @@
   --bv-line-2: rgba(15, 15, 20, 0.12);
   --bv-line-dashed: rgba(15, 15, 20, 0.16);
 
-  /* ── Bextudio Brand: Light Neon Cyan (leans blue, never green) ── */
-  --bv-brand: #5BFFEA;            /* vivid neon cyan, for glow/highlights */
-  --bv-brand-glow: #8FFFF1;        /* lighter highlight */
-  --bv-brand-mid: #00E5D9;         /* mid cyan for gradient stops */
-  --bv-brand-deep: #009FB0;        /* deep cyan-blue, AA on white */
-  --bv-brand-ink: #002B33;         /* text on brand surfaces */
-  --bv-brand-tint-8: rgba(91, 234, 255, 0.08);
-  --bv-brand-tint-16: rgba(91, 234, 255, 0.16);
-  --bv-brand-tint-32: rgba(91, 234, 255, 0.32);
+  /* ── Brand palette derives from the design-system primary color ── */
+  --bv-brand: color-mix(in srgb, var(--primary) 72%, white);   /* light primary, for glow/highlights */
+  --bv-brand-glow: color-mix(in srgb, var(--primary) 48%, white); /* lighter highlight */
+  --bv-brand-mid: var(--primary);          /* primary, mid gradient stop */
+  --bv-brand-deep: var(--primary-hover);   /* deep primary, AA on white */
+  --bv-brand-ink: var(--primary-foreground); /* text on brand surfaces */
+  --bv-brand-tint-8: color-mix(in srgb, var(--primary) 8%, transparent);
+  --bv-brand-tint-16: color-mix(in srgb, var(--primary) 16%, transparent);
+  --bv-brand-tint-32: color-mix(in srgb, var(--primary) 32%, transparent);
   --bv-brand-glow-shadow: 0 0 24px var(--bv-brand-tint-32);
 
-  /* Accent maps to deep cyan for WCAG AA on white */
+  /* Accent maps to deep primary for WCAG AA on white */
   --bv-accent: var(--bv-brand-deep);
   --bv-accent-tint: var(--bv-brand-tint-8);
 
