@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeftIcon, ArrowRightIcon, LockIcon } from "lucide-react";
+import { ArrowRightIcon, LockIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -73,16 +73,8 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
       <div className="mx-auto max-w-[780px]">
-        {/* Back + summary */}
-        <div className="mb-6 flex items-center justify-between">
-          <Link
-            className="inline-flex items-center gap-2 rounded-full border bg-white px-3.5 py-2 text-[13px] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-            href="/dashboard"
-            style={{ borderColor: "var(--bv-line)", color: "var(--bv-ink-2)" }}
-          >
-            <ArrowLeftIcon className="size-3.5" />
-            Dashboard
-          </Link>
+        {/* Summary (navigation handled by the global breadcrumb) */}
+        <div className="mb-6 flex items-center justify-end">
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
             {completion.answeredQuestions}/{completion.totalQuestions} answered ·{" "}
             {completion.completionPercent}%

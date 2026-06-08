@@ -49,16 +49,26 @@ export function DashboardBreadcrumb() {
   const rest = segments.slice(1);
   if (rest.length === 0) return null;
 
-  const crumbs = rest.map((segment, index) => {
-    const href = `/dashboard/${rest.slice(0, index + 1).join("/")}`;
-    return {
-      key: `${segment}-${index}`,
-      // Override (real label) wins, then the known-segment map, then humanize.
-      label: labelOverrides[href] ?? humanizeSegment(segment),
-      href,
-      isLast: index === rest.length - 1,
-    };
-  });
+  // Always anchor with a clickable "Dashboard" root so every page has a real,
+  // navigable breadcrumb trail (this replaces per-page back buttons).
+  const crumbs = [
+    {
+      key: "dashboard-home",
+      label: "Dashboard",
+      href: "/dashboard",
+      isLast: false,
+    },
+    ...rest.map((segment, index) => {
+      const href = `/dashboard/${rest.slice(0, index + 1).join("/")}`;
+      return {
+        key: `${segment}-${index}`,
+        // Override (real label) wins, then the known-segment map, then humanize.
+        label: labelOverrides[href] ?? humanizeSegment(segment),
+        href,
+        isLast: index === rest.length - 1,
+      };
+    }),
+  ];
 
   return (
     <div className="hidden items-center gap-2 md:flex">
