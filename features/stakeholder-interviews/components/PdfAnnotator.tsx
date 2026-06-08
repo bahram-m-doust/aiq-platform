@@ -24,7 +24,9 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -104,6 +106,12 @@ export function PdfAnnotator({
   // the dashboard view). `pageIndex` indexes into this list.
   const [contentPages, setContentPages] = useState<number[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
+  // Page indices the reviewer has actually landed on. Drives the "reviewed
+  // N / total" hint and the soft warning when approving early.
+  const [viewedPages, setViewedPages] = useState<Set<number>>(
+    () => new Set([0]),
+  );
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [size, setSize] = useState<{ width: number; height: number } | null>(
     null,
   );
@@ -145,9 +153,21 @@ export function PdfAnnotator({
 
   function goToAnnotation(annotation: StakeholderAnnotation) {
     const idx = contentPages.indexOf(annotation.page);
-    if (idx >= 0) setPageIndex(idx);
+    if (idx >= 0) goToPage(idx);
     setOpenPin(annotation.id);
   }
+
+  // Navigate to a page and mark it reviewed (drives the "reviewed N / total"
+  // hint and the soft warning when approving early).
+  const goToPage = useCallback((index: number) => {
+    setPageIndex(index);
+    setViewedPages((prev) => {
+      if (prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+  }, []);
 
   function approve() {
     startApproving(async () => {
@@ -411,6 +431,8 @@ export function PdfAnnotator({
     (item) => item.page === currentPdfPage,
   );
   const totalPages = contentPages.length;
+  const reviewedCount = Math.min(viewedPages.size, totalPages || 1);
+  const allReviewed = totalPages > 0 && reviewedCount >= totalPages;
 
   function startEditing(annotation: StakeholderAnnotation) {
     setEditingId(annotation.id);
@@ -446,7 +468,7 @@ export function PdfAnnotator({
               <Button
                 aria-label="Previous page"
                 disabled={pageIndex <= 0}
-                onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+                onClick={() => goToPage(Math.max(0, pageIndex - 1))}
                 size="icon"
                 type="button"
                 variant="outline"
@@ -459,9 +481,7 @@ export function PdfAnnotator({
               <Button
                 aria-label="Next page"
                 disabled={pageIndex >= totalPages - 1}
-                onClick={() =>
-                  setPageIndex((i) => Math.min(totalPages - 1, i + 1))
-                }
+                onClick={() => goToPage(Math.min(totalPages - 1, pageIndex + 1))}
                 size="icon"
                 type="button"
                 variant="outline"
@@ -610,19 +630,56 @@ export function PdfAnnotator({
               </span>
             </div>
           ) : canApprove ? (
-            <div className="flex justify-center pt-2">
-              <Button
-                className="min-w-[166px]"
-                disabled={isApproving}
-                onClick={approve}
-                size="lg"
-                type="button"
+            <div className="flex flex-col items-center gap-2 pt-2">
+              {totalPages > 1 ? (
+                <span
+                  className={cn(
+                    "text-[12px]",
+                    allReviewed
+                      ? "font-medium text-[#157a52]"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {allReviewed
+                    ? "All pages reviewed."
+                    : `Reviewed ${reviewedCount} / ${totalPages} pages`}
+                </span>
+              ) : null}
+              <ConfirmDialog
+                confirmLabel="Approve"
+                description="Approving unlocks Futures Research and locks this report from further changes."
+                errorMessage={null}
+                isPending={isApproving}
+                onConfirm={approve}
+                onOpenChange={setConfirmOpen}
+                open={confirmOpen}
+                pendingLabel="Approving…"
+                title="Approve this report?"
+                trigger={
+                  <Button
+                    className="min-w-[166px]"
+                    disabled={isApproving}
+                    size="lg"
+                    type="button"
+                  >
+                    {isApproving ? (
+                      <Loader2Icon className="size-4 animate-spin" />
+                    ) : null}
+                    Approve
+                  </Button>
+                }
+                variant="default"
               >
-                {isApproving ? (
-                  <Loader2Icon className="size-4 animate-spin" />
+                {!allReviewed && totalPages > 1 ? (
+                  <Alert>
+                    <AlertDescription>
+                      You haven&apos;t viewed all pages yet ({reviewedCount} /{" "}
+                      {totalPages}). You can still approve, but consider
+                      reviewing the rest first.
+                    </AlertDescription>
+                  </Alert>
                 ) : null}
-                Approve
-              </Button>
+              </ConfirmDialog>
             </div>
           ) : null}
           </div>
