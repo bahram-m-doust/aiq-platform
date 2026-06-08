@@ -674,8 +674,7 @@ export function BrandBuildView({
           return;
         }
         if (substep.id === "futures-research") {
-          // Futures Research page is not built yet — open the detail sheet.
-          setDetail({ phase, substep, state });
+          window.location.href = "/dashboard/brain/roadmap/futures-research";
           return;
         }
         window.location.href = "/dashboard/questionnaire";

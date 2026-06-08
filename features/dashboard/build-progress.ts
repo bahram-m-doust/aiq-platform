@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getFuturesResearchReportRowByBrand } from "@/features/futures-research/queries";
+import type { FuturesResearchReportStatus } from "@/features/futures-research/types";
 import type { IntakePageData } from "@/features/intake/types";
 import { getStakeholderReportRowByBrand } from "@/features/stakeholder-interviews/queries";
 import type { StakeholderReportStatus } from "@/features/stakeholder-interviews/types";
@@ -136,18 +138,60 @@ function stakeholderSubstep(
   }
 }
 
+async function getFuturesResearchStatusSafe(
+  brandId: string,
+): Promise<FuturesResearchReportStatus | null> {
+  try {
+    const row = await getFuturesResearchReportRowByBrand(brandId);
+    if (!row) return null;
+    if (
+      row.status === "CLIENT_REVIEW" ||
+      row.status === "CHANGES_REQUESTED" ||
+      row.status === "APPROVED"
+    ) {
+      return row.status;
+    }
+    return "PENDING_UPLOAD";
+  } catch {
+    // Table not migrated yet, or a transient error — treat as not started.
+    return null;
+  }
+}
+
+// Mirrors stakeholderSubstep, but only unlocks once Stakeholder Interviews is
+// approved.
+function futuresResearchSubstep(
+  unlocked: boolean,
+  status: FuturesResearchReportStatus | null,
+): { state: SubstepState; progress: number } {
+  if (!unlocked) return { state: "locked", progress: 0 };
+  switch (status) {
+    case "APPROVED":
+      return { state: "done", progress: 100 };
+    case "CLIENT_REVIEW":
+      return { state: "awaiting-review", progress: 50 };
+    case "CHANGES_REQUESTED":
+      return { state: "in-progress", progress: 50 };
+    default:
+      // PENDING_UPLOAD / no report — the Bextudio team is preparing it.
+      return { state: "in-progress", progress: 0 };
+  }
+}
+
 function getBrandResearchProgress({
   answeredCount,
   percent,
   sessionExists,
   totalQuestions,
   stakeholderStatus,
+  futuresResearchStatus,
 }: {
   answeredCount: number;
   percent: number;
   sessionExists: boolean;
   totalQuestions: number;
   stakeholderStatus: StakeholderReportStatus | null;
+  futuresResearchStatus: FuturesResearchReportStatus | null;
 }) {
   const intakeStarted = sessionExists || percent > 0;
   const questionnairesDone = percent === 100;
@@ -158,6 +202,7 @@ function getBrandResearchProgress({
 
   const stakeholder = stakeholderSubstep(questionnairesDone, stakeholderStatus);
   const futuresUnlocked = stakeholder.state === "done";
+  const futures = futuresResearchSubstep(futuresUnlocked, futuresResearchStatus);
 
   const substeps: SubstepProgress[] = [
     {
@@ -181,8 +226,8 @@ function getBrandResearchProgress({
       title: "Futures Research",
       description:
         "Map the trends and future scenarios shaping where the brand can go.",
-      progress: 0,
-      state: futuresUnlocked ? "in-progress" : "locked",
+      progress: futures.progress,
+      state: futures.state,
     },
   ];
 
@@ -208,6 +253,7 @@ function getBrandResearchProgress({
 async function getIntakeProgress(
   brandId: string,
   stakeholderStatus: StakeholderReportStatus | null,
+  futuresResearchStatus: FuturesResearchReportStatus | null,
 ) {
   const admin = createAdminClient();
 
@@ -250,12 +296,14 @@ async function getIntakeProgress(
     sessionExists: Boolean(session),
     totalQuestions,
     stakeholderStatus,
+    futuresResearchStatus,
   });
 }
 
 function getIntakeProgressFromPageData(
   data: IntakePageData,
   stakeholderStatus: StakeholderReportStatus | null,
+  futuresResearchStatus: FuturesResearchReportStatus | null,
 ) {
   const isLocked = data.session.status === "LOCKED";
   const percent = isLocked ? 100 : data.completion.completionPercent;
@@ -269,6 +317,7 @@ function getIntakeProgressFromPageData(
     sessionExists: Boolean(data.session),
     totalQuestions: data.completion.totalQuestions,
     stakeholderStatus,
+    futuresResearchStatus,
   });
 }
 
@@ -439,15 +488,26 @@ export async function getBrandBuildProgress(
     intakeData?: IntakePageData | null | Promise<IntakePageData | null>;
   } = {},
 ): Promise<BrandBuildProgress> {
-  const stakeholderStatus = await getStakeholderStatusSafe(brandId);
+  const [stakeholderStatus, futuresResearchStatus] = await Promise.all([
+    getStakeholderStatusSafe(brandId),
+    getFuturesResearchStatusSafe(brandId),
+  ]);
   const intakeProgressPromise =
     "intakeData" in options
       ? Promise.resolve(options.intakeData).then((intakeData) =>
           intakeData
-            ? getIntakeProgressFromPageData(intakeData, stakeholderStatus)
-            : getIntakeProgress(brandId, stakeholderStatus),
+            ? getIntakeProgressFromPageData(
+                intakeData,
+                stakeholderStatus,
+                futuresResearchStatus,
+              )
+            : getIntakeProgress(
+                brandId,
+                stakeholderStatus,
+                futuresResearchStatus,
+              ),
         )
-      : getIntakeProgress(brandId, stakeholderStatus);
+      : getIntakeProgress(brandId, stakeholderStatus, futuresResearchStatus);
   const [intake, modules, brain] = await Promise.all([
     intakeProgressPromise,
     getModulesProgress(brandId),

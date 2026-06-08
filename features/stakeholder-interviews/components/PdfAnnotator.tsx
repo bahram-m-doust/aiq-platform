@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -35,18 +36,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  addStakeholderAnnotationAction,
-  approveStakeholderReportAction,
-  deleteStakeholderAnnotationAction,
-  editStakeholderAnnotationAction,
-  resolveStakeholderAnnotationAction,
-} from "@/features/stakeholder-interviews/actions";
-import { StakeholderHeader } from "@/features/stakeholder-interviews/components/StakeholderHeader";
-import type { StakeholderAnnotation } from "@/features/stakeholder-interviews/types";
+import type {
+  AddAnnotationInput,
+  AddAnnotationResult,
+  StakeholderAnnotation,
+} from "@/features/stakeholder-interviews/types";
 import { cn } from "@/lib/utils";
 
 type Draft = { page: number; x: number; y: number } | null;
+
+// The annotator is generic over the report kind — each consumer (Stakeholder
+// Interviews, Futures Research, …) passes its own server actions and header.
+export type PdfReviewActions = {
+  addAnnotation: (input: AddAnnotationInput) => Promise<AddAnnotationResult>;
+  approveReport: () => Promise<{ ok: boolean; message?: string }>;
+  deleteAnnotation: (
+    annotationId: string,
+  ) => Promise<{ ok: boolean; message?: string }>;
+  editAnnotation: (
+    annotationId: string,
+    body: string,
+  ) => Promise<{ ok: boolean; message?: string }>;
+  resolveAnnotation: (
+    annotationId: string,
+    resolved: boolean,
+  ) => Promise<{ ok: boolean; message?: string }>;
+};
 
 function formatCommentDate(value: string | null): string {
   if (!value) return "";
@@ -74,7 +89,8 @@ export function PdfAnnotator({
   canResolve,
   canApprove,
   isApproved,
-  status,
+  actions,
+  header,
 }: {
   signedUrl: string;
   reportId: string;
@@ -84,7 +100,8 @@ export function PdfAnnotator({
   canResolve: boolean;
   canApprove: boolean;
   isApproved: boolean;
-  status: string;
+  actions: PdfReviewActions;
+  header: ReactNode;
 }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -171,7 +188,7 @@ export function PdfAnnotator({
 
   function approve() {
     startApproving(async () => {
-      const result = await approveStakeholderReportAction();
+      const result = await actions.approveReport();
       if (result.ok) router.refresh();
     });
   }
@@ -347,7 +364,7 @@ export function PdfAnnotator({
   function saveDraft() {
     if (!draft || !draftBody.trim()) return;
     startSaving(async () => {
-      const result = await addStakeholderAnnotationAction({
+      const result = await actions.addAnnotation({
         reportId,
         page: draft.page,
         posX: draft.x,
@@ -367,7 +384,7 @@ export function PdfAnnotator({
     const body = replyBody.trim();
     if (!body) return;
     startMutating(async () => {
-      const result = await addStakeholderAnnotationAction({
+      const result = await actions.addAnnotation({
         reportId,
         page: root.page,
         posX: root.posX,
@@ -387,7 +404,7 @@ export function PdfAnnotator({
     const body = editBody.trim();
     if (!body) return;
     startMutating(async () => {
-      const result = await editStakeholderAnnotationAction(annotation.id, body);
+      const result = await actions.editAnnotation(annotation.id, body);
       if (result.ok) {
         setAnnotations((current) =>
           current.map((item) =>
@@ -402,7 +419,7 @@ export function PdfAnnotator({
 
   function deleteAnnotation(annotation: StakeholderAnnotation) {
     startMutating(async () => {
-      const result = await deleteStakeholderAnnotationAction(annotation.id);
+      const result = await actions.deleteAnnotation(annotation.id);
       if (result.ok) {
         setAnnotations((current) =>
           current.filter(
@@ -423,7 +440,7 @@ export function PdfAnnotator({
         item.id === annotation.id ? { ...item, resolved: next } : item,
       ),
     );
-    void resolveStakeholderAnnotationAction(annotation.id, next);
+    void actions.resolveAnnotation(annotation.id, next);
   }
 
   // Only root comments are pinned on the page; replies live in the sidebar.
@@ -452,7 +469,7 @@ export function PdfAnnotator({
             that remains beside the right-anchored comments rail. */}
         <div className="flex min-w-0 flex-1 lg:justify-center">
           <div className="flex w-full flex-col gap-4 lg:max-w-[756px]">
-          <StakeholderHeader status={status} />
+          {header}
 
           {editable ? (
             <div className="flex items-center gap-[9px]">

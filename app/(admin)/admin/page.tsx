@@ -215,6 +215,17 @@ export default async function AdminPage() {
                 size="lg"
                 variant="outline"
               >
+                <Link href="/admin/futures-research">
+                  <LayoutDashboardIcon className="size-4" />
+                  Futures Research
+                </Link>
+              </Button>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
                 <Link href="/admin/change-requests">
                   <ListChecksIcon className="size-4" />
                   Change Requests
