@@ -671,7 +671,7 @@ export function PdfAnnotator({
                 variant="default"
               >
                 {!allReviewed && totalPages > 1 ? (
-                  <Alert>
+                  <Alert variant="destructive">
                     <AlertDescription>
                       You haven&apos;t viewed all pages yet ({reviewedCount} /{" "}
                       {totalPages}). You can still approve, but consider
