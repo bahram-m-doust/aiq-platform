@@ -220,7 +220,7 @@ function PhaseCard({
         <div
           className="absolute inset-x-0 top-0 z-[1] h-0.5 opacity-90"
           style={{
-            background: "var(--bv-accent)",
+            background: `linear-gradient(90deg, transparent, var(--bv-accent), transparent)`,
           }}
         />
       )}
@@ -796,7 +796,7 @@ export function BrandBuildView({
                 className="absolute inset-x-0 top-0 rounded-sm transition-all duration-700"
                 style={{
                   height: `${spineFillPct}%`,
-                  background: "var(--bv-brand-mid)",
+                  background: `linear-gradient(to bottom, var(--bv-brand), var(--bv-brand-mid))`,
                   boxShadow: "0 0 16px var(--bv-brand-tint-32)",
                   transitionTimingFunction: "var(--bv-ease)",
                 }}
@@ -829,7 +829,7 @@ export function BrandBuildView({
                     style={{
                       background:
                         info.phaseState === "complete"
-                          ? "var(--bv-brand-mid)"
+                          ? `linear-gradient(140deg, var(--bv-brand), var(--bv-brand-mid))`
                           : info.phaseState === "active"
                             ? "#fff"
                             : info.nextUp
