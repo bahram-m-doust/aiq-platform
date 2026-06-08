@@ -29,6 +29,18 @@ const SEGMENT_LABELS: Record<string, string> = {
   "create-brand": "Create Brand",
 };
 
+// Some pages live at a top-level route but conceptually sit deeper in the
+// product. Map the first segment to the parent crumbs that should precede it so
+// its trail matches its real place in the hierarchy.
+const PARENT_TRAIL: Record<string, { label: string; href: string }[]> = {
+  // Questionnaires is Phase 1 of the Build Roadmap (sibling of Stakeholder
+  // Interviews), even though it has its own top-level route.
+  questionnaire: [
+    { label: SEGMENT_LABELS.brain, href: "/dashboard/brain" },
+    { label: SEGMENT_LABELS.roadmap, href: "/dashboard/brain/roadmap" },
+  ],
+};
+
 function humanizeSegment(segment: string) {
   const decoded = decodeURIComponent(segment);
   return (
@@ -58,6 +70,13 @@ export function DashboardBreadcrumb() {
       href: "/dashboard",
       isLast: false,
     },
+    // Inject any parent crumbs for routes that sit deeper than their URL.
+    ...(PARENT_TRAIL[rest[0]] ?? []).map((crumb, index) => ({
+      key: `parent-${index}`,
+      label: crumb.label,
+      href: crumb.href,
+      isLast: false,
+    })),
     ...rest.map((segment, index) => {
       const href = `/dashboard/${rest.slice(0, index + 1).join("/")}`;
       return {
