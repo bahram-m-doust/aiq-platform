@@ -138,7 +138,6 @@ export function AgentChatPanel({
     let cancelled = false;
     resolveAgentImageUrlsAction(paths).then((urls) => {
       if (cancelled) return;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setImageUrls(urls);
     });
     return () => {
