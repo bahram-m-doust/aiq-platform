@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { CheckCircleIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { DSButton } from "@/components/ds/Button";
 import {
   Dialog,
@@ -84,9 +83,9 @@ export function FinalSubmitReadiness({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="w-full" disabled={disabled} size="lg" type="button">
+        <DSButton disabled={disabled} size="lg" type="button" variant="brand">
           Approve &amp; Lock
-        </Button>
+        </DSButton>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
