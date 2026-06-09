@@ -484,6 +484,7 @@ export function QuestionRenderer({
         <>
           <div
             className="mt-3 rounded-[12px] border px-3.5 py-2.5 text-[13.5px] leading-6 whitespace-pre-wrap"
+            dir={detectDir(currentValue)}
             style={{
               background: "var(--bv-card-soft)",
               borderColor: "var(--bv-line)",
