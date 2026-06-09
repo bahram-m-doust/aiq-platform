@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, CheckCircleIcon, DownloadIcon, LockIcon } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
@@ -160,18 +161,15 @@ export function SectionQuestionnaire({
           </div>
 
           {locked && (
-            <div
-              className="mt-4 flex flex-wrap items-center gap-3 rounded-[12px] border border-dashed px-3.5 py-2.5 text-[13px] text-[var(--bv-ink-2)]"
-              style={{ borderColor: "var(--bv-line-2)" }}
-            >
-              <span className="flex items-center gap-2">
-                <LockIcon className="size-3.5 shrink-0" />
+            <Alert className="mt-4" variant="success">
+              <LockIcon />
+              <AlertDescription>
                 This questionnaire is submitted and locked - answers are shown
                 for reference only.
-              </span>
+              </AlertDescription>
               {latestSnapshotId && (
                 <a
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                  className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
                   download
                   href={`/api/intake/${latestSnapshotId}/docx`}
                 >
@@ -179,7 +177,7 @@ export function SectionQuestionnaire({
                   Download answers (Word)
                 </a>
               )}
-            </div>
+            </Alert>
           )}
 
           <div className="mt-5">

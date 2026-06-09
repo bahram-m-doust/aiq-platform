@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRightIcon, DownloadIcon, LockIcon } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { FinalSubmitReadiness } from "@/features/intake/components/FinalSubmitReadiness";
@@ -105,18 +106,15 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
           </div>
 
           {locked && (
-            <div
-              className="mt-4 flex flex-wrap items-center gap-3 rounded-[12px] border border-dashed px-3.5 py-2.5 text-[13px] text-[var(--bv-ink-2)]"
-              style={{ borderColor: "var(--bv-line-2)" }}
-            >
-              <span className="flex items-center gap-2">
-                <LockIcon className="size-3.5 shrink-0" />
+            <Alert className="mt-4" variant="success">
+              <LockIcon />
+              <AlertDescription>
                 This questionnaire has been submitted and locked. Sections are
                 read-only — open one to review your answers.
-              </span>
+              </AlertDescription>
               {data.latestSnapshotId && (
                 <a
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                  className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
                   download
                   href={`/api/intake/${data.latestSnapshotId}/docx`}
                 >
@@ -124,7 +122,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
                   Download answers (Word)
                 </a>
               )}
-            </div>
+            </Alert>
           )}
         </div>
 
