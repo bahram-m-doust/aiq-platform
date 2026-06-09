@@ -205,7 +205,11 @@ export function SectionQuestionnaire({
                         : // Other tabs — plain muted label, no background
                           "text-muted-foreground hover:text-foreground",
                     )}
-                    href={`/dashboard/questionnaire/${item.key}`}
+                    href={
+                      isComplete
+                        ? `/dashboard/questionnaire/${item.key}`
+                        : `/dashboard/questionnaire/${item.key}?validate=1`
+                    }
                     key={item.id}
                   >
                     {isComplete && (
@@ -285,7 +289,7 @@ export function SectionQuestionnaire({
           {sectionIndex < allSections.length ? (
             <Button asChild className="group" variant="outline">
               <Link
-                href={`/dashboard/questionnaire/${allSections[sectionIndex].key}`}
+                href={`/dashboard/questionnaire/${allSections[sectionIndex].key}?validate=1`}
               >
                 Next: {allSections[sectionIndex].title}
                 <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
