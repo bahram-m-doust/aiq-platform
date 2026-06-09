@@ -141,14 +141,11 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
             const progress = progressByKey.get(section.key);
             const total = progress?.totalQuestions ?? section.questions.length;
             const answered = progress?.answeredQuestions ?? 0;
-            const percent = progress?.completionPercent ?? 0;
             const state = sectionState(progress);
-            const barColor: "green-soft" | "muted" =
-              state === "not-started" ? "muted" : "green-soft";
 
             return (
               <Link
-                className="group block overflow-hidden rounded-xl border bg-[var(--bv-card)] p-5 transition-all duration-200 hover:border-[var(--bv-line-2)] hover:shadow-sm"
+                className="group flex items-center gap-3 rounded-xl border bg-[var(--bv-card)] px-5 py-4 transition-all duration-200 hover:border-[var(--bv-line-2)] hover:shadow-sm"
                 href={
                   state === "done"
                     ? `/dashboard/questionnaire/${section.key}`
@@ -157,40 +154,26 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
                 key={section.id}
                 style={{ borderColor: "var(--bv-line)" }}
               >
-                <div className="flex items-center gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-baseline gap-2.5">
-                        <span className="shrink-0 text-[15px] font-semibold tracking-[-0.005em] text-[var(--bv-ink-4)]">
-                          {index + 1}
-                        </span>
-                        <h2 className="truncate text-[15px] font-semibold tracking-[-0.005em]">
-                          {section.title}
-                        </h2>
-                      </div>
-                      <Badge variant="outline" style={STATE_STYLE[state]}>
-                        {STATE_LABEL[state]}
-                      </Badge>
-                    </div>
-
-                    {section.description && (
-                      <p className="mt-1 line-clamp-1 text-[13px] text-[var(--bv-ink-3)]">
-                        {section.description}
-                      </p>
-                    )}
-
-                    <div className="mt-2.5 flex items-center gap-3">
-                      <div className="flex-1">
-                        <ProgressBar color={barColor} value={percent} />
-                      </div>
-                      <span className="min-w-[44px] text-right font-mono text-[10.5px] text-[var(--bv-ink-3)]">
-                        {answered}/{total}
-                      </span>
-                    </div>
-                  </div>
-
-                  <ArrowRightIcon className="size-4 shrink-0 text-[var(--bv-ink-4)] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--bv-ink-2)]" />
+                <span className="shrink-0 text-[15px] font-semibold tracking-[-0.005em] text-[var(--bv-ink-4)]">
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-[15px] font-semibold tracking-[-0.005em]">
+                    {section.title}
+                  </h2>
+                  {section.description && (
+                    <p className="truncate text-[12.5px] text-[var(--bv-ink-3)]">
+                      {section.description}
+                    </p>
+                  )}
                 </div>
+                <span className="shrink-0 font-mono text-[10.5px] text-[var(--bv-ink-4)]">
+                  {answered}/{total}
+                </span>
+                <Badge variant="outline" style={STATE_STYLE[state]}>
+                  {STATE_LABEL[state]}
+                </Badge>
+                <ArrowRightIcon className="size-4 shrink-0 text-[var(--bv-ink-4)] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--bv-ink-2)]" />
               </Link>
             );
           })}
