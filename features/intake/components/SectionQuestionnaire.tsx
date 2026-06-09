@@ -223,7 +223,7 @@ export function SectionQuestionnaire({
                   <span>
                     {sectionIndex}.{String(index + 1).padStart(2, "0")}
                   </span>
-                  {question.isRequired && <span>REQUIRED</span>}
+                  {!locked && question.isRequired && <span>REQUIRED</span>}
                 </div>
                 <div className="mt-3">
                   {locked ? (
