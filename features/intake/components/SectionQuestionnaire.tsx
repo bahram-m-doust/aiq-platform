@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, CheckCircleIcon, DownloadIcon, LockIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,7 +16,6 @@ import {
 } from "@/components/ui/pagination";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
-  calculateIntakeCompletion,
   isIntakeAnswerComplete,
   isIntakeSessionLocked,
 } from "@/features/intake/schemas";
@@ -66,14 +64,6 @@ export function SectionQuestionnaire({
       initialAnswers,
     });
   const displayedAnswers = locked ? initialAnswers : answers;
-  const completion = useMemo(
-    () =>
-      calculateIntakeCompletion({
-        sections: allSections,
-        answers: displayedAnswers,
-      }),
-    [displayedAnswers, allSections],
-  );
 
   const sectionQuestionIds = section.questions.map((question) => question.id);
   const sectionAnswered = sectionQuestionIds.filter((id) =>
@@ -85,8 +75,7 @@ export function SectionQuestionnaire({
 
   const sectionIndex = allSections.findIndex((item) => item.id === section.id) + 1;
 
-  const router = useRouter();
-  const [showErrors, setShowErrors] = useState(autoValidate);
+  const [showErrors] = useState(autoValidate);
 
   // Arrived here from the overview's "fix this" link — highlight the gaps and
   // jump to the first unanswered question.
@@ -102,25 +91,6 @@ export function SectionQuestionnaire({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoValidate]);
-
-  function handleFinish() {
-    const emptyQuestions = section.questions.filter(
-      (question) => !isIntakeAnswerComplete(displayedAnswers[question.id] ?? null),
-    );
-
-    // Unanswered questions in this section — flag them in place instead of
-    // navigating away.
-    if (emptyQuestions.length > 0) {
-      setShowErrors(true);
-      document
-        .getElementById(`question-card-${emptyQuestions[0].id}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-
-    // This section is complete — head to the overview to finish the rest.
-    router.push("/dashboard/questionnaire");
-  }
 
   return (
     <div
@@ -339,13 +309,9 @@ export function SectionQuestionnaire({
                   </span>
                 </Link>
               </Button>
-            ) : completion.completionPercent === 100 ? (
+            ) : (
               <Button asChild variant="outline">
                 <Link href="/dashboard/questionnaire">Review &amp; submit</Link>
-              </Button>
-            ) : (
-              <Button onClick={handleFinish} type="button" variant="outline">
-                Finish questionnaire
               </Button>
             )}
           </div>
