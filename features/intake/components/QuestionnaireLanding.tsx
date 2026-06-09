@@ -73,7 +73,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
       className="min-h-svh px-4 py-6 sm:px-6 sm:py-8"
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
-      <div className="mx-auto max-w-[780px]">
+      <div className="mx-auto max-w-[1057px]">
         {/* Summary (navigation handled by the global breadcrumb) */}
         <div className="mb-6 flex items-center justify-end">
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
