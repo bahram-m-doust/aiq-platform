@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeftIcon, CheckCircleIcon, LockIcon } from "lucide-react";
+import { ArrowLeftIcon, CheckCircleIcon, DownloadIcon, LockIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -38,6 +38,7 @@ export function SectionQuestionnaire({
   session,
   answers: initialAnswers,
   allSections,
+  latestSnapshotId = null,
   autoValidate = false,
 }: {
   section: IntakeSectionWithQuestions;
@@ -46,6 +47,7 @@ export function SectionQuestionnaire({
   completion: IntakeCompletion;
   brandName: string;
   allSections: IntakeSectionWithQuestions[];
+  latestSnapshotId?: string | null;
   autoValidate?: boolean;
 }) {
   const locked = isIntakeSessionLocked(session);
@@ -159,12 +161,24 @@ export function SectionQuestionnaire({
 
           {locked && (
             <div
-              className="mt-4 flex items-center gap-2 rounded-[12px] border border-dashed px-3.5 py-2.5 text-[13px] text-[var(--bv-ink-2)]"
+              className="mt-4 flex flex-wrap items-center gap-3 rounded-[12px] border border-dashed px-3.5 py-2.5 text-[13px] text-[var(--bv-ink-2)]"
               style={{ borderColor: "var(--bv-line-2)" }}
             >
-              <LockIcon className="size-3.5 shrink-0" />
-              This questionnaire is submitted and locked - answers are shown for
-              reference only.
+              <span className="flex items-center gap-2">
+                <LockIcon className="size-3.5 shrink-0" />
+                This questionnaire is submitted and locked - answers are shown
+                for reference only.
+              </span>
+              {latestSnapshotId && (
+                <a
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                  download
+                  href={`/api/intake/${latestSnapshotId}/docx`}
+                >
+                  <DownloadIcon className="size-3.5" />
+                  Download answers (Word)
+                </a>
+              )}
             </div>
           )}
 
