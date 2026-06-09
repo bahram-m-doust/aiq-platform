@@ -92,23 +92,27 @@ export default async function FuturesResearchPage() {
 
   const storylineNode = (
     <div className="px-2 pt-[15px]">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <FuturesResearchHeader status={status} />
-          <Button asChild size="sm" variant="outline">
-            <a href={storylineUrl} rel="noreferrer" target="_blank">
-              <ExternalLinkIcon className="size-3.5" />
-              Open full screen
-            </a>
-          </Button>
-        </div>
-        <div className="overflow-hidden rounded-[10px] border border-border bg-white">
-          <iframe
-            className="h-[82vh] w-full"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-downloads"
-            src={storylineUrl}
-            title="Futures Research Storyline"
-          />
+      <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="flex min-w-0 flex-1 lg:justify-center">
+          <div className="flex w-full flex-col gap-4 lg:max-w-[756px]">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <FuturesResearchHeader status={status} />
+              <Button asChild size="sm" variant="outline">
+                <a href={storylineUrl} rel="noreferrer" target="_blank">
+                  <ExternalLinkIcon className="size-3.5" />
+                  Open full screen
+                </a>
+              </Button>
+            </div>
+            <div className="w-full overflow-hidden rounded-[10px] border border-border bg-white">
+              <iframe
+                className="h-[82vh] w-full"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-downloads"
+                src={storylineUrl}
+                title="Futures Research Storyline"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
