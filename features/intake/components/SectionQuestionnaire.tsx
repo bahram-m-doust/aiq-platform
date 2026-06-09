@@ -7,6 +7,14 @@ import { ArrowLeftIcon, CheckCircleIcon, DownloadIcon, LockIcon } from "lucide-r
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLast,
+  PaginationLink,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   calculateIntakeCompletion,
@@ -275,37 +283,62 @@ export function SectionQuestionnaire({
         </div>
 
         <div
-          className="mt-8 flex items-center justify-between border-t border-dashed pt-6"
+          className="mt-8 flex flex-col gap-5 border-t border-dashed pt-6"
           style={{ borderColor: "var(--bv-line-dashed)" }}
         >
-          <Link
-            className="inline-flex items-center gap-2 text-sm text-[var(--bv-ink-3)] transition-colors hover:text-[var(--bv-ink)]"
-            href="/dashboard/questionnaire"
-          >
-            <ArrowLeftIcon className="size-3.5" />
-            All sections
-          </Link>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href={
+                    sectionIndex > 1
+                      ? `/dashboard/questionnaire/${allSections[sectionIndex - 2].key}`
+                      : undefined
+                  }
+                />
+              </PaginationItem>
+              {allSections.map((item, index) => (
+                <PaginationItem key={item.key}>
+                  <PaginationLink
+                    href={`/dashboard/questionnaire/${item.key}`}
+                    isActive={index + 1 === sectionIndex}
+                  >
+                    {index + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationLast
+                  href={
+                    sectionIndex < allSections.length
+                      ? `/dashboard/questionnaire/${allSections[allSections.length - 1].key}`
+                      : undefined
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
 
-          {sectionIndex < allSections.length ? (
-            <Button asChild className="group" variant="outline">
-              <Link
-                href={`/dashboard/questionnaire/${allSections[sectionIndex].key}?validate=1`}
-              >
-                Next: {allSections[sectionIndex].title}
-                <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
-                  -&gt;
-                </span>
-              </Link>
-            </Button>
-          ) : completion.completionPercent === 100 ? (
-            <Button asChild variant="outline">
-              <Link href="/dashboard/questionnaire">Review &amp; submit</Link>
-            </Button>
-          ) : (
-            <Button onClick={handleFinish} type="button" variant="outline">
-              Finish questionnaire
-            </Button>
-          )}
+          <div className="flex items-center justify-between">
+            <Link
+              className="inline-flex items-center gap-2 text-sm text-[var(--bv-ink-3)] transition-colors hover:text-[var(--bv-ink)]"
+              href="/dashboard/questionnaire"
+            >
+              <ArrowLeftIcon className="size-3.5" />
+              All sections
+            </Link>
+
+            {sectionIndex === allSections.length &&
+              (completion.completionPercent === 100 ? (
+                <Button asChild variant="outline">
+                  <Link href="/dashboard/questionnaire">Review &amp; submit</Link>
+                </Button>
+              ) : (
+                <Button onClick={handleFinish} type="button" variant="outline">
+                  Finish questionnaire
+                </Button>
+              ))}
+          </div>
         </div>
       </div>
     </div>
