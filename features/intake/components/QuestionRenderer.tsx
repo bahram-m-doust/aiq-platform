@@ -231,6 +231,28 @@ export function QuestionRenderer({
     save(localValue);
   }
 
+  // Keyboard fast-fill: Ctrl/Cmd+Enter jumps to the next questionnaire field
+  // (focusing it blurs the current one, which autosaves), so the whole form can
+  // be completed without the mouse. Plain Tab still works as usual.
+  function handleFieldKeyDown(
+    event: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) {
+    if (!(event.ctrlKey || event.metaKey) || event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    const fields = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-intake-field]"),
+    );
+    const index = fields.indexOf(event.currentTarget);
+    const next = index >= 0 ? fields[index + 1] : undefined;
+    if (next) {
+      next.focus();
+    } else {
+      event.currentTarget.blur();
+    }
+  }
+
   function handleDone() {
     const isTextKind =
       kind === "text" ||
@@ -402,6 +424,7 @@ export function QuestionRenderer({
         <Textarea
           aria-describedby={statusId}
           aria-invalid={displayedStatus === "error" || showRequiredError}
+          data-intake-field
           dir={detectDir(localValue)}
           id={controlId}
           onBlur={handleTextBlur}
@@ -409,6 +432,7 @@ export function QuestionRenderer({
           onFocus={() => {
             isFocusedRef.current = true;
           }}
+          onKeyDown={handleFieldKeyDown}
           placeholder="Enter a considered response"
           value={valueToString(localValue)}
         />
@@ -419,6 +443,7 @@ export function QuestionRenderer({
       <Input
         aria-describedby={statusId}
         aria-invalid={displayedStatus === "error" || showRequiredError}
+        data-intake-field
         dir={detectDir(localValue)}
         id={controlId}
         onBlur={handleTextBlur}
@@ -426,6 +451,7 @@ export function QuestionRenderer({
         onFocus={() => {
           isFocusedRef.current = true;
         }}
+        onKeyDown={handleFieldKeyDown}
         placeholder="Enter your response"
         type={kind}
         value={valueToString(localValue)}
