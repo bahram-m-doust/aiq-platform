@@ -4,7 +4,6 @@ import { useActionState, useMemo } from "react";
 import { MailCheckIcon, MailWarningIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
 import { Input } from "@/components/ui/input";

@@ -80,8 +80,7 @@ export function AgentDetail({
               aria-hidden
               className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white"
               style={{
-                background:
-                  "linear-gradient(135deg, var(--bv-brand), var(--bv-brand-deep))",
+                background: "var(--bv-brand-mid)",
                 boxShadow: "0 10px 26px var(--bv-brand-tint-32)",
               }}
             >

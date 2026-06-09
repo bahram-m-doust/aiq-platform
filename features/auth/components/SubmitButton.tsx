@@ -2,7 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 
-import { DSButton } from "@/components/ds/Button";
+import { Button } from "@/components/ui/button";
 
 export function SubmitButton({
   idleLabel,
@@ -14,8 +14,8 @@ export function SubmitButton({
   const { pending } = useFormStatus();
 
   return (
-    <DSButton className="w-full" disabled={pending} size="lg" type="submit">
+    <Button className="w-full" disabled={pending} size="lg" type="submit">
       {pending ? pendingLabel : idleLabel}
-    </DSButton>
+    </Button>
   );
 }

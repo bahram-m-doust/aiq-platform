@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { requireUserProfile } from "@/features/auth/queries";
 import { canViewAdminModulesRole } from "@/features/modules/schema";
 import { StakeholderUploadForm } from "@/features/stakeholder-interviews/components/StakeholderUploadForm";
@@ -86,6 +88,10 @@ export default async function AdminStakeholderInterviewsPage() {
             </tbody>
           </table>
         </div>
+
+        <Button asChild variant="outline">
+          <Link href="/admin">Return to Admin</Link>
+        </Button>
       </section>
     </main>
   );

@@ -128,6 +128,17 @@ export type AdminModuleBoardData = {
   pagination: PaginationState;
 };
 
+export type AdminModuleBrandGroup = {
+  brandId: string;
+  brandName: string;
+  modules: AdminModuleBoardItem[];
+};
+
+export type AdminModuleBrandGroups = {
+  actorRole: AdminModuleRole;
+  groups: AdminModuleBrandGroup[];
+};
+
 export type AdminModuleDetail = {
   actorRole: AdminModuleRole;
   module: ModuleRecord;

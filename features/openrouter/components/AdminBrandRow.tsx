@@ -191,7 +191,7 @@ export function AdminBrandRow({
                     width: `${pct}%`,
                     background: overCap
                       ? "var(--destructive)"
-                      : "linear-gradient(90deg, var(--bv-brand), var(--bv-brand-mid))",
+                      : "var(--bv-brand-mid)",
                   }}
                 />
               </div>

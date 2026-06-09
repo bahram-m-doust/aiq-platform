@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
 import { AdminChangeRequestsList } from "@/features/change-requests/components/AdminChangeRequestsList";
 import { canReviewChangeRequestRole } from "@/features/change-requests/schema";
 import { getAdminChangeRequests } from "@/features/change-requests/queries";
@@ -49,6 +51,10 @@ export default async function AdminChangeRequestsPage({
           basePath="/admin/change-requests"
           pagination={pagination}
         />
+
+        <Button asChild variant="outline">
+          <Link href="/admin">Return to Admin</Link>
+        </Button>
       </section>
     </main>
   );

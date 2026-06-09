@@ -33,7 +33,6 @@ import {
   getRagApprovedFilesForSync,
 } from "@/features/rag/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { downloadPrivateFile } from "@/features/documents/storage";
 import { RagApprovalQueue } from "@/features/rag/components/RagApprovalQueue";
 import { RagSyncPanel } from "@/features/rag/components/RagSyncPanel";
 import { hasEmbeddingEnv } from "@/features/rag/embeddings";
@@ -73,7 +72,6 @@ import { formData } from "@/tests/helpers/formData";
 const mockedGetEligibleItem = vi.mocked(getEligibleRagApprovalItemByArtifactId);
 const mockedGetApprovedFilesForSync = vi.mocked(getRagApprovedFilesForSync);
 const mockedCreateAdminClient = vi.mocked(createAdminClient);
-const mockedDownloadPrivateFile = vi.mocked(downloadPrivateFile);
 const mockedHasEmbeddingEnv = vi.mocked(hasEmbeddingEnv);
 const mockedSyncFileToChunks = vi.mocked(syncFileToChunks);
 

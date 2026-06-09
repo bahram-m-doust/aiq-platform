@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 
 import { PageShell } from "@/components/ds/PageShell";
 import { BrainChat } from "@/features/agents/brain/components/BrainChat";
-import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
+import {
+  getBrandBrainConversation,
+  getBrandBrainWorkspace,
+} from "@/features/agents/brain/queries";
 import { requireUserProfile } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
@@ -18,9 +21,15 @@ export default async function BrandBrainPage() {
 
   // Until the brand brain is built (knowledge base synced), this destination
   // routes to the build workflow; it activates as the chat once ready.
-  if (!workspace.readiness.isReady || !workspace.access) {
+  if (!workspace.readiness.isReady || !workspace.access || !workspace.agent) {
     redirect("/dashboard/brain/roadmap");
   }
+
+  const initialMessages = await getBrandBrainConversation({
+    brandId: workspace.access.brandId,
+    agentId: workspace.agent.id,
+    userId: profile.id,
+  });
 
   return (
     <PageShell
@@ -29,7 +38,10 @@ export default async function BrandBrainPage() {
       subtitle={`Ask strategic questions against the approved knowledge base for ${workspace.access.brandName}.`}
       title="Brand Brain"
     >
-      <BrainChat access={workspace.access} />
+      <BrainChat
+        access={workspace.access}
+        initialMessages={initialMessages}
+      />
     </PageShell>
   );
 }

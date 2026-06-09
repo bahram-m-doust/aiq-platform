@@ -29,10 +29,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { BrainChat } from "@/features/agents/brain/components/BrainChat";
 import { BrainLockedState } from "@/features/agents/brain/components/BrainLockedState";
 import {
+  brandBrainHistoryMaxMessages,
   canUseBrandBrainRole,
   extractBrandBrainSources,
+  normalizeBrandBrainHistory,
+  parseBrandBrainHistory,
   resolveBrandBrainReadiness,
   toAgentRunAuditMetadata,
+  validateBrandBrainPrompt,
   validateBrandBrainPromptFormData,
 } from "@/features/agents/brain/schema";
 import { runBrandBrain } from "@/features/agents/brain/services";
@@ -177,6 +181,75 @@ describe("Brand Brain rules", () => {
     );
   });
 
+  it("parses conversation history defensively and caps the memory window", () => {
+    const valid = [
+      { role: "user", content: "  What is the positioning?  " },
+      { role: "assistant", content: "It is premium." },
+      { role: "system", content: "ignored role" },
+      { role: "user", content: "" },
+      { role: "user", content: 42 },
+      "not-an-object",
+    ];
+
+    expect(
+      parseBrandBrainHistory(
+        formData({ history: JSON.stringify(valid) }),
+      ),
+    ).toEqual([
+      { role: "user", content: "What is the positioning?" },
+      { role: "assistant", content: "It is premium." },
+    ]);
+
+    expect(parseBrandBrainHistory(new FormData())).toEqual([]);
+    expect(
+      parseBrandBrainHistory(formData({ history: "not json" })),
+    ).toEqual([]);
+
+    const overflow = Array.from(
+      { length: brandBrainHistoryMaxMessages + 4 },
+      (_, index) => ({ role: "user", content: `q${index}` }),
+    );
+    const parsed = parseBrandBrainHistory(
+      formData({ history: JSON.stringify(overflow) }),
+    );
+    expect(parsed).toHaveLength(brandBrainHistoryMaxMessages);
+    expect(parsed[parsed.length - 1]?.content).toBe(
+      `q${overflow.length - 1}`,
+    );
+  });
+
+  it("validates and normalizes JSON-body prompts and history for the stream route", () => {
+    expect(validateBrandBrainPrompt("  Positioning?  ")).toEqual({
+      prompt: "Positioning?",
+      error: null,
+    });
+    expect(validateBrandBrainPrompt(42).error).toBe(
+      "Enter a question for Brand Brain.",
+    );
+
+    expect(
+      normalizeBrandBrainHistory([
+        { role: "user", content: "  Hi  " },
+        { role: "assistant", content: "Hello." },
+        { role: "system", content: "drop me" },
+        { role: "user", content: "" },
+      ]),
+    ).toEqual([
+      { role: "user", content: "Hi" },
+      { role: "assistant", content: "Hello." },
+    ]);
+
+    expect(normalizeBrandBrainHistory("not-an-array")).toEqual([]);
+
+    const overflow = Array.from(
+      { length: brandBrainHistoryMaxMessages + 3 },
+      (_, index) => ({ role: "user" as const, content: `q${index}` }),
+    );
+    expect(normalizeBrandBrainHistory(overflow)).toHaveLength(
+      brandBrainHistoryMaxMessages,
+    );
+  });
+
   it("extracts safe file-search sources without document content", () => {
     const sources = extractBrandBrainSources({
       output: [
@@ -292,11 +365,17 @@ describe("Brand Brain service", () => {
         Promise.resolve({ data: value, error: null }),
       ),
     };
+    const instructionBuilder = {
+      select: vi.fn(() => instructionBuilder),
+      eq: vi.fn(() => instructionBuilder),
+      or: vi.fn(() => Promise.resolve({ data: [], error: null })),
+    };
     const from = vi.fn((table: string) => {
       if (table === "agent_runs") return agentRunBuilder;
       if (table === "audit_logs") return auditBuilder;
       if (table === "brands") return brandsBuilder;
       if (table === "agent_run_usage") return usageBuilder;
+      if (table === "brand_agent_settings") return instructionBuilder;
       throw new Error(`Unexpected table ${table}`);
     });
 

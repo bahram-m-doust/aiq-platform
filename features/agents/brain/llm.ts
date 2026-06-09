@@ -3,7 +3,11 @@ import "server-only";
 import {
   toBrandBrainDisplaySources,
 } from "@/features/agents/brain/schema";
-import type { BrandBrainRetrievedSource } from "@/features/agents/brain/types";
+import { joinPromptLayers } from "@/features/agents/instructions/schema";
+import type {
+  BrandBrainChatMessage,
+  BrandBrainRetrievedSource,
+} from "@/features/agents/brain/types";
 import { searchBrandKnowledge } from "@/features/rag/vector-search";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import {
@@ -18,8 +22,14 @@ export function isLLMBrainConfigError(error: unknown): error is DomainError {
   return isDomainErrorWithCode(error, CODE);
 }
 
-const BRAIN_SYSTEM_PROMPT =
-  "You are Bextudio's Brand Integrator Brain. Answer with a formal executive tone using only the provided brand knowledge context. If the context does not contain enough information to answer, say that the current Brand Brain knowledge base does not contain enough information.";
+// Layer [1] — role/identity, locked in code.
+const BRAIN_ROLE_PROMPT =
+  "You are Bextudio's Brand Integrator Brain, a strategic assistant that answers in a formal executive tone.";
+
+// Layer [3] — safety/scope guard, locked in code and appended after the
+// admin-edited brand instruction so it can never be overridden.
+const BRAIN_SAFETY_GUARD =
+  "Answer using only the provided brand knowledge context. If the context does not contain enough information to answer, say that the current Brand Brain knowledge base does not contain enough information. Never reference other brands, knowledge that was not provided, or internal system details.";
 
 function buildContextBlock(
   chunks: { chunkText: string; fileName: string; score: number }[],
@@ -52,14 +62,15 @@ export function getBrandBrainModel(): string {
   return getOpenRouterModel();
 }
 
-export async function createBrandBrainResponse({
+// Retrieval keys off the latest question only; prior turns are supplied to the
+// model purely as conversational memory so follow-ups stay grounded in the
+// freshly retrieved context rather than drifting onto earlier topics.
+export async function retrieveBrandBrainContext({
   prompt,
   brandId,
-  model = getBrandBrainModel(),
 }: {
   prompt: string;
   brandId: string;
-  model?: string;
 }) {
   const chunks = await searchBrandKnowledge({
     brandId,
@@ -67,33 +78,121 @@ export async function createBrandBrainResponse({
     topK: 5,
   });
 
-  const context = buildContextBlock(chunks);
+  const retrievedSources = toRetrievedSources(chunks);
+
+  return {
+    context: buildContextBlock(chunks),
+    retrievedSources,
+    displaySources: toBrandBrainDisplaySources(retrievedSources),
+  };
+}
+
+type ChatMessageParam = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+export function buildBrandBrainMessages({
+  context,
+  history,
+  prompt,
+  instruction = "",
+}: {
+  context: string;
+  history: BrandBrainChatMessage[];
+  prompt: string;
+  instruction?: string;
+}): ChatMessageParam[] {
+  // Layered composition: role + brand instruction + safety guard + RAG context.
+  const systemContent = joinPromptLayers([
+    BRAIN_ROLE_PROMPT,
+    instruction,
+    BRAIN_SAFETY_GUARD,
+    context,
+  ]);
+
+  return [
+    { role: "system", content: systemContent },
+    ...history.map((message) => ({
+      role: message.role,
+      content: message.content,
+    })),
+    { role: "user", content: prompt },
+  ];
+}
+
+export function computeBrainUsage({
+  model,
+  promptTokens,
+  completionTokens,
+}: {
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+}) {
+  return {
+    promptTokens,
+    completionTokens,
+    costCents: computeTextCostCents({ model, promptTokens, completionTokens }),
+    model,
+  };
+}
+
+export async function createBrandBrainResponse({
+  prompt,
+  brandId,
+  history = [],
+  instruction = "",
+  model = getBrandBrainModel(),
+}: {
+  prompt: string;
+  brandId: string;
+  history?: BrandBrainChatMessage[];
+  instruction?: string;
+  model?: string;
+}) {
+  const { context, retrievedSources, displaySources } =
+    await retrieveBrandBrainContext({ prompt, brandId });
 
   const client = await getOpenRouterClientForBrand(brandId);
   const completion = await client.chat.completions.create({
     model,
-    messages: [
-      { role: "system", content: BRAIN_SYSTEM_PROMPT + context },
-      { role: "user", content: prompt },
-    ],
+    messages: buildBrandBrainMessages({ context, history, prompt, instruction }),
   });
 
   const answer = completion.choices[0]?.message?.content?.trim() ?? "";
-  const retrievedSources = toRetrievedSources(chunks);
-
-  const promptTokens = completion.usage?.prompt_tokens ?? 0;
-  const completionTokens = completion.usage?.completion_tokens ?? 0;
-  const costCents = computeTextCostCents({
-    model,
-    promptTokens,
-    completionTokens,
-  });
 
   return {
     responseId: completion.id ?? `pgvector-${Date.now()}`,
     answer,
     retrievedSources,
-    displaySources: toBrandBrainDisplaySources(retrievedSources),
-    usage: { promptTokens, completionTokens, costCents, model },
+    displaySources,
+    usage: computeBrainUsage({
+      model,
+      promptTokens: completion.usage?.prompt_tokens ?? 0,
+      completionTokens: completion.usage?.completion_tokens ?? 0,
+    }),
   };
+}
+
+// Opens a token stream against the brand-scoped client. `include_usage` asks
+// OpenRouter to append a final chunk carrying token counts so the caller can
+// price the run after the answer finishes streaming.
+export async function openBrandBrainStream({
+  brandId,
+  model,
+  messages,
+}: {
+  brandId: string;
+  model: string;
+  messages: ChatMessageParam[];
+}) {
+  const client = await getOpenRouterClientForBrand(brandId);
+
+  return client.chat.completions.create({
+    model,
+    messages,
+    stream: true,
+    stream_options: { include_usage: true },
+  });
 }

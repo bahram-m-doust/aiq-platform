@@ -1,13 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowLeftIcon, CheckCircleIcon, LockIcon } from "lucide-react";
+import { ArrowLeftIcon, CheckCircleIcon, DownloadIcon, LockIcon } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLast,
+  PaginationLink,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import {
-  calculateIntakeCompletion,
   isIntakeAnswerComplete,
   isIntakeSessionLocked,
 } from "@/features/intake/schemas";
@@ -37,6 +45,7 @@ export function SectionQuestionnaire({
   session,
   answers: initialAnswers,
   allSections,
+  latestSnapshotId = null,
   autoValidate = false,
 }: {
   section: IntakeSectionWithQuestions;
@@ -45,6 +54,7 @@ export function SectionQuestionnaire({
   completion: IntakeCompletion;
   brandName: string;
   allSections: IntakeSectionWithQuestions[];
+  latestSnapshotId?: string | null;
   autoValidate?: boolean;
 }) {
   const locked = isIntakeSessionLocked(session);
@@ -54,14 +64,6 @@ export function SectionQuestionnaire({
       initialAnswers,
     });
   const displayedAnswers = locked ? initialAnswers : answers;
-  const completion = useMemo(
-    () =>
-      calculateIntakeCompletion({
-        sections: allSections,
-        answers: displayedAnswers,
-      }),
-    [displayedAnswers, allSections],
-  );
 
   const sectionQuestionIds = section.questions.map((question) => question.id);
   const sectionAnswered = sectionQuestionIds.filter((id) =>
@@ -73,8 +75,7 @@ export function SectionQuestionnaire({
 
   const sectionIndex = allSections.findIndex((item) => item.id === section.id) + 1;
 
-  const router = useRouter();
-  const [showErrors, setShowErrors] = useState(autoValidate);
+  const [showErrors] = useState(autoValidate);
 
   // Arrived here from the overview's "fix this" link — highlight the gaps and
   // jump to the first unanswered question.
@@ -91,25 +92,6 @@ export function SectionQuestionnaire({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoValidate]);
 
-  function handleFinish() {
-    const emptyQuestions = section.questions.filter(
-      (question) => !isIntakeAnswerComplete(displayedAnswers[question.id] ?? null),
-    );
-
-    // Unanswered questions in this section — flag them in place instead of
-    // navigating away.
-    if (emptyQuestions.length > 0) {
-      setShowErrors(true);
-      document
-        .getElementById(`question-card-${emptyQuestions[0].id}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-
-    // This section is complete — head to the overview to finish the rest.
-    router.push("/dashboard/questionnaire");
-  }
-
   return (
     <div
       className="min-h-svh px-4 py-6 sm:px-6 sm:py-8"
@@ -117,13 +99,12 @@ export function SectionQuestionnaire({
     >
       <div className="mx-auto max-w-[1057px]">
         <div className="mb-6 flex items-center justify-between">
-          <Link
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-3.5 py-2 text-[13px] text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)]"
-            href="/dashboard/questionnaire"
-          >
-            <ArrowLeftIcon className="size-3.5" />
-            All sections
-          </Link>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/dashboard/questionnaire">
+              <ArrowLeftIcon className="size-3.5" />
+              All sections
+            </Link>
+          </Button>
           <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
             Section {sectionIndex} of {allSections.length} - {sectionAnswered}/
             {sectionTotal} answered
@@ -158,14 +139,23 @@ export function SectionQuestionnaire({
           </div>
 
           {locked && (
-            <div
-              className="mt-4 flex items-center gap-2 rounded-[12px] border border-dashed px-3.5 py-2.5 text-[13px] text-[var(--bv-ink-2)]"
-              style={{ borderColor: "var(--bv-line-2)" }}
-            >
-              <LockIcon className="size-3.5 shrink-0" />
-              This questionnaire is submitted and locked - answers are shown for
-              reference only.
-            </div>
+            <Alert className="mt-4" variant="success">
+              <LockIcon />
+              <AlertDescription>
+                This questionnaire is submitted and locked - answers are shown
+                for reference only.
+              </AlertDescription>
+              {latestSnapshotId && (
+                <a
+                  className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                  download
+                  href={`/api/intake/${latestSnapshotId}/docx`}
+                >
+                  <DownloadIcon className="size-3.5" />
+                  Download answers (Word)
+                </a>
+              )}
+            </Alert>
           )}
 
           <div className="mt-5">
@@ -193,7 +183,11 @@ export function SectionQuestionnaire({
                         : // Other tabs — plain muted label, no background
                           "text-muted-foreground hover:text-foreground",
                     )}
-                    href={`/dashboard/questionnaire/${item.key}`}
+                    href={
+                      isComplete
+                        ? `/dashboard/questionnaire/${item.key}`
+                        : `/dashboard/questionnaire/${item.key}?validate=1`
+                    }
                     key={item.id}
                   >
                     {isComplete && (
@@ -223,7 +217,7 @@ export function SectionQuestionnaire({
                   <span>
                     {sectionIndex}.{String(index + 1).padStart(2, "0")}
                   </span>
-                  {question.isRequired && <span>REQUIRED</span>}
+                  {!locked && question.isRequired && <span>REQUIRED</span>}
                 </div>
                 <div className="mt-3">
                   {locked ? (
@@ -259,43 +253,68 @@ export function SectionQuestionnaire({
         </div>
 
         <div
-          className="mt-8 flex items-center justify-between border-t border-dashed pt-6"
+          className="mt-8 flex flex-col gap-5 border-t border-dashed pt-6"
           style={{ borderColor: "var(--bv-line-dashed)" }}
         >
-          <Link
-            className="inline-flex items-center gap-2 text-sm text-[var(--bv-ink-3)] transition-colors hover:text-[var(--bv-ink)]"
-            href="/dashboard/questionnaire"
-          >
-            <ArrowLeftIcon className="size-3.5" />
-            All sections
-          </Link>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href={
+                    sectionIndex > 1
+                      ? `/dashboard/questionnaire/${allSections[sectionIndex - 2].key}`
+                      : undefined
+                  }
+                />
+              </PaginationItem>
+              {allSections.map((item, index) => (
+                <PaginationItem key={item.key}>
+                  <PaginationLink
+                    href={`/dashboard/questionnaire/${item.key}`}
+                    isActive={index + 1 === sectionIndex}
+                  >
+                    {index + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationLast
+                  href={
+                    sectionIndex < allSections.length
+                      ? `/dashboard/questionnaire/${allSections[allSections.length - 1].key}`
+                      : undefined
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
 
-          {sectionIndex < allSections.length ? (
+          <div className="flex items-center justify-between">
             <Link
-              className="group inline-flex items-center gap-2 rounded-full border border-[var(--bv-line)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] hover:shadow-md"
-              href={`/dashboard/questionnaire/${allSections[sectionIndex].key}`}
-            >
-              Next: {allSections[sectionIndex].title}
-              <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
-                -&gt;
-              </span>
-            </Link>
-          ) : completion.completionPercent === 100 ? (
-            <Link
-              className="inline-flex items-center rounded-full border border-[var(--bv-line)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] hover:shadow-md"
+              className="inline-flex items-center gap-2 text-sm text-[var(--bv-ink-3)] transition-colors hover:text-[var(--bv-ink)]"
               href="/dashboard/questionnaire"
             >
-              Review &amp; submit
+              <ArrowLeftIcon className="size-3.5" />
+              All sections
             </Link>
-          ) : (
-            <button
-              className="inline-flex items-center rounded-full border border-[var(--bv-line)] bg-white px-4 py-2 text-[13px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:bg-[var(--bv-card-soft)] hover:text-[var(--bv-ink)] hover:shadow-md"
-              onClick={handleFinish}
-              type="button"
-            >
-              Finish questionnaire
-            </button>
-          )}
+
+            {sectionIndex < allSections.length ? (
+              <Button asChild className="group" variant="outline">
+                <Link
+                  href={`/dashboard/questionnaire/${allSections[sectionIndex].key}?validate=1`}
+                >
+                  Next: {allSections[sectionIndex].title}
+                  <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
+                    -&gt;
+                  </span>
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild variant="outline">
+                <Link href="/dashboard/questionnaire">Review &amp; submit</Link>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

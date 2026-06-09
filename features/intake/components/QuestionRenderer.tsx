@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   AlertCircleIcon,
   CheckIcon,
@@ -8,6 +8,7 @@ import {
   PencilIcon,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -141,6 +142,10 @@ export function QuestionRenderer({
   const [isEditing, setIsEditing] = useState(
     () => !isIntakeAnswerComplete(value),
   );
+  // Text inputs hold their in-progress value locally while focused so typing
+  // never triggers a save; we resync from the committed value only when the
+  // field is not being edited (a restored draft or a completed save).
+  const isFocusedRef = useRef(false);
   const kind = resolveQuestionInputKind(question.inputType);
   const options = useMemo(
     () => parseQuestionOptions(question.validationSchema),
@@ -150,6 +155,12 @@ export function QuestionRenderer({
   const statusId = `${controlId}-status`;
   const usesQueuedAutosave = Boolean(onQueuedChange);
   const currentValue = usesQueuedAutosave ? value : localValue;
+
+  useEffect(() => {
+    if (!isFocusedRef.current) {
+      setLocalValue(value);
+    }
+  }, [value]);
   const displayedStatus = saveState?.status ?? status;
   const displayedMessage = saveState?.message ?? message;
   // Flagged by the parent on a finish attempt when this required answer is empty.
@@ -202,16 +213,17 @@ export function QuestionRenderer({
 
   function setTextValue(nextValue: string) {
     setStatus("idle");
-    if (onQueuedChange) {
-      queueValue(nextValue);
-    } else {
-      setLocalValue(nextValue);
-    }
+    // Typing only updates the local draft — no save is queued until the field
+    // loses focus, so the "Saving" indicator never flashes mid-keystroke.
+    setLocalValue(nextValue);
   }
 
   function handleTextBlur() {
+    isFocusedRef.current = false;
+
     if (onQueuedChange) {
-      queueValue(currentValue, true);
+      // Commit the local draft once, on blur (flush = save immediately).
+      queueValue(localValue, true);
       return;
     }
 
@@ -219,19 +231,45 @@ export function QuestionRenderer({
     save(localValue);
   }
 
+  // Keyboard fast-fill: Ctrl/Cmd+Enter jumps to the next questionnaire field
+  // (focusing it blurs the current one, which autosaves), so the whole form can
+  // be completed without the mouse. Plain Tab still works as usual.
+  function handleFieldKeyDown(
+    event: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) {
+    if (!(event.ctrlKey || event.metaKey) || event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    const fields = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-intake-field]"),
+    );
+    const index = fields.indexOf(event.currentTarget);
+    const next = index >= 0 ? fields[index + 1] : undefined;
+    if (next) {
+      next.focus();
+    } else {
+      event.currentTarget.blur();
+    }
+  }
+
   function handleDone() {
-    if (
+    const isTextKind =
       kind === "text" ||
       kind === "textarea" ||
       kind === "url" ||
-      kind === "number"
-    ) {
+      kind === "number";
+
+    if (isTextKind) {
       handleTextBlur();
     }
 
     // Only collapse to the read-only "done" view when there is an actual
-    // answer. An empty Done must keep the field in edit mode.
-    if (isIntakeAnswerComplete(currentValue)) {
+    // answer. For text fields the freshest value lives in the local draft
+    // (the committed value updates a render later). An empty Done must keep
+    // the field in edit mode.
+    const committedValue = isTextKind ? localValue : currentValue;
+    if (isIntakeAnswerComplete(committedValue)) {
       setIsEditing(false);
     }
   }
@@ -386,12 +424,17 @@ export function QuestionRenderer({
         <Textarea
           aria-describedby={statusId}
           aria-invalid={displayedStatus === "error" || showRequiredError}
-          dir={detectDir(currentValue)}
+          data-intake-field
+          dir={detectDir(localValue)}
           id={controlId}
           onBlur={handleTextBlur}
           onChange={(event) => setTextValue(event.target.value)}
+          onFocus={() => {
+            isFocusedRef.current = true;
+          }}
+          onKeyDown={handleFieldKeyDown}
           placeholder="Enter a considered response"
-          value={valueToString(currentValue)}
+          value={valueToString(localValue)}
         />
       );
     }
@@ -400,13 +443,18 @@ export function QuestionRenderer({
       <Input
         aria-describedby={statusId}
         aria-invalid={displayedStatus === "error" || showRequiredError}
-        dir={detectDir(currentValue)}
+        data-intake-field
+        dir={detectDir(localValue)}
         id={controlId}
         onBlur={handleTextBlur}
         onChange={(event) => setTextValue(event.target.value)}
+        onFocus={() => {
+          isFocusedRef.current = true;
+        }}
+        onKeyDown={handleFieldKeyDown}
         placeholder="Enter your response"
         type={kind}
-        value={valueToString(currentValue)}
+        value={valueToString(localValue)}
       />
     );
   }
@@ -446,21 +494,23 @@ export function QuestionRenderer({
                 status={displayedStatus}
               />
             </span>
-            <button
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] text-[var(--bv-ink-2)] transition-colors hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+            <Button
+              className="shrink-0"
               onClick={handleDone}
-              style={{ borderColor: "var(--bv-line)" }}
+              size="sm"
               type="button"
+              variant="outline"
             >
               <CheckIcon className="size-3.5" />
               Done
-            </button>
+            </Button>
           </div>
         </>
       ) : (
         <>
           <div
             className="mt-3 rounded-[12px] border px-3.5 py-2.5 text-[13.5px] leading-6 whitespace-pre-wrap"
+            dir={detectDir(currentValue)}
             style={{
               background: "var(--bv-card-soft)",
               borderColor: "var(--bv-line)",
@@ -481,15 +531,16 @@ export function QuestionRenderer({
                 status={displayedStatus}
               />
             </span>
-            <button
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] text-[var(--bv-ink-2)] transition-colors hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+            <Button
+              className="shrink-0"
               onClick={() => setIsEditing(true)}
-              style={{ borderColor: "var(--bv-line)" }}
+              size="sm"
               type="button"
+              variant="outline"
             >
               <PencilIcon className="size-3.5" />
               Edit
-            </button>
+            </Button>
           </div>
         </>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -24,7 +25,9 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,18 +36,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  addStakeholderAnnotationAction,
-  approveStakeholderReportAction,
-  deleteStakeholderAnnotationAction,
-  editStakeholderAnnotationAction,
-  resolveStakeholderAnnotationAction,
-} from "@/features/stakeholder-interviews/actions";
-import { StakeholderHeader } from "@/features/stakeholder-interviews/components/StakeholderHeader";
-import type { StakeholderAnnotation } from "@/features/stakeholder-interviews/types";
+import type {
+  AddAnnotationInput,
+  AddAnnotationResult,
+  StakeholderAnnotation,
+} from "@/features/stakeholder-interviews/types";
 import { cn } from "@/lib/utils";
 
 type Draft = { page: number; x: number; y: number } | null;
+
+// The annotator is generic over the report kind — each consumer (Stakeholder
+// Interviews, Futures Research, …) passes its own server actions and header.
+export type PdfReviewActions = {
+  addAnnotation: (input: AddAnnotationInput) => Promise<AddAnnotationResult>;
+  approveReport: () => Promise<{ ok: boolean; message?: string }>;
+  deleteAnnotation: (
+    annotationId: string,
+  ) => Promise<{ ok: boolean; message?: string }>;
+  editAnnotation: (
+    annotationId: string,
+    body: string,
+  ) => Promise<{ ok: boolean; message?: string }>;
+  resolveAnnotation: (
+    annotationId: string,
+    resolved: boolean,
+  ) => Promise<{ ok: boolean; message?: string }>;
+};
 
 function formatCommentDate(value: string | null): string {
   if (!value) return "";
@@ -72,7 +89,8 @@ export function PdfAnnotator({
   canResolve,
   canApprove,
   isApproved,
-  status,
+  actions,
+  header,
 }: {
   signedUrl: string;
   reportId: string;
@@ -82,13 +100,19 @@ export function PdfAnnotator({
   canResolve: boolean;
   canApprove: boolean;
   isApproved: boolean;
-  status: string;
+  actions: PdfReviewActions;
+  header: ReactNode;
 }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfRef = useRef<any>(null);
+  // In-flight pdf.js render task. A new render must cancel and await the
+  // previous one, otherwise pdf.js throws "Cannot use the same canvas during
+  // multiple render() operations" (e.g. on resize or comment-panel toggles).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderTaskRef = useRef<any>(null);
   // Per-page vertical content bounds (PDF user-space Y), used to trim the
   // empty top/bottom margins of low-content pages.
   const cropRef = useRef<Map<number, { minY: number; maxY: number }>>(
@@ -99,6 +123,12 @@ export function PdfAnnotator({
   // the dashboard view). `pageIndex` indexes into this list.
   const [contentPages, setContentPages] = useState<number[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
+  // Page indices the reviewer has actually landed on. Drives the "reviewed
+  // N / total" hint and the soft warning when approving early.
+  const [viewedPages, setViewedPages] = useState<Set<number>>(
+    () => new Set([0]),
+  );
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [size, setSize] = useState<{ width: number; height: number } | null>(
     null,
   );
@@ -140,13 +170,25 @@ export function PdfAnnotator({
 
   function goToAnnotation(annotation: StakeholderAnnotation) {
     const idx = contentPages.indexOf(annotation.page);
-    if (idx >= 0) setPageIndex(idx);
+    if (idx >= 0) goToPage(idx);
     setOpenPin(annotation.id);
   }
 
+  // Navigate to a page and mark it reviewed (drives the "reviewed N / total"
+  // hint and the soft warning when approving early).
+  const goToPage = useCallback((index: number) => {
+    setPageIndex(index);
+    setViewedPages((prev) => {
+      if (prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+  }, []);
+
   function approve() {
     startApproving(async () => {
-      const result = await approveStakeholderReportAction();
+      const result = await actions.approveReport();
       if (result.ok) router.refresh();
     });
   }
@@ -251,23 +293,57 @@ export function PdfAnnotator({
       cssHeight = full.height;
     }
 
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Ensure any previous render on this canvas has fully settled before
+    // starting a new one.
+    if (renderTaskRef.current) {
+      const prev = renderTaskRef.current;
+      prev.cancel();
+      try {
+        await prev.promise;
+      } catch {
+        // ignore cancellation
+      }
+      renderTaskRef.current = null;
+    }
+
     canvas.width = Math.floor(cssWidth * ratio);
     canvas.height = Math.floor(cssHeight * ratio);
     canvas.style.width = `${cssWidth}px`;
     canvas.style.height = `${cssHeight}px`;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    await pdfPage.render({ canvasContext: ctx, viewport }).promise;
+    const task = pdfPage.render({ canvasContext: ctx, viewport });
+    renderTaskRef.current = task;
+    try {
+      await task.promise;
+    } catch (err) {
+      if ((err as Error)?.name === "RenderingCancelledException") return;
+      throw err;
+    }
+    if (renderTaskRef.current === task) renderTaskRef.current = null;
     setSize({ width: cssWidth, height: cssHeight });
   }, [currentPdfPage]);
 
   useEffect(() => {
     void renderPage();
-    const onResize = () => void renderPage();
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    const onResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => void renderPage(), 150);
+    };
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    return () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      window.removeEventListener("resize", onResize);
+      // Cancel any in-flight render so it doesn't touch a stale canvas.
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+        renderTaskRef.current = null;
+      }
+    };
     // Re-render when the sidebar toggles (the PDF column changes width).
   }, [renderPage, contentPages.length, showComments]);
 
@@ -288,7 +364,7 @@ export function PdfAnnotator({
   function saveDraft() {
     if (!draft || !draftBody.trim()) return;
     startSaving(async () => {
-      const result = await addStakeholderAnnotationAction({
+      const result = await actions.addAnnotation({
         reportId,
         page: draft.page,
         posX: draft.x,
@@ -308,7 +384,7 @@ export function PdfAnnotator({
     const body = replyBody.trim();
     if (!body) return;
     startMutating(async () => {
-      const result = await addStakeholderAnnotationAction({
+      const result = await actions.addAnnotation({
         reportId,
         page: root.page,
         posX: root.posX,
@@ -328,7 +404,7 @@ export function PdfAnnotator({
     const body = editBody.trim();
     if (!body) return;
     startMutating(async () => {
-      const result = await editStakeholderAnnotationAction(annotation.id, body);
+      const result = await actions.editAnnotation(annotation.id, body);
       if (result.ok) {
         setAnnotations((current) =>
           current.map((item) =>
@@ -343,7 +419,7 @@ export function PdfAnnotator({
 
   function deleteAnnotation(annotation: StakeholderAnnotation) {
     startMutating(async () => {
-      const result = await deleteStakeholderAnnotationAction(annotation.id);
+      const result = await actions.deleteAnnotation(annotation.id);
       if (result.ok) {
         setAnnotations((current) =>
           current.filter(
@@ -364,7 +440,7 @@ export function PdfAnnotator({
         item.id === annotation.id ? { ...item, resolved: next } : item,
       ),
     );
-    void resolveStakeholderAnnotationAction(annotation.id, next);
+    void actions.resolveAnnotation(annotation.id, next);
   }
 
   // Only root comments are pinned on the page; replies live in the sidebar.
@@ -372,6 +448,8 @@ export function PdfAnnotator({
     (item) => item.page === currentPdfPage,
   );
   const totalPages = contentPages.length;
+  const reviewedCount = Math.min(viewedPages.size, totalPages || 1);
+  const allReviewed = totalPages > 0 && reviewedCount >= totalPages;
 
   function startEditing(annotation: StakeholderAnnotation) {
     setEditingId(annotation.id);
@@ -386,10 +464,12 @@ export function PdfAnnotator({
 
   return (
     <div className="px-2 pt-[15px]">
-      <div className="flex w-full max-w-[1024px] flex-col gap-6 lg:flex-row lg:items-start">
-        {/* Left column — header, hint, PDF, approve */}
-        <div className="flex min-w-0 flex-1 flex-col gap-4 lg:max-w-[756px]">
-          <StakeholderHeader status={status} />
+      <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
+        {/* Left column — header, hint, PDF, approve. Centered in the space
+            that remains beside the right-anchored comments rail. */}
+        <div className="flex min-w-0 flex-1 lg:justify-center">
+          <div className="flex w-full flex-col gap-4 lg:max-w-[756px]">
+          {header}
 
           {editable ? (
             <div className="flex items-center gap-[9px]">
@@ -397,6 +477,34 @@ export function PdfAnnotator({
               <span className="text-[12px] font-light text-muted-foreground">
                 Click anywhere on the page to add a comment.
               </span>
+            </div>
+          ) : null}
+
+          {totalPages > 1 ? (
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                aria-label="Previous page"
+                disabled={pageIndex <= 0}
+                onClick={() => goToPage(Math.max(0, pageIndex - 1))}
+                size="icon"
+                type="button"
+                variant="outline"
+              >
+                <ChevronLeftIcon />
+              </Button>
+              <span className="min-w-[84px] text-center text-sm text-muted-foreground tabular-nums">
+                {pageIndex + 1} / {totalPages}
+              </span>
+              <Button
+                aria-label="Next page"
+                disabled={pageIndex >= totalPages - 1}
+                onClick={() => goToPage(Math.min(totalPages - 1, pageIndex + 1))}
+                size="icon"
+                type="button"
+                variant="outline"
+              >
+                <ChevronRightIcon />
+              </Button>
             </div>
           ) : null}
 
@@ -457,21 +565,19 @@ export function PdfAnnotator({
                             <p className="whitespace-pre-wrap text-sm text-foreground">
                               {annotation.body}
                             </p>
-                            {canResolve ? (
+                            {annotation.resolved ? (
+                              <p className="mt-2 text-xs text-[#008a2e]">
+                                Solved
+                              </p>
+                            ) : canResolve ? (
                               <button
                                 className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                                 onClick={() => toggleResolve(annotation)}
                                 type="button"
                               >
                                 <CheckIcon className="size-3" />
-                                {annotation.resolved
-                                  ? "Mark unsolved"
-                                  : "Mark solved"}
+                                Mark solved
                               </button>
-                            ) : annotation.resolved ? (
-                              <p className="mt-2 text-xs text-[#008a2e]">
-                                Solved
-                              </p>
                             ) : null}
                           </div>
                         ) : null}
@@ -508,6 +614,7 @@ export function PdfAnnotator({
                             onClick={saveDraft}
                             size="sm"
                             type="button"
+                            variant="outline"
                           >
                             {isSaving ? (
                               <Loader2Icon className="animate-spin" />
@@ -532,36 +639,6 @@ export function PdfAnnotator({
             </div>
           )}
 
-          {totalPages > 1 ? (
-            <div className="flex items-center justify-center gap-3">
-              <Button
-                disabled={pageIndex <= 0}
-                onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <ChevronLeftIcon />
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {pageIndex + 1} / {totalPages}
-              </span>
-              <Button
-                disabled={pageIndex >= totalPages - 1}
-                onClick={() =>
-                  setPageIndex((i) => Math.min(totalPages - 1, i + 1))
-                }
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                Next
-                <ChevronRightIcon />
-              </Button>
-            </div>
-          ) : null}
-
           {isApproved ? (
             <div className="flex flex-col items-center gap-3 pt-2 sm:flex-row sm:justify-center">
               <span className="inline-flex items-center gap-2 text-sm font-medium text-[#157a52]">
@@ -570,20 +647,59 @@ export function PdfAnnotator({
               </span>
             </div>
           ) : canApprove ? (
-            <div className="flex justify-center pt-2">
-              <button
-                className="inline-flex h-10 min-w-[166px] items-center justify-center gap-2 rounded-md bg-[#1da9b9] px-4 text-sm font-semibold tracking-[-0.084px] text-white transition-colors hover:bg-[#1796a5] disabled:opacity-60"
-                disabled={isApproving}
-                onClick={approve}
-                type="button"
+            <div className="flex flex-col items-center gap-2 pt-2">
+              {totalPages > 1 ? (
+                <span
+                  className={cn(
+                    "text-[12px]",
+                    allReviewed
+                      ? "font-medium text-[#157a52]"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {allReviewed
+                    ? "All pages reviewed."
+                    : `Reviewed ${reviewedCount} / ${totalPages} pages`}
+                </span>
+              ) : null}
+              <ConfirmDialog
+                confirmLabel="Approve"
+                description="Approving unlocks Futures Research and locks this report from further changes."
+                errorMessage={null}
+                isPending={isApproving}
+                onConfirm={approve}
+                onOpenChange={setConfirmOpen}
+                open={confirmOpen}
+                pendingLabel="Approving…"
+                title="Approve this report?"
+                trigger={
+                  <Button
+                    className="min-w-[166px]"
+                    disabled={isApproving}
+                    size="lg"
+                    type="button"
+                  >
+                    {isApproving ? (
+                      <Loader2Icon className="size-4 animate-spin" />
+                    ) : null}
+                    Approve
+                  </Button>
+                }
+                variant="default"
               >
-                {isApproving ? (
-                  <Loader2Icon className="size-4 animate-spin" />
+                {!allReviewed && totalPages > 1 ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>
+                      You haven&apos;t viewed all pages yet ({reviewedCount} /{" "}
+                      {totalPages}). You can still approve, but consider
+                      reviewing the rest first.
+                    </AlertDescription>
+                  </Alert>
                 ) : null}
-                Approve
-              </button>
+              </ConfirmDialog>
             </div>
           ) : null}
+          </div>
         </div>
 
         {/* Right column — comments */}
@@ -709,6 +825,7 @@ export function PdfAnnotator({
                                 onClick={() => saveReply(root)}
                                 size="sm"
                                 type="button"
+                                variant="outline"
                               >
                                 {isMutating ? (
                                   <Loader2Icon className="animate-spin" />
@@ -797,7 +914,7 @@ function CommentBlock({
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="Comment actions"
-                className="-mr-1 -mt-1 flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="-mr-1 -mt-1 flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                 type="button"
               >
                 <EllipsisIcon className="size-4" />
@@ -810,10 +927,10 @@ function CommentBlock({
                   Reply
                 </DropdownMenuItem>
               ) : null}
-              {canResolve && onToggleResolve ? (
+              {canResolve && onToggleResolve && !annotation.resolved ? (
                 <DropdownMenuItem onSelect={() => onToggleResolve()}>
                   <CheckIcon />
-                  {annotation.resolved ? "Mark unsolved" : "Mark solved"}
+                  Mark solved
                 </DropdownMenuItem>
               ) : null}
               {canEdit ? (
@@ -828,7 +945,6 @@ function CommentBlock({
                   <DropdownMenuItem
                     disabled={isMutating}
                     onSelect={() => onDelete()}
-                    variant="destructive"
                   >
                     <Trash2Icon />
                     Delete
@@ -862,6 +978,7 @@ function CommentBlock({
               onClick={onSaveEdit}
               size="sm"
               type="button"
+              variant="outline"
             >
               {isMutating ? <Loader2Icon className="animate-spin" /> : null}
               Save

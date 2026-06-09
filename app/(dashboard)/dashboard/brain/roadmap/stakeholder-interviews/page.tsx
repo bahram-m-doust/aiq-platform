@@ -2,9 +2,25 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { requireUserProfile } from "@/features/auth/queries";
+import {
+  addStakeholderAnnotationAction,
+  approveStakeholderReportAction,
+  deleteStakeholderAnnotationAction,
+  editStakeholderAnnotationAction,
+  resolveStakeholderAnnotationAction,
+} from "@/features/stakeholder-interviews/actions";
+import type { PdfReviewActions } from "@/features/stakeholder-interviews/components/PdfAnnotator";
 import { PdfAnnotator } from "@/features/stakeholder-interviews/components/PdfAnnotator";
 import { StakeholderHeader } from "@/features/stakeholder-interviews/components/StakeholderHeader";
 import { getStakeholderInterviewWorkspace } from "@/features/stakeholder-interviews/queries";
+
+const stakeholderActions: PdfReviewActions = {
+  addAnnotation: addStakeholderAnnotationAction,
+  approveReport: approveStakeholderReportAction,
+  deleteAnnotation: deleteStakeholderAnnotationAction,
+  editAnnotation: editStakeholderAnnotationAction,
+  resolveAnnotation: resolveStakeholderAnnotationAction,
+};
 
 export const metadata: Metadata = {
   title: "Stakeholder Interviews | Bextudio Platform",
@@ -34,15 +50,16 @@ export default async function StakeholderInterviewsPage() {
   if (hasPdf && workspace.report && workspace.signedUrl) {
     return (
       <PdfAnnotator
+        actions={stakeholderActions}
         canApprove={workspace.canReview}
         canResolve={workspace.canReview}
         currentUserId={profile.id}
         editable={editable}
+        header={<StakeholderHeader status={status} />}
         initialAnnotations={workspace.annotations}
         isApproved={isApproved}
         reportId={workspace.report.id}
         signedUrl={workspace.signedUrl}
-        status={status}
       />
     );
   }

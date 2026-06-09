@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import { AdminDemoRequestsList } from "@/features/demo-requests/components/AdminDemoRequestsList";
 import { getPendingDemoRequests } from "@/features/demo-requests/queries";
@@ -31,6 +33,10 @@ export default async function AdminDemoRequestsPage() {
           </p>
         </div>
         <AdminDemoRequestsList requests={requests} />
+
+        <Button asChild variant="outline">
+          <Link href="/admin">Return to Admin</Link>
+        </Button>
       </section>
     </main>
   );
