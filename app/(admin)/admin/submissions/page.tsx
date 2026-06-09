@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { requirePlatformOwner } from "@/features/auth/queries";
+import { ReopenSubmissionButton } from "@/features/intake/components/ReopenSubmissionButton";
 import { getIntakeSubmissionsForAdmin } from "@/features/intake/queries";
 
 export const metadata: Metadata = {
@@ -45,6 +46,7 @@ export default async function AdminSubmissionsPage() {
                 <th className="px-4 py-2.5 text-left font-medium">Brand</th>
                 <th className="px-4 py-2.5 text-left font-medium">Submitted</th>
                 <th className="px-4 py-2.5 text-left font-medium">Export</th>
+                <th className="px-4 py-2.5 text-left font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -65,13 +67,16 @@ export default async function AdminSubmissionsPage() {
                       Download Word
                     </a>
                   </td>
+                  <td className="px-4 py-2.5">
+                    <ReopenSubmissionButton snapshotId={submission.snapshotId} />
+                  </td>
                 </tr>
               ))}
               {submissions.length === 0 ? (
                 <tr className="border-t border-border">
                   <td
                     className="px-4 py-6 text-center text-muted-foreground"
-                    colSpan={3}
+                    colSpan={4}
                   >
                     No submitted questionnaires yet.
                   </td>

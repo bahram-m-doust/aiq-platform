@@ -19,6 +19,7 @@ export const auditActions = [
   "member_joined",
   "intake_answer_updated",
   "intake_final_submitted",
+  "intake_reopened",
   "intake_section_created",
   "intake_section_updated",
   "intake_section_archived",

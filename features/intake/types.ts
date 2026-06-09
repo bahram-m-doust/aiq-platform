@@ -156,6 +156,11 @@ export type FinalSubmitIntakeFormState =
       snapshotId: string;
     };
 
+export type ReopenIntakeFormState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; message: string };
+
 export type IntakeInternalNotificationPlaceholder = {
   status: "placeholder";
   channel: "internal_team";

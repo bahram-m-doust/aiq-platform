@@ -982,3 +982,65 @@ export async function finalSubmitIntake({
     sectionKeys: sections.map((section) => section.key),
   };
 }
+
+// Admin action: send a locked questionnaire back to the brand owner for editing.
+// Reverts the session to DRAFT and clears the lock; the prior snapshot is kept
+// (a fresh one is written when the owner re-submits). Authorization is enforced
+// by the caller (platform owner only).
+export async function reopenIntakeSubmission({
+  snapshotId,
+  profileId,
+  actorRole,
+}: {
+  snapshotId: string;
+  profileId: string;
+  actorRole?: string | null;
+}): Promise<{ brandId: string; sessionId: string }> {
+  const admin = createAdminClient();
+
+  const { data: snapshotData, error: snapshotError } = await admin
+    .from("intake_snapshots")
+    .select("id, session_id, brand_id")
+    .eq("id", snapshotId)
+    .maybeSingle();
+
+  if (snapshotError) {
+    throw snapshotError;
+  }
+
+  const snapshot = snapshotData as
+    | { id: string; session_id: string; brand_id: string }
+    | null;
+  if (!snapshot) {
+    finalSubmitError("The questionnaire submission could not be found.");
+  }
+
+  const now = new Date().toISOString();
+  const { error: updateError } = await admin
+    .from("intake_sessions")
+    .update({
+      status: "DRAFT",
+      locked_at: null,
+      locked_by: null,
+      updated_at: now,
+    })
+    .eq("id", snapshot.session_id)
+    .eq("brand_id", snapshot.brand_id);
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  await logAudit({
+    actorUserId: profileId,
+    actorRole: actorRole ?? null,
+    brandId: snapshot.brand_id,
+    action: "intake_reopened",
+    entityType: "intake_session",
+    entityId: snapshot.session_id,
+    before: null,
+    after: { snapshot_id: snapshot.id, reopened_at: now },
+  });
+
+  return { brandId: snapshot.brand_id, sessionId: snapshot.session_id };
+}
