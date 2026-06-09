@@ -1,5 +1,6 @@
 import type {
   BrandBrainChatFormState,
+  BrandBrainChatMessage,
   BrandBrainReadiness,
   BrandBrainReadinessStatus,
   BrandBrainRetrievedSource,
@@ -10,6 +11,12 @@ import type { BrandAccessSummary } from "@/features/access/types";
 export const brandBrainAgentKey = "BRAND_INTEGRATOR_BRAIN";
 export const brandBrainProvider = "OPENROUTER";
 export const brandBrainPromptMaxLength = 2000;
+
+// Conversation memory window. The client sends prior turns with each request so
+// follow-up questions ("expand on that") stay coherent; we cap how many turns
+// reach the model to bound token cost and keep retrieval focused on the latest
+// question.
+export const brandBrainHistoryMaxMessages = 10;
 
 export const initialBrandBrainChatFormState: BrandBrainChatFormState = {
   status: "idle",
@@ -50,12 +57,10 @@ export function canUseBrandBrainRole(
   return role === "OWNER" || role === "EXECUTIVE_MANAGER";
 }
 
-export function validateBrandBrainPromptFormData(formData: FormData): {
+function validatePromptString(prompt: string): {
   prompt: string | null;
   error: string | null;
 } {
-  const prompt = readString(formData, "prompt");
-
   if (!prompt) {
     return { prompt: null, error: "Enter a question for Brand Brain." };
   }
@@ -68,6 +73,72 @@ export function validateBrandBrainPromptFormData(formData: FormData): {
   }
 
   return { prompt, error: null };
+}
+
+export function validateBrandBrainPromptFormData(formData: FormData): {
+  prompt: string | null;
+  error: string | null;
+} {
+  return validatePromptString(readString(formData, "prompt"));
+}
+
+// JSON-body equivalent used by the streaming route handler.
+export function validateBrandBrainPrompt(value: unknown): {
+  prompt: string | null;
+  error: string | null;
+} {
+  return validatePromptString(typeof value === "string" ? value.trim() : "");
+}
+
+function toChatMessage(value: unknown): BrandBrainChatMessage | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const role = value.role;
+  const content = typeof value.content === "string" ? value.content.trim() : "";
+
+  if ((role !== "user" && role !== "assistant") || !content) {
+    return null;
+  }
+
+  return { role, content: content.slice(0, brandBrainPromptMaxLength) };
+}
+
+// History arrives as untrusted input from the browser; normalize defensively and
+// cap it to the memory window so a crafted payload can't balloon the model
+// context.
+export function normalizeBrandBrainHistory(
+  value: unknown,
+): BrandBrainChatMessage[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const messages = value
+    .map(toChatMessage)
+    .filter((message): message is BrandBrainChatMessage => message !== null);
+
+  return messages.slice(-brandBrainHistoryMaxMessages);
+}
+
+export function parseBrandBrainHistory(
+  formData: FormData,
+): BrandBrainChatMessage[] {
+  const raw = formData.get("history");
+
+  if (typeof raw !== "string" || !raw) {
+    return [];
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+
+  return normalizeBrandBrainHistory(parsed);
 }
 
 function readiness({

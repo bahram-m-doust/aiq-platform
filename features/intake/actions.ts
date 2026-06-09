@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireUser, requireUserProfile } from "@/features/auth/queries";
+import { requireUser, requireUserProfile, requirePlatformOwner } from "@/features/auth/queries";
 import {
   autosaveIntakeAnswer,
   autosaveIntakeAnswers,
   finalSubmitIntake,
   isFinalSubmitIntakeError,
+  reopenIntakeSubmission,
 } from "@/features/intake/services";
 import type {
   AutosaveIntakeAnswerInput,
@@ -15,7 +16,9 @@ import type {
   AutosaveIntakeAnswersInput,
   AutosaveIntakeAnswersResult,
   FinalSubmitIntakeFormState,
+  ReopenIntakeFormState,
 } from "@/features/intake/types";
+import { logServerError } from "@/lib/logging/server";
 
 export async function autosaveIntakeAnswerAction(
   input: AutosaveIntakeAnswerInput,
@@ -83,5 +86,50 @@ export async function finalSubmitIntakeAction(
     return finalSubmitErrorState(
       "Questionnaire could not be submitted. Please try again.",
     );
+  }
+}
+
+// Admin (platform owner) sends a locked questionnaire back to the brand owner
+// for editing.
+export async function reopenIntakeSubmissionAction(
+  _previousState: ReopenIntakeFormState,
+  formData: FormData,
+): Promise<ReopenIntakeFormState> {
+  const { profile } = await requirePlatformOwner("/admin/submissions");
+  const snapshotId = formValue(formData, "snapshot_id");
+
+  if (!snapshotId) {
+    return { status: "error", message: "Submission not found." };
+  }
+
+  try {
+    await reopenIntakeSubmission({
+      snapshotId,
+      profileId: profile.id,
+      actorRole: profile.global_role,
+    });
+
+    // Refresh the admin list and the owner's questionnaire views.
+    revalidatePath("/admin/submissions");
+    revalidatePath("/dashboard/questionnaire");
+
+    return {
+      status: "success",
+      message: "Questionnaire reopened for the brand owner.",
+    };
+  } catch (error) {
+    if (isFinalSubmitIntakeError(error)) {
+      return { status: "error", message: error.message };
+    }
+
+    logServerError({
+      label: "[intake] reopen failed",
+      error,
+      metadata: { profileId: profile.id, snapshotId },
+    });
+    return {
+      status: "error",
+      message: "Could not reopen the questionnaire. Please try again.",
+    };
   }
 }

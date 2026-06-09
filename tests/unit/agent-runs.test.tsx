@@ -156,16 +156,6 @@ function queryBuilder(result: unknown) {
   return builder;
 }
 
-function insertBuilder(result: unknown) {
-  const builder = {
-    insert: vi.fn(() => builder),
-    select: vi.fn(() => builder),
-    single: vi.fn(() => Promise.resolve(result)),
-  };
-
-  return builder;
-}
-
 function listBuilder(result: unknown) {
   const builder = {
     select: vi.fn(() => builder),

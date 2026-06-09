@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 
+import { Button } from "@/components/ui/button";
 import type {
   BrandBuildProgress,
   PhaseProgress,
@@ -166,17 +167,17 @@ function StatePill({ state }: { state: SubstepState }) {
 /* ── Phase Card ── */
 
 const TONE_GRADIENTS: Record<number, string> = {
-  1: "linear-gradient(150deg, var(--bv-c1-a), var(--bv-c1-b))",
-  2: "linear-gradient(150deg, var(--bv-c2-a), var(--bv-c2-b))",
-  3: "linear-gradient(150deg, var(--bv-c3-a), var(--bv-c3-b))",
-  4: "linear-gradient(150deg, var(--bv-c4-a), var(--bv-c4-b))",
+  1: "var(--bv-c1-b)",
+  2: "var(--bv-c2-b)",
+  3: "var(--bv-c3-b)",
+  4: "var(--bv-c4-b)",
 };
 
 const BAR_GRADIENTS: Record<number, string> = {
-  1: "linear-gradient(90deg, var(--bv-c1-a), var(--bv-c1-b))",
-  2: "linear-gradient(90deg, var(--bv-c2-a), var(--bv-c2-b))",
-  3: "linear-gradient(90deg, var(--bv-c3-a), var(--bv-c3-b))",
-  4: "linear-gradient(90deg, var(--bv-c4-a), var(--bv-c4-b))",
+  1: "var(--bv-c1-b)",
+  2: "var(--bv-c2-b)",
+  3: "var(--bv-c3-b)",
+  4: "var(--bv-c4-b)",
 };
 
 function PhaseCard({
@@ -289,7 +290,7 @@ function PhaseCard({
                 background: isLocked
                   ? "var(--bv-ink-4)"
                   : isReadyToSubmit
-                    ? "linear-gradient(90deg, var(--bv-brand), var(--bv-brand-mid))"
+                    ? "var(--bv-brand-mid)"
                     : BAR_GRADIENTS[tone],
                 transitionTimingFunction: "var(--bv-ease)",
               }}
@@ -355,8 +356,6 @@ function PhaseCard({
         style={{
           maxHeight: open ? 1600 : 0,
           borderTopColor: open ? "var(--bv-line)" : "transparent",
-          background:
-            "linear-gradient(180deg, rgba(15,15,20,0.012), transparent 40px)",
           transitionTimingFunction: "var(--bv-ease)",
         }}
       >
@@ -452,22 +451,14 @@ function DetailPage({
     >
       <div
         className="pointer-events-none fixed inset-0"
-        style={{
-          background: `radial-gradient(900px 600px at 100% -10%, rgba(255,255,255,0.95), transparent 60%),
-                       radial-gradient(800px 600px at -10% 100%, rgba(225,225,232,0.5), transparent 60%)`,
-        }}
+        style={{ background: "var(--bv-bg)" }}
       />
 
       <div className="relative z-10 mx-auto max-w-[980px] px-7 pb-24 pt-9">
         <div className="mb-9 flex items-center justify-between">
-          <button
-            className="inline-flex cursor-pointer items-center gap-2 rounded-full border bg-white px-3.5 py-2 text-[13px] text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-            onClick={onBack}
-            style={{ borderColor: "var(--bv-line)" }}
-            type="button"
-          >
+          <Button onClick={onBack} size="sm" type="button" variant="outline">
             <BackArrow /> Back to roadmap
-          </button>
+          </Button>
           <span className="font-mono text-[11px] tracking-wider text-[var(--bv-ink-3)]">
             <kbd className="rounded border border-[var(--bv-line-2)] bg-white px-1.5 py-0.5 font-mono text-[10px] text-[var(--bv-ink-2)]">
               Esc
@@ -608,13 +599,11 @@ function DetailPage({
 
 export function BrandBuildView({
   progress,
-  email,
   intakeCompletion,
   intakeSessionId,
   intakeCanApprove = false,
 }: {
   progress: BrandBuildProgress;
-  email: string;
   intakeCompletion?: IntakeCompletion | null;
   intakeSessionId?: string | null;
   intakeCanApprove?: boolean;
@@ -685,8 +674,7 @@ export function BrandBuildView({
           return;
         }
         if (substep.id === "futures-research") {
-          // Futures Research page is not built yet — open the detail sheet.
-          setDetail({ phase, substep, state });
+          window.location.href = "/dashboard/brain/roadmap/futures-research";
           return;
         }
         window.location.href = "/dashboard/questionnaire";

@@ -133,6 +133,7 @@ function intakeData(overrides: Partial<IntakePageData> = {}): IntakePageData {
         },
       ],
     }),
+    latestSnapshotId: null,
     ...overrides,
   };
 }

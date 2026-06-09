@@ -41,8 +41,7 @@ export function DashboardNavbar({
         <div className="flex items-center gap-2">
           <Button
             aria-label="Notifications"
-            className="size-9"
-            size="icon"
+            size="icon-lg"
             variant="ghost"
           >
             <BellIcon />

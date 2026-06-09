@@ -131,28 +131,39 @@ describe("intake autosave queue", () => {
     window.localStorage.clear();
   });
 
-  it("debounces and batches multiple changed questions into one action", async () => {
+  it("does not save while typing and commits each field on blur", async () => {
     renderQuestionnaire();
 
-    fireEvent.change(screen.getByLabelText("Company overview"), {
-      target: { value: "First draft" },
-    });
-    fireEvent.change(screen.getByLabelText("Core values"), {
-      target: { value: "Clarity" },
-    });
+    const overview = screen.getByLabelText("Company overview");
+    fireEvent.focus(overview);
+    fireEvent.change(overview, { target: { value: "First draft" } });
 
-    await flushAutosaveTimers(349);
+    // Typing alone never triggers a save, even past the debounce window.
+    await flushAutosaveTimers();
     expect(mockedAutosaveIntakeAnswersAction).not.toHaveBeenCalled();
+    expect(screen.queryByText("Saving")).not.toBeInTheDocument();
 
-    await flushAutosaveTimers(1);
+    // Blurring the field commits it.
+    fireEvent.blur(overview);
+    await flushAutosaveTimers(0);
 
     expect(mockedAutosaveIntakeAnswersAction).toHaveBeenCalledTimes(1);
-    expect(mockedAutosaveIntakeAnswersAction).toHaveBeenCalledWith({
+    expect(mockedAutosaveIntakeAnswersAction).toHaveBeenLastCalledWith({
       sessionId: "session-1",
-      answers: [
-        { questionId: "question-1", value: "First draft" },
-        { questionId: "question-2", value: "Clarity" },
-      ],
+      answers: [{ questionId: "question-1", value: "First draft" }],
+    });
+
+    // A second field commits on its own blur.
+    const values = screen.getByLabelText("Core values");
+    fireEvent.focus(values);
+    fireEvent.change(values, { target: { value: "Clarity" } });
+    fireEvent.blur(values);
+    await flushAutosaveTimers(0);
+
+    expect(mockedAutosaveIntakeAnswersAction).toHaveBeenCalledTimes(2);
+    expect(mockedAutosaveIntakeAnswersAction).toHaveBeenLastCalledWith({
+      sessionId: "session-1",
+      answers: [{ questionId: "question-2", value: "Clarity" }],
     });
   });
 
@@ -192,17 +203,19 @@ describe("intake autosave queue", () => {
     expect(screen.queryByText("Saving")).not.toBeInTheDocument();
   });
 
-  it("coalesces repeated changes for one question before flushing", async () => {
+  it("commits only the final typed value of a field on blur", async () => {
     renderQuestionnaire();
 
-    fireEvent.change(screen.getByLabelText("Company overview"), {
-      target: { value: "First" },
-    });
-    fireEvent.change(screen.getByLabelText("Company overview"), {
-      target: { value: "Final" },
-    });
+    const field = screen.getByLabelText("Company overview");
+    fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: "First" } });
+    fireEvent.change(field, { target: { value: "Final" } });
 
     await flushAutosaveTimers();
+    expect(mockedAutosaveIntakeAnswersAction).not.toHaveBeenCalled();
+
+    fireEvent.blur(field);
+    await flushAutosaveTimers(0);
 
     expect(mockedAutosaveIntakeAnswersAction).toHaveBeenCalledTimes(1);
     expect(mockedAutosaveIntakeAnswersAction).toHaveBeenCalledWith({
@@ -229,11 +242,12 @@ describe("intake autosave queue", () => {
 
     renderQuestionnaire();
 
-    fireEvent.change(screen.getByLabelText("Company overview"), {
-      target: { value: "Retry me" },
-    });
+    const field = screen.getByLabelText("Company overview");
+    fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: "Retry me" } });
+    fireEvent.blur(field);
 
-    await flushAutosaveTimers();
+    await flushAutosaveTimers(0);
     const retry = screen.getByRole("button", {
       name: "The intake answer could not be saved.",
     });

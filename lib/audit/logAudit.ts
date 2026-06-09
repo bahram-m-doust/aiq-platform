@@ -19,6 +19,7 @@ export const auditActions = [
   "member_joined",
   "intake_answer_updated",
   "intake_final_submitted",
+  "intake_reopened",
   "intake_section_created",
   "intake_section_updated",
   "intake_section_archived",
@@ -54,6 +55,7 @@ export const auditActions = [
   "admin_override_used",
   "intake_knowledge_generated",
   "admin_file_rag_promoted",
+  "brand_instruction_updated",
 ] as const;
 
 export type AuditAction = (typeof auditActions)[number];

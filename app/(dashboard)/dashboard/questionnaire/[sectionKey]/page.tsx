@@ -51,6 +51,7 @@ export default async function QuestionnaireSectionPage({
         autoValidate={validate === "1"}
         brandName={data.access.brandName}
         completion={data.completion}
+        latestSnapshotId={data.latestSnapshotId}
         section={selectedSection}
         session={data.session}
       />
