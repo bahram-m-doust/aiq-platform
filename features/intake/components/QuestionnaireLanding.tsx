@@ -1,7 +1,12 @@
 import Link from "next/link";
-import { ArrowRightIcon, DownloadIcon, LockIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  DownloadIcon,
+  LockIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { FinalSubmitReadiness } from "@/features/intake/components/FinalSubmitReadiness";
@@ -188,31 +193,31 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
               sessionId={session.id}
             />
             {completion.completionPercent < 100 && incompleteSections.length > 0 && (
-              <div
-                className="mt-4 rounded-[12px] border px-4 py-3.5"
-                style={{ borderColor: "var(--bv-line-2)", background: "var(--bv-card)" }}
-              >
-                <p className="text-[13px] font-medium text-[var(--bv-ink)]">
+              <Alert className="mt-4" variant="warning">
+                <TriangleAlertIcon />
+                <AlertTitle>
                   {totalRemaining}{" "}
                   {totalRemaining === 1 ? "question" : "questions"} still need an
                   answer before you can submit.
-                </p>
-                <ul className="mt-2 space-y-1">
-                  {incompleteSections.map(({ section, remaining }) => (
-                    <li key={section.id}>
-                      <Link
-                        className="inline-flex items-center gap-2 text-[13px] text-[var(--bv-ink-2)] underline-offset-2 transition-colors hover:text-[var(--bv-ink)] hover:underline"
-                        href={`/dashboard/questionnaire/${section.key}?validate=1`}
-                      >
-                        <span className="font-medium">{section.title}</span>
-                        <span className="text-[var(--bv-ink-3)]">
-                          — {remaining} unanswered
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                </AlertTitle>
+                <AlertDescription>
+                  <ul className="space-y-1">
+                    {incompleteSections.map(({ section, remaining }) => (
+                      <li key={section.id}>
+                        <Link
+                          className="inline-flex items-center gap-2 underline-offset-2 transition-colors hover:underline"
+                          href={`/dashboard/questionnaire/${section.key}?validate=1`}
+                        >
+                          <span className="font-medium">{section.title}</span>
+                          <span className="opacity-80">
+                            — {remaining} unanswered
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
             )}
           </div>
         )}
