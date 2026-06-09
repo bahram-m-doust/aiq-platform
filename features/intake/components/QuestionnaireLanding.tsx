@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightIcon, LockIcon } from "lucide-react";
+import { ArrowRightIcon, DownloadIcon, LockIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -106,12 +106,24 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
 
           {locked && (
             <div
-              className="mt-4 flex items-center gap-2 rounded-[12px] border border-dashed px-3.5 py-2.5 text-[13px] text-[var(--bv-ink-2)]"
+              className="mt-4 flex flex-wrap items-center gap-3 rounded-[12px] border border-dashed px-3.5 py-2.5 text-[13px] text-[var(--bv-ink-2)]"
               style={{ borderColor: "var(--bv-line-2)" }}
             >
-              <LockIcon className="size-3.5 shrink-0" />
-              This questionnaire has been submitted and locked. Sections are
-              read-only — open one to review your answers.
+              <span className="flex items-center gap-2">
+                <LockIcon className="size-3.5 shrink-0" />
+                This questionnaire has been submitted and locked. Sections are
+                read-only — open one to review your answers.
+              </span>
+              {data.latestSnapshotId && (
+                <a
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                  download
+                  href={`/api/intake/${data.latestSnapshotId}/docx`}
+                >
+                  <DownloadIcon className="size-3.5" />
+                  Download answers (Word)
+                </a>
+              )}
             </div>
           )}
         </div>

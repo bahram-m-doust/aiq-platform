@@ -270,6 +270,17 @@ export default async function AdminPage() {
                 size="lg"
                 variant="outline"
               >
+                <Link href="/admin/submissions">
+                  <FileTextIcon className="size-4" />
+                  Questionnaire Submissions
+                </Link>
+              </Button>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
                 <Link href="/admin/agent-instructions">
                   <MessageSquareTextIcon className="size-4" />
                   Agent Instructions

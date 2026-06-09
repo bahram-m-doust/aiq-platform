@@ -90,6 +90,15 @@ export type IntakePageData = {
   sections: IntakeSectionWithQuestions[];
   answers: IntakeAnswerMap;
   completion: IntakeCompletion;
+  // Latest locked snapshot for this session, if any — drives the Word download.
+  latestSnapshotId: string | null;
+};
+
+export type IntakeSubmissionSummary = {
+  snapshotId: string;
+  brandId: string;
+  brandName: string;
+  submittedAt: string | null;
 };
 
 export type AutosaveIntakeAnswerInput = {

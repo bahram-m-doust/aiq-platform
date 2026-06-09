@@ -17,6 +17,8 @@ import type {
   IntakeSection,
   IntakeSectionWithQuestions,
   IntakeSession,
+  IntakeSnapshotJson,
+  IntakeSubmissionSummary,
 } from "@/features/intake/types";
 import { cacheSharedConfig } from "@/lib/cache/shared";
 import { CACHE_TAGS } from "@/lib/cache/tags";
@@ -429,6 +431,10 @@ export async function getIntakePageData({
     sessionId: session.id,
     questions,
   });
+  const latestSnapshotId =
+    session.status === "LOCKED"
+      ? await getLatestIntakeSnapshotId(session.id)
+      : null;
 
   return {
     access,
@@ -436,5 +442,94 @@ export async function getIntakePageData({
     sections,
     answers,
     completion: calculateIntakeCompletion({ sections, answers }),
+    latestSnapshotId,
   };
+}
+
+// Most recent snapshot for a session (the questionnaire locks once, but order
+// defensively in case of re-locks).
+export async function getLatestIntakeSnapshotId(
+  sessionId: string,
+): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("intake_snapshots")
+    .select("id")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as { id: string } | null)?.id ?? null;
+}
+
+// Loads a snapshot's answers for download, authorizing the caller: platform
+// owners and active brand Owners/Executive Managers of the snapshot's brand.
+export async function getIntakeSnapshotForProfile({
+  profileId,
+  snapshotId,
+}: {
+  profileId: string;
+  snapshotId: string;
+}): Promise<{ snapshotJson: IntakeSnapshotJson; brandName: string } | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("intake_snapshots")
+    .select("id, brand_id, snapshot_json")
+    .eq("id", snapshotId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  const snapshot = data as
+    | { id: string; brand_id: string; snapshot_json: IntakeSnapshotJson }
+    | null;
+  if (!snapshot) {
+    return null;
+  }
+
+  const access = await getIntakeAccessForProfile({
+    profileId,
+    brandId: snapshot.brand_id,
+  });
+  if (!access) {
+    return null;
+  }
+
+  return { snapshotJson: snapshot.snapshot_json, brandName: access.brandName };
+}
+
+// Admin Submissions list: every locked questionnaire, newest first.
+export async function getIntakeSubmissionsForAdmin(): Promise<
+  IntakeSubmissionSummary[]
+> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("intake_snapshots")
+    .select("id, brand_id, created_at, brands(name)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (
+    (data ?? []) as Array<{
+      id: string;
+      brand_id: string;
+      created_at: string | null;
+      brands: RelatedRecord<{ name: string }>;
+    }>
+  ).map((row) => ({
+    snapshotId: row.id,
+    brandId: row.brand_id,
+    brandName: firstRelated(row.brands)?.name ?? "Unknown brand",
+    submittedAt: row.created_at,
+  }));
 }
