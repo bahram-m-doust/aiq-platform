@@ -71,7 +71,7 @@ export default async function FuturesResearchPage() {
       />
     ) : (
       <div className="px-2 pt-[15px]">
-        <div className="flex max-w-[756px] flex-col gap-6">
+        <div className="mx-auto flex w-full max-w-[756px] flex-col gap-6">
           <FuturesResearchHeader status={status} />
           <div className="rounded-[10px] border border-dashed border-border px-6 py-12 text-center">
             <p className="text-sm font-medium text-foreground">
