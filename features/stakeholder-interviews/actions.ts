@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { logServerError } from "@/lib/logging/server";
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { requireUserProfile } from "@/features/auth/queries";
 import { canViewAdminModulesRole } from "@/features/modules/schema";
@@ -58,7 +59,22 @@ export async function uploadStakeholderReportAction(
     return { status: "error", message: "The report must be a PDF file." };
   }
 
-  await uploadStakeholderReport({ brandId, profileId: profile.id, file });
+  try {
+    await uploadStakeholderReport({ brandId, profileId: profile.id, file });
+  } catch (error) {
+    // Surface the real DB/storage error in the server log without crashing the
+    // page; the client gets a friendly message.
+    logServerError({
+      label: "[stakeholder] report upload failed",
+      error,
+      metadata: { profileId: profile.id, brandId },
+    });
+    return {
+      status: "error",
+      message: "Could not upload the report. Please try again.",
+    };
+  }
+
   revalidateStakeholderPaths();
   revalidatePath("/admin/stakeholder-interviews");
 
