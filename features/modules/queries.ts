@@ -14,6 +14,7 @@ import {
 import type {
   AdminModuleBoardData,
   AdminModuleBoardItem,
+  AdminModuleBrandGroups,
   AdminModuleDetail,
   ClientModuleDetail,
   ClientModuleWorkspace,
@@ -514,6 +515,68 @@ export async function getAdminModuleBoard(
       };
     }),
     pagination: paginated.pagination,
+  };
+}
+
+// Same data as the board, but ungated by pagination and grouped by brand so the
+// admin can pick a brand and upload drafts for its modules in one place.
+export async function getAdminModuleBrandGroups(
+  profile: UserProfile,
+): Promise<AdminModuleBrandGroups | null> {
+  if (!canViewAdminModulesRole(profile.global_role)) {
+    return null;
+  }
+
+  const admin = createAdminClient();
+  let query = admin
+    .from("brand_modules")
+    .select(moduleColumns)
+    .order("updated_at", { ascending: false });
+
+  if (profile.global_role === "INTERNAL_SPECIALIST") {
+    query = query.eq("assigned_to", profile.id);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw error;
+  }
+
+  const modules = await mapModuleRows(rowAsArray<ModuleRow>(data));
+  const artifactsByModuleId = await fetchArtifactsForModules(
+    modules.map((brandModule) => brandModule.id),
+  );
+
+  const groupByBrand = new Map<
+    string,
+    { brandId: string; brandName: string; modules: AdminModuleBoardItem[] }
+  >();
+
+  for (const brandModule of modules) {
+    const item: AdminModuleBoardItem = {
+      ...brandModule,
+      latestArtifact: getLatestModuleArtifact(
+        artifactsByModuleId.get(brandModule.id) ?? [],
+      ),
+    };
+
+    let group = groupByBrand.get(brandModule.brandId);
+    if (!group) {
+      group = {
+        brandId: brandModule.brandId,
+        brandName: brandModule.brandName,
+        modules: [],
+      };
+      groupByBrand.set(brandModule.brandId, group);
+    }
+    group.modules.push(item);
+  }
+
+  return {
+    actorRole: profile.global_role,
+    groups: Array.from(groupByBrand.values()).sort((a, b) =>
+      a.brandName.localeCompare(b.brandName),
+    ),
   };
 }
 
