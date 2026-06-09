@@ -328,16 +328,26 @@ export function SectionQuestionnaire({
               All sections
             </Link>
 
-            {sectionIndex === allSections.length &&
-              (completion.completionPercent === 100 ? (
-                <Button asChild variant="outline">
-                  <Link href="/dashboard/questionnaire">Review &amp; submit</Link>
-                </Button>
-              ) : (
-                <Button onClick={handleFinish} type="button" variant="outline">
-                  Finish questionnaire
-                </Button>
-              ))}
+            {sectionIndex < allSections.length ? (
+              <Button asChild className="group" variant="outline">
+                <Link
+                  href={`/dashboard/questionnaire/${allSections[sectionIndex].key}?validate=1`}
+                >
+                  Next: {allSections[sectionIndex].title}
+                  <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
+                    -&gt;
+                  </span>
+                </Link>
+              </Button>
+            ) : completion.completionPercent === 100 ? (
+              <Button asChild variant="outline">
+                <Link href="/dashboard/questionnaire">Review &amp; submit</Link>
+              </Button>
+            ) : (
+              <Button onClick={handleFinish} type="button" variant="outline">
+                Finish questionnaire
+              </Button>
+            )}
           </div>
         </div>
       </div>
