@@ -35,7 +35,7 @@ export async function GET(
     );
   }
 
-  // Null covers both "not found" and "not authorized" — don't disclose which.
+  // Null covers both "not found" and "not authorized"; do not disclose which.
   if (!snapshot) {
     return NextResponse.json({ message: "Not found." }, { status: 404 });
   }

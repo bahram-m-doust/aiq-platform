@@ -84,12 +84,15 @@ function firstHeaderValue(value: string | null) {
 
 export async function getRequestRateLimitIdentity() {
   const headerList = await headers();
-  const clientIp =
-    firstHeaderValue(headerList.get("x-forwarded-for")) ??
-    firstHeaderValue(headerList.get("x-real-ip")) ??
-    firstHeaderValue(headerList.get("cf-connecting-ip")) ??
-    firstHeaderValue(headerList.get("true-client-ip")) ??
-    "unknown";
+  const netlifyClientIp = firstHeaderValue(
+    headerList.get("x-nf-client-connection-ip"),
+  );
+  const developmentClientIp =
+    process.env.NODE_ENV === "production"
+      ? null
+      : firstHeaderValue(headerList.get("x-forwarded-for")) ??
+        firstHeaderValue(headerList.get("x-real-ip"));
+  const clientIp = netlifyClientIp ?? developmentClientIp ?? "unknown";
 
   return {
     clientIp,
@@ -125,9 +128,9 @@ export async function checkRateLimit({
     });
 
     return {
-      allowed: true,
+      allowed: false,
       bucket,
-      count: 0,
+      count: safeLimit + 1,
       limit: safeLimit,
       resetAt,
     };

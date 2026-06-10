@@ -17,7 +17,9 @@ import {
 } from "@/features/agents/brain/services";
 import type { BrandBrainStreamEvent } from "@/features/agents/brain/types";
 import { isBudgetExceededError } from "@/features/openrouter/usage";
+import { releaseRunUsageReservation } from "@/features/openrouter/usage";
 import { logServerError } from "@/lib/logging/server";
+import { providerCostCents } from "@/lib/openrouter/models";
 import {
   checkRequestRateLimit,
   RATE_LIMITED_MESSAGE,
@@ -97,18 +99,25 @@ export async function POST(request: Request) {
     );
   }
 
+  const providerAbort = new AbortController();
+  request.signal.addEventListener("abort", () => providerAbort.abort(), {
+    once: true,
+  });
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       let answer = "";
       let promptTokens = 0;
       let completionTokens = 0;
       let responseId = "";
+      let providerUsage: unknown = null;
 
       try {
         const completion = await openBrandBrainStream({
           brandId: plan.brandId,
           model: plan.model,
           messages: plan.messages,
+          signal: providerAbort.signal,
         });
 
         for await (const chunk of completion) {
@@ -123,6 +132,7 @@ export async function POST(request: Request) {
           }
 
           if (chunk.usage) {
+            providerUsage = chunk.usage;
             promptTokens = chunk.usage.prompt_tokens ?? promptTokens;
             completionTokens = chunk.usage.completion_tokens ?? completionTokens;
           }
@@ -130,6 +140,9 @@ export async function POST(request: Request) {
 
         const trimmedAnswer = answer.trim();
         if (!trimmedAnswer) {
+          await releaseRunUsageReservation(plan.reservation).catch(
+            () => undefined,
+          );
           controller.enqueue(
             encodeEvent({
               type: "error",
@@ -142,6 +155,11 @@ export async function POST(request: Request) {
 
         // Persist only after the answer is fully streamed so the stored run,
         // usage ledger, and audit trail match what the user actually received.
+        const estimatedUsage = computeBrainUsage({
+          model: plan.model,
+          promptTokens,
+          completionTokens,
+        });
         const runId = await finalizeBrandBrainRun({
           profile,
           brandId: plan.brandId,
@@ -151,11 +169,14 @@ export async function POST(request: Request) {
           answer: trimmedAnswer,
           responseId: responseId || `pgvector-${Date.now()}`,
           retrievedSources: plan.retrievedSources,
-          usage: computeBrainUsage({
-            model: plan.model,
-            promptTokens,
-            completionTokens,
-          }),
+          usage: {
+            ...estimatedUsage,
+            costCents: providerCostCents(
+              providerUsage,
+              estimatedUsage.costCents,
+            ),
+          },
+          reservation: plan.reservation,
           latencyMs: Math.max(0, Date.now() - plan.startedAt),
         });
 
@@ -168,6 +189,9 @@ export async function POST(request: Request) {
         );
         controller.close();
       } catch (error) {
+        await releaseRunUsageReservation(plan.reservation).catch(
+          () => undefined,
+        );
         logServerError({
           label: "[brand-brain] stream failed",
           error,
@@ -181,6 +205,10 @@ export async function POST(request: Request) {
         );
         controller.close();
       }
+    },
+    cancel() {
+      providerAbort.abort();
+      void releaseRunUsageReservation(plan.reservation).catch(() => undefined);
     },
   });
 

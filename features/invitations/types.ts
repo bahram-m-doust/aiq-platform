@@ -40,15 +40,6 @@ export type AcceptInvitationFormState = {
   message: string;
 };
 
-export type SpecialistMembershipUpsert = {
-  brand_id: string;
-  user_id: string;
-  role: "BRAND_SPECIALIST";
-  status: "ACTIVE";
-  invited_by: string | null;
-  expires_at: null;
-};
-
 export type SpecialistMembershipRecord = {
   id: string;
   brandId: string;

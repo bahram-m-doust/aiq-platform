@@ -20,8 +20,15 @@ describe("release readiness docs", () => {
   it("documents the latest Supabase migration and seed order", () => {
     const setup = readRepoFile("supabase", "migrations", "SETUP.md");
     const runbook = readRepoFile("docs", "MVP_RELEASE_RUNBOOK.md");
+    const latestMigration = fs
+      .readdirSync(path.join(process.cwd(), "supabase", "migrations"))
+      .filter((name) => /^\d{4}_.+\.sql$/.test(name))
+      .sort()
+      .at(-1);
 
-    expect(setup).toContain("0010_rate_limits.sql");
+    expect(latestMigration).toBeTruthy();
+    expect(setup).toContain(latestMigration);
+    expect(runbook).toContain(latestMigration);
     expect(setup).toContain("supabase/seeds/plans.sql");
     expect(setup).toContain("supabase/seeds/agents.sql");
     expect(setup).toContain("supabase/seeds/questions_sections.sql");
@@ -36,6 +43,8 @@ describe("release readiness docs", () => {
       "ADMIN_BASE_URL",
       "APP_BASE_URL",
       "EMAIL_FROM",
+      "KEY_ENCRYPTION_ACTIVE_KEY_ID",
+      "KEY_ENCRYPTION_KEY",
       "NEXT_PUBLIC_SUPABASE_ANON_KEY",
       "NEXT_PUBLIC_SUPABASE_URL",
       "OPENROUTER_API_KEY",
@@ -50,9 +59,17 @@ describe("release readiness docs", () => {
 
   it("keeps the consolidated setup script aligned with private MVP hardening", () => {
     const setupAll = readRepoFile("supabase", "migrations", "setup-all.sql");
+    const migrationNames = fs
+      .readdirSync(path.join(process.cwd(), "supabase", "migrations"))
+      .filter((name) => /^\d{4}_.+\.sql$/.test(name))
+      .sort();
 
+    migrationNames.forEach((name) => {
+      expect(setupAll).toContain(`-- BEGIN ${name}`);
+      expect(setupAll).toContain(`-- END ${name}`);
+    });
     expect(setupAll).toContain(
-      "alter table public.rate_limits enable row level security;",
+      `-- Latest migration: ${migrationNames.at(-1)}`,
     );
     expect(setupAll).toContain(
       "alter table public.audit_logs force row level security;",
@@ -77,8 +94,8 @@ describe("release readiness docs", () => {
     expect(healthRoute).toContain("getHealthStatus");
     expect(nextConfig).toContain("X-Content-Type-Options");
     expect(nextConfig).toContain("X-Frame-Options");
+    expect(nextConfig).toContain('value: "SAMEORIGIN"');
     expect(nextConfig).toContain("Referrer-Policy");
     expect(nextConfig).toContain("Permissions-Policy");
-    expect(nextConfig).not.toContain("Content-Security-Policy");
   });
 });

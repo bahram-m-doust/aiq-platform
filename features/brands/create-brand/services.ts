@@ -1,14 +1,14 @@
 import "server-only";
 
-import { grantBrandAccess } from "@/features/access/grant-brand-access";
 import {
-  buildBrandModuleRows,
-  calculatePlanGrantExpiresAt,
-  parseIncludedModuleTypes,
+  auditBrandAccessGrant,
+  toGrantBrandAccessResult,
+  type BrandAccessGrantRpcRow,
+} from "@/features/access/grant-brand-access";
+import {
   validateCreateBrandAccessKeyContext,
 } from "@/features/brands/create-brand/schema";
 import type {
-  CreateBrandAccessKeyContext,
   CreateBrandAccessKeyRecord,
   CreateBrandContextResult,
   CreateBrandFormInput,
@@ -57,8 +57,33 @@ type BrandRow = {
   status: string;
 };
 
-type IdRow = {
-  id: string;
+type AtomicBrandCreationRow = {
+  created_brand_id: string;
+  created_brand_name: string;
+  created_brand_industry: string | null;
+  created_brand_website: string | null;
+  created_brand_status: string;
+  created_membership_id: string;
+  created_intake_session_id: string;
+  used_access_key_id: string;
+  used_access_key_prefix: string;
+  used_plan_id: string | null;
+  created_module_types: string[] | null;
+  created_module_count: number;
+  entitlement_id: string | null;
+  entitlement_brand_id: string | null;
+  entitlement_plan_id: string | null;
+  entitlement_source: string | null;
+  entitlement_status: string | null;
+  entitlement_starts_at: string | null;
+  entitlement_expires_at: string | null;
+  entitlement_granted_by: string | null;
+  entitlement_manual_reference: string | null;
+  entitlement_internal_note: string | null;
+  entitlement_created_at: string | null;
+  included_agent_keys: string[] | null;
+  matched_agent_keys: string[] | null;
+  agent_entitlement_count: number;
 };
 
 function toAccessKeyRecord(row: AccessKeyRow): CreateBrandAccessKeyRecord {
@@ -163,54 +188,22 @@ export async function getCreateBrandAccessKeyContext({
   };
 }
 
-async function markAccessKeyFulfilled({
-  accessKeyId,
-  brandId,
-  userId,
-  nowIso,
-}: {
-  accessKeyId: string;
-  brandId: string;
-  userId: string;
-  nowIso: string;
-}) {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("access_keys")
-    .update({ target_brand_id: brandId })
-    .eq("id", accessKeyId)
-    .eq("type", "CREATE_BRAND")
-    .eq("status", "REDEEMED")
-    .eq("redeemed_by", userId)
-    .is("target_brand_id", null)
-    .gt("expires_at", nowIso)
-    .select("id")
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return Boolean(data);
-}
-
-async function deleteCreatedBrand(brandId: string) {
-  const admin = createAdminClient();
-  await admin.from("brands").delete().eq("id", brandId);
-}
-
 function toBrandCreatedAudit({
   brand,
-  context,
+  accessKeyId,
+  accessKeyPrefix,
   membershipId,
   intakeSessionId,
+  planId,
   entitlementId,
   moduleTypes,
 }: {
   brand: BrandRow;
-  context: CreateBrandAccessKeyContext;
+  accessKeyId: string;
+  accessKeyPrefix: string;
   membershipId: string;
   intakeSessionId: string;
+  planId: string | null;
   entitlementId: string | null;
   moduleTypes: string[];
 }) {
@@ -223,14 +216,14 @@ function toBrandCreatedAudit({
       status: brand.status,
     },
     access_key: {
-      id: context.accessKey.id,
-      key_prefix: context.accessKey.keyPrefix,
-      type: context.accessKey.type,
+      id: accessKeyId,
+      key_prefix: accessKeyPrefix,
+      type: "CREATE_BRAND",
     },
     membership_id: membershipId,
     membership_role: "OWNER",
     intake_session_id: intakeSessionId,
-    plan_id: context.plan?.id ?? null,
+    plan_id: planId,
     entitlement_id: entitlementId,
     module_types: moduleTypes,
     module_count: moduleTypes.length,
@@ -250,112 +243,49 @@ export async function createBrandFromCreateBrandAccessKey({
   userEmail: string;
   actorRole?: string | null;
 }): Promise<CreatedBrandResult> {
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const contextResult = await getCreateBrandAccessKeyContext({
-    accessKeyId,
-    profileId: userId,
-    userEmail,
-    now,
-  });
-
-  if (!contextResult.ok) {
-    throw new Error(contextResult.message);
-  }
-
-  const context = contextResult.context;
-  const moduleTypes = parseIncludedModuleTypes(context.plan?.includedModules);
   const admin = createAdminClient();
-  const { data: brandData, error: brandError } = await admin
-    .from("brands")
-    .insert({
-      name: brandName,
-      industry,
-      website,
-      status: "CREATED",
-      created_by: userId,
-    })
-    .select("id, name, industry, website, status")
-    .single();
+  const { data, error } = await admin.rpc(
+    "create_brand_from_access_key_atomic",
+    {
+      p_access_key_id: accessKeyId,
+      p_brand_name: brandName,
+      p_industry: industry,
+      p_website: website,
+      p_user_id: userId,
+      p_user_email: userEmail,
+    },
+  );
+  if (error) throw error;
 
-  if (brandError) {
-    throw brandError;
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | AtomicBrandCreationRow
+    | null;
+  if (!row) {
+    throw new Error("Brand creation transaction returned no result.");
   }
 
-  const brand = brandData as unknown as BrandRow;
-  const fulfilled = await markAccessKeyFulfilled({
-    accessKeyId,
-    brandId: brand.id,
-    userId,
-    nowIso,
-  });
-
-  if (!fulfilled) {
-    await deleteCreatedBrand(brand.id);
-    throw new Error("This CREATE_BRAND key has already been fulfilled.");
-  }
-
-  const { data: membershipData, error: membershipError } = await admin
-    .from("brand_memberships")
-    .insert({
-      brand_id: brand.id,
-      user_id: userId,
-      role: "OWNER",
-      status: "ACTIVE",
-    })
-    .select("id")
-    .single();
-
-  if (membershipError) {
-    throw membershipError;
-  }
-
-  const { data: intakeSessionData, error: intakeSessionError } = await admin
-    .from("intake_sessions")
-    .insert({
-      brand_id: brand.id,
-      status: "DRAFT",
-      completion_percent: 0,
-    })
-    .select("id")
-    .single();
-
-  if (intakeSessionError) {
-    throw intakeSessionError;
-  }
-
-  const moduleRows = buildBrandModuleRows({
-    brandId: brand.id,
-    moduleTypes,
-  });
-
-  if (moduleRows.length > 0) {
-    const { error: moduleError } = await admin
-      .from("brand_modules")
-      .insert(moduleRows);
-
-    if (moduleError) {
-      throw moduleError;
-    }
-  }
-
-  const entitlement = context.plan
-    ? await grantBrandAccess({
-        brandId: brand.id,
-        planId: context.plan.id,
-        source: "ACCESS_KEY",
-        startsAt: nowIso,
-        expiresAt: calculatePlanGrantExpiresAt(
-          nowIso,
-          context.plan.durationDays,
-        ),
-        grantedByUserId: userId,
-        actorRole,
-      })
+  const brand: BrandRow = {
+    id: row.created_brand_id,
+    name: row.created_brand_name,
+    industry: row.created_brand_industry,
+    website: row.created_brand_website,
+    status: row.created_brand_status,
+  };
+  const moduleTypes = row.created_module_types ?? [];
+  const entitlement = row.entitlement_id
+    ? toGrantBrandAccessResult(
+        row as unknown as BrandAccessGrantRpcRow,
+      )
     : null;
 
-  const membershipId = (membershipData as unknown as IdRow).id;
-  const intakeSessionId = (intakeSessionData as unknown as IdRow).id;
+  if (entitlement) {
+    await auditBrandAccessGrant({
+      result: entitlement,
+      actorUserId: userId,
+      actorRole,
+    });
+  }
+
   await logAudit({
     actorUserId: userId,
     actorRole: actorRole ?? null,
@@ -366,9 +296,11 @@ export async function createBrandFromCreateBrandAccessKey({
     before: null,
     after: toBrandCreatedAudit({
       brand,
-      context,
-      membershipId,
-      intakeSessionId,
+      accessKeyId: row.used_access_key_id,
+      accessKeyPrefix: row.used_access_key_prefix,
+      membershipId: row.created_membership_id,
+      intakeSessionId: row.created_intake_session_id,
+      planId: row.used_plan_id,
       entitlementId: entitlement?.entitlement.id ?? null,
       moduleTypes,
     }),
@@ -376,9 +308,9 @@ export async function createBrandFromCreateBrandAccessKey({
 
   return {
     brandId: brand.id,
-    membershipId,
-    intakeSessionId,
+    membershipId: row.created_membership_id,
+    intakeSessionId: row.created_intake_session_id,
     entitlement,
-    moduleCount: moduleRows.length,
+    moduleCount: row.created_module_count,
   };
 }

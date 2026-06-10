@@ -1,9 +1,9 @@
 import "server-only";
 
 import { failure } from "@/features/access/access-key-rules";
+import { activateRedeemedBrandMembership } from "@/features/access/redeemed-brand-membership";
 import type { AccessKeySafeRecord } from "@/features/access/types";
 import {
-  buildOwnerMembershipUpsert,
   findCurrentActiveBrandEntitlement,
   toBrandClaimedAudit,
   validateClaimableBrandAvailability,
@@ -191,54 +191,35 @@ export async function claimBrandForRedeemedAccessKey({
     );
   }
 
-  const claimableBrand = await getClaimableBrand({
-    brandId: accessKey.targetBrandId,
-    now: new Date(),
+  const activation = await activateRedeemedBrandMembership({
+    accessKeyId: accessKey.id,
+    userId,
   });
-
-  if (!claimableBrand) {
-    throw new Error("This brand is not ready to be claimed.");
-  }
-
-  const admin = createAdminClient();
-  const { data: membershipData, error: membershipError } = await admin
-    .from("brand_memberships")
-    .upsert(
-      buildOwnerMembershipUpsert({
-        brandId: accessKey.targetBrandId,
-        userId,
-      }),
-      {
-        onConflict: "brand_id,user_id,role",
-      },
-    )
-    .select("id, brand_id, user_id, role, status")
-    .single();
-
-  if (membershipError) {
-    throw membershipError;
-  }
-
-  const membership = toClaimBrandMembershipRecord(
-    membershipData as unknown as MembershipRow,
-  );
+  const brand = toClaimBrandRecord(activation.brand);
+  const membership = toClaimBrandMembershipRecord({
+    id: activation.membership.id,
+    brand_id: activation.membership.brandId,
+    user_id: activation.membership.userId,
+    role: activation.membership.role,
+    status: activation.membership.status,
+  });
   await logAudit({
     actorUserId: userId,
     actorRole,
-    brandId: claimableBrand.brand.id,
+    brandId: brand.id,
     action: "brand_claimed",
     entityType: "brand",
-    entityId: claimableBrand.brand.id,
+    entityId: brand.id,
     before: null,
     after: toBrandClaimedAudit({
-      brand: claimableBrand.brand,
+      brand,
       membership,
       accessKey,
     }),
   });
 
   return {
-    brand: claimableBrand.brand,
+    brand,
     membership,
   };
 }

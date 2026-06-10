@@ -6,10 +6,13 @@ import {
   sanitize,
   type SafeJson,
 } from "@/lib/security/sanitize";
+import { logServerError } from "@/lib/logging/server";
 
 export const auditActions = [
   "access_key_created",
+  "access_key_revoked",
   "access_key_redeemed",
+  "access_key_redemption_rolled_back",
   "access_key_failed",
   "brand_created",
   "brand_claimed",
@@ -83,22 +86,38 @@ export function sanitizeAuditJson(value: unknown): AuditJson {
   return sanitize(value, { maxDepth: 20 });
 }
 
-export async function logAudit(input: LogAuditInput) {
-  const admin = createAdminClient();
-  const { error } = await admin.from("audit_logs").insert({
-    actor_user_id: input.actorUserId ?? null,
-    actor_role: input.actorRole ?? null,
-    brand_id: input.brandId ?? null,
-    action: input.action,
-    entity_type: input.entityType ?? null,
-    entity_id: input.entityId ?? null,
-    before_json: sanitizeAuditJson(input.before ?? null),
-    after_json: sanitizeAuditJson(input.after ?? null),
-    ip_address: input.ipAddress ?? null,
-    user_agent: input.userAgent ?? null,
-  });
+export async function logAudit(input: LogAuditInput): Promise<boolean> {
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin.from("audit_logs").insert({
+      actor_user_id: input.actorUserId ?? null,
+      actor_role: input.actorRole ?? null,
+      brand_id: input.brandId ?? null,
+      action: input.action,
+      entity_type: input.entityType ?? null,
+      entity_id: input.entityId ?? null,
+      before_json: sanitizeAuditJson(input.before ?? null),
+      after_json: sanitizeAuditJson(input.after ?? null),
+      ip_address: input.ipAddress ?? null,
+      user_agent: input.userAgent ?? null,
+    });
 
-  if (error) {
-    throw error;
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    // Audit persistence must be observable, but it must not turn an already
+    // committed business mutation into a retry that duplicates side effects.
+    logServerError({
+      label: "[audit] persistence failed",
+      error,
+      metadata: {
+        action: input.action,
+        actorUserId: input.actorUserId ?? null,
+        brandId: input.brandId ?? null,
+        entityType: input.entityType ?? null,
+        entityId: input.entityId ?? null,
+      },
+    });
+    return false;
   }
 }

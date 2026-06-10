@@ -87,9 +87,28 @@ describe("rate limit helper", () => {
     expect(result.count).toBe(101);
   });
 
-  it("reads the first proxy IP for request-scoped identifiers", async () => {
+  it("fails closed when the persistent limiter is unavailable", async () => {
+    mockedCreateAdminClient.mockReturnValue({
+      rpc: vi.fn(() =>
+        Promise.resolve({ data: null, error: { message: "database down" } }),
+      ),
+    } as never);
+
+    const result = await checkRateLimit({
+      bucket: "auth.login",
+      identifier: "profile-1",
+      limit: 10,
+      windowSeconds: 60,
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.count).toBe(11);
+  });
+
+  it("uses Netlify's connection IP instead of spoofable forwarded values", async () => {
     mockedHeaders.mockResolvedValue({
       get: vi.fn((name: string) => {
+        if (name === "x-nf-client-connection-ip") return "198.51.100.20";
         if (name === "x-forwarded-for") return "203.0.113.10, 10.0.0.1";
         if (name === "user-agent") return "Vitest";
         return null;
@@ -97,7 +116,7 @@ describe("rate limit helper", () => {
     } as never);
 
     await expect(getRequestRateLimitIdentity()).resolves.toEqual({
-      clientIp: "203.0.113.10",
+      clientIp: "198.51.100.20",
       userAgent: "Vitest",
     });
   });

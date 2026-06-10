@@ -59,7 +59,13 @@ export function DocumentUploader({ access }: { access: DocumentAccessContext }) 
           <div className="grid gap-4 md:grid-cols-[1fr_240px]">
             <div className="space-y-2">
               <Label htmlFor="file">Document</Label>
-              <Input id="file" name="file" required type="file" />
+              <Input
+                accept=".pdf,.docx,.txt,.md,.markdown,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv"
+                id="file"
+                name="file"
+                required
+                type="file"
+              />
             </div>
 
             <div className="space-y-2">

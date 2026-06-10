@@ -246,7 +246,7 @@ export async function syncBrandKnowledgeBase({
   }
 
   if (!hasEmbeddingEnv()) {
-    ragSyncError("OPENAI_API_KEY is required for generating embeddings.");
+    ragSyncError("OPENROUTER_API_KEY is required for generating embeddings.");
   }
 
   const initialKnowledgeBase = await getOrCreateKnowledgeBase(brand.id);

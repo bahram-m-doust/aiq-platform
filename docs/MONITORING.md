@@ -51,13 +51,18 @@ Recommended settings:
 2. Confirm `APP_BASE_URL` and `ADMIN_BASE_URL` match the public domain.
 3. Confirm Supabase env values are set on the server.
 4. Confirm Supabase project is reachable.
-5. Confirm migrations through `0010_rate_limits.sql` have run.
+5. Confirm all numbered migrations through
+   `0039_rag_approval_consistency.sql` have run.
 6. Check server logs for sanitized `[health] supabase check failed` messages.
+7. Alert on `[audit] persistence failed`; the business mutation may have
+   completed even though its audit row could not be stored.
+8. Inspect `storage_cleanup_jobs` for old or repeatedly attempted rows. Jobs
+   are retried opportunistically by later file operations.
 
 ## Current Limits
 
 - No request tracing.
 - No metrics dashboard.
 - No centralized log storage.
-- No queue or async job monitoring.
+- No external queue or managed async job monitoring.
 - RAG and agent cost/rate dashboards are deferred to a later scale phase.

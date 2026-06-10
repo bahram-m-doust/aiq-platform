@@ -9,14 +9,22 @@ import type {
   BrandBrainRetrievedSource,
 } from "@/features/agents/brain/types";
 import { searchBrandKnowledge } from "@/features/rag/vector-search";
+import {
+  buildUntrustedKnowledgeContext,
+  untrustedKnowledgeInstruction,
+} from "@/features/rag/prompt-context";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import {
   getOpenRouterClientForBrand,
   getOpenRouterModel,
 } from "@/lib/openrouter/client";
-import { computeTextCostCents } from "@/lib/openrouter/models";
+import {
+  computeTextCostCents,
+  providerCostCents,
+} from "@/lib/openrouter/models";
 
 const CODE = "openrouter_brain_config";
+const MAX_COMPLETION_TOKENS = 1200;
 
 export function isLLMBrainConfigError(error: unknown): error is DomainError {
   return isDomainErrorWithCode(error, CODE);
@@ -29,19 +37,12 @@ const BRAIN_ROLE_PROMPT =
 // Layer [3] — safety/scope guard, locked in code and appended after the
 // admin-edited brand instruction so it can never be overridden.
 const BRAIN_SAFETY_GUARD =
-  "Answer using only the provided brand knowledge context. If the context does not contain enough information to answer, say that the current Brand Brain knowledge base does not contain enough information. Never reference other brands, knowledge that was not provided, or internal system details.";
+  `Answer using only the provided brand knowledge context. If the context does not contain enough information to answer, say that the current Brand Brain knowledge base does not contain enough information. Never reference other brands, knowledge that was not provided, or internal system details. ${untrustedKnowledgeInstruction}`;
 
 function buildContextBlock(
   chunks: { chunkText: string; fileName: string; score: number }[],
 ): string {
-  if (chunks.length === 0) return "";
-
-  const sections = chunks.map(
-    (c) =>
-      `--- Source: ${c.fileName} (relevance: ${Math.round(c.score * 100)}%) ---\n${c.chunkText}`,
-  );
-
-  return `\n\n## Brand Knowledge Context\n\n${sections.join("\n\n")}`;
+  return buildUntrustedKnowledgeContext(chunks);
 }
 
 function toRetrievedSources(
@@ -103,12 +104,11 @@ export function buildBrandBrainMessages({
   prompt: string;
   instruction?: string;
 }): ChatMessageParam[] {
-  // Layered composition: role + brand instruction + safety guard + RAG context.
+  // Retrieved documents stay in a separate untrusted user message.
   const systemContent = joinPromptLayers([
     BRAIN_ROLE_PROMPT,
     instruction,
     BRAIN_SAFETY_GUARD,
-    context,
   ]);
 
   return [
@@ -117,6 +117,7 @@ export function buildBrandBrainMessages({
       role: message.role,
       content: message.content,
     })),
+    ...(context ? [{ role: "user" as const, content: context }] : []),
     { role: "user", content: prompt },
   ];
 }
@@ -158,20 +159,30 @@ export async function createBrandBrainResponse({
   const completion = await client.chat.completions.create({
     model,
     messages: buildBrandBrainMessages({ context, history, prompt, instruction }),
+    max_tokens: MAX_COMPLETION_TOKENS,
   });
 
   const answer = completion.choices[0]?.message?.content?.trim() ?? "";
+
+  const promptTokens = completion.usage?.prompt_tokens ?? 0;
+  const completionTokens = completion.usage?.completion_tokens ?? 0;
+  const estimatedCostCents = computeTextCostCents({
+    model,
+    promptTokens,
+    completionTokens,
+  });
 
   return {
     responseId: completion.id ?? `pgvector-${Date.now()}`,
     answer,
     retrievedSources,
     displaySources,
-    usage: computeBrainUsage({
+    usage: {
+      promptTokens,
+      completionTokens,
+      costCents: providerCostCents(completion.usage, estimatedCostCents),
       model,
-      promptTokens: completion.usage?.prompt_tokens ?? 0,
-      completionTokens: completion.usage?.completion_tokens ?? 0,
-    }),
+    },
   };
 }
 
@@ -182,17 +193,23 @@ export async function openBrandBrainStream({
   brandId,
   model,
   messages,
+  signal,
 }: {
   brandId: string;
   model: string;
   messages: ChatMessageParam[];
+  signal?: AbortSignal;
 }) {
   const client = await getOpenRouterClientForBrand(brandId);
 
-  return client.chat.completions.create({
-    model,
-    messages,
-    stream: true,
-    stream_options: { include_usage: true },
-  });
+  return client.chat.completions.create(
+    {
+      model,
+      messages,
+      max_tokens: MAX_COMPLETION_TOKENS,
+      stream: true,
+      stream_options: { include_usage: true },
+    },
+    { signal },
+  );
 }

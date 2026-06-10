@@ -1,6 +1,8 @@
 import "server-only";
 
 import { failure } from "@/features/access/access-key-rules";
+import { isCurrentActiveEntitlementWindow } from "@/features/access/entitlement-window";
+import { activateRedeemedBrandMembership } from "@/features/access/redeemed-brand-membership";
 import type { AccessKeySafeRecord } from "@/features/access/types";
 import {
   createAccessKey,
@@ -8,7 +10,6 @@ import {
 } from "@/features/access/services";
 import {
   buildInvitationAcceptUrl,
-  buildSpecialistMembershipUpsert,
   toMemberInvitedAudit,
   toMemberJoinedAudit,
   validateJoinBrandAccessKey,
@@ -59,23 +60,12 @@ export function isInvitationError(error: unknown): error is DomainError {
 }
 
 function isActiveEntitlement(row: EntitlementRow, now = new Date()) {
-  if (row.status !== "ACTIVE") {
-    return false;
-  }
-
-  const nowTime = now.getTime();
-  const startsAt = row.starts_at ? Date.parse(row.starts_at) : null;
-  const expiresAt = row.expires_at ? Date.parse(row.expires_at) : null;
-
-  if (startsAt !== null && (Number.isNaN(startsAt) || startsAt > nowTime)) {
-    return false;
-  }
-
-  if (expiresAt !== null && (Number.isNaN(expiresAt) || expiresAt <= nowTime)) {
-    return false;
-  }
-
-  return true;
+  return isCurrentActiveEntitlementWindow({
+    status: row.status,
+    startsAt: row.starts_at,
+    expiresAt: row.expires_at,
+    now,
+  });
 }
 
 function toSpecialistMembershipRecord(
@@ -316,38 +306,18 @@ export async function acceptSpecialistInvitationForRedeemedAccessKey({
     );
   }
 
-  const joinableBrand = await getJoinableBrand({
-    brandId: accessKey.targetBrandId,
-    now: new Date(),
+  const activation = await activateRedeemedBrandMembership({
+    accessKeyId: accessKey.id,
+    userId,
   });
-
-  if (!joinableBrand) {
-    throw new Error("This brand workspace is not available.");
-  }
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("brand_memberships")
-    .upsert(
-      buildSpecialistMembershipUpsert({
-        brandId: accessKey.targetBrandId,
-        userId,
-        invitedBy: accessKey.createdBy,
-      }),
-      {
-        onConflict: "brand_id,user_id,role",
-      },
-    )
-    .select("id, brand_id, user_id, role, status, invited_by")
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  const membership = toSpecialistMembershipRecord(
-    data as unknown as MembershipRow,
-  );
+  const membership = toSpecialistMembershipRecord({
+    id: activation.membership.id,
+    brand_id: activation.membership.brandId,
+    user_id: activation.membership.userId,
+    role: activation.membership.role,
+    status: activation.membership.status,
+    invited_by: activation.membership.invitedBy,
+  });
 
   await insertInvitationAudit({
     actorUserId: userId,
@@ -363,7 +333,7 @@ export async function acceptSpecialistInvitationForRedeemedAccessKey({
   });
 
   return {
-    brand: joinableBrand,
+    brand: activation.brand,
     membership,
   };
 }

@@ -3,6 +3,10 @@ import type {
   FuturesResearchReportStatus,
   FuturesResearchReviewRole,
 } from "@/features/futures-research/types";
+import {
+  normalizeReviewPosition,
+  validateReviewAnnotationBody,
+} from "@/features/review-deliverables/schema";
 
 export const futuresResearchReportStatusLabels: Record<
   FuturesResearchReportStatus,
@@ -19,7 +23,8 @@ export const initialFuturesResearchActionState: FuturesResearchActionState = {
   message: "",
 };
 
-const maxAnnotationLength = 4000;
+export const maxFuturesResearchPdfBytes = 10 * 1024 * 1024;
+export const maxFuturesResearchStorylineBytes = 5 * 1024 * 1024;
 
 export function canReviewFuturesResearchRole(
   role: string | null | undefined,
@@ -29,16 +34,18 @@ export function canReviewFuturesResearchRole(
 
 export function isFuturesResearchPdf(file: File): boolean {
   return (
-    file.type.toLowerCase() === "application/pdf" ||
+    file.size <= maxFuturesResearchPdfBytes &&
+    file.type.toLowerCase() === "application/pdf" &&
     file.name.toLowerCase().endsWith(".pdf")
   );
 }
 
 export function isFuturesResearchStoryline(file: File): boolean {
   return (
-    file.type.toLowerCase() === "text/html" ||
-    file.name.toLowerCase().endsWith(".html") ||
-    file.name.toLowerCase().endsWith(".htm")
+    file.size <= maxFuturesResearchStorylineBytes &&
+    file.type.toLowerCase() === "text/html" &&
+    (file.name.toLowerCase().endsWith(".html") ||
+      file.name.toLowerCase().endsWith(".htm"))
   );
 }
 
@@ -46,18 +53,9 @@ export function validateAnnotationBody(body: string): {
   value: string | null;
   error: string | null;
 } {
-  const trimmed = body.trim();
-  if (!trimmed) return { value: null, error: "Enter a comment." };
-  if (trimmed.length > maxAnnotationLength) {
-    return {
-      value: null,
-      error: `Comment must be ${maxAnnotationLength} characters or fewer.`,
-    };
-  }
-  return { value: trimmed, error: null };
+  return validateReviewAnnotationBody(body);
 }
 
 export function normalizePosition(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
+  return normalizeReviewPosition(value);
 }

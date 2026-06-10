@@ -3,6 +3,7 @@ import "server-only";
 import { getOpenRouterClientForBrand } from "@/lib/openrouter/client";
 import {
   computeImageCostCents,
+  providerCostCents,
   type ImageModelId,
 } from "@/lib/openrouter/models";
 
@@ -44,12 +45,16 @@ export async function generateImage({
 }): Promise<GenerateImageResult> {
   const client = await getOpenRouterClientForBrand(brandId);
 
-  const b64Images = CHAT_COMPLETIONS_IMAGE_MODELS.has(model)
+  const transport = CHAT_COMPLETIONS_IMAGE_MODELS.has(model)
     ? await generateViaChatCompletions(client, model, prompt, n)
     : await generateViaImagesEndpoint(client, model, prompt, n);
 
+  const b64Images = transport.b64Images;
   const imageCount = b64Images.length;
-  const costCents = computeImageCostCents({ model, imageCount });
+  const costCents = providerCostCents(
+    transport.usage,
+    computeImageCostCents({ model, imageCount }),
+  );
 
   return {
     b64Images,
@@ -62,7 +67,7 @@ async function generateViaImagesEndpoint(
   model: ImageModelId,
   prompt: string,
   n: number,
-): Promise<string[]> {
+): Promise<{ b64Images: string[]; usage: unknown }> {
   // The OpenAI SDK's images.generate is OpenAI-typed; OpenRouter accepts
   // arbitrary model ids, so we cast through `unknown` to satisfy TS.
   const response = await client.images.generate({
@@ -72,13 +77,18 @@ async function generateViaImagesEndpoint(
     response_format: "b64_json",
   } as unknown as Parameters<typeof client.images.generate>[0]);
 
-  const data =
-    (response as unknown as { data?: Array<{ b64_json?: string | null }> })
-      .data ?? [];
+  const normalized = response as unknown as {
+    data?: Array<{ b64_json?: string | null }>;
+    usage?: unknown;
+  };
+  const data = normalized.data ?? [];
 
-  return data
-    .map((d) => d?.b64_json ?? null)
-    .filter((b): b is string => Boolean(b));
+  return {
+    b64Images: data
+      .map((d) => d?.b64_json ?? null)
+      .filter((b): b is string => Boolean(b)),
+    usage: normalized.usage,
+  };
 }
 
 async function generateViaChatCompletions(
@@ -86,7 +96,7 @@ async function generateViaChatCompletions(
   model: ImageModelId,
   prompt: string,
   n: number,
-): Promise<string[]> {
+): Promise<{ b64Images: string[]; usage: unknown }> {
   // OpenRouter's chat.completions accepts a `modalities` field that the OpenAI
   // SDK types do not know about. Cast the payload to bypass the type check;
   // OpenRouter forwards the param to the upstream provider verbatim.
@@ -97,16 +107,17 @@ async function generateViaChatCompletions(
     n,
   } as unknown as Parameters<typeof client.chat.completions.create>[0]);
 
-  const choices =
-    (response as unknown as {
-      choices?: Array<{
-        message?: {
-          images?: Array<
-            { image_url?: { url?: string | null } | null } | null
-          >;
-        };
-      }>;
-    }).choices ?? [];
+  const normalized = response as unknown as {
+    choices?: Array<{
+      message?: {
+        images?: Array<
+          { image_url?: { url?: string | null } | null } | null
+        >;
+      };
+    }>;
+    usage?: unknown;
+  };
+  const choices = normalized.choices ?? [];
 
   const dataUrls: string[] = [];
   for (const choice of choices) {
@@ -117,9 +128,12 @@ async function generateViaChatCompletions(
     }
   }
 
-  return dataUrls
-    .map(stripDataUrlPrefix)
-    .filter((b): b is string => Boolean(b));
+  return {
+    b64Images: dataUrls
+      .map(stripDataUrlPrefix)
+      .filter((b): b is string => Boolean(b)),
+    usage: normalized.usage,
+  };
 }
 
 function stripDataUrlPrefix(value: string): string | null {

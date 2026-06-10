@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { validateAccessKeyForRedemption } from "@/features/access/access-key-rules";
 import type { AccessKeySafeRecord } from "@/features/access/types";
 import {
-  buildOwnerMembershipUpsert,
   findCurrentActiveBrandEntitlement,
   toBrandClaimedAudit,
   validateClaimableBrandAvailability,
@@ -152,20 +151,6 @@ describe("claim brand target availability", () => {
 });
 
 describe("claim brand persistence shapes", () => {
-  it("builds an active owner membership upsert row", () => {
-    expect(
-      buildOwnerMembershipUpsert({
-        brandId: "brand-1",
-        userId: "profile-1",
-      }),
-    ).toEqual({
-      brand_id: "brand-1",
-      user_id: "profile-1",
-      role: "OWNER",
-      status: "ACTIVE",
-    });
-  });
-
   it("builds safe brand claimed audit metadata", () => {
     const membership: ClaimBrandMembershipRecord = {
       id: "membership-1",

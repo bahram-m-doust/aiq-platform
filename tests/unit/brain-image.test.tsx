@@ -25,8 +25,23 @@ vi.mock("@/lib/openrouter/image", () => ({
   generateImage: vi.fn(),
 }));
 vi.mock("@/features/openrouter/usage", () => ({
-  assertWithinBudget: vi.fn(() => Promise.resolve()),
-  recordRunUsage: vi.fn(() => Promise.resolve()),
+  withRunUsageReservation: vi.fn(
+    async ({
+      brandId,
+      kind,
+      operation,
+    }: {
+      brandId: string;
+      kind: "TEXT" | "IMAGE" | "EMBEDDING";
+      operation: (reservation: {
+        id: string;
+        brandId: string;
+        kind: "TEXT" | "IMAGE" | "EMBEDDING";
+      }) => Promise<unknown>;
+    }) => operation({ id: `reservation-${kind}`, brandId, kind }),
+  ),
+  recordRunUsage: vi.fn(() => Promise.resolve("usage-1")),
+  attachRunUsage: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("@/lib/audit/logAudit", () => ({
   logAudit: vi.fn(() => Promise.resolve()),

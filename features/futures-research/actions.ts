@@ -9,6 +9,7 @@ import {
   canReviewFuturesResearchRole,
   isFuturesResearchPdf,
   isFuturesResearchStoryline,
+  maxFuturesResearchStorylineBytes,
   validateAnnotationBody,
 } from "@/features/futures-research/schema";
 import {
@@ -26,6 +27,7 @@ import type {
   FuturesResearchActionState,
 } from "@/features/futures-research/types";
 import { canViewAdminModulesRole } from "@/features/modules/schema";
+import { validateSecureUpload } from "@/lib/security/file-upload";
 
 const CLIENT_PATH = "/dashboard/brain/roadmap/futures-research";
 
@@ -55,7 +57,17 @@ export async function uploadFuturesResearchReportAction(
     return { status: "error", message: "Choose a PDF file to upload." };
   }
   if (!isFuturesResearchPdf(file)) {
-    return { status: "error", message: "The report must be a PDF file." };
+    return {
+      status: "error",
+      message: "The report must be a valid PDF file up to 10 MB.",
+    };
+  }
+  const validation = await validateSecureUpload({
+    file,
+    allowedKinds: ["PDF"],
+  });
+  if (!validation.ok) {
+    return { status: "error", message: validation.message };
   }
 
   await uploadFuturesResearchReport({ brandId, profileId: profile.id, file });
@@ -85,7 +97,18 @@ export async function uploadFuturesResearchStorylineAction(
     return { status: "error", message: "Choose an HTML file to upload." };
   }
   if (!isFuturesResearchStoryline(file)) {
-    return { status: "error", message: "The storyline must be an HTML file." };
+    return {
+      status: "error",
+      message: "The storyline must be a valid HTML file up to 5 MB.",
+    };
+  }
+  const validation = await validateSecureUpload({
+    file,
+    allowedKinds: ["HTML"],
+    maxBytes: maxFuturesResearchStorylineBytes,
+  });
+  if (!validation.ok) {
+    return { status: "error", message: validation.message };
   }
 
   await uploadFuturesResearchStoryline({ brandId, profileId: profile.id, file });

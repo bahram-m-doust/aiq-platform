@@ -26,6 +26,17 @@ export async function uploadBrandIcon({
   }
 }
 
+export async function removeBrandIcon(storagePath: string) {
+  const admin = createAdminClient();
+  const { error } = await admin.storage
+    .from(brandIconsBucket)
+    .remove([storagePath]);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export function brandIconPublicUrl(iconPath: string | null) {
   if (!iconPath) return null;
   const admin = createAdminClient();

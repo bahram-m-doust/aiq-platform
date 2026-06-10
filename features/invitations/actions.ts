@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { redeemAccessKey } from "@/features/access/services";
+import {
+  redeemAccessKey,
+  rollbackAccessKeyRedemption,
+} from "@/features/access/services";
 import { getTrustedRequestOrigin } from "@/features/auth/origins";
 import { requireUserProfile } from "@/features/auth/queries";
 import {
@@ -142,6 +145,22 @@ export async function acceptSpecialistInvitationAction(
       userId: profile.id,
     });
   } catch (error) {
+    try {
+      await rollbackAccessKeyRedemption({
+        redemption: result.redemption,
+        actorUserId: profile.id,
+        actorRole: profile.global_role,
+      });
+    } catch (rollbackError) {
+      logServerError({
+        label: "[invitations] redemption rollback failed",
+        error: rollbackError,
+        metadata: {
+          profileId: profile.id,
+          accessKeyId: result.accessKey.id,
+        },
+      });
+    }
     logServerError({
       label: "[invitations] accept failed",
       error,

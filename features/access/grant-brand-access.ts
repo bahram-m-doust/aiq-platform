@@ -1,11 +1,5 @@
 import "server-only";
 
-import {
-  buildAgentEntitlementUpserts,
-  findUnmatchedAgentKeys,
-  parseIncludedAgentKeys,
-  type AgentLookupRecord,
-} from "@/features/access/grant-brand-access-rules";
 import type {
   BrandEntitlementRecord,
   EntitlementSource,
@@ -16,42 +10,22 @@ import { entitlementSources } from "@/features/access/types";
 import { logAudit } from "@/lib/audit/logAudit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-type BrandRow = {
-  id: string;
+export type BrandAccessGrantRpcRow = {
+  entitlement_id: string;
+  entitlement_brand_id: string;
+  entitlement_plan_id: string;
+  entitlement_source: string;
+  entitlement_status: string;
+  entitlement_starts_at: string;
+  entitlement_expires_at: string | null;
+  entitlement_granted_by: string | null;
+  entitlement_manual_reference: string | null;
+  entitlement_internal_note: string | null;
+  entitlement_created_at: string | null;
+  included_agent_keys: string[] | null;
+  matched_agent_keys: string[] | null;
+  agent_entitlement_count: number;
 };
-
-type PlanRow = {
-  id: string;
-  included_agents: unknown;
-};
-
-type BrandEntitlementRow = {
-  id: string;
-  brand_id: string;
-  plan_id: string;
-  source: string;
-  status: string;
-  starts_at: string;
-  expires_at: string | null;
-  granted_by: string | null;
-  manual_reference: string | null;
-  internal_note: string | null;
-  created_at: string | null;
-};
-
-const entitlementColumns = [
-  "id",
-  "brand_id",
-  "plan_id",
-  "source",
-  "status",
-  "starts_at",
-  "expires_at",
-  "granted_by",
-  "manual_reference",
-  "internal_note",
-  "created_at",
-].join(", ");
 
 function isEntitlementSource(value: string): value is EntitlementSource {
   return entitlementSources.includes(value as EntitlementSource);
@@ -81,28 +55,28 @@ function toNullableIsoTimestamp(value: Date | string | null | undefined) {
 }
 
 function toBrandEntitlementRecord(
-  row: BrandEntitlementRow,
+  row: BrandAccessGrantRpcRow,
 ): BrandEntitlementRecord {
-  if (!isEntitlementSource(row.source)) {
+  if (!isEntitlementSource(row.entitlement_source)) {
     throw new Error("Unsupported entitlement source.");
   }
 
-  if (row.status !== "ACTIVE") {
+  if (row.entitlement_status !== "ACTIVE") {
     throw new Error("Unexpected entitlement status.");
   }
 
   return {
-    id: row.id,
-    brandId: row.brand_id,
-    planId: row.plan_id,
-    source: row.source,
-    status: row.status,
-    startsAt: row.starts_at,
-    expiresAt: row.expires_at,
-    grantedBy: row.granted_by,
-    manualReference: row.manual_reference,
-    internalNote: row.internal_note,
-    createdAt: row.created_at,
+    id: row.entitlement_id,
+    brandId: row.entitlement_brand_id,
+    planId: row.entitlement_plan_id,
+    source: row.entitlement_source,
+    status: row.entitlement_status,
+    startsAt: row.entitlement_starts_at,
+    expiresAt: row.entitlement_expires_at,
+    grantedBy: row.entitlement_granted_by,
+    manualReference: row.entitlement_manual_reference,
+    internalNote: row.entitlement_internal_note,
+    createdAt: row.entitlement_created_at,
   };
 }
 
@@ -130,6 +104,46 @@ function toAuditGrant({
   };
 }
 
+export function toGrantBrandAccessResult(
+  row: BrandAccessGrantRpcRow,
+): GrantBrandAccessResult {
+  const entitlement = toBrandEntitlementRecord(row);
+  const includedAgentKeys = row.included_agent_keys ?? [];
+  const matchedAgentKeys = row.matched_agent_keys ?? [];
+  const matchedAgentKeySet = new Set(matchedAgentKeys);
+
+  return {
+    entitlement,
+    includedAgentKeys,
+    matchedAgentKeys,
+    unmatchedAgentKeys: includedAgentKeys.filter(
+      (key) => !matchedAgentKeySet.has(key),
+    ),
+    agentEntitlementCount: row.agent_entitlement_count,
+  };
+}
+
+export async function auditBrandAccessGrant({
+  result,
+  actorUserId,
+  actorRole,
+}: {
+  result: GrantBrandAccessResult;
+  actorUserId: string;
+  actorRole?: string | null;
+}) {
+  await logAudit({
+    actorUserId,
+    actorRole: actorRole ?? null,
+    brandId: result.entitlement.brandId,
+    action: "plan_granted",
+    entityType: "brand_entitlement",
+    entityId: result.entitlement.id,
+    before: null,
+    after: toAuditGrant(result),
+  });
+}
+
 export async function grantBrandAccess(
   input: GrantBrandAccessInput,
 ): Promise<GrantBrandAccessResult> {
@@ -145,114 +159,33 @@ export async function grantBrandAccess(
   }
 
   const admin = createAdminClient();
-  const [brandResult, planResult] = await Promise.all([
-    admin.from("brands").select("id").eq("id", input.brandId).maybeSingle(),
-    admin
-      .from("plans")
-      .select("id, included_agents")
-      .eq("id", input.planId)
-      .eq("is_active", true)
-      .maybeSingle(),
-  ]);
-
-  if (brandResult.error) {
-    throw brandResult.error;
-  }
-
-  if (planResult.error) {
-    throw planResult.error;
-  }
-
-  if (!(brandResult.data as BrandRow | null)) {
-    throw new Error("Brand could not be found.");
-  }
-
-  const plan = planResult.data as PlanRow | null;
-
-  if (!plan) {
-    throw new Error("Active plan could not be found.");
-  }
-
-  const { data: entitlementData, error: entitlementError } = await admin
-    .from("brand_entitlements")
-    .insert({
-      brand_id: input.brandId,
-      plan_id: input.planId,
-      source: input.source,
-      status: "ACTIVE",
-      starts_at: startsAt,
-      expires_at: expiresAt,
-      granted_by: input.grantedByUserId,
-      manual_reference: normalizeOptionalText(input.manualReference),
-      internal_note: normalizeOptionalText(input.internalNote),
-    })
-    .select(entitlementColumns)
-    .single();
-
-  if (entitlementError) {
-    throw entitlementError;
-  }
-
-  const entitlement = toBrandEntitlementRecord(
-    entitlementData as unknown as BrandEntitlementRow,
-  );
-  const includedAgentKeys = parseIncludedAgentKeys(plan.included_agents);
-  let matchedAgents: AgentLookupRecord[] = [];
-
-  if (includedAgentKeys.length > 0) {
-    const { data: agentData, error: agentError } = await admin
-      .from("agents")
-      .select("id, key")
-      .in("key", includedAgentKeys)
-      .eq("is_active", true);
-
-    if (agentError) {
-      throw agentError;
-    }
-
-    matchedAgents = (agentData ?? []) as AgentLookupRecord[];
-  }
-
-  const agentRows = buildAgentEntitlementUpserts({
-    brandId: input.brandId,
-    planId: input.planId,
-    startsAt,
-    expiresAt,
-    agents: matchedAgents,
+  const idempotencyKey = normalizeOptionalText(input.idempotencyKey);
+  const { data, error } = await admin.rpc("grant_brand_access_atomic", {
+    p_brand_id: input.brandId,
+    p_plan_id: input.planId,
+    p_source: input.source,
+    p_starts_at: startsAt,
+    p_expires_at: expiresAt,
+    p_granted_by: input.grantedByUserId,
+    p_manual_reference: normalizeOptionalText(input.manualReference),
+    p_internal_note: normalizeOptionalText(input.internalNote),
+    p_idempotency_key: idempotencyKey,
   });
+  if (error) throw error;
 
-  if (agentRows.length > 0) {
-    const { error: agentEntitlementError } = await admin
-      .from("agent_entitlements")
-      .upsert(agentRows, {
-        onConflict: "brand_id,agent_id",
-      });
-
-    if (agentEntitlementError) {
-      throw agentEntitlementError;
-    }
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | BrandAccessGrantRpcRow
+    | null;
+  if (!row) {
+    throw new Error("Plan grant transaction returned no entitlement.");
   }
 
-  const result: GrantBrandAccessResult = {
-    entitlement,
-    includedAgentKeys,
-    matchedAgentKeys: matchedAgents.map((agent) => agent.key),
-    unmatchedAgentKeys: findUnmatchedAgentKeys({
-      includedAgentKeys,
-      agents: matchedAgents,
-    }),
-    agentEntitlementCount: agentRows.length,
-  };
+  const result = toGrantBrandAccessResult(row);
 
-  await logAudit({
+  await auditBrandAccessGrant({
+    result,
     actorUserId: input.grantedByUserId,
-    actorRole: input.actorRole ?? null,
-    brandId: input.brandId,
-    action: "plan_granted",
-    entityType: "brand_entitlement",
-    entityId: entitlement.id,
-    before: null,
-    after: toAuditGrant(result),
+    actorRole: input.actorRole,
   });
 
   return result;

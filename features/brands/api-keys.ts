@@ -1,6 +1,9 @@
 import "server-only";
 
-import { decryptSecret, encryptSecret } from "@/lib/crypto/encrypt";
+import {
+  decryptSecretWithMetadata,
+  encryptSecret,
+} from "@/lib/crypto/encrypt";
 import { logAudit } from "@/lib/audit/logAudit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -33,7 +36,20 @@ export async function getBrandApiKey(
   const row = data as ApiKeyRow | null;
   if (!row) return null;
 
-  return decryptSecret(row.encrypted_key);
+  const decrypted = decryptSecretWithMetadata(row.encrypted_key);
+  if (decrypted.needsReencryption) {
+    const { error: migrationError } = await admin
+      .from("brand_api_keys")
+      .update({
+        encrypted_key: encryptSecret(decrypted.plaintext),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", row.id)
+      .eq("encrypted_key", row.encrypted_key);
+    if (migrationError) throw migrationError;
+  }
+
+  return decrypted.plaintext;
 }
 
 export async function hasBrandApiKey(

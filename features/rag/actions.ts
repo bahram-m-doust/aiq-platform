@@ -123,7 +123,7 @@ export async function syncBrandKnowledgeBaseAction(
       message:
         result.failedCount > 0
           ? `${result.syncedCount} file(s) synced; ${result.failedCount} file(s) failed.`
-          : `${result.syncedCount} file(s) synced to OpenAI File Search.`,
+          : `${result.syncedCount} file(s) synced to the brand knowledge base.`,
       brandId: result.brandId,
       syncedCount: result.syncedCount,
       failedCount: result.failedCount,

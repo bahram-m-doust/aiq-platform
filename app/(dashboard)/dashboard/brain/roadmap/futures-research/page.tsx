@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ExternalLinkIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { requireUserProfile } from "@/features/auth/queries";
 import {
   addFuturesResearchAnnotationAction,
@@ -95,19 +93,12 @@ export default async function FuturesResearchPage() {
       <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 lg:justify-center">
           <div className="flex w-full flex-col gap-4 lg:max-w-[756px]">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <FuturesResearchHeader status={status} />
-              <Button asChild size="sm" variant="outline">
-                <a href={storylineUrl} rel="noreferrer" target="_blank">
-                  <ExternalLinkIcon className="size-3.5" />
-                  Open full screen
-                </a>
-              </Button>
-            </div>
+            <FuturesResearchHeader status={status} />
             <div className="w-full overflow-hidden rounded-[10px] border border-border bg-white">
               <iframe
                 className="h-[82vh] w-full"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-downloads"
+                referrerPolicy="no-referrer"
+                sandbox="allow-scripts"
                 src={storylineUrl}
                 title="Futures Research Storyline"
               />

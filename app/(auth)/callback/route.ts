@@ -21,6 +21,7 @@ function loginRedirect(
   redirectUrl.pathname = resolveLoginPathForNext(nextPath);
   redirectUrl.search = "";
   redirectUrl.searchParams.set("message", message);
+  redirectUrl.searchParams.set("next", sanitizeRedirectPath(nextPath));
   return NextResponse.redirect(redirectUrl);
 }
 
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     const detail = describeProfileProvisioningError(profileError);
     return loginRedirect(
       request,
-      `Profile setup failed — ${detail}`,
+      `Profile setup failed - ${detail}`,
       nextPath,
     );
   }

@@ -19,13 +19,18 @@ import type {
   CreateAccessKeyResult,
   RedeemAccessKeyFailure,
   RedeemAccessKeyResult,
+  RedeemAccessKeySuccess,
 } from "@/features/access/types";
 import { generateAccessKey } from "@/lib/security/generateAccessKey";
 import {
   hashAccessKey,
   normalizeAccessKey,
 } from "@/lib/security/hashAccessKey";
-import { logAudit } from "@/lib/audit/logAudit";
+import {
+  logAudit,
+  type AuditAction,
+  type AuditJson,
+} from "@/lib/audit/logAudit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const accessKeySafeColumns = [
@@ -81,13 +86,6 @@ type RedeemAccessKeyInput = {
     now: Date;
   }) => Promise<RedeemAccessKeyFailure | null>;
 };
-
-type AuditAction =
-  | "access_key_created"
-  | "access_key_redeemed"
-  | "access_key_failed";
-
-type AuditJson = Record<string, unknown>;
 
 function toIsoTimestamp(value: Date | string) {
   const date = value instanceof Date ? value : new Date(value);
@@ -327,6 +325,43 @@ export async function updateAccessKeyEmailDelivery({
   return toAccessKeySafeRecord(data as unknown as AccessKeyRow);
 }
 
+export async function revokeUnusedAccessKey({
+  accessKeyId,
+  actorUserId,
+  actorRole,
+}: {
+  accessKeyId: string;
+  actorUserId: string;
+  actorRole?: string | null;
+}) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("access_keys")
+    .update({ status: "REVOKED" satisfies AccessKeyStatus })
+    .eq("id", accessKeyId)
+    .eq("status", "ACTIVE")
+    .eq("redeemed_count", 0)
+    .select(accessKeySafeColumns)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return false;
+
+  const revoked = toAccessKeySafeRecord(data as unknown as AccessKeyRow);
+  await insertAccessKeyAuditLog({
+    action: "access_key_revoked",
+    actorUserId,
+    actorRole,
+    accessKey: revoked,
+    afterJson: {
+      outcome: "revoked",
+      reason: "dependent_workflow_failed",
+      access_key: toAuditAccessKey(revoked),
+    },
+  });
+  return true;
+}
+
 export async function redeemAccessKey({
   rawKey,
   userId,
@@ -501,5 +536,58 @@ export async function redeemAccessKey({
     ok: true,
     accessKey: redeemedAccessKey,
     nextAction,
+    redemption: {
+      before: accessKey,
+      after: redeemedAccessKey,
+    },
   };
+}
+
+export async function rollbackAccessKeyRedemption({
+  redemption,
+  actorUserId,
+  actorRole = null,
+}: {
+  redemption: RedeemAccessKeySuccess["redemption"];
+  actorUserId: string;
+  actorRole?: string | null;
+}): Promise<void> {
+  const { before, after } = redemption;
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("access_keys")
+    .update({
+      status: before.status,
+      redeemed_count: before.redeemedCount,
+      redeemed_by: before.redeemedBy,
+      redeemed_at: before.redeemedAt,
+    })
+    .eq("id", after.id)
+    .eq("status", after.status)
+    .eq("redeemed_count", after.redeemedCount)
+    .eq("redeemed_by", actorUserId)
+    .eq("redeemed_at", after.redeemedAt)
+    .select(accessKeySafeColumns)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error("Access key redemption rollback conflicted with newer state.");
+  }
+
+  const restored = toAccessKeySafeRecord(data as unknown as AccessKeyRow);
+  await insertAccessKeyAuditLog({
+    action: "access_key_redemption_rolled_back",
+    actorUserId,
+    actorRole,
+    accessKey: restored,
+    beforeJson: { access_key: toAuditAccessKey(after) },
+    afterJson: {
+      outcome: "rolled_back",
+      access_key: toAuditAccessKey(restored),
+    },
+  });
 }

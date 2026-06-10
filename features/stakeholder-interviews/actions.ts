@@ -6,6 +6,7 @@ import { logServerError } from "@/lib/logging/server";
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { requireUserProfile } from "@/features/auth/queries";
 import { canViewAdminModulesRole } from "@/features/modules/schema";
+import { validateSecureUpload } from "@/lib/security/file-upload";
 import {
   getStakeholderReportRowByBrand,
 } from "@/features/stakeholder-interviews/queries";
@@ -57,6 +58,13 @@ export async function uploadStakeholderReportAction(
   }
   if (!isStakeholderPdf(file)) {
     return { status: "error", message: "The report must be a PDF file." };
+  }
+  const validation = await validateSecureUpload({
+    file,
+    allowedKinds: ["PDF"],
+  });
+  if (!validation.ok) {
+    return { status: "error", message: validation.message };
   }
 
   try {

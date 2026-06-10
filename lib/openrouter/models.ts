@@ -128,6 +128,19 @@ export function computeImageCostCents({
   return Math.max(0, imageCount * price.perImage);
 }
 
+export function providerCostCents(
+  usage: unknown,
+  fallbackCostCents: number,
+): number {
+  if (typeof usage !== "object" || usage === null) {
+    return fallbackCostCents;
+  }
+  const cost = (usage as { cost?: unknown }).cost;
+  return typeof cost === "number" && Number.isFinite(cost) && cost >= 0
+    ? cost * 100
+    : fallbackCostCents;
+}
+
 const TEXT_MODEL_IDS = new Set(TEXT_MODELS.map((m) => m.id));
 const IMAGE_MODEL_IDS = new Set(IMAGE_MODELS.map((m) => m.id));
 

@@ -7,7 +7,6 @@ import type {
   SpecialistInvitationFormState,
   SpecialistInvitationInput,
   SpecialistMembershipRecord,
-  SpecialistMembershipUpsert,
 } from "@/features/invitations/types";
 
 function readString(formData: FormData, key: string) {
@@ -125,25 +124,6 @@ export function validateJoinBrandAccessKey(accessKey: AccessKeySafeRecord) {
   }
 
   return null;
-}
-
-export function buildSpecialistMembershipUpsert({
-  brandId,
-  userId,
-  invitedBy,
-}: {
-  brandId: string;
-  userId: string;
-  invitedBy: string | null;
-}): SpecialistMembershipUpsert {
-  return {
-    brand_id: brandId,
-    user_id: userId,
-    role: "BRAND_SPECIALIST",
-    status: "ACTIVE",
-    invited_by: invitedBy,
-    expires_at: null,
-  };
 }
 
 export function buildInvitationAcceptPath(rawKey: string) {

@@ -22,7 +22,11 @@ import type {
 } from "@/features/agents/runs/types";
 import { uploadAgentImagePng } from "@/features/agents/runs/image-storage";
 import type { UserProfile } from "@/features/auth/types";
-import { assertWithinBudget, recordRunUsage } from "@/features/openrouter/usage";
+import {
+  attachRunUsage,
+  recordRunUsage,
+  withRunUsageReservation,
+} from "@/features/openrouter/usage";
 import { searchBrandKnowledge } from "@/features/rag/vector-search";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
@@ -347,21 +351,20 @@ export async function runCatalogAgent({
     runError("This agent must be activated before it can run.");
   }
 
-  await assertWithinBudget(brainWorkspace.access.brandId);
-
+  const brandId = brainWorkspace.access.brandId;
   const moduleScope = await resolveKnowledgeModuleScope({
-    brandId: brainWorkspace.access.brandId,
+    brandId,
     requiredModules: agent.required_modules,
   });
 
-  const defaults = await getBrandModelDefaults(brainWorkspace.access.brandId);
+  const defaults = await getBrandModelDefaults(brandId);
   const textModel: TextModelId = textModelOverride ?? defaults.text;
   const imageModel: ImageModelId = imageModelOverride ?? defaults.image;
 
   if (normalizedAgentKey === "IMAGE_GENERATOR") {
     return runImageGeneratorAgent({
       profile,
-      brandId: brainWorkspace.access.brandId,
+      brandId,
       agent,
       agentKey: normalizedAgentKey,
       prompt,
@@ -371,59 +374,64 @@ export async function runCatalogAgent({
     });
   }
 
-  const startedAt = Date.now();
-  const response = await createAgentRunResponse({
-    agentKey: normalizedAgentKey,
-    prompt,
-    brandId: brainWorkspace.access.brandId,
-    moduleScope,
-    model: textModel,
-  });
-  const latencyMs = Math.max(0, Date.now() - startedAt);
-
-  if (!response.answer) {
-    runError("The agent did not return an answer.");
-  }
-
-  const runId = await insertAgentRun({
-    brandId: brainWorkspace.access.brandId,
-    agentId: agent.id,
-    userId: profile.id,
-    agentKey: normalizedAgentKey,
-    prompt,
-    answer: response.answer,
-    responseId: response.responseId,
-    model: textModel,
-    retrievedSources: response.retrievedSources,
-    moduleScope,
-    latencyMs,
-  });
-
-  await recordRunUsage({
-    runId,
-    brandId: brainWorkspace.access.brandId,
+  return withRunUsageReservation({
+    brandId,
     kind: "TEXT",
-    model: response.usage.model,
-    promptTokens: response.usage.promptTokens,
-    completionTokens: response.usage.completionTokens,
-    costCents: response.usage.costCents,
-  });
+    operation: async (reservation) => {
+      const startedAt = Date.now();
+      const response = await createAgentRunResponse({
+        agentKey: normalizedAgentKey,
+        prompt,
+        brandId,
+        moduleScope,
+        model: textModel,
+      });
+      const latencyMs = Math.max(0, Date.now() - startedAt);
 
-  await insertAgentRunAudit({
-    profile,
-    brandId: brainWorkspace.access.brandId,
-    agentId: agent.id,
-    agentKey: normalizedAgentKey,
-    runId,
-    model: textModel,
-  });
+      if (!response.answer) {
+        runError("The agent did not return an answer.");
+      }
 
-  return {
-    runId,
-    answer: response.answer,
-    sources: response.displaySources,
-    model: textModel,
-  };
+      const usageId = await recordRunUsage({
+        reservation,
+        kind: "TEXT",
+        model: response.usage.model,
+        promptTokens: response.usage.promptTokens,
+        completionTokens: response.usage.completionTokens,
+        costCents: response.usage.costCents,
+      });
+      const runId = await insertAgentRun({
+        brandId,
+        agentId: agent.id,
+        userId: profile.id,
+        agentKey: normalizedAgentKey,
+        prompt,
+        answer: response.answer,
+        responseId: response.responseId,
+        model: textModel,
+        retrievedSources: response.retrievedSources,
+        moduleScope,
+        latencyMs,
+      });
+      await attachRunUsage({ runId, usageIds: [usageId] });
+
+      await insertAgentRunAudit({
+        profile,
+        brandId,
+        agentId: agent.id,
+        agentKey: normalizedAgentKey,
+        runId,
+        model: textModel,
+      });
+
+      return {
+        runId,
+        answer: response.answer,
+        sources: response.displaySources,
+        model: textModel,
+      };
+    },
+  });
 }
 
 async function runImageGeneratorAgent({
@@ -465,19 +473,50 @@ async function runImageGeneratorAgent({
     : "";
 
   const startedAt = Date.now();
-  const { optimizedPrompt, usage: textUsage } = await rewritePromptForImage({
+  const textStage = await withRunUsageReservation({
     brandId,
-    brandPrompt: prompt,
-    model: textModel,
-    brandContext,
+    kind: "TEXT",
+    operation: async (reservation) => {
+      const result = await rewritePromptForImage({
+        brandId,
+        brandPrompt: prompt,
+        model: textModel,
+        brandContext,
+      });
+      const usageId = await recordRunUsage({
+        reservation,
+        kind: "TEXT",
+        model: result.usage.model,
+        promptTokens: result.usage.promptTokens,
+        completionTokens: result.usage.completionTokens,
+        costCents: result.usage.costCents,
+      });
+      return { ...result, usageId };
+    },
   });
+  const { optimizedPrompt } = textStage;
 
-  const { b64Images, usage: imageUsage } = await generateImage({
+  const imageStage = await withRunUsageReservation({
     brandId,
-    model: imageModel,
-    prompt: optimizedPrompt,
-    n: 1,
+    kind: "IMAGE",
+    operation: async (reservation) => {
+      const result = await generateImage({
+        brandId,
+        model: imageModel,
+        prompt: optimizedPrompt,
+        n: 1,
+      });
+      const usageId = await recordRunUsage({
+        reservation,
+        kind: "IMAGE",
+        model: result.usage.model,
+        imageCount: result.usage.imageCount,
+        costCents: result.usage.costCents,
+      });
+      return { ...result, usageId };
+    },
   });
+  const { b64Images } = imageStage;
   const latencyMs = Math.max(0, Date.now() - startedAt);
 
   if (b64Images.length === 0) {
@@ -539,23 +578,9 @@ async function runImageGeneratorAgent({
     throw outputError;
   }
 
-  await recordRunUsage({
+  await attachRunUsage({
     runId,
-    brandId,
-    kind: "TEXT",
-    model: textUsage.model,
-    promptTokens: textUsage.promptTokens,
-    completionTokens: textUsage.completionTokens,
-    costCents: textUsage.costCents,
-  });
-
-  await recordRunUsage({
-    runId,
-    brandId,
-    kind: "IMAGE",
-    model: imageUsage.model,
-    imageCount: imageUsage.imageCount,
-    costCents: imageUsage.costCents,
+    usageIds: [textStage.usageId, imageStage.usageId],
   });
 
   await insertAgentRunAudit({

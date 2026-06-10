@@ -6,12 +6,14 @@ import type { UserProfile } from "@/features/auth/types";
 import { buildStoragePath } from "@/features/documents/schema";
 import {
   createPrivateFileSignedDownloadUrl,
-  removePrivateFile,
   signedDownloadUrlTtlSeconds,
   uploadPrivateFile,
 } from "@/features/documents/storage";
 import {
-  artifactColumns,
+  processPendingStorageCleanups,
+  removePrivateFileOrQueue,
+} from "@/features/documents/storage-cleanup";
+import {
   getAdminModuleDetail,
   getClientModuleDetail,
   getLatestModuleArtifact,
@@ -43,6 +45,7 @@ import type {
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { validateSecureUpload } from "@/lib/security/file-upload";
 
 const CODE = "module_service";
 
@@ -207,55 +210,39 @@ async function uploadModuleArtifact({
   });
 
   const admin = createAdminClient();
-  const fileInsert = {
-    id: fileId,
-    brand_id: brandModule.brandId,
-    storage_path: storagePath,
-    original_name: input.file.name,
-    mime_type: input.file.type || null,
-    size_bytes: input.file.size,
-    visibility: "HELIO_INTERNAL",
-    status: "INTERNAL_DRAFT",
-    uploaded_by: profile.id,
-  };
-
-  const { error: fileError } = await admin.from("files").insert(fileInsert);
-
-  if (fileError) {
-    await removePrivateFile(storagePath);
-    throw fileError;
-  }
-
   const { data: artifactData, error: artifactError } = await admin
-    .from("module_artifacts")
-    .insert({
-      module_id: brandModule.id,
-      artifact_type: input.artifactType,
-      file_id: fileId,
-      version: nextVersion,
-      status: "INTERNAL_DRAFT",
-      uploaded_by: profile.id,
-    })
-    .select(artifactColumns)
-    .single();
+    .rpc("create_module_artifact_with_file", {
+      p_module_id: brandModule.id,
+      p_brand_id: brandModule.brandId,
+      p_uploaded_by: profile.id,
+      p_file_id: fileId,
+      p_storage_path: storagePath,
+      p_original_name: input.file.name,
+      p_mime_type: input.file.type || null,
+      p_size_bytes: input.file.size,
+      p_artifact_type: input.artifactType,
+      p_next_version: nextVersion,
+    });
 
   if (artifactError) {
-    await removePrivateFile(storagePath);
+    await removePrivateFileOrQueue({
+      storagePath,
+      fileId,
+      reason: "MODULE_UPLOAD_ROLLBACK",
+    });
     throw artifactError;
   }
 
-  const { error: moduleError } = await admin
-    .from("brand_modules")
-    .update({
-      status: "INTERNAL_REVIEW",
-      current_version: nextVersion,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", brandModule.id)
-    .eq("brand_id", brandModule.brandId);
-
-  if (moduleError) {
-    throw moduleError;
+  const artifactRow = Array.isArray(artifactData)
+    ? artifactData[0]
+    : artifactData;
+  if (!artifactRow) {
+    await removePrivateFileOrQueue({
+      storagePath,
+      fileId,
+      reason: "MODULE_UPLOAD_ROLLBACK",
+    });
+    throw new Error("Module artifact transaction returned no artifact.");
   }
 
   const fileRecord = {
@@ -272,7 +259,7 @@ async function uploadModuleArtifact({
     createdAt: new Date().toISOString(),
   };
   const artifact = toTemporaryArtifactRecord({
-    row: artifactData as unknown as ArtifactRow,
+    row: artifactRow as unknown as ArtifactRow,
     brandModule,
     file: fileRecord,
   });
@@ -282,6 +269,7 @@ async function uploadModuleArtifact({
     currentVersion: nextVersion,
   };
 
+  await processPendingStorageCleanups(undefined, 3);
   await insertModuleAuditLog({
     actorUserId: profile.id,
     actorRole: profile.global_role,
@@ -320,6 +308,13 @@ export async function uploadModuleArtifactFromFormData({
 
   if (validation.error || !validation.data) {
     moduleServiceError(validation.error ?? "Module upload details are invalid.");
+  }
+  const secureUpload = await validateSecureUpload({
+    file: validation.data.file,
+    allowedKinds: ["PDF", "DOCX"],
+  });
+  if (!secureUpload.ok) {
+    moduleServiceError(secureUpload.message);
   }
 
   const detail = await requireAdminModuleDetail({
@@ -376,54 +371,16 @@ export async function sendModuleToClientReview({
 
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
-  const { error: moduleError } = await admin
-    .from("brand_modules")
-    .update({
-      status: "CLIENT_REVIEW",
-      updated_at: nowIso,
-    })
-    .eq("id", detail.module.id)
-    .eq("brand_id", detail.module.brandId);
-
-  if (moduleError) {
-    throw moduleError;
-  }
-
-  const [artifactUpdate, fileUpdate] = await Promise.all([
-    admin
-      .from("module_artifacts")
-      .update({ status: "CLIENT_REVIEW" })
-      .eq("id", latestArtifact.id)
-      .eq("module_id", detail.module.id),
-    admin
-      .from("files")
-      .update({
-        visibility: "CLIENT_REVIEW",
-        status: "CLIENT_REVIEW",
-      })
-      .eq("id", latestArtifact.file.id)
-      .eq("brand_id", detail.module.brandId),
-  ]);
-
-  if (artifactUpdate.error) {
-    throw artifactUpdate.error;
-  }
-
-  if (fileUpdate.error) {
-    throw fileUpdate.error;
-  }
-
   const { data: reviewData, error: reviewError } = await admin
-    .from("module_reviews")
-    .insert({
-      module_id: detail.module.id,
-      reviewer_id: profile.id,
-      review_type: "SUPERVISOR",
-      decision: "APPROVED_FOR_CLIENT_REVIEW",
-      comment: null,
-    })
-    .select(reviewColumns)
-    .single();
+    .rpc("transition_module_review", {
+      p_action: "SEND_TO_CLIENT",
+      p_module_id: detail.module.id,
+      p_brand_id: detail.module.brandId,
+      p_artifact_id: latestArtifact.id,
+      p_file_id: latestArtifact.file.id,
+      p_reviewer_id: profile.id,
+      p_comment: null,
+    });
 
   if (reviewError) {
     throw reviewError;
@@ -443,7 +400,11 @@ export async function sendModuleToClientReview({
       status: "CLIENT_REVIEW",
     },
   };
-  const review = toTemporaryReviewRecord(reviewData as unknown as ReviewRow);
+  const reviewRow = Array.isArray(reviewData) ? reviewData[0] : reviewData;
+  if (!reviewRow) {
+    throw new Error("Module review transaction returned no review.");
+  }
+  const review = toTemporaryReviewRecord(reviewRow as unknown as ReviewRow);
 
   await insertModuleAuditLog({
     actorUserId: profile.id,
@@ -599,74 +560,43 @@ export async function submitClientModuleDecision({
 
   const nextModuleStatus =
     decision === "APPROVE" ? "CLIENT_APPROVED" : "CLIENT_CHANGE_REQUESTED";
-  const reviewDecision =
-    decision === "APPROVE" ? "APPROVED" : "CHANGE_REQUESTED";
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
-  const { error: moduleError } = await admin
-    .from("brand_modules")
-    .update({
-      status: nextModuleStatus,
-      updated_at: nowIso,
-    })
-    .eq("id", detail.module.id)
-    .eq("brand_id", detail.module.brandId);
-
-  if (moduleError) {
-    throw moduleError;
-  }
-
-  let updatedArtifact = artifact;
-
-  if (decision === "APPROVE") {
-    const [artifactUpdate, fileUpdate] = await Promise.all([
-      admin
-        .from("module_artifacts")
-        .update({ status: "CLIENT_APPROVED" })
-        .eq("id", artifact.id)
-        .eq("module_id", detail.module.id),
-      admin
-        .from("files")
-        .update({ status: "CLIENT_APPROVED" })
-        .eq("id", artifact.file.id)
-        .eq("brand_id", detail.module.brandId),
-    ]);
-
-    if (artifactUpdate.error) {
-      throw artifactUpdate.error;
-    }
-
-    if (fileUpdate.error) {
-      throw fileUpdate.error;
-    }
-
-    updatedArtifact = {
+  const updatedArtifact: ModuleArtifactRecord =
+    decision === "APPROVE"
+      ? {
       ...artifact,
       status: "CLIENT_APPROVED",
       file: {
         ...artifact.file,
         status: "CLIENT_APPROVED",
       },
-    };
-  }
+        }
+      : artifact;
 
   const { data: reviewData, error: reviewError } = await admin
-    .from("module_reviews")
-    .insert({
-      module_id: detail.module.id,
-      reviewer_id: profile.id,
-      review_type: "CLIENT",
-      decision: reviewDecision,
-      comment,
-    })
-    .select(reviewColumns)
-    .single();
+    .rpc("transition_module_review", {
+      p_action:
+        decision === "APPROVE"
+          ? "CLIENT_APPROVE"
+          : "CLIENT_REQUEST_CHANGE",
+      p_module_id: detail.module.id,
+      p_brand_id: detail.module.brandId,
+      p_artifact_id: artifact.id,
+      p_file_id: artifact.file.id,
+      p_reviewer_id: profile.id,
+      p_comment: comment,
+    });
 
   if (reviewError) {
     throw reviewError;
   }
 
-  const review = toTemporaryReviewRecord(reviewData as unknown as ReviewRow);
+  const reviewRow = Array.isArray(reviewData) ? reviewData[0] : reviewData;
+  if (!reviewRow) {
+    throw new Error("Module decision transaction returned no review.");
+  }
+  const review = toTemporaryReviewRecord(reviewRow as unknown as ReviewRow);
   const updatedModule: ModuleRecord = {
     ...detail.module,
     status: nextModuleStatus,

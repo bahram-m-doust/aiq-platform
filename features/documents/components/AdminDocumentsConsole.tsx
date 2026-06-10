@@ -155,7 +155,13 @@ function UploadForm({ brandId }: { brandId: string }) {
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
         <div className="space-y-2">
           <Label htmlFor="admin_upload_file">Document</Label>
-          <Input id="admin_upload_file" name="file" required type="file" />
+          <Input
+            accept=".pdf,.docx,.txt,.md,.markdown,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv"
+            id="admin_upload_file"
+            name="file"
+            required
+            type="file"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="admin_upload_visibility">Visibility</Label>

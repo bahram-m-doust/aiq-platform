@@ -20,6 +20,15 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
 
+vi.mock("@/features/openrouter/usage", () => ({
+  reserveRunUsage: vi.fn(() =>
+    Promise.resolve({ id: "reservation-1", brandId: "brand-1", kind: "TEXT" }),
+  ),
+  releaseRunUsageReservation: vi.fn(() => Promise.resolve()),
+  recordRunUsage: vi.fn(() => Promise.resolve("usage-1")),
+  attachRunUsage: vi.fn(() => Promise.resolve()),
+}));
+
 import {
   createBrandBrainResponse,
   getBrandBrainModel,

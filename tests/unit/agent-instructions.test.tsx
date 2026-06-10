@@ -3,11 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
+vi.mock("@/lib/audit/logAudit", () => ({
+  logAudit: vi.fn(() => Promise.resolve(true)),
+}));
 
 import {
   getBrandAgentInstruction,
   listBrandInstructionSlots,
 } from "@/features/agents/instructions/queries";
+import { upsertBrandAgentInstruction } from "@/features/agents/instructions/services";
 import {
   brandInstructionMaxLength,
   joinPromptLayers,
@@ -140,5 +144,39 @@ describe("listBrandInstructionSlots", () => {
       instruction: "",
       isEnabled: true,
     });
+  });
+});
+
+describe("upsertBrandAgentInstruction", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("uses one race-safe RPC for a brand-wide instruction slot", async () => {
+    const rpc = vi.fn(() => Promise.resolve({ data: "setting-1", error: null }));
+    mockedCreateAdminClient.mockReturnValue({ rpc } as never);
+
+    await upsertBrandAgentInstruction({
+      profile: {
+        id: "owner-1",
+        auth_user_id: "auth-owner-1",
+        email: "owner@example.com",
+        full_name: null,
+        global_role: "PLATFORM_OWNER",
+      },
+      brandId: "brand-1",
+      agentId: null,
+      instruction: "Use the approved brand voice.",
+      isEnabled: true,
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "upsert_brand_agent_instruction_atomic",
+      {
+        p_brand_id: "brand-1",
+        p_agent_id: null,
+        p_instruction: "Use the approved brand voice.",
+        p_is_enabled: true,
+        p_updated_by: "owner-1",
+      },
+    );
   });
 });

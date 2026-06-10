@@ -31,7 +31,12 @@ export async function uploadPrivateFile({
 
 export async function removePrivateFile(storagePath: string) {
   const admin = createAdminClient();
-  await admin.storage.from(privateFilesBucket).remove([storagePath]);
+  const { error } = await admin.storage
+    .from(privateFilesBucket)
+    .remove([storagePath]);
+  if (error) {
+    throw error;
+  }
 }
 
 export async function downloadPrivateFile(storagePath: string) {

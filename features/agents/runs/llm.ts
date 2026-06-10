@@ -6,15 +6,24 @@ import {
 } from "@/features/agents/runs/schema";
 import type { AgentKnowledgeModuleScope } from "@/features/agents/runs/types";
 import type { CatalogAgentKey } from "@/features/agents/catalog/types";
+import {
+  buildUntrustedKnowledgeContext,
+  untrustedKnowledgeInstruction,
+} from "@/features/rag/prompt-context";
 import { searchBrandKnowledge } from "@/features/rag/vector-search";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import {
   getOpenRouterClientForBrand,
   getOpenRouterModel,
 } from "@/lib/openrouter/client";
-import { computeTextCostCents } from "@/lib/openrouter/models";
+import {
+  computeTextCostCents,
+  providerCostCents,
+} from "@/lib/openrouter/models";
 
 const CODE = "openrouter_agent_run_config";
+const MAX_COMPLETION_TOKENS = 1200;
+const MAX_IMAGE_PROMPT_TOKENS = 200;
 
 export function isLLMAgentRunConfigError(error: unknown): error is DomainError {
   return isDomainErrorWithCode(error, CODE);
@@ -23,14 +32,7 @@ export function isLLMAgentRunConfigError(error: unknown): error is DomainError {
 function buildContextBlock(
   chunks: { chunkText: string; fileName: string; score: number }[],
 ): string {
-  if (chunks.length === 0) return "";
-
-  const sections = chunks.map(
-    (c) =>
-      `--- Source: ${c.fileName} (relevance: ${Math.round(c.score * 100)}%) ---\n${c.chunkText}`,
-  );
-
-  return `\n\n## Brand Knowledge Context\n\n${sections.join("\n\n")}`;
+  return buildUntrustedKnowledgeContext(chunks);
 }
 
 export function getAgentRunModel(): string {
@@ -67,9 +69,14 @@ export async function createAgentRunResponse({
   const completion = await client.chat.completions.create({
     model,
     messages: [
-      { role: "system", content: systemPrompt + context },
+      {
+        role: "system",
+        content: `${systemPrompt}\n\n${untrustedKnowledgeInstruction}`,
+      },
+      ...(context ? [{ role: "user" as const, content: context }] : []),
       { role: "user", content: prompt },
     ],
+    max_tokens: MAX_COMPLETION_TOKENS,
   });
 
   const answer = completion.choices[0]?.message?.content?.trim() ?? "";
@@ -86,11 +93,12 @@ export async function createAgentRunResponse({
 
   const promptTokens = completion.usage?.prompt_tokens ?? 0;
   const completionTokens = completion.usage?.completion_tokens ?? 0;
-  const costCents = computeTextCostCents({
+  const estimatedCostCents = computeTextCostCents({
     model,
     promptTokens,
     completionTokens,
   });
+  const costCents = providerCostCents(completion.usage, estimatedCostCents);
 
   return {
     responseId: completion.id ?? `pgvector-${Date.now()}`,
@@ -124,21 +132,26 @@ export async function rewritePromptForImage({
           "You convert a user's request into ONE tight, visual image-generation prompt for a text-to-image model. " +
           "Use the supplied brand knowledge to keep style, palette, and tone on-brand. " +
           "Output ONLY the prompt text — no preamble, no markdown, no quotes. Keep it under 100 words." +
-          (instruction ? `\n\nBrand instruction:\n${instruction}` : "") +
-          (brandContext ? `\n\n${brandContext}` : ""),
+          ` ${untrustedKnowledgeInstruction}` +
+          (instruction ? `\n\nBrand instruction:\n${instruction}` : ""),
       },
+      ...(brandContext
+        ? [{ role: "user" as const, content: brandContext }]
+        : []),
       { role: "user", content: brandPrompt },
     ],
+    max_tokens: MAX_IMAGE_PROMPT_TOKENS,
   });
 
   const optimized = completion.choices[0]?.message?.content?.trim() ?? brandPrompt;
   const promptTokens = completion.usage?.prompt_tokens ?? 0;
   const completionTokens = completion.usage?.completion_tokens ?? 0;
-  const costCents = computeTextCostCents({
+  const estimatedCostCents = computeTextCostCents({
     model,
     promptTokens,
     completionTokens,
   });
+  const costCents = providerCostCents(completion.usage, estimatedCostCents);
 
   return {
     optimizedPrompt: optimized,

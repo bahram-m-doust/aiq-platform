@@ -44,5 +44,8 @@ Record pass/fail results in `docs/MVP_QA_RESULTS.md`.
 - Inspect server logs for failures and confirm they contain action context but
   no raw access keys, passwords, tokens, signed URLs, full email fields, prompts,
   or answers.
-- Confirm Supabase migration `0010_rate_limits.sql` has run before expecting
+- Confirm all Supabase migrations through
+  `0039_rag_approval_consistency.sql` have run before expecting
   production rate limits to enforce.
+- Confirm a forced Storage deletion failure leaves a row in
+  `storage_cleanup_jobs` instead of silently orphaning the object.

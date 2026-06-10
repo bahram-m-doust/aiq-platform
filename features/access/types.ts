@@ -68,6 +68,7 @@ export type GrantBrandAccessInput = {
   actorRole?: string | null;
   manualReference?: string | null;
   internalNote?: string | null;
+  idempotencyKey?: string | null;
 };
 
 export type BrandEntitlementRecord = {
@@ -190,6 +191,10 @@ export type RedeemAccessKeySuccess = {
   ok: true;
   accessKey: AccessKeySafeRecord;
   nextAction: AccessKeyNextAction;
+  redemption: {
+    before: AccessKeySafeRecord;
+    after: AccessKeySafeRecord;
+  };
 };
 
 export type RedeemAccessKeyFailure = {

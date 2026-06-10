@@ -4,6 +4,7 @@ import { getEligibleRagApprovalItemByArtifactId } from "@/features/rag/queries";
 import {
   canPlatformOwnerApproveRag,
   canSupervisorApproveRag,
+  safeRagStatus,
   toRagApprovalAuditMetadata,
 } from "@/features/rag/schema";
 import type {
@@ -17,27 +18,21 @@ import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { UserProfile } from "@/features/auth/types";
 
-type KnowledgeFileRow = {
-  id: string;
-  brand_id: string;
-  module_id: string | null;
-  file_id: string | null;
-  rag_status: string;
-  approved_by_supervisor: string | null;
-  approved_by_platform_owner: string | null;
-  created_at: string | null;
+type RagApprovalTransitionRow = {
+  knowledge_file_id: string;
+  knowledge_brand_id: string;
+  knowledge_module_id: string | null;
+  knowledge_file_record_id: string | null;
+  knowledge_rag_status: string;
+  knowledge_approved_by_supervisor: string | null;
+  knowledge_approved_by_platform_owner: string | null;
+  knowledge_created_at: string | null;
+  previous_rag_status: string;
+  current_module_status: string;
+  current_artifact_status: string;
+  current_file_status: string;
+  changed: boolean;
 };
-
-const knowledgeFileColumns = [
-  "id",
-  "brand_id",
-  "module_id",
-  "file_id",
-  "rag_status",
-  "approved_by_supervisor",
-  "approved_by_platform_owner",
-  "created_at",
-].join(", ");
 
 const CODE = "rag_approval";
 
@@ -103,149 +98,56 @@ async function insertRagApprovalAudit({
 function withKnowledgeState({
   item,
   row,
-  ragStatus,
 }: {
   item: RagApprovalQueueItem;
-  row: KnowledgeFileRow;
-  ragStatus: RagStatus;
+  row: RagApprovalTransitionRow;
 }): RagApprovalQueueItem {
   return {
     ...item,
-    knowledgeFileId: row.id,
-    ragStatus,
-    approvedBySupervisor: row.approved_by_supervisor,
-    approvedByPlatformOwner: row.approved_by_platform_owner,
-    createdAt: row.created_at,
+    moduleStatus: row.current_module_status,
+    artifactStatus: row.current_artifact_status,
+    fileStatus: row.current_file_status,
+    knowledgeFileId: row.knowledge_file_id,
+    ragStatus: safeRagStatus(row.knowledge_rag_status),
+    approvedBySupervisor: row.knowledge_approved_by_supervisor,
+    approvedByPlatformOwner: row.knowledge_approved_by_platform_owner,
+    createdAt: row.knowledge_created_at,
   };
 }
 
-async function upsertSupervisorKnowledgeFile({
-  item,
+async function transitionRagApproval({
+  stage,
+  artifactId,
   actor,
 }: {
-  item: RagApprovalQueueItem;
+  stage: RagApprovalStage;
+  artifactId: string;
   actor: UserProfile;
 }) {
   const admin = createAdminClient();
   const { data, error } = await admin
-    .from("knowledge_files")
-    .upsert(
-      {
-        brand_id: item.brandId,
-        module_id: item.moduleId,
-        file_id: item.fileId,
-        rag_status: "RAG_REVIEW_REQUIRED",
-        approved_by_supervisor: actor.id,
-      },
-      {
-        onConflict: "brand_id,file_id",
-      },
-    )
-    .select(knowledgeFileColumns)
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return data as unknown as KnowledgeFileRow;
-}
-
-async function updateModuleAndArtifactForSupervisor(item: RagApprovalQueueItem) {
-  const admin = createAdminClient();
-  const [moduleResult, artifactResult] = await Promise.all([
-    admin
-      .from("brand_modules")
-      .update({
-        status: "RAG_REVIEW_REQUIRED",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", item.moduleId)
-      .eq("brand_id", item.brandId)
-      .neq("status", "RAG_APPROVED"),
-    admin
-      .from("module_artifacts")
-      .update({ status: "RAG_REVIEW_REQUIRED" })
-      .eq("id", item.artifactId)
-      .eq("module_id", item.moduleId)
-      .neq("status", "RAG_APPROVED"),
-  ]);
-
-  if (moduleResult.error) {
-    throw moduleResult.error;
-  }
-
-  if (artifactResult.error) {
-    throw artifactResult.error;
-  }
-}
-
-async function updateFinalRagApproval({
-  item,
-  actor,
-}: {
-  item: RagApprovalQueueItem;
-  actor: UserProfile;
-}) {
-  if (!item.knowledgeFileId) {
-    ragApprovalError("Supervisor approval is required before final approval.");
-  }
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("knowledge_files")
-    .update({
-      module_id: item.moduleId,
-      rag_status: "RAG_APPROVED",
-      approved_by_platform_owner: actor.id,
+    .rpc("transition_rag_approval", {
+      p_stage: stage,
+      p_artifact_id: artifactId,
+      p_actor_id: actor.id,
     })
-    .eq("id", item.knowledgeFileId)
-    .eq("brand_id", item.brandId)
-    .eq("file_id", item.fileId)
-    .select(knowledgeFileColumns)
     .single();
 
   if (error) {
+    if (
+      error.message?.includes(
+        "Supervisor approval is required before final approval.",
+      )
+    ) {
+      ragApprovalError(
+        "Supervisor approval is required before final approval.",
+      );
+    }
+
     throw error;
   }
 
-  return data as unknown as KnowledgeFileRow;
-}
-
-async function updateModuleArtifactAndFileForFinalApproval(
-  item: RagApprovalQueueItem,
-) {
-  const admin = createAdminClient();
-  const nowIso = new Date().toISOString();
-  const [moduleResult, artifactResult, fileResult] = await Promise.all([
-    admin
-      .from("brand_modules")
-      .update({ status: "RAG_APPROVED", updated_at: nowIso })
-      .eq("id", item.moduleId)
-      .eq("brand_id", item.brandId),
-    admin
-      .from("module_artifacts")
-      .update({ status: "RAG_APPROVED" })
-      .eq("id", item.artifactId)
-      .eq("module_id", item.moduleId),
-    admin
-      .from("files")
-      .update({ status: "RAG_APPROVED" })
-      .eq("id", item.fileId)
-      .eq("brand_id", item.brandId),
-  ]);
-
-  if (moduleResult.error) {
-    throw moduleResult.error;
-  }
-
-  if (artifactResult.error) {
-    throw artifactResult.error;
-  }
-
-  if (fileResult.error) {
-    throw fileResult.error;
-  }
+  return data as unknown as RagApprovalTransitionRow;
 }
 
 export async function approveRagAsSupervisor({
@@ -261,56 +163,44 @@ export async function approveRagAsSupervisor({
 
   const item = await requireQueueItem(artifactId);
 
-  if (item.ragStatus === "RAG_APPROVED") {
-    return {
-      item,
-      message: "This file is already RAG approved.",
-      alreadyApproved: true,
-    };
-  }
-
-  if (item.approvedBySupervisor || item.ragStatus === "RAG_REVIEW_REQUIRED") {
-    return {
-      item,
-      message: "Supervisor approval is already recorded.",
-      alreadyApproved: false,
-    };
-  }
-
-  const oldStatus = item.ragStatus;
-  const knowledgeFile = await upsertSupervisorKnowledgeFile({ item, actor });
-
-  await updateModuleAndArtifactForSupervisor(item);
-
-  const updatedItem = withKnowledgeState({
-    item: {
-      ...item,
-      moduleStatus:
-        item.moduleStatus === "RAG_APPROVED"
-          ? "RAG_APPROVED"
-          : "RAG_REVIEW_REQUIRED",
-      artifactStatus:
-        item.artifactStatus === "RAG_APPROVED"
-          ? "RAG_APPROVED"
-          : "RAG_REVIEW_REQUIRED",
-    },
-    row: knowledgeFile,
-    ragStatus: "RAG_REVIEW_REQUIRED",
-  });
-
-  await insertRagApprovalAudit({
-    item,
+  const transition = await transitionRagApproval({
+    stage: "SUPERVISOR",
+    artifactId,
     actor,
-    oldStatus,
-    newStatus: "RAG_REVIEW_REQUIRED",
-    approvalStage: "SUPERVISOR",
-    knowledgeFileId: knowledgeFile.id,
   });
+  const updatedItem = withKnowledgeState({
+    item,
+    row: transition,
+  });
+
+  if (transition.changed) {
+    await insertRagApprovalAudit({
+      item,
+      actor,
+      oldStatus: safeRagStatus(transition.previous_rag_status),
+      newStatus: updatedItem.ragStatus,
+      approvalStage: "SUPERVISOR",
+      knowledgeFileId: transition.knowledge_file_id,
+    });
+  }
+
+  const finalState = [
+    "RAG_APPROVED",
+    "SYNCING",
+    "RAG_SYNCED",
+    "SYNC_FAILED",
+  ].includes(updatedItem.ragStatus);
 
   return {
     item: updatedItem,
-    message: "Supervisor RAG approval recorded.",
-    alreadyApproved: false,
+    message: transition.changed && finalState
+      ? "RAG approval consistency repaired."
+      : transition.changed
+        ? "Supervisor RAG approval recorded."
+      : finalState
+        ? "This file is already RAG approved."
+        : "Supervisor approval is already recorded.",
+    alreadyApproved: !transition.changed && finalState,
   };
 }
 
@@ -327,46 +217,32 @@ export async function approveRagAsPlatformOwner({
 
   const item = await requireQueueItem(artifactId);
 
-  if (item.ragStatus === "RAG_APPROVED") {
-    return {
-      item,
-      message: "This file is already RAG approved.",
-      alreadyApproved: true,
-    };
-  }
-
-  if (!item.approvedBySupervisor) {
-    ragApprovalError("Supervisor approval is required before final approval.");
-  }
-
-  const oldStatus = item.ragStatus;
-  const knowledgeFile = await updateFinalRagApproval({ item, actor });
-
-  await updateModuleArtifactAndFileForFinalApproval(item);
-
-  const updatedItem = withKnowledgeState({
-    item: {
-      ...item,
-      moduleStatus: "RAG_APPROVED",
-      artifactStatus: "RAG_APPROVED",
-      fileStatus: "RAG_APPROVED",
-    },
-    row: knowledgeFile,
-    ragStatus: "RAG_APPROVED",
-  });
-
-  await insertRagApprovalAudit({
-    item,
+  const transition = await transitionRagApproval({
+    stage: "PLATFORM_OWNER",
+    artifactId,
     actor,
-    oldStatus,
-    newStatus: "RAG_APPROVED",
-    approvalStage: "PLATFORM_OWNER",
-    knowledgeFileId: knowledgeFile.id,
   });
+  const updatedItem = withKnowledgeState({
+    item,
+    row: transition,
+  });
+
+  if (transition.changed) {
+    await insertRagApprovalAudit({
+      item,
+      actor,
+      oldStatus: safeRagStatus(transition.previous_rag_status),
+      newStatus: updatedItem.ragStatus,
+      approvalStage: "PLATFORM_OWNER",
+      knowledgeFileId: transition.knowledge_file_id,
+    });
+  }
 
   return {
     item: updatedItem,
-    message: "Final RAG approval recorded.",
-    alreadyApproved: false,
+    message: transition.changed
+      ? "Final RAG approval recorded."
+      : "This file is already RAG approved.",
+    alreadyApproved: !transition.changed,
   };
 }

@@ -33,16 +33,17 @@ Required public/config values:
 Required server-only secret:
 
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `KEY_ENCRYPTION_KEY`
+- `KEY_ENCRYPTION_ACTIVE_KEY_ID`
 
 Optional server-only secrets for enabled features:
 
-- `OPENAI_API_KEY`
+- `OPENROUTER_API_KEY`
 - `RESEND_API_KEY`
 
 Optional non-secret config:
 
-- `OPENAI_BRAIN_MODEL`
-- `OPENAI_AGENT_MODEL`
+- `OPENROUTER_MODEL`
 - `EMAIL_FROM`
 
 Remove unused future envs from Netlify for this MVP. The current runtime does
@@ -52,7 +53,7 @@ not read `DATABASE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 `NEXT_PUBLIC_SUPABASE_URL` must remain the Supabase Project URL from Project
 Settings > API. It is not the Netlify app URL. `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 is intentionally public and must not be treated like a private secret. Keep
-`SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, and `RESEND_API_KEY`
+`SUPABASE_SERVICE_ROLE_KEY`, `KEY_ENCRYPTION_KEY`, `OPENROUTER_API_KEY`, and `RESEND_API_KEY`
 server-only and never expose them in client code, docs, screenshots, or support
 messages.
 

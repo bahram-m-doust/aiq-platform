@@ -54,7 +54,6 @@ bextudio-mvp
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-DATABASE_URL
 ```
 
 قانون امنیتی:
@@ -233,43 +232,45 @@ Seed کن:
 
 ---
 
-# 4. OpenAI Setup
+# 4. OpenRouter Setup
 
 ## 4.1 API Key
 
-1. OpenAI Platform برو.
+1. OpenRouter dashboard برو.
 2. Project بساز.
 3. API key بساز.
 4. در env بگذار:
 
 ```text
-OPENAI_API_KEY=...
+OPENROUTER_API_KEY=...
+OPENROUTER_MODEL=openai/gpt-4o-mini
 ```
 
-## 4.2 File Search Strategy
+## 4.2 Knowledge Retrieval Strategy
 
 MVP:
 
 ```text
-One vector store per brand.
-Only RAG_APPROVED files uploaded.
+One pgvector knowledge base per brand.
+Only RAG_APPROVED files are extracted, chunked, and embedded.
 ```
 
 DB mapping:
 
 ```text
-knowledge_bases.provider_vector_store_id
-knowledge_files.provider_file_id
+knowledge_bases.status
+knowledge_files.rag_status
+knowledge_chunks.embedding
 ```
 
 ## 4.3 Sync Flow
 
 ```text
 RAG_APPROVED files
-→ create/load brand vector store
-→ upload file
-→ attach to vector store
-→ store provider_file_id
+→ securely extract text
+→ split content into bounded chunks
+→ generate embeddings through OpenRouter
+→ transactionally replace pgvector chunks
 → mark RAG_SYNCED
 ```
 
@@ -279,90 +280,28 @@ RAG_APPROVED files
 User prompt
 → permission check
 → agent entitlement check
-→ load brand vector store
-→ call Responses API + File Search
+→ retrieve current-brand pgvector context
+→ call the bounded OpenRouter model
 → store agent_run
 → return response
 ```
 
-## 4.5 OpenAI Security
+## 4.5 AI Security
 
-- هیچ فایل non-approved آپلود نشود.
-- هر برند vector store جدا داشته باشد.
+- هیچ فایل non-approved وارد RAG نشود.
+- retrieval همیشه با brand_id فعلی فیلتر شود.
+- محتوای بازیابی‌شده untrusted data است و نباید system prompt شود.
 - هر run log شود.
-- هزینه/latency در agent_runs ذخیره شود اگر ممکن بود.
+- بودجه قبل از فراخوانی provider به‌صورت اتمیک reserve شود.
+- هزینه واقعی provider در صورت وجود ثبت شود.
 
 ---
 
-# 5. Stripe Setup
+# 5. Access Grant Setup
 
-## 5.1 Products
-
-در Stripe بساز:
-
-- Bextudio Basic
-- Bextudio Advanced
-- Bextudio Enterprise
-
-Prices:
-
-- 6000 USD
-- 30000 USD
-- 55000 USD
-
-برای MVP اگر این‌ها package هستند، one-time payment ساده‌تر است.
-
-## 5.2 Checkout
-
-Flow:
-
-```text
-User selects plan
-→ app creates Checkout Session
-→ user pays
-→ Stripe webhook confirms
-→ grantBrandAccess()
-```
-
-قانون:
-
-```text
-از success redirect برای فعال‌سازی نهایی استفاده نکن.
-Webhook source of truth است.
-```
-
-## 5.3 Webhook
-
-Endpoint:
-
-```text
-POST /api/webhooks/stripe
-```
-
-Events:
-
-- checkout.session.completed
-- payment_intent.succeeded
-- payment_intent.payment_failed
-
-اگر subscription شد:
-
-- customer.subscription.created
-- customer.subscription.updated
-- customer.subscription.deleted
-- invoice.payment_succeeded
-- invoice.payment_failed
-
-Env:
-
-```text
-STRIPE_SECRET_KEY
-STRIPE_WEBHOOK_SECRET
-```
-
-## 5.4 Manual Grant
-
-Stripe و Manual باید تابع مشترک داشته باشند:
+Stripe در MVP فعلی پیاده‌سازی نشده و env یا webhook آن نباید تنظیم شود.
+دسترسی از access key، demo approval یا manual grant ایجاد می‌شود و همه‌ی
+مسیرها باید از سرویس idempotent مشترک استفاده کنند:
 
 ```text
 grantBrandAccess()
@@ -498,10 +437,10 @@ SSL با Let's Encrypt.
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-DATABASE_URL
-OPENAI_API_KEY
-STRIPE_SECRET_KEY
-STRIPE_WEBHOOK_SECRET
+KEY_ENCRYPTION_KEY
+KEY_ENCRYPTION_ACTIVE_KEY_ID
+OPENROUTER_API_KEY
+OPENROUTER_MODEL
 RESEND_API_KEY
 EMAIL_FROM
 APP_BASE_URL

@@ -19,7 +19,13 @@ import type {
   BrandBrainRetrievedSource,
   BrandBrainRunResult,
 } from "@/features/agents/brain/types";
-import { assertWithinBudget, recordRunUsage } from "@/features/openrouter/usage";
+import {
+  attachRunUsage,
+  recordRunUsage,
+  releaseRunUsageReservation,
+  reserveRunUsage,
+  type UsageReservation,
+} from "@/features/openrouter/usage";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -128,6 +134,7 @@ export async function finalizeBrandBrainRun({
   responseId,
   retrievedSources,
   usage,
+  reservation,
   latencyMs,
 }: {
   profile: UserProfile;
@@ -139,8 +146,18 @@ export async function finalizeBrandBrainRun({
   responseId: string;
   retrievedSources: BrandBrainRetrievedSource[];
   usage: { promptTokens: number; completionTokens: number; costCents: number };
+  reservation: UsageReservation;
   latencyMs: number;
 }): Promise<string> {
+  const usageId = await recordRunUsage({
+    reservation,
+    kind: "TEXT",
+    model,
+    promptTokens: usage.promptTokens,
+    completionTokens: usage.completionTokens,
+    costCents: usage.costCents,
+  });
+
   const runId = await insertAgentRun({
     brandId,
     agentId,
@@ -153,15 +170,7 @@ export async function finalizeBrandBrainRun({
     latencyMs,
   });
 
-  await recordRunUsage({
-    runId,
-    brandId,
-    kind: "TEXT",
-    model,
-    promptTokens: usage.promptTokens,
-    completionTokens: usage.completionTokens,
-    costCents: usage.costCents,
-  });
+  await attachRunUsage({ runId, usageIds: [usageId] });
 
   await insertAgentRunAudit({ profile, brandId, agentId, runId, model });
 
@@ -184,46 +193,54 @@ export async function runBrandBrain({
     brainError(readiness.message);
   }
 
-  await assertWithinBudget(access.brandId);
-
   const instruction = await getBrandAgentInstruction({
     brandId: access.brandId,
     agentId: agent.id,
   });
   const model = getBrandBrainModel();
+  const reservation = await reserveRunUsage({
+    brandId: access.brandId,
+    kind: "TEXT",
+  });
   const startedAt = Date.now();
-  const response = await createBrandBrainResponse({
-    prompt,
-    history,
-    instruction,
-    brandId: access.brandId,
-    model,
-  });
-  const latencyMs = Math.max(0, Date.now() - startedAt);
+  try {
+    const response = await createBrandBrainResponse({
+      prompt,
+      history,
+      instruction,
+      brandId: access.brandId,
+      model,
+    });
+    const latencyMs = Math.max(0, Date.now() - startedAt);
 
-  if (!response.answer) {
-    brainError("Brand Brain did not return an answer.");
+    if (!response.answer) {
+      brainError("Brand Brain did not return an answer.");
+    }
+
+    const runId = await finalizeBrandBrainRun({
+      profile,
+      brandId: access.brandId,
+      agentId: agent.id,
+      model,
+      prompt,
+      answer: response.answer,
+      responseId: response.responseId,
+      retrievedSources: response.retrievedSources,
+      usage: response.usage,
+      reservation,
+      latencyMs,
+    });
+
+    return {
+      runId,
+      answer: response.answer,
+      sources: response.displaySources,
+      model,
+    };
+  } catch (error) {
+    await releaseRunUsageReservation(reservation).catch(() => undefined);
+    throw error;
   }
-
-  const runId = await finalizeBrandBrainRun({
-    profile,
-    brandId: access.brandId,
-    agentId: agent.id,
-    model,
-    prompt,
-    answer: response.answer,
-    responseId: response.responseId,
-    retrievedSources: response.retrievedSources,
-    usage: response.usage,
-    latencyMs,
-  });
-
-  return {
-    runId,
-    answer: response.answer,
-    sources: response.displaySources,
-    model,
-  };
 }
 
 export type BrandBrainStreamPlan = {
@@ -234,6 +251,7 @@ export type BrandBrainStreamPlan = {
   retrievedSources: BrandBrainRetrievedSource[];
   displaySources: BrandBrainDisplaySource[];
   startedAt: number;
+  reservation: UsageReservation;
 };
 
 // Gate, retrieve, and assemble everything the streaming route needs before it
@@ -255,8 +273,6 @@ export async function prepareBrandBrainStream({
     brainError(readiness.message);
   }
 
-  await assertWithinBudget(access.brandId);
-
   const instruction = await getBrandAgentInstruction({
     brandId: access.brandId,
     agentId: agent.id,
@@ -264,6 +280,10 @@ export async function prepareBrandBrainStream({
   const model = getBrandBrainModel();
   const { context, retrievedSources, displaySources } =
     await retrieveBrandBrainContext({ prompt, brandId: access.brandId });
+  const reservation = await reserveRunUsage({
+    brandId: access.brandId,
+    kind: "TEXT",
+  });
 
   return {
     brandId: access.brandId,
@@ -273,5 +293,6 @@ export async function prepareBrandBrainStream({
     retrievedSources,
     displaySources,
     startedAt: Date.now(),
+    reservation,
   };
 }

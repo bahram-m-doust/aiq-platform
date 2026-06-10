@@ -2,7 +2,6 @@ import "server-only";
 
 import {
   getDemoRequestById,
-  hasPendingDemoRequestForUser,
   toDemoRequestRecord,
   type DemoRequestRow,
 } from "@/features/demo-requests/queries";
@@ -15,12 +14,56 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const CODE = "demo_request";
 
+type DemoRequestRpcRow = {
+  request_id: string;
+  request_user_id: string | null;
+  request_email: string;
+  request_message: string | null;
+  request_status: string;
+  request_reviewed_by: string | null;
+  request_reviewed_at: string | null;
+  request_resolution_note: string | null;
+  request_approved_access_key_id: string | null;
+  request_created_at: string | null;
+  request_updated_at: string | null;
+  created?: boolean;
+};
+
 function demoRequestError(message: string): never {
   throw new DomainError(CODE, message);
 }
 
 export function isDemoRequestError(error: unknown): error is DomainError {
   return isDomainErrorWithCode(error, CODE);
+}
+
+function toDemoRequestRow(row: DemoRequestRpcRow): DemoRequestRow {
+  return {
+    id: row.request_id,
+    user_id: row.request_user_id,
+    email: row.request_email,
+    message: row.request_message,
+    status: row.request_status,
+    reviewed_by: row.request_reviewed_by,
+    reviewed_at: row.request_reviewed_at,
+    resolution_note: row.request_resolution_note,
+    approved_access_key_id: row.request_approved_access_key_id,
+    created_at: row.request_created_at,
+    updated_at: row.request_updated_at,
+  };
+}
+
+function firstRpcRow(data: unknown): DemoRequestRpcRow | null {
+  return (Array.isArray(data) ? data[0] : data) as DemoRequestRpcRow | null;
+}
+
+function mapResolutionError(error: { message?: string }) {
+  if (
+    error.message?.includes("could not be found") ||
+    error.message?.includes("already been resolved")
+  ) {
+    demoRequestError(error.message);
+  }
 }
 
 export async function createDemoRequest({
@@ -30,31 +73,23 @@ export async function createDemoRequest({
   profile: UserProfile;
   message: string | null;
 }): Promise<DemoRequestRecord> {
-  if (await hasPendingDemoRequestForUser(profile.id)) {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("create_demo_request_atomic", {
+    p_user_id: profile.id,
+    p_email: profile.email,
+    p_message: message,
+  });
+  if (error) throw error;
+
+  const row = firstRpcRow(data);
+  if (!row) throw new Error("Demo request transaction returned no result.");
+  if (!row.created) {
     demoRequestError(
       "You already have a pending demo request. Our team will reach out shortly.",
     );
   }
 
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("demo_requests")
-    .insert({
-      user_id: profile.id,
-      email: profile.email,
-      message,
-      status: "REQUESTED",
-    })
-    .select(
-      "id, user_id, email, message, status, reviewed_by, reviewed_at, resolution_note, approved_access_key_id, created_at, updated_at",
-    )
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  const record = toDemoRequestRecord(data as unknown as DemoRequestRow);
+  const record = toDemoRequestRecord(toDemoRequestRow(row));
 
   await logAudit({
     actorUserId: profile.id,
@@ -88,26 +123,21 @@ export async function markDemoRequestApproved({
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("demo_requests")
-    .update({
-      status: "APPROVED",
-      reviewed_by: reviewer.id,
-      reviewed_at: new Date().toISOString(),
-      approved_access_key_id: accessKeyId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", demoRequestId)
-    .select(
-      "id, user_id, email, message, status, reviewed_by, reviewed_at, resolution_note, approved_access_key_id, created_at, updated_at",
-    )
-    .single();
-
+  const { data, error } = await admin.rpc("resolve_demo_request_atomic", {
+    p_request_id: demoRequestId,
+    p_decision: "APPROVED",
+    p_reviewer_id: reviewer.id,
+    p_access_key_id: accessKeyId,
+    p_resolution_note: null,
+  });
   if (error) {
+    mapResolutionError(error);
     throw error;
   }
 
-  const after = toDemoRequestRecord(data as unknown as DemoRequestRow);
+  const row = firstRpcRow(data);
+  if (!row) throw new Error("Demo request transaction returned no result.");
+  const after = toDemoRequestRecord(toDemoRequestRow(row));
 
   await logAudit({
     actorUserId: reviewer.id,
@@ -142,26 +172,21 @@ export async function rejectDemoRequest({
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("demo_requests")
-    .update({
-      status: "REJECTED",
-      reviewed_by: reviewer.id,
-      reviewed_at: new Date().toISOString(),
-      resolution_note: resolutionNote,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", demoRequestId)
-    .select(
-      "id, user_id, email, message, status, reviewed_by, reviewed_at, resolution_note, approved_access_key_id, created_at, updated_at",
-    )
-    .single();
-
+  const { data, error } = await admin.rpc("resolve_demo_request_atomic", {
+    p_request_id: demoRequestId,
+    p_decision: "REJECTED",
+    p_reviewer_id: reviewer.id,
+    p_access_key_id: null,
+    p_resolution_note: resolutionNote,
+  });
   if (error) {
+    mapResolutionError(error);
     throw error;
   }
 
-  const after = toDemoRequestRecord(data as unknown as DemoRequestRow);
+  const row = firstRpcRow(data);
+  if (!row) throw new Error("Demo request transaction returned no result.");
+  const after = toDemoRequestRecord(toDemoRequestRow(row));
 
   await logAudit({
     actorUserId: reviewer.id,

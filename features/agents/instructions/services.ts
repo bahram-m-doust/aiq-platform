@@ -13,13 +13,6 @@ export function isBrandInstructionServiceError(
   return isDomainErrorWithCode(error, CODE);
 }
 
-type ExistingRow = {
-  id: string;
-};
-
-// Upsert one instruction slot. The brand-wide default (agentId null) and each
-// per-agent override are matched manually because the uniqueness lives in a
-// coalesce() expression index that a plain ON CONFLICT cannot target.
 export async function upsertBrandAgentInstruction({
   profile,
   brandId,
@@ -34,53 +27,22 @@ export async function upsertBrandAgentInstruction({
   isEnabled: boolean;
 }): Promise<void> {
   const admin = createAdminClient();
+  const { error } = await admin.rpc(
+    "upsert_brand_agent_instruction_atomic",
+    {
+      p_brand_id: brandId,
+      p_agent_id: agentId,
+      p_instruction: instruction,
+      p_is_enabled: isEnabled,
+      p_updated_by: profile.id,
+    },
+  );
 
-  let lookup = admin
-    .from("brand_agent_settings")
-    .select("id")
-    .eq("brand_id", brandId);
-  lookup = agentId
-    ? lookup.eq("agent_id", agentId)
-    : lookup.is("agent_id", null);
-
-  const { data: existing, error: lookupError } = await lookup.maybeSingle();
-  if (lookupError) {
-    throw new DomainError(CODE, lookupError.message);
+  if (error) {
+    throw new DomainError(CODE, error.message);
   }
 
-  const now = new Date().toISOString();
-
-  if (existing) {
-    const { error: updateError } = await admin
-      .from("brand_agent_settings")
-      .update({
-        instruction,
-        is_enabled: isEnabled,
-        updated_by: profile.id,
-        updated_at: now,
-      })
-      .eq("id", (existing as ExistingRow).id);
-    if (updateError) {
-      throw new DomainError(CODE, updateError.message);
-    }
-  } else {
-    const { error: insertError } = await admin
-      .from("brand_agent_settings")
-      .insert({
-        brand_id: brandId,
-        agent_id: agentId,
-        instruction,
-        is_enabled: isEnabled,
-        updated_by: profile.id,
-        updated_at: now,
-      });
-    if (insertError) {
-      throw new DomainError(CODE, insertError.message);
-    }
-  }
-
-  // Audit the change without storing the instruction body — record only its
-  // shape so the trail stays lean and content-free.
+  // Keep instruction content out of the audit trail.
   await logAudit({
     actorUserId: profile.id,
     actorRole: profile.global_role,

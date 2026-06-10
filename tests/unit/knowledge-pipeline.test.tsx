@@ -367,54 +367,28 @@ describe("adminPromoteDocumentToRag", () => {
       error: null,
     });
 
-    const updateBuilder = createResolvedBuilder({
-      data: ragRow,
-      error: null,
-    });
-
-    const upsertBuilder = createResolvedBuilder({
-      data: null,
-      error: null,
-    });
-
-    const auditBuilder = createResolvedBuilder({
-      data: null,
-      error: null,
-    });
-
-    let selectCallCount = 0;
+    const rpc = vi.fn(() =>
+      Promise.resolve({ data: [ragRow], error: null }),
+    );
     const from = vi.fn((table: string) => {
-      if (table === "files") {
-        selectCallCount++;
-        return selectCallCount === 1 ? selectBuilder : updateBuilder;
-      }
-      if (table === "knowledge_files") return upsertBuilder;
-      if (table === "audit_logs") return auditBuilder;
+      if (table === "files") return selectBuilder;
       throw new Error(`Unexpected table: ${table}`);
     });
 
-    mockedCreateAdminClient.mockReturnValue({ from } as never);
+    mockedCreateAdminClient.mockReturnValue({ from, rpc } as never);
 
-    return { updateBuilder, upsertBuilder };
+    return { rpc };
   }
 
-  it("updates file status and upserts knowledge_file", async () => {
-    const { updateBuilder, upsertBuilder } = setupFileExists("UPLOADED");
+  it("atomically promotes the file and knowledge_file through one RPC", async () => {
+    const { rpc } = setupFileExists("UPLOADED");
 
     await adminPromoteDocumentToRag({ fileId: "file-1", actor: actor() });
 
-    expect(updateBuilder.update).toHaveBeenCalledWith({
-      status: "RAG_APPROVED",
+    expect(rpc).toHaveBeenCalledWith("promote_document_to_rag", {
+      p_file_id: "file-1",
+      p_actor_id: "owner-1",
     });
-    expect(upsertBuilder.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        brand_id: "brand-1",
-        module_id: null,
-        file_id: "file-1",
-        rag_status: "RAG_APPROVED",
-      }),
-      expect.objectContaining({ onConflict: "brand_id, file_id" }),
-    );
   });
 
   it("rejects archived files with DomainError", async () => {

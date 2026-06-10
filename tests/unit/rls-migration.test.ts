@@ -60,11 +60,7 @@ describe("RLS hardening migration", () => {
       "values ('bextudio-files', 'bextudio-files', false)",
     );
     expect(migration).toContain("set public = false;");
-    expect(migration).toContain(
-      "alter table storage.objects enable row level security;",
-    );
-    expect(migration).toContain(
-      "alter table storage.objects force row level security;",
-    );
+    expect(migration).not.toMatch(/alter table storage\.objects/i);
+    expect(migration).toContain("supabase_storage_admin");
   });
 });

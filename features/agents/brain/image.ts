@@ -13,8 +13,9 @@ import {
 import { rewritePromptForImage } from "@/features/agents/runs/llm";
 import { getBrandModelDefaults } from "@/features/agents/runs/services";
 import {
-  assertWithinBudget,
+  attachRunUsage,
   recordRunUsage,
+  withRunUsageReservation,
 } from "@/features/openrouter/usage";
 import { generateImage } from "@/lib/openrouter/image";
 import { logAudit } from "@/lib/audit/logAudit";
@@ -66,8 +67,6 @@ export async function runBrandBrainImage({
     imageError(readiness.message);
   }
 
-  await assertWithinBudget(access.brandId);
-
   const brandId = access.brandId;
   const instructionAgentId = await resolveImageInstructionAgentId(agent.id);
   const instruction = await getBrandAgentInstruction({
@@ -80,20 +79,51 @@ export async function runBrandBrainImage({
   const defaults = await getBrandModelDefaults(brandId);
 
   const startedAt = Date.now();
-  const { optimizedPrompt, usage: textUsage } = await rewritePromptForImage({
+  const textStage = await withRunUsageReservation({
     brandId,
-    brandPrompt: prompt,
-    model: defaults.text,
-    brandContext: context,
-    instruction,
+    kind: "TEXT",
+    operation: async (reservation) => {
+      const result = await rewritePromptForImage({
+        brandId,
+        brandPrompt: prompt,
+        model: defaults.text,
+        brandContext: context,
+        instruction,
+      });
+      const usageId = await recordRunUsage({
+        reservation,
+        kind: "TEXT",
+        model: result.usage.model,
+        promptTokens: result.usage.promptTokens,
+        completionTokens: result.usage.completionTokens,
+        costCents: result.usage.costCents,
+      });
+      return { ...result, usageId };
+    },
   });
+  const { optimizedPrompt } = textStage;
 
-  const { b64Images, usage: imageUsage } = await generateImage({
+  const imageStage = await withRunUsageReservation({
     brandId,
-    model: defaults.image,
-    prompt: optimizedPrompt,
-    n: 1,
+    kind: "IMAGE",
+    operation: async (reservation) => {
+      const result = await generateImage({
+        brandId,
+        model: defaults.image,
+        prompt: optimizedPrompt,
+        n: 1,
+      });
+      const usageId = await recordRunUsage({
+        reservation,
+        kind: "IMAGE",
+        model: result.usage.model,
+        imageCount: result.usage.imageCount,
+        costCents: result.usage.costCents,
+      });
+      return { ...result, usageId };
+    },
   });
+  const { b64Images } = imageStage;
   const latencyMs = Math.max(0, Date.now() - startedAt);
 
   if (b64Images.length === 0) {
@@ -154,22 +184,9 @@ export async function runBrandBrainImage({
     throw outputError;
   }
 
-  await recordRunUsage({
+  await attachRunUsage({
     runId,
-    brandId,
-    kind: "TEXT",
-    model: textUsage.model,
-    promptTokens: textUsage.promptTokens,
-    completionTokens: textUsage.completionTokens,
-    costCents: textUsage.costCents,
-  });
-  await recordRunUsage({
-    runId,
-    brandId,
-    kind: "IMAGE",
-    model: imageUsage.model,
-    imageCount: imageUsage.imageCount,
-    costCents: imageUsage.costCents,
+    usageIds: [textStage.usageId, imageStage.usageId],
   });
 
   await logAudit({

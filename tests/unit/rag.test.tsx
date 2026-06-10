@@ -28,11 +28,16 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
 
+vi.mock("@/lib/audit/logAudit", () => ({
+  logAudit: vi.fn(() => Promise.resolve(true)),
+}));
+
 import {
   getEligibleRagApprovalItemByArtifactId,
   getRagApprovedFilesForSync,
 } from "@/features/rag/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logAudit } from "@/lib/audit/logAudit";
 import { RagApprovalQueue } from "@/features/rag/components/RagApprovalQueue";
 import { RagSyncPanel } from "@/features/rag/components/RagSyncPanel";
 import { hasEmbeddingEnv } from "@/features/rag/embeddings";
@@ -72,6 +77,7 @@ import { formData } from "@/tests/helpers/formData";
 const mockedGetEligibleItem = vi.mocked(getEligibleRagApprovalItemByArtifactId);
 const mockedGetApprovedFilesForSync = vi.mocked(getRagApprovedFilesForSync);
 const mockedCreateAdminClient = vi.mocked(createAdminClient);
+const mockedLogAudit = vi.mocked(logAudit);
 const mockedHasEmbeddingEnv = vi.mocked(hasEmbeddingEnv);
 const mockedSyncFileToChunks = vi.mocked(syncFileToChunks);
 
@@ -262,6 +268,18 @@ describe("RAG approval service guards", () => {
     vi.clearAllMocks();
   });
 
+  function setupApprovalRpc(
+    result: {
+      data: Record<string, unknown> | null;
+      error: { message: string } | null;
+    },
+  ) {
+    const single = vi.fn(() => Promise.resolve(result));
+    const rpc = vi.fn(() => ({ single }));
+    mockedCreateAdminClient.mockReturnValue({ rpc } as never);
+    return { rpc, single };
+  }
+
   it("does not downgrade an already RAG_APPROVED knowledge file", async () => {
     mockedGetEligibleItem.mockResolvedValue(
       queueItem({
@@ -274,6 +292,24 @@ describe("RAG approval service guards", () => {
         fileStatus: "RAG_APPROVED",
       }),
     );
+    const { rpc } = setupApprovalRpc({
+      data: {
+        knowledge_file_id: "knowledge-1",
+        knowledge_brand_id: "brand-1",
+        knowledge_module_id: "module-1",
+        knowledge_file_record_id: "file-1",
+        knowledge_rag_status: "RAG_APPROVED",
+        knowledge_approved_by_supervisor: "supervisor-1",
+        knowledge_approved_by_platform_owner: "platform_owner-1",
+        knowledge_created_at: "2026-06-10T00:00:00.000Z",
+        previous_rag_status: "RAG_APPROVED",
+        current_module_status: "RAG_APPROVED",
+        current_artifact_status: "RAG_APPROVED",
+        current_file_status: "RAG_APPROVED",
+        changed: false,
+      },
+      error: null,
+    });
 
     const result = await approveRagAsSupervisor({
       artifactId: "artifact-1",
@@ -282,10 +318,69 @@ describe("RAG approval service guards", () => {
 
     expect(result.alreadyApproved).toBe(true);
     expect(result.item.ragStatus).toBe("RAG_APPROVED");
+    expect(rpc).toHaveBeenCalledWith("transition_rag_approval", {
+      p_stage: "SUPERVISOR",
+      p_artifact_id: "artifact-1",
+      p_actor_id: "supervisor-1",
+    });
+    expect(mockedLogAudit).not.toHaveBeenCalled();
+  });
+
+  it("repairs related final RAG records without downgrading knowledge state", async () => {
+    mockedGetEligibleItem.mockResolvedValue(
+      queueItem({
+        knowledgeFileId: "knowledge-1",
+        ragStatus: "RAG_SYNCED",
+        approvedBySupervisor: "supervisor-1",
+        approvedByPlatformOwner: "platform_owner-1",
+        moduleStatus: "RAG_REVIEW_REQUIRED",
+        artifactStatus: "RAG_REVIEW_REQUIRED",
+        fileStatus: "CLIENT_APPROVED",
+      }),
+    );
+    setupApprovalRpc({
+      data: {
+        knowledge_file_id: "knowledge-1",
+        knowledge_brand_id: "brand-1",
+        knowledge_module_id: "module-1",
+        knowledge_file_record_id: "file-1",
+        knowledge_rag_status: "RAG_SYNCED",
+        knowledge_approved_by_supervisor: "supervisor-1",
+        knowledge_approved_by_platform_owner: "platform_owner-1",
+        knowledge_created_at: "2026-06-10T00:00:00.000Z",
+        previous_rag_status: "RAG_SYNCED",
+        current_module_status: "RAG_APPROVED",
+        current_artifact_status: "RAG_APPROVED",
+        current_file_status: "RAG_APPROVED",
+        changed: true,
+      },
+      error: null,
+    });
+
+    const result = await approveRagAsSupervisor({
+      artifactId: "artifact-1",
+      actor: profile("SUPERVISOR"),
+    });
+
+    expect(result.item).toMatchObject({
+      ragStatus: "RAG_SYNCED",
+      moduleStatus: "RAG_APPROVED",
+      artifactStatus: "RAG_APPROVED",
+      fileStatus: "RAG_APPROVED",
+    });
+    expect(result.message).toBe("RAG approval consistency repaired.");
+    expect(result.alreadyApproved).toBe(false);
+    expect(mockedLogAudit).toHaveBeenCalledTimes(1);
   });
 
   it("blocks Platform Owner final approval before Supervisor approval", async () => {
     mockedGetEligibleItem.mockResolvedValue(queueItem());
+    setupApprovalRpc({
+      data: null,
+      error: {
+        message: "Supervisor approval is required before final approval.",
+      },
+    });
 
     await expect(
       approveRagAsPlatformOwner({
@@ -293,6 +388,86 @@ describe("RAG approval service guards", () => {
         actor: profile("PLATFORM_OWNER"),
       }),
     ).rejects.toSatisfy(isRagApprovalServiceError);
+  });
+
+  it("records Supervisor approval through one atomic RPC and audits it", async () => {
+    mockedGetEligibleItem.mockResolvedValue(queueItem());
+    const { rpc } = setupApprovalRpc({
+      data: {
+        knowledge_file_id: "knowledge-1",
+        knowledge_brand_id: "brand-1",
+        knowledge_module_id: "module-1",
+        knowledge_file_record_id: "file-1",
+        knowledge_rag_status: "RAG_REVIEW_REQUIRED",
+        knowledge_approved_by_supervisor: "supervisor-1",
+        knowledge_approved_by_platform_owner: null,
+        knowledge_created_at: "2026-06-10T00:00:00.000Z",
+        previous_rag_status: "CLIENT_APPROVED",
+        current_module_status: "RAG_REVIEW_REQUIRED",
+        current_artifact_status: "RAG_REVIEW_REQUIRED",
+        current_file_status: "CLIENT_APPROVED",
+        changed: true,
+      },
+      error: null,
+    });
+
+    const result = await approveRagAsSupervisor({
+      artifactId: "artifact-1",
+      actor: profile("SUPERVISOR"),
+    });
+
+    expect(result.item).toMatchObject({
+      ragStatus: "RAG_REVIEW_REQUIRED",
+      moduleStatus: "RAG_REVIEW_REQUIRED",
+      artifactStatus: "RAG_REVIEW_REQUIRED",
+      fileStatus: "CLIENT_APPROVED",
+      approvedBySupervisor: "supervisor-1",
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(mockedLogAudit).toHaveBeenCalledTimes(1);
+  });
+
+  it("records final approval through one atomic RPC", async () => {
+    mockedGetEligibleItem.mockResolvedValue(
+      queueItem({
+        knowledgeFileId: "knowledge-1",
+        ragStatus: "RAG_REVIEW_REQUIRED",
+        approvedBySupervisor: "supervisor-1",
+      }),
+    );
+    const { rpc } = setupApprovalRpc({
+      data: {
+        knowledge_file_id: "knowledge-1",
+        knowledge_brand_id: "brand-1",
+        knowledge_module_id: "module-1",
+        knowledge_file_record_id: "file-1",
+        knowledge_rag_status: "RAG_APPROVED",
+        knowledge_approved_by_supervisor: "supervisor-1",
+        knowledge_approved_by_platform_owner: "platform_owner-1",
+        knowledge_created_at: "2026-06-10T00:00:00.000Z",
+        previous_rag_status: "RAG_REVIEW_REQUIRED",
+        current_module_status: "RAG_APPROVED",
+        current_artifact_status: "RAG_APPROVED",
+        current_file_status: "RAG_APPROVED",
+        changed: true,
+      },
+      error: null,
+    });
+
+    const result = await approveRagAsPlatformOwner({
+      artifactId: "artifact-1",
+      actor: profile("PLATFORM_OWNER"),
+    });
+
+    expect(result.item).toMatchObject({
+      ragStatus: "RAG_APPROVED",
+      moduleStatus: "RAG_APPROVED",
+      artifactStatus: "RAG_APPROVED",
+      fileStatus: "RAG_APPROVED",
+      approvedByPlatformOwner: "platform_owner-1",
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(mockedLogAudit).toHaveBeenCalledTimes(1);
   });
 
   it("rejects cross-role approval attempts", async () => {
@@ -527,7 +702,7 @@ describe("RAG sync service", () => {
     expect(mockedCreateAdminClient).not.toHaveBeenCalled();
   });
 
-  it("returns a controlled error when OPENAI_API_KEY is missing", async () => {
+  it("returns a controlled error when OPENROUTER_API_KEY is missing", async () => {
     mockedHasEmbeddingEnv.mockReturnValue(false);
     setupSyncAdminClient();
 
@@ -540,8 +715,7 @@ describe("RAG sync service", () => {
   });
 
   it("moves RAG_APPROVED files through SYNCING to RAG_SYNCED and audits the sync", async () => {
-    const { markFilesBuilder, fileResultBuilder, auditBuilder } =
-      setupSyncAdminClient();
+    const { markFilesBuilder, fileResultBuilder } = setupSyncAdminClient();
 
     const result = await syncBrandKnowledgeBase({
       brandId: "brand-1",
@@ -562,10 +736,10 @@ describe("RAG sync service", () => {
         rag_status: "RAG_SYNCED",
       }),
     );
-    expect(auditBuilder.insert).toHaveBeenCalledWith(
+    expect(mockedLogAudit).toHaveBeenCalledWith(
       expect.objectContaining({ action: "rag_sync_started" }),
     );
-    expect(auditBuilder.insert).toHaveBeenCalledWith(
+    expect(mockedLogAudit).toHaveBeenCalledWith(
       expect.objectContaining({ action: "rag_sync_completed" }),
     );
   });

@@ -11,14 +11,15 @@ Required:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `KEY_ENCRYPTION_KEY`
+- `KEY_ENCRYPTION_ACTIVE_KEY_ID`
 - `APP_BASE_URL`
 - `ADMIN_BASE_URL`
 
 Optional for enabled features:
 
-- `OPENAI_API_KEY`
-- `OPENAI_BRAIN_MODEL`
-- `OPENAI_AGENT_MODEL`
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_MODEL`
 - `RESEND_API_KEY`
 - `EMAIL_FROM`
 
@@ -33,11 +34,13 @@ Fresh project:
    - `supabase/seeds/plans.sql`
    - `supabase/seeds/agents.sql`
    - `supabase/seeds/questions_sections.sql`
+   - `supabase/seeds/questions.sql`
 3. Run `NOTIFY pgrst, 'reload schema';`.
 
 Existing project:
 
-1. Run missing migrations in numeric order through `0010_rate_limits.sql`.
+1. Run missing migrations in numeric order through
+   `0039_rag_approval_consistency.sql`.
 2. Re-run seeds only if the environment is missing plan, agent, or intake
    configuration rows.
 3. Run `NOTIFY pgrst, 'reload schema';`.
@@ -46,12 +49,14 @@ Confirm:
 
 - `bextudio-files` bucket is private.
 - `rate_limits` exists.
+- `storage_cleanup_jobs` exists and has no anon/authenticated policies.
 - RLS is enabled and forced for public app tables.
 - No anon/auth policies were added for business tables.
 
 ## 3. Verification Commands
 
 ```powershell
+npm run db:check-bundles
 npm run verify
 npm run build
 npm audit --omit=dev

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildAgentEntitlementUpserts,
-  findUnmatchedAgentKeys,
-  parseIncludedAgentKeys,
-} from "@/features/access/grant-brand-access-rules";
-import {
   toEndOfDayUtcIso,
   toStartOfDayUtcIso,
   validateManualGrantFormData,
@@ -96,51 +91,5 @@ describe("manual grant validation", () => {
       "2026-05-16T23:59:59.999Z",
     );
     expect(toStartOfDayUtcIso("not-a-date")).toBeNull();
-  });
-});
-
-describe("plan included agent rules", () => {
-  it("parses unique string agent keys from plan metadata", () => {
-    expect(
-      parseIncludedAgentKeys([
-        "STORY_TELLER",
-        "",
-        "STORY_TELLER",
-        " IMAGE_GENERATOR ",
-        123,
-      ]),
-    ).toEqual(["STORY_TELLER", "IMAGE_GENERATOR"]);
-
-    expect(parseIncludedAgentKeys(null)).toEqual([]);
-  });
-
-  it("builds locked-by-brain agent entitlement upsert rows", () => {
-    expect(
-      buildAgentEntitlementUpserts({
-        brandId: "brand-1",
-        planId: "plan-1",
-        startsAt: "2026-05-16T00:00:00.000Z",
-        expiresAt: "2026-06-16T23:59:59.999Z",
-        agents: [{ id: "agent-1", key: "STORY_TELLER" }],
-      }),
-    ).toEqual([
-      {
-        brand_id: "brand-1",
-        agent_id: "agent-1",
-        plan_id: "plan-1",
-        status: "LOCKED_BY_BRAIN",
-        starts_at: "2026-05-16T00:00:00.000Z",
-        expires_at: "2026-06-16T23:59:59.999Z",
-      },
-    ]);
-  });
-
-  it("reports configured agent keys not found in active agents", () => {
-    expect(
-      findUnmatchedAgentKeys({
-        includedAgentKeys: ["STORY_TELLER", "IMAGE_GENERATOR"],
-        agents: [{ id: "agent-1", key: "STORY_TELLER" }],
-      }),
-    ).toEqual(["IMAGE_GENERATOR"]);
   });
 });

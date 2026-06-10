@@ -57,5 +57,5 @@ values ('bextudio-files', 'bextudio-files', false)
 on conflict (id) do update
 set public = false;
 
-alter table storage.objects enable row level security;
-alter table storage.objects force row level security;
+-- Supabase Cloud owns storage.objects as supabase_storage_admin and enables
+-- RLS there by default. App migrations must not try to alter that table.

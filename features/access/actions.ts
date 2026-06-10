@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 
 import { requireUserProfile } from "@/features/auth/queries";
 import { activateDemoAccessForUser } from "@/features/access/demo-access-grant";
-import { redeemAccessKey } from "@/features/access/services";
+import {
+  redeemAccessKey,
+  rollbackAccessKeyRedemption,
+} from "@/features/access/services";
 import type {
   AccessKeyRedemptionFormState,
   RedeemAccessKeyResult,
@@ -118,6 +121,22 @@ export async function redeemDashboardAccessKeyAction(
         actorRole: profile.global_role,
       });
     } catch (error) {
+      try {
+        await rollbackAccessKeyRedemption({
+          redemption: result.redemption,
+          actorUserId: profile.id,
+          actorRole: profile.global_role,
+        });
+      } catch (rollbackError) {
+        logServerError({
+          label: "[access] brand claim redemption rollback failed",
+          error: rollbackError,
+          metadata: {
+            profileId: profile.id,
+            accessKeyId: result.accessKey.id,
+          },
+        });
+      }
       logServerError({
         label: "[access] brand claim failed",
         error,
@@ -156,6 +175,22 @@ export async function redeemDashboardAccessKeyAction(
         actorRole: profile.global_role,
       });
     } catch (error) {
+      try {
+        await rollbackAccessKeyRedemption({
+          redemption: result.redemption,
+          actorUserId: profile.id,
+          actorRole: profile.global_role,
+        });
+      } catch (rollbackError) {
+        logServerError({
+          label: "[access] demo redemption rollback failed",
+          error: rollbackError,
+          metadata: {
+            profileId: profile.id,
+            accessKeyId: result.accessKey.id,
+          },
+        });
+      }
       logServerError({
         label: "[access] demo grant failed",
         error,

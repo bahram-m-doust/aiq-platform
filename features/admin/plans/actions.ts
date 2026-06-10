@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requirePlatformOwner } from "@/features/auth/queries";
 import type { PlanFormState } from "@/features/admin/plans/form-state";
+import { logServerError } from "@/lib/logging/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function parseCommonFields(formData: FormData):
@@ -73,7 +74,12 @@ export async function createPlanAction(
     if (error.code === "23505") {
       return { status: "error", message: "A plan with that name already exists." };
     }
-    return { status: "error", message: error.message };
+    logServerError({
+      label: "[admin-plans] create failed",
+      error,
+      metadata: { actor: "platform_owner" },
+    });
+    return { status: "error", message: "Plan could not be created." };
   }
 
   revalidatePath("/admin/plans");
@@ -102,7 +108,12 @@ export async function updatePlanAction(
     if (error.code === "23505") {
       return { status: "error", message: "A plan with that name already exists." };
     }
-    return { status: "error", message: error.message };
+    logServerError({
+      label: "[admin-plans] update failed",
+      error,
+      metadata: { planId: id },
+    });
+    return { status: "error", message: "Plan could not be updated." };
   }
 
   revalidatePath("/admin/plans");

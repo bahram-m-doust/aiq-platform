@@ -7,11 +7,13 @@ fastest path is the Supabase Dashboard SQL Editor.
 
 1. Open Supabase Dashboard -> SQL Editor.
 2. Paste and run `supabase/migrations/setup-all.sql`.
-   - This consolidated script is intended for fresh projects and is
-     idempotent for the current MVP schema.
-   - It includes migrations through `0010_rate_limits.sql`.
+   - This generated script is intended only for an empty project.
+   - It includes every numbered migration through
+     `0039_rag_approval_consistency.sql`.
+   - Regenerate it after adding a migration with
+     `npm run db:generate-bundles`.
    - On Supabase Cloud the script intentionally does **not** run
-     `alter table storage.objects enable/force row level security;` —
+     `alter table storage.objects enable/force row level security;` -
      those statements require the `supabase_storage_admin` role and
      RLS on `storage.objects` is already enabled by default.
 3. Paste and run seed files in this order:
@@ -25,9 +27,11 @@ fastest path is the Supabase Dashboard SQL Editor.
 NOTIFY pgrst, 'reload schema';
 ```
 
-5. Verify these tables exist: `users_profile`, `brands`, `plans`,
-   `question_sections`, `questions`, `agent_runs`, `audit_logs`,
-   `rate_limits`, `demo_requests`.
+5. Verify the latest tables exist, including `rate_limits`, `demo_requests`,
+   `knowledge_chunks`, `brand_api_keys`, `agent_run_usage`,
+   `ai_usage_reservations`, `stakeholder_interview_reports`,
+   `brand_agent_settings`, `futures_research_reports`, and
+   `storage_cleanup_jobs`.
 
 ## Existing Project
 
@@ -45,13 +49,32 @@ migrations in numeric order:
 - `0009_performance_indexes.sql`
 - `0010_rate_limits.sql`
 - `0011_demo_requests.sql`
-
-If the project is already at `0010_rate_limits.sql`, run only
-`0011_demo_requests.sql`, then reload PostgREST:
-
-```sql
-NOTIFY pgrst, 'reload schema';
-```
+- `0012_pgvector_knowledge_chunks.sql`
+- `0013_brand_api_keys.sql`
+- `0014_brand_icons.sql`
+- `0015_openrouter_ops.sql`
+- `0018_ensure_brand_ops_columns.sql`
+- `0019_fast_intake_autosave.sql`
+- `0020_batch_intake_autosave.sql`
+- `0021_stakeholder_interviews.sql`
+- `0022_stakeholder_annotation_replies.sql`
+- `0023_plan_credits.sql`
+- `0024_brand_agent_settings.sql`
+- `0025_futures_research.sql`
+- `0026_futures_research_storyline.sql`
+- `0027_atomic_workflows.sql`
+- `0028_ai_budget_reservations.sql`
+- `0029_atomic_file_workflows.sql`
+- `0030_atomic_module_review.sql`
+- `0031_atomic_rag_promotion.sql`
+- `0032_storage_cleanup_outbox.sql`
+- `0033_atomic_brand_access_grants.sql`
+- `0034_atomic_rag_approval.sql`
+- `0035_release_race_hardening.sql`
+- `0036_atomic_brand_creation.sql`
+- `0037_atomic_intake_reordering.sql`
+- `0038_atomic_redeemed_brand_membership.sql`
+- `0039_rag_approval_consistency.sql`
 
 ## Required Supabase Dashboard Configuration
 
@@ -95,8 +118,6 @@ to promote the profile to `PLATFORM_OWNER`.
   project.
 - Service role failures: re-copy `SUPABASE_SERVICE_ROLE_KEY` into the server
   environment.
-- `ERROR 42501: must be owner of table objects` when running
-  `0008_enable_rls_deny_by_default.sql` on Supabase Cloud: that file's
-  last two lines toggle RLS on `storage.objects`, which is owned by
-  `supabase_storage_admin`. Comment out those two lines for that one
-  execution; RLS on `storage.objects` is already enabled on Cloud.
+- A notice about skipping the brand icon storage policy means the SQL Editor
+  role does not own `storage.objects`. Create the public-read policy through
+  the Storage UI; application tables remain deny-by-default.

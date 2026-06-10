@@ -25,7 +25,6 @@ import { SpecialistInvitationForm } from "@/features/invitations/components/Spec
 import {
   buildInvitationAcceptPath,
   buildInvitationAcceptUrl,
-  buildSpecialistMembershipUpsert,
   canInviteSpecialistRole,
   toMemberInvitedAudit,
   toMemberJoinedAudit,
@@ -114,22 +113,6 @@ describe("invitation validation", () => {
     ).toBe("This invitation is not configured for Brand Specialist access.");
   });
 
-  it("builds specialist membership rows without expiry", () => {
-    expect(
-      buildSpecialistMembershipUpsert({
-        brandId: "brand-1",
-        userId: "specialist-1",
-        invitedBy: "owner-1",
-      }),
-    ).toEqual({
-      brand_id: "brand-1",
-      user_id: "specialist-1",
-      role: "BRAND_SPECIALIST",
-      status: "ACTIVE",
-      invited_by: "owner-1",
-      expires_at: null,
-    });
-  });
 });
 
 describe("invitation safe metadata and email", () => {

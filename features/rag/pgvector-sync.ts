@@ -28,26 +28,27 @@ export async function syncFileToChunks(
 
   const admin = createAdminClient();
 
-  await admin
-    .from("knowledge_chunks")
-    .delete()
-    .eq("knowledge_file_id", file.knowledgeFileId);
-
   const rows = chunks.map((chunk, i) => ({
-    knowledge_file_id: file.knowledgeFileId,
-    brand_id: file.brandId,
-    module_id: file.moduleId ?? null,
     chunk_index: chunk.index,
     chunk_text: chunk.text,
     token_count: chunk.tokenCount,
-    embedding: JSON.stringify(embeddings[i]),
+    embedding: embeddings[i],
   }));
 
-  const { error: insertError } = await admin
-    .from("knowledge_chunks")
-    .insert(rows);
+  const { data: replacedCount, error: replaceError } = await admin.rpc(
+    "replace_knowledge_chunks",
+    {
+      p_knowledge_file_id: file.knowledgeFileId,
+      p_brand_id: file.brandId,
+      p_module_id: file.moduleId ?? null,
+      p_rows: rows,
+    },
+  );
 
-  if (insertError) throw insertError;
+  if (replaceError) throw replaceError;
+  if (Number(replacedCount) !== rows.length) {
+    throw new Error("Knowledge chunk replacement returned an unexpected count.");
+  }
 
   return { ok: true, chunkCount: chunks.length };
 }

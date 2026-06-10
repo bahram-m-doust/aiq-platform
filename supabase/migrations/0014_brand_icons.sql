@@ -21,4 +21,7 @@ begin
       for select
       using (bucket_id = 'brand-icons');
   end if;
+exception
+  when insufficient_privilege then
+    raise notice 'Skipping storage.objects policy creation; configure it through the Storage UI.';
 end $$;

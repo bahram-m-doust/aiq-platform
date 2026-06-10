@@ -5,19 +5,25 @@ import OpenAI from "openai";
 import { getBrandApiKey } from "@/features/brands/api-keys";
 import { readTrimmedRuntimeEnv } from "@/lib/env/runtime";
 import { DomainError } from "@/lib/errors";
+import {
+  coerceTextModel,
+  DEFAULT_TEXT_MODEL,
+  type TextModelId,
+} from "@/lib/openrouter/models";
 
 let globalClient: OpenAI | null = null;
 const brandClients = new Map<string, OpenAI>();
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-const DEFAULT_MODEL = "openai/gpt-4o";
 
 export function hasOpenRouterEnv(): boolean {
   return Boolean(readTrimmedRuntimeEnv("OPENROUTER_API_KEY"));
 }
 
-export function getOpenRouterModel(): string {
-  return process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL;
+export function getOpenRouterModel(): TextModelId {
+  return coerceTextModel(
+    process.env.OPENROUTER_MODEL?.trim() || DEFAULT_TEXT_MODEL,
+  );
 }
 
 export function getOpenRouterClient(): OpenAI {

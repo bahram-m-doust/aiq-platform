@@ -163,11 +163,11 @@ export function artifactTypeForFile(file: File): ModuleArtifactType | null {
   const name = file.name.toLowerCase();
   const type = file.type.toLowerCase();
 
-  if (type === "application/pdf" || name.endsWith(".pdf")) {
+  if (type === "application/pdf" && name.endsWith(".pdf")) {
     return "PDF";
   }
 
-  if (type === docxMimeType || name.endsWith(".docx")) {
+  if (type === docxMimeType && name.endsWith(".docx")) {
     return "DOCX";
   }
 

@@ -19,6 +19,7 @@ const originalEnv = {
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  KEY_ENCRYPTION_KEY: process.env.KEY_ENCRYPTION_KEY,
   APP_BASE_URL: process.env.APP_BASE_URL,
   ADMIN_BASE_URL: process.env.ADMIN_BASE_URL,
 };
@@ -37,6 +38,7 @@ function setRequiredEnv() {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.test";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
+  process.env.KEY_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
   process.env.APP_BASE_URL = "https://app.test";
   process.env.ADMIN_BASE_URL = "https://app.test/admin";
 }

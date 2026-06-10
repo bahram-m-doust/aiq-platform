@@ -12,6 +12,7 @@ import { getTrustedRequestOrigin } from "@/features/auth/origins";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import {
   createAccessKey,
+  revokeUnusedAccessKey,
   updateAccessKeyEmailDelivery,
 } from "@/features/access/services";
 import { markDemoRequestApproved } from "@/features/demo-requests/services";
@@ -60,6 +61,11 @@ export async function createAdminAccessKeyAction(
   }
 
   try {
+    const demoRequestIdRaw = formData.get("demo_request_id");
+    const demoRequestId =
+      typeof demoRequestIdRaw === "string" && demoRequestIdRaw.trim().length > 0
+        ? demoRequestIdRaw.trim()
+        : null;
     const created = await createAccessKey({
       type: validation.data.type,
       targetEmail: validation.data.targetEmail,
@@ -74,6 +80,48 @@ export async function createAdminAccessKeyAction(
     let accessKey = created.accessKey;
     let resendEmailId: string | null = null;
     let warning: string | undefined;
+
+    if (demoRequestId) {
+      try {
+        await markDemoRequestApproved({
+          demoRequestId,
+          reviewer: profile,
+          accessKeyId: accessKey.id,
+        });
+        revalidateTag(CACHE_TAGS.demoRequests, "max");
+        revalidatePath("/admin/demo-requests");
+        revalidatePath("/admin");
+      } catch (error) {
+        let revoked = false;
+        try {
+          revoked = await revokeUnusedAccessKey({
+            accessKeyId: accessKey.id,
+            actorUserId: profile.id,
+            actorRole: profile.global_role,
+          });
+        } catch (revokeError) {
+          logServerError({
+            label: "[admin] orphan access key revoke failed",
+            error: revokeError,
+            metadata: { demoRequestId, accessKeyId: accessKey.id },
+          });
+        }
+        logServerError({
+          label: "[admin] demo request approval link failed",
+          error,
+          metadata: {
+            demoRequestId,
+            accessKeyId: accessKey.id,
+            accessKeyRevoked: revoked,
+          },
+        });
+        return errorState(
+          revoked
+            ? "Demo request could not be approved. The generated access key was revoked."
+            : "Demo request could not be approved safely.",
+        );
+      }
+    }
 
     if (validation.data.sendEmail) {
       const redeemUrl = buildAccessKeyRedeemUrl({
@@ -111,34 +159,6 @@ export async function createAdminAccessKeyAction(
         }
       } else {
         warning = emailResult.message;
-      }
-    }
-
-    const demoRequestIdRaw = formData.get("demo_request_id");
-    const demoRequestId =
-      typeof demoRequestIdRaw === "string" && demoRequestIdRaw.trim().length > 0
-        ? demoRequestIdRaw.trim()
-        : null;
-
-    if (demoRequestId) {
-      try {
-        await markDemoRequestApproved({
-          demoRequestId,
-          reviewer: profile,
-          accessKeyId: accessKey.id,
-        });
-        revalidateTag(CACHE_TAGS.demoRequests, "max");
-        revalidatePath("/admin/demo-requests");
-        revalidatePath("/admin");
-      } catch (error) {
-        logServerError({
-          label: "[admin] demo request approval link failed",
-          error,
-          metadata: { demoRequestId, accessKeyId: accessKey.id },
-        });
-        warning = warning
-          ? `${warning} Demo request row could not be updated.`
-          : "Access key was created but the demo request row could not be updated.";
       }
     }
 

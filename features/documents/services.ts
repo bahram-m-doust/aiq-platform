@@ -17,10 +17,13 @@ import {
 } from "@/features/documents/queries";
 import {
   createPrivateFileSignedDownloadUrl,
-  removePrivateFile,
   signedDownloadUrlTtlSeconds,
   uploadPrivateFile,
 } from "@/features/documents/storage";
+import {
+  processPendingStorageCleanups,
+  removePrivateFileOrQueue,
+} from "@/features/documents/storage-cleanup";
 import type {
   BrandDocumentRecord,
   DocumentReviewDecision,
@@ -28,6 +31,7 @@ import type {
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { validateSecureUpload } from "@/lib/security/file-upload";
 
 const CODE = "file_service";
 
@@ -117,6 +121,13 @@ export async function uploadBrandDocumentFromFormData({
   if (validation.error || !validation.data) {
     fileServiceError(validation.error ?? "Document upload details are invalid.");
   }
+  const secureUpload = await validateSecureUpload({
+    file: validation.data.file,
+    allowedKinds: ["PDF", "DOCX", "TEXT", "MARKDOWN", "CSV"],
+  });
+  if (!secureUpload.ok) {
+    fileServiceError(secureUpload.message);
+  }
 
   const fileId = randomUUID();
   const file = validation.data.file;
@@ -130,7 +141,7 @@ export async function uploadBrandDocumentFromFormData({
   await uploadPrivateFile({
     storagePath,
     file,
-    mimeType: file.type || null,
+    mimeType: secureUpload.mimeType,
   });
 
   const admin = createAdminClient();
@@ -141,7 +152,7 @@ export async function uploadBrandDocumentFromFormData({
       brand_id: access.brandId,
       storage_path: storagePath,
       original_name: file.name,
-      mime_type: file.type || null,
+      mime_type: secureUpload.mimeType,
       size_bytes: file.size,
       visibility: validation.data.visibility,
       status,
@@ -153,7 +164,11 @@ export async function uploadBrandDocumentFromFormData({
     .single();
 
   if (error) {
-    await removePrivateFile(storagePath);
+    await removePrivateFileOrQueue({
+      storagePath,
+      fileId,
+      reason: "UPLOAD_ROLLBACK",
+    });
     throw error;
   }
 
@@ -174,6 +189,7 @@ export async function uploadBrandDocumentFromFormData({
     createdAt: data.created_at,
   } satisfies BrandDocumentRecord;
 
+  await processPendingStorageCleanups(undefined, 3);
   await insertFileAuditLog({
     actorUserId: profileId,
     actorRole: access.membershipRole,

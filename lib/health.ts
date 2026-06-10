@@ -21,6 +21,8 @@ function hasRequiredServerEnv() {
   return Boolean(
     hasPublicSupabaseEnv() &&
       readTrimmedRuntimeEnv("SUPABASE_SERVICE_ROLE_KEY") &&
+      (readTrimmedRuntimeEnv("KEY_ENCRYPTION_KEY") ||
+        readTrimmedRuntimeEnv("KEY_ENCRYPTION_KEYS")) &&
       process.env.APP_BASE_URL?.trim() &&
       process.env.ADMIN_BASE_URL?.trim(),
   );

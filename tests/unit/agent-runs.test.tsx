@@ -24,6 +24,26 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
 
+vi.mock("@/features/openrouter/usage", () => ({
+  withRunUsageReservation: vi.fn(
+    async ({
+      brandId,
+      kind,
+      operation,
+    }: {
+      brandId: string;
+      kind: "TEXT" | "IMAGE" | "EMBEDDING";
+      operation: (reservation: {
+        id: string;
+        brandId: string;
+        kind: "TEXT" | "IMAGE" | "EMBEDDING";
+      }) => Promise<unknown>;
+    }) => operation({ id: `reservation-${kind}`, brandId, kind }),
+  ),
+  recordRunUsage: vi.fn(() => Promise.resolve("usage-1")),
+  attachRunUsage: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     refresh: vi.fn(),

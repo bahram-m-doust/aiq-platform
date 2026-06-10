@@ -9,10 +9,13 @@ import {
 } from "@/features/documents/schema";
 import {
   createPrivateFileSignedDownloadUrl,
-  removePrivateFile,
   signedDownloadUrlTtlSeconds,
   uploadPrivateFile,
 } from "@/features/documents/storage";
+import {
+  processPendingStorageCleanups,
+  removePrivateFileOrQueue,
+} from "@/features/documents/storage-cleanup";
 import { toBrandDocumentRecord } from "@/features/documents/queries";
 import type {
   BrandDocumentRecord,
@@ -22,6 +25,7 @@ import type { UserProfile } from "@/features/auth/types";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { validateSecureUpload } from "@/lib/security/file-upload";
 
 const CODE = "admin_file_service";
 
@@ -74,6 +78,11 @@ export async function adminUploadDocumentForBrand({
 }): Promise<BrandDocumentRecord> {
   const file = readUploadFile(formData);
   if (!file) adminFileError("Choose a document to upload.");
+  const secureUpload = await validateSecureUpload({
+    file,
+    allowedKinds: ["PDF", "DOCX", "TEXT", "MARKDOWN", "CSV"],
+  });
+  if (!secureUpload.ok) adminFileError(secureUpload.message);
 
   const visibility = readVisibility(formData);
 
@@ -97,7 +106,7 @@ export async function adminUploadDocumentForBrand({
   await uploadPrivateFile({
     storagePath,
     file,
-    mimeType: file.type || null,
+    mimeType: secureUpload.mimeType,
   });
 
   const { data, error } = await admin
@@ -107,7 +116,7 @@ export async function adminUploadDocumentForBrand({
       brand_id: brandId,
       storage_path: storagePath,
       original_name: file.name,
-      mime_type: file.type || null,
+      mime_type: secureUpload.mimeType,
       size_bytes: file.size,
       visibility,
       status: "UPLOADED",
@@ -117,12 +126,17 @@ export async function adminUploadDocumentForBrand({
     .single();
 
   if (error) {
-    await removePrivateFile(storagePath);
+    await removePrivateFileOrQueue({
+      storagePath,
+      fileId,
+      reason: "UPLOAD_ROLLBACK",
+    });
     throw error;
   }
 
   const record = toBrandDocumentRecord({ row: data as unknown as FileRow });
 
+  await processPendingStorageCleanups(undefined, 3);
   await logAudit({
     actorUserId: actor.id,
     actorRole: actor.global_role,
@@ -239,18 +253,15 @@ export async function adminDeleteDocument({
   if (!before) adminFileError("Document could not be found.");
 
   const admin = createAdminClient();
-  const { error: deleteError } = await admin
-    .from("files")
-    .delete()
-    .eq("id", fileId);
-
+  const { error: deleteError } = await admin.rpc(
+    "delete_file_and_queue_storage_cleanup",
+    {
+      p_file_id: fileId,
+      p_reason: "ADMIN_FILE_DELETED",
+    },
+  );
   if (deleteError) throw deleteError;
-
-  try {
-    await removePrivateFile(before.storagePath);
-  } catch {
-    // Best-effort: row is gone; the orphaned object can be reaped later.
-  }
+  await processPendingStorageCleanups(fileId);
 
   await logAudit({
     actorUserId: actor.id,
@@ -300,33 +311,15 @@ export async function adminPromoteDocumentToRag({
   }
 
   const admin = createAdminClient();
+  const { data, error } = await admin.rpc("promote_document_to_rag", {
+    p_file_id: fileId,
+    p_actor_id: actor.id,
+  });
+  if (error) throw error;
 
-  const { data, error: updateError } = await admin
-    .from("files")
-    .update({ status: "RAG_APPROVED" })
-    .eq("id", fileId)
-    .select(fileColumns)
-    .single();
-
-  if (updateError) throw updateError;
-
-  const after = toBrandDocumentRecord({ row: data as unknown as FileRow });
-
-  const { error: knowledgeError } = await admin
-    .from("knowledge_files")
-    .upsert(
-      {
-        brand_id: after.brandId,
-        module_id: null,
-        file_id: fileId,
-        rag_status: "RAG_APPROVED",
-        approved_by_supervisor: actor.id,
-        approved_by_platform_owner: actor.id,
-      },
-      { onConflict: "brand_id, file_id" },
-    );
-
-  if (knowledgeError) throw knowledgeError;
+  const row = (data as FileRow[] | null)?.[0];
+  if (!row) adminFileError("Document promotion returned no result.");
+  const after = toBrandDocumentRecord({ row });
 
   await logAudit({
     actorUserId: actor.id,

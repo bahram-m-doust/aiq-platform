@@ -28,6 +28,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 type AuditActor = Pick<UserProfile, "id" | "global_role">;
 
+type ReorderRow = {
+  reordered_id: string;
+  target_id: string | null;
+  previous_order_index: number;
+  current_order_index: number;
+  changed: boolean;
+};
+
 function actorRole(actor: AuditActor) {
   return actor.global_role ?? "PLATFORM_OWNER";
 }
@@ -592,32 +600,24 @@ export async function reorderIntakeSection({
     throw new DomainError("intake_builder", "Active section could not be found.");
   }
 
-  const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-  const target = sections[targetIndex];
-
-  if (!target) {
-    return sections[currentIndex];
-  }
-
   const current = sections[currentIndex];
-  const now = new Date().toISOString();
-  const [currentResult, targetResult] = await Promise.all([
-    admin
-      .from("question_sections")
-      .update({ order_index: target.orderIndex, updated_at: now })
-      .eq("id", current.id),
-    admin
-      .from("question_sections")
-      .update({ order_index: current.orderIndex, updated_at: now })
-      .eq("id", target.id),
-  ]);
+  const { data: reorderData, error: reorderError } = await admin.rpc(
+    "reorder_intake_section_atomic",
+    {
+      p_section_id: sectionId,
+      p_direction: direction,
+    },
+  );
+  if (reorderError) throw reorderError;
 
-  if (currentResult.error) {
-    throw currentResult.error;
+  const reorder = (Array.isArray(reorderData) ? reorderData[0] : reorderData) as
+    | ReorderRow
+    | null;
+  if (!reorder) {
+    throw new Error("Section reorder transaction returned no result.");
   }
-
-  if (targetResult.error) {
-    throw targetResult.error;
+  if (!reorder.changed) {
+    return current;
   }
 
   await logAudit({
@@ -626,15 +626,18 @@ export async function reorderIntakeSection({
     action: "intake_section_updated",
     entityType: "question_section",
     entityId: current.id,
-    before: sectionAuditShape(current),
+    before: {
+      ...sectionAuditShape(current),
+      order_index: reorder.previous_order_index,
+    },
     after: {
       ...sectionAuditShape(current),
-      order_index: target.orderIndex,
-      swapped_with_section_id: target.id,
+      order_index: reorder.current_order_index,
+      swapped_with_section_id: reorder.target_id,
     },
   });
 
-  return current;
+  return { ...current, orderIndex: reorder.current_order_index };
 }
 
 export async function unarchiveIntakeQuestion({
@@ -734,31 +737,27 @@ export async function reorderIntakeQuestion({
   const currentIndex = questions.findIndex(
     (question) => question.id === questionId,
   );
-  const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-  const target = questions[targetIndex];
+  if (currentIndex < 0) {
+    throw new DomainError("intake_builder", "Active question could not be found.");
+  }
 
-  if (!target) {
+  const { data: reorderData, error: reorderError } = await admin.rpc(
+    "reorder_intake_question_atomic",
+    {
+      p_question_id: questionId,
+      p_direction: direction,
+    },
+  );
+  if (reorderError) throw reorderError;
+
+  const reorder = (Array.isArray(reorderData) ? reorderData[0] : reorderData) as
+    | ReorderRow
+    | null;
+  if (!reorder) {
+    throw new Error("Question reorder transaction returned no result.");
+  }
+  if (!reorder.changed) {
     return current;
-  }
-
-  const now = new Date().toISOString();
-  const [currentResult, targetResult] = await Promise.all([
-    admin
-      .from("questions")
-      .update({ order_index: target.orderIndex, updated_at: now })
-      .eq("id", current.id),
-    admin
-      .from("questions")
-      .update({ order_index: current.orderIndex, updated_at: now })
-      .eq("id", target.id),
-  ]);
-
-  if (currentResult.error) {
-    throw currentResult.error;
-  }
-
-  if (targetResult.error) {
-    throw targetResult.error;
   }
 
   await logAudit({
@@ -767,13 +766,16 @@ export async function reorderIntakeQuestion({
     action: "intake_question_reordered",
     entityType: "question",
     entityId: current.id,
-    before: questionAuditShape(current),
+    before: {
+      ...questionAuditShape(current),
+      order_index: reorder.previous_order_index,
+    },
     after: {
       ...questionAuditShape(current),
-      order_index: target.orderIndex,
-      swapped_with_question_id: target.id,
+      order_index: reorder.current_order_index,
+      swapped_with_question_id: reorder.target_id,
     },
   });
 
-  return current;
+  return { ...current, orderIndex: reorder.current_order_index };
 }

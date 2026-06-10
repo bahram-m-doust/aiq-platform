@@ -202,6 +202,38 @@ describe("central audit logging", () => {
       prompt: "[REDACTED]",
     });
   });
+
+  it("reports persistence failures without failing the completed mutation", async () => {
+    const insert = vi.fn(() =>
+      Promise.resolve({
+        data: null,
+        error: { code: "08006", message: "database unavailable" },
+      }),
+    );
+    mockedCreateAdminClient.mockReturnValue({
+      from: vi.fn(() => ({ insert })),
+    } as never);
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    const persisted = await logAudit({
+      actorUserId: "profile-1",
+      action: "brand_created",
+      entityType: "brand",
+      entityId: "brand-1",
+    });
+
+    expect(persisted).toBe(false);
+    expect(consoleError).toHaveBeenCalledWith(
+      "[audit] persistence failed",
+      expect.objectContaining({
+        action: "brand_created",
+        entityId: "brand-1",
+      }),
+    );
+    consoleError.mockRestore();
+  });
 });
 
 describe("audit log queries and UI", () => {
