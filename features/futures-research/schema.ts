@@ -4,6 +4,9 @@ import type {
   FuturesResearchReviewRole,
 } from "@/features/futures-research/types";
 import {
+  canReviewDeliverableRole,
+  deliverableStatusLabels,
+  isDeliverablePdf,
   normalizeReviewPosition,
   validateReviewAnnotationBody,
 } from "@/features/review-deliverables/schema";
@@ -11,12 +14,7 @@ import {
 export const futuresResearchReportStatusLabels: Record<
   FuturesResearchReportStatus,
   string
-> = {
-  PENDING_UPLOAD: "Awaiting upload",
-  CLIENT_REVIEW: "In review",
-  CHANGES_REQUESTED: "Changes requested",
-  APPROVED: "Approved",
-};
+> = deliverableStatusLabels;
 
 export const initialFuturesResearchActionState: FuturesResearchActionState = {
   status: "idle",
@@ -29,15 +27,11 @@ export const maxFuturesResearchStorylineBytes = 5 * 1024 * 1024;
 export function canReviewFuturesResearchRole(
   role: string | null | undefined,
 ): role is FuturesResearchReviewRole {
-  return role === "OWNER" || role === "EXECUTIVE_MANAGER";
+  return canReviewDeliverableRole(role);
 }
 
 export function isFuturesResearchPdf(file: File): boolean {
-  return (
-    file.size <= maxFuturesResearchPdfBytes &&
-    file.type.toLowerCase() === "application/pdf" &&
-    file.name.toLowerCase().endsWith(".pdf")
-  );
+  return isDeliverablePdf(file, maxFuturesResearchPdfBytes);
 }
 
 export function isFuturesResearchStoryline(file: File): boolean {

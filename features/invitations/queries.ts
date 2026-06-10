@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getIntakeAccessForProfile } from "@/features/intake/queries";
+import { getIntakeAccessForProfile } from "@/features/questionnaire/queries";
 import { canInviteSpecialistRole } from "@/features/invitations/schema";
 import type { SpecialistInvitationContext } from "@/features/invitations/types";
 

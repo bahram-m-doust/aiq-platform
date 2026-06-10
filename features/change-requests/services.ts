@@ -3,7 +3,7 @@ import "server-only";
 import {
   getIntakeSectionsWithQuestions,
   getLatestIntakeSessionForBrand,
-} from "@/features/intake/queries";
+} from "@/features/questionnaire/queries";
 import {
   canCreateChangeRequestRole,
   canReviewChangeRequestRole,

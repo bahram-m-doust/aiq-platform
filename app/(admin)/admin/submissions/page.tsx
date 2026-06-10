@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
 import { requirePlatformOwner } from "@/features/auth/queries";
-import { ReopenSubmissionButton } from "@/features/intake/components/ReopenSubmissionButton";
-import { getIntakeSubmissionsForAdmin } from "@/features/intake/queries";
+import { ReopenSubmissionButton } from "@/features/questionnaire/components/ReopenSubmissionButton";
+import { getIntakeSubmissionsForAdmin } from "@/features/questionnaire/queries";
 
 export const metadata: Metadata = {
   title: "Questionnaire Submissions | Bextudio Platform",
@@ -62,7 +60,7 @@ export default async function AdminSubmissionsPage() {
                     <a
                       className="text-[var(--bv-accent)] hover:underline"
                       download
-                      href={`/api/intake/${submission.snapshotId}/docx`}
+                      href={`/api/questionnaire/${submission.snapshotId}/docx`}
                     >
                       Download Word
                     </a>
@@ -86,9 +84,7 @@ export default async function AdminSubmissionsPage() {
           </table>
         </div>
 
-        <Button asChild variant="outline">
-          <Link href="/admin">Return to Admin</Link>
-        </Button>
+        
       </section>
     </main>
   );

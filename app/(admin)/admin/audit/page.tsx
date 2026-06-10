@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { PaginationControls } from "@/components/PaginationControls";
-import { Button } from "@/components/ui/button";
 import { AuditLogList } from "@/features/audit/components/AuditLogList";
 import { getLatestAuditLogs } from "@/features/audit/queries";
 import { requirePlatformOwner } from "@/features/auth/queries";
@@ -43,9 +41,7 @@ export default async function AdminAuditPage({
         <AuditLogList logs={logs} />
         <PaginationControls basePath="/admin/audit" pagination={pagination} />
 
-        <Button asChild variant="outline">
-          <Link href="/admin">Return to Admin</Link>
-        </Button>
+        
       </section>
     </main>
   );

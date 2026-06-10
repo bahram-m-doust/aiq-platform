@@ -102,7 +102,7 @@ export async function uploadBrandIconAction(
   }
 
   revalidatePath("/admin/brand-icons");
-  revalidatePath("/dashboard");
+  revalidatePath("/home");
 
   return { status: "success", message: "Icon updated." };
 }

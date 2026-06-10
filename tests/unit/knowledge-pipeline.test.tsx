@@ -9,20 +9,24 @@ vi.mock("@/lib/audit/logAudit", () => ({
   logAudit: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock("@/features/intake/docx-generator", () => ({
+vi.mock("@/features/questionnaire/docx-generator", async (importOriginal) => ({
+  // Keep the real (pure) filename helpers; only stub the buffer generator.
+  ...(await importOriginal<
+    typeof import("@/features/questionnaire/docx-generator")
+  >()),
   generateIntakeDocx: vi.fn(),
 }));
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit/logAudit";
-import { generateIntakeDocx as mockedGenerateIntakeDocx } from "@/features/intake/docx-generator";
-import { createIntakeKnowledgeFile } from "@/features/intake/intake-knowledge";
+import { generateIntakeDocx as mockedGenerateIntakeDocx } from "@/features/questionnaire/docx-generator";
+import { createIntakeKnowledgeFile } from "@/features/questionnaire/intake-knowledge";
 import { adminPromoteDocumentToRag } from "@/features/documents/admin-services";
 import {
   isRagApprovedSyncEligible,
   isRagSyncDisplayEligible,
 } from "@/features/rag/schema";
-import type { IntakeSnapshotJson } from "@/features/intake/types";
+import type { IntakeSnapshotJson } from "@/features/questionnaire/types";
 import type { UserProfile } from "@/features/auth/types";
 
 const mockedCreateAdminClient = vi.mocked(createAdminClient);
@@ -160,8 +164,8 @@ describe("DOCX generator", () => {
   async function callReal(snap: IntakeSnapshotJson) {
     // Bypass the mock for direct testing
     const { generateIntakeDocx } = await vi.importActual<
-      typeof import("@/features/intake/docx-generator")
-    >("@/features/intake/docx-generator");
+      typeof import("@/features/questionnaire/docx-generator")
+    >("@/features/questionnaire/docx-generator");
     return generateIntakeDocx(snap);
   }
 
@@ -269,7 +273,7 @@ describe("createIntakeKnowledgeFile", () => {
     expect(filesBuilder.insert).toHaveBeenCalledWith(
       expect.objectContaining({
         brand_id: "brand-1",
-        original_name: "Brand Intake.docx",
+        original_name: "Helio Questionnaire.docx",
         status: "RAG_APPROVED",
         visibility: "HELIO_INTERNAL",
       }),

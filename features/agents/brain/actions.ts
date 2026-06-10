@@ -34,7 +34,7 @@ export async function askBrandBrainAction(
   _previousState: BrandBrainChatFormState,
   formData: FormData,
 ): Promise<BrandBrainChatFormState> {
-  const { profile } = await requireUserProfile("/dashboard/brain");
+  const { profile } = await requireUserProfile("/brand-integrated-brain");
   const validation = validateBrandBrainPromptFormData(formData);
 
   if (validation.error || !validation.prompt) {
@@ -94,7 +94,7 @@ export async function askBrandBrainAction(
 export async function generateBrandBrainImageAction(
   prompt: string,
 ): Promise<BrandBrainImageState> {
-  const { profile } = await requireUserProfile("/dashboard/brain");
+  const { profile } = await requireUserProfile("/brand-integrated-brain");
   const validation = validateBrandBrainPrompt(prompt);
 
   if (validation.error || !validation.prompt) {

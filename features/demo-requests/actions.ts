@@ -53,7 +53,7 @@ export async function createDemoRequestAction(
   _previousState: CreateDemoRequestFormState,
   formData: FormData,
 ): Promise<CreateDemoRequestFormState> {
-  const { profile } = await requireUserProfile("/dashboard");
+  const { profile } = await requireUserProfile("/home");
   const rateLimit = await checkRequestRateLimit({
     bucket: "demo-requests.create",
     identifiers: [profile.id],

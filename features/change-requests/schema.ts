@@ -302,7 +302,7 @@ export function toChangeRequestStatusAfterAudit({
 }
 
 export function reviewAccessDeniedRedirectPath(role: GlobalRole) {
-  return canReviewChangeRequestRole(role) ? null : "/dashboard";
+  return canReviewChangeRequestRole(role) ? null : "/home";
 }
 
 export function sortChangeRequestsByCreatedAt(

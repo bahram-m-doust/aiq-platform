@@ -37,7 +37,7 @@ export async function runAgentAction(
   _previousState: AgentRunFormState,
   formData: FormData,
 ): Promise<AgentRunFormState> {
-  const { profile } = await requireUserProfile("/dashboard/agents");
+  const { profile } = await requireUserProfile("/agents");
   const validation = validateAgentRunFormData(formData, catalogAgentKeyFromRoute);
 
   if (validation.error || !validation.agentKey || !validation.prompt) {
@@ -73,9 +73,9 @@ export async function runAgentAction(
       imageModelOverride,
     });
 
-    revalidatePath("/dashboard/agents");
+    revalidatePath("/agents");
     revalidatePath(
-      `/dashboard/agents/${catalogAgentSlugForKey(validation.agentKey)}`,
+      `/agents/${catalogAgentSlugForKey(validation.agentKey)}`,
     );
 
     return {
@@ -113,7 +113,7 @@ export async function resolveAgentImageUrlsAction(
   imagePaths: string[],
 ): Promise<string[]> {
   if (!Array.isArray(imagePaths) || imagePaths.length === 0) return [];
-  await requireUserProfile("/dashboard/agents");
+  await requireUserProfile("/agents");
   try {
     return await createAgentImageSignedUrls(imagePaths.slice(0, 8));
   } catch (error) {

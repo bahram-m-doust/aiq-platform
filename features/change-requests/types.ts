@@ -1,4 +1,4 @@
-import type { IntakeQuestion, IntakeSectionWithQuestions } from "@/features/intake/types";
+import type { IntakeQuestion, IntakeSectionWithQuestions } from "@/features/questionnaire/types";
 import type { PaginationState } from "@/lib/pagination";
 
 export const changeRequestStatuses = [

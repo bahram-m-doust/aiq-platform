@@ -64,7 +64,7 @@ app/
 │   └── callback/
 │       └── route.ts
 │
-├── (dashboard)/
+├── (app)/
 │   ├── dashboard/
 │   │   ├── page.tsx
 │   │   ├── loading.tsx

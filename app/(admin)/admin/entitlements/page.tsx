@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
 import { ManualPlanGrantForm } from "@/features/admin/manual-grant/components/ManualPlanGrantForm";
 import { getManualGrantFormOptions } from "@/features/admin/queries";
 import { requirePlatformOwner } from "@/features/auth/queries";
@@ -31,9 +29,7 @@ export default async function AdminEntitlementsPage() {
               Signed in as {profile.email}
             </p>
           </div>
-          <Button asChild variant="outline">
-            <Link href="/admin">Admin overview</Link>
-          </Button>
+          
         </div>
 
         <ManualPlanGrantForm options={options} />

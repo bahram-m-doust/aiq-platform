@@ -27,7 +27,7 @@ export function LoginForm({
 }) {
   const [state, formAction] = useActionState(login, initialAuthFormState);
   const registerHref =
-    nextPath === "/dashboard"
+    nextPath === "/home"
       ? "/register"
       : `/register?next=${encodeURIComponent(nextPath)}`;
 

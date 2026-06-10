@@ -2,16 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { requireUserProfile } from "@/features/auth/queries";
 import { getFuturesResearchReportRowByBrand } from "@/features/futures-research/queries";
 import {
-  canReviewFuturesResearchRole,
   isFuturesResearchPdf,
   isFuturesResearchStoryline,
   maxFuturesResearchStorylineBytes,
   validateAnnotationBody,
 } from "@/features/futures-research/schema";
+import { requireDeliverableReviewer as requireClientReviewer } from "@/features/review-deliverables/reviewer";
 import {
   addFuturesResearchAnnotation,
   deleteFuturesResearchAnnotation,
@@ -29,12 +28,12 @@ import type {
 import { canViewAdminModulesRole } from "@/features/modules/schema";
 import { validateSecureUpload } from "@/lib/security/file-upload";
 
-const CLIENT_PATH = "/dashboard/brain/roadmap/futures-research";
+const CLIENT_PATH = "/brand-integrated-brain/roadmap/futures-research";
 
 function revalidateFuturesResearchPaths() {
   revalidatePath(CLIENT_PATH);
-  revalidatePath("/dashboard/brain/roadmap");
-  revalidatePath("/dashboard/brain");
+  revalidatePath("/brand-integrated-brain/roadmap");
+  revalidatePath("/brand-integrated-brain");
 }
 
 export async function uploadFuturesResearchReportAction(
@@ -118,23 +117,6 @@ export async function uploadFuturesResearchStorylineAction(
   return { status: "success", message: "Storyline attached for the client." };
 }
 
-async function requireClientReviewer(returnTo: string) {
-  const { profile } = await requireUserProfile(returnTo);
-  const access = await getBrandAccessSummaryForProfile(profile.id);
-  if (
-    access.status !== "ACTIVE_ACCESS" ||
-    !access.brandId ||
-    !canReviewFuturesResearchRole(access.membershipRole)
-  ) {
-    return null;
-  }
-  return {
-    profileId: profile.id,
-    brandId: access.brandId,
-    authorName: profile.full_name ?? null,
-    authorEmail: profile.email ?? null,
-  };
-}
 
 export async function addFuturesResearchAnnotationAction(
   input: AddAnnotationInput,

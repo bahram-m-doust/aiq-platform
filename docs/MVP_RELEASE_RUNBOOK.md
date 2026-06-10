@@ -27,6 +27,9 @@ Do not add secrets to git, docs screenshots, issue text, or chat messages.
 
 ## 2. Supabase Checklist
 
+`supabase/migrations/SETUP.md` is the canonical, detailed setup guide — follow it
+for the full steps and dashboard configuration. This is the quick checklist.
+
 Fresh project:
 
 1. Run `supabase/migrations/setup-all.sql`.
@@ -40,7 +43,7 @@ Fresh project:
 Existing project:
 
 1. Run missing migrations in numeric order through
-   `0039_rag_approval_consistency.sql`.
+   `0040_city_model_district_files.sql`.
 2. Re-run seeds only if the environment is missing plan, agent, or intake
    configuration rows.
 3. Run `NOTIFY pgrst, 'reload schema';`.

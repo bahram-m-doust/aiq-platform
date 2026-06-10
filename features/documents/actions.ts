@@ -30,7 +30,7 @@ export async function uploadDocumentAction(
   _previousState: DocumentUploadFormState,
   formData: FormData,
 ): Promise<DocumentUploadFormState> {
-  const { profile } = await requireUserProfile("/dashboard/documents");
+  const { profile } = await requireUserProfile("/documents");
   const rateLimit = await checkRequestRateLimit({
     bucket: "file.upload",
     identifiers: [profile.id],
@@ -48,7 +48,7 @@ export async function uploadDocumentAction(
       profileId: profile.id,
     });
 
-    revalidatePath("/dashboard/documents");
+    revalidatePath("/documents");
 
     return {
       status: "success",
@@ -76,11 +76,11 @@ export async function uploadDocumentAction(
 }
 
 export async function createSignedDownloadUrlAction(formData: FormData) {
-  const { profile } = await requireUserProfile("/dashboard/documents");
+  const { profile } = await requireUserProfile("/documents");
   const fileId = readFileId(formData);
 
   if (!fileId) {
-    redirect("/dashboard/documents");
+    redirect("/documents");
   }
 
   const { signedUrl } = await createSignedDownloadUrlForDocument({
@@ -92,7 +92,7 @@ export async function createSignedDownloadUrlAction(formData: FormData) {
 }
 
 export async function approveSpecialistDocumentAction(formData: FormData) {
-  const { profile } = await requireUserProfile("/dashboard/documents");
+  const { profile } = await requireUserProfile("/documents");
   const fileId = readFileId(formData);
 
   if (fileId) {
@@ -103,11 +103,11 @@ export async function approveSpecialistDocumentAction(formData: FormData) {
     });
   }
 
-  revalidatePath("/dashboard/documents");
+  revalidatePath("/documents");
 }
 
 export async function rejectSpecialistDocumentAction(formData: FormData) {
-  const { profile } = await requireUserProfile("/dashboard/documents");
+  const { profile } = await requireUserProfile("/documents");
   const fileId = readFileId(formData);
 
   if (fileId) {
@@ -118,5 +118,5 @@ export async function rejectSpecialistDocumentAction(formData: FormData) {
     });
   }
 
-  revalidatePath("/dashboard/documents");
+  revalidatePath("/documents");
 }

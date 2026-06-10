@@ -26,7 +26,7 @@ export async function activateAgentAction(
   _previousState: AgentActivationFormState,
   formData: FormData,
 ): Promise<AgentActivationFormState> {
-  const { profile } = await requireUserProfile("/dashboard/agents");
+  const { profile } = await requireUserProfile("/agents");
   const validation = validateAgentActivationFormData(formData);
 
   if (validation.error || !validation.agentKey) {
@@ -50,10 +50,10 @@ export async function activateAgentAction(
       agentKey: validation.agentKey,
     });
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/agents");
+    revalidatePath("/home");
+    revalidatePath("/agents");
     revalidatePath(
-      `/dashboard/agents/${catalogAgentSlugForKey(validation.agentKey)}`,
+      `/agents/${catalogAgentSlugForKey(validation.agentKey)}`,
     );
 
     return {

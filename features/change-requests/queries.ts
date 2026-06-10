@@ -4,7 +4,7 @@ import {
   getIntakeAccessForProfile,
   getIntakeSectionsWithQuestions,
   getLatestIntakeSessionForBrand,
-} from "@/features/intake/queries";
+} from "@/features/questionnaire/queries";
 import {
   isChangeRequestStatus,
   isChangeRequestTargetType,

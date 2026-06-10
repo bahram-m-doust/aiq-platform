@@ -74,7 +74,7 @@ export const getUserProfileByAuthUserId = cache(async (authUserId: string) => {
   });
 });
 
-export async function requireUser(nextPath = "/dashboard") {
+export async function requireUser(nextPath = "/home") {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -86,7 +86,7 @@ export async function requireUser(nextPath = "/dashboard") {
   return user;
 }
 
-export async function requireUserProfile(nextPath = "/dashboard") {
+export async function requireUserProfile(nextPath = "/home") {
   const user = await requireUser(nextPath);
   let profile = await getUserProfileByAuthUserId(user.id);
 
@@ -124,7 +124,7 @@ export async function requirePlatformOwner(nextPath = "/admin") {
   const { user, profile } = await requireUserProfile(nextPath);
 
   if (!isPlatformOwnerProfile(profile)) {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   return { user: user as User, profile };

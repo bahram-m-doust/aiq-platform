@@ -36,7 +36,7 @@ export default async function AdminModuleDetailPage({
   );
 
   if (!canViewAdminModulesRole(profile.global_role)) {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   const detail = await getAdminModuleDetail({ moduleId, profile });

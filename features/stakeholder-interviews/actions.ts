@@ -3,15 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { logServerError } from "@/lib/logging/server";
-import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { requireUserProfile } from "@/features/auth/queries";
+import { requireDeliverableReviewer as requireClientReviewer } from "@/features/review-deliverables/reviewer";
 import { canViewAdminModulesRole } from "@/features/modules/schema";
 import { validateSecureUpload } from "@/lib/security/file-upload";
 import {
   getStakeholderReportRowByBrand,
 } from "@/features/stakeholder-interviews/queries";
 import {
-  canReviewStakeholderInterviewRole,
   isStakeholderPdf,
   validateAnnotationBody,
 } from "@/features/stakeholder-interviews/schema";
@@ -29,12 +28,12 @@ import type {
   StakeholderActionState,
 } from "@/features/stakeholder-interviews/types";
 
-const CLIENT_PATH = "/dashboard/brain/roadmap/stakeholder-interviews";
+const CLIENT_PATH = "/brand-integrated-brain/roadmap/stakeholder-interviews";
 
 function revalidateStakeholderPaths() {
   revalidatePath(CLIENT_PATH);
-  revalidatePath("/dashboard/brain/roadmap");
-  revalidatePath("/dashboard/brain");
+  revalidatePath("/brand-integrated-brain/roadmap");
+  revalidatePath("/brand-integrated-brain");
 }
 
 export async function uploadStakeholderReportAction(
@@ -89,23 +88,6 @@ export async function uploadStakeholderReportAction(
   return { status: "success", message: "Report sent for client review." };
 }
 
-async function requireClientReviewer(returnTo: string) {
-  const { profile } = await requireUserProfile(returnTo);
-  const access = await getBrandAccessSummaryForProfile(profile.id);
-  if (
-    access.status !== "ACTIVE_ACCESS" ||
-    !access.brandId ||
-    !canReviewStakeholderInterviewRole(access.membershipRole)
-  ) {
-    return null;
-  }
-  return {
-    profileId: profile.id,
-    brandId: access.brandId,
-    authorName: profile.full_name ?? null,
-    authorEmail: profile.email ?? null,
-  };
-}
 
 export async function addStakeholderAnnotationAction(
   input: AddAnnotationInput,

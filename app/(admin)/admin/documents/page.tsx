@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import { AdminDocumentsConsole } from "@/features/documents/components/AdminDocumentsConsole";
 import { hasBrandApiKey } from "@/features/brands/api-keys";
@@ -58,9 +56,7 @@ export default async function AdminDocumentsPage({
               Signed in as {profile.email}. All actions here are audited.
             </p>
           </div>
-          <Button asChild variant="outline">
-            <Link href="/admin">Admin overview</Link>
-          </Button>
+          
         </div>
 
         <AdminDocumentsConsole

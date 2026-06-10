@@ -1,3 +1,5 @@
+import { AdminBackBar } from "@/components/app/AdminBackBar";
+
 export default function AdminSectionLayout({
   children,
 }: {
@@ -5,6 +7,7 @@ export default function AdminSectionLayout({
 }) {
   return (
     <div className="dark bg-background text-foreground min-h-svh">
+      <AdminBackBar />
       {children}
     </div>
   );

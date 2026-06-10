@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
 import { isAdminAccessKeyType } from "@/features/admin/access-key-schema";
 import { AdminAccessKeyForm } from "@/features/admin/components/AdminAccessKeyForm";
 import { getAdminAccessKeyFormOptions } from "@/features/admin/queries";
@@ -53,9 +51,7 @@ export default async function AdminAccessKeysPage({
               Signed in as {profile.email}
             </p>
           </div>
-          <Button asChild variant="outline">
-            <Link href="/admin">Admin overview</Link>
-          </Button>
+          
         </div>
 
         <AdminAccessKeyForm

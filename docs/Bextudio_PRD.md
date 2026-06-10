@@ -498,7 +498,7 @@ Rules:
 bextudio-platform/
 ├── app/
 │   ├── (auth)/
-│   ├── (dashboard)/
+│   ├── (app)/
 │   ├── (admin)/
 │   └── api/
 ├── components/

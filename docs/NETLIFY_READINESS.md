@@ -101,7 +101,7 @@ After Netlify deploy succeeds, verify:
 
 - `/api/health` returns `200` and `status: "ok"`.
 - `/login` and `/register` render.
-- `/dashboard` redirects unauthenticated users to `/login`.
+- `/home` redirects unauthenticated users to `/login`.
 - `/admin` redirects unauthenticated users to `/admin/login`.
 - `/invite/accept` renders the logged-out invitation prompt.
 - Google/email callback returns through `/callback` on the Netlify domain.

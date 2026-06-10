@@ -72,3 +72,22 @@ export async function createPrivateFileSignedDownloadUrl({
 
   return data.signedUrl;
 }
+
+// Signed URL WITHOUT a `download` disposition, so the browser renders the file
+// inline (e.g. a PDF preview in an iframe) instead of forcing a download.
+export async function createPrivateFileSignedInlineUrl({
+  storagePath,
+}: {
+  storagePath: string;
+}) {
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from(privateFilesBucket)
+    .createSignedUrl(storagePath, signedDownloadUrlTtlSeconds);
+
+  if (error || !data?.signedUrl) {
+    throw error ?? new Error("Signed inline URL could not be created.");
+  }
+
+  return data.signedUrl;
+}

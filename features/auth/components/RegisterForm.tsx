@@ -18,10 +18,10 @@ import { initialAuthFormState } from "@/features/auth/schemas";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
 
-export function RegisterForm({ nextPath = "/dashboard" }: { nextPath?: string }) {
+export function RegisterForm({ nextPath = "/home" }: { nextPath?: string }) {
   const [state, formAction] = useActionState(register, initialAuthFormState);
   const loginHref =
-    nextPath === "/dashboard"
+    nextPath === "/home"
       ? "/login"
       : `/login?next=${encodeURIComponent(nextPath)}`;
 

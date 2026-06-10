@@ -10,6 +10,7 @@ import type {
   StakeholderReportStatus,
 } from "@/features/stakeholder-interviews/types";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isMissingTableError } from "@/lib/supabase/errors";
 
 type ReportRow = {
   id: string;
@@ -52,15 +53,6 @@ function toStatus(value: string): StakeholderReportStatus {
   return "PENDING_UPLOAD";
 }
 
-// Postgres "undefined_table" — the migration hasn't been applied yet. Treat it
-// as "no report" so the roadmap and review page degrade gracefully.
-function isMissingTableError(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { code?: string }).code === "42P01"
-  );
-}
 
 export type StakeholderAdminBrandRow = {
   brandId: string;

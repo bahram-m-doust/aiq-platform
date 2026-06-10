@@ -98,9 +98,7 @@ export default async function AdminAgentInstructionsPage({
           </p>
         )}
 
-        <Button asChild variant="outline">
-          <Link href="/admin">Return to Admin</Link>
-        </Button>
+        
       </section>
     </main>
   );

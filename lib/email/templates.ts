@@ -21,7 +21,7 @@ export function buildAccessKeyRedeemPath({
   const encoded = encodeURIComponent(rawKey.trim());
   return type === "JOIN_BRAND"
     ? `/invite/accept?key=${encoded}`
-    : `/dashboard?key=${encoded}`;
+    : `/home?key=${encoded}`;
 }
 
 export function buildAccessKeyRedeemUrl({

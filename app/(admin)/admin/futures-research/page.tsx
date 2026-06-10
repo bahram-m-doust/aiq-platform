@@ -19,7 +19,7 @@ export default async function AdminFuturesResearchPage() {
   const { profile } = await requireUserProfile("/admin/futures-research");
 
   if (!canViewAdminModulesRole(profile.global_role)) {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   const overview = await getFuturesResearchAdminOverview();

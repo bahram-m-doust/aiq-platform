@@ -54,14 +54,14 @@ Expected:
 ```text
 - User can login.
 - Session persists.
-- User can access /dashboard.
+- User can access /home.
 ```
 
 ### AUTH-003 — Protected route
 
 Expected:
 ```text
-- Unauthenticated user cannot access /dashboard.
+- Unauthenticated user cannot access /home.
 - Redirect to /login.
 ```
 

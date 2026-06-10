@@ -31,7 +31,7 @@ export async function createChangeRequestAction(
   _previousState: CreateChangeRequestFormState,
   formData: FormData,
 ): Promise<CreateChangeRequestFormState> {
-  const { profile } = await requireUserProfile("/dashboard/change-requests");
+  const { profile } = await requireUserProfile("/change-requests");
   const validation = validateCreateChangeRequestFormData(formData);
 
   if (validation.error || !validation.data) {
@@ -46,7 +46,7 @@ export async function createChangeRequestAction(
       profileId: profile.id,
     });
 
-    revalidatePath("/dashboard/change-requests");
+    revalidatePath("/change-requests");
     revalidatePath("/admin/change-requests");
 
     return {
@@ -70,7 +70,7 @@ export async function reviewChangeRequestAction(
   const { profile } = await requireUserProfile("/admin/change-requests");
 
   if (!canReviewChangeRequestRole(profile.global_role)) {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   const validation = validateReviewChangeRequestFormData(formData);
@@ -89,7 +89,7 @@ export async function reviewChangeRequestAction(
     });
 
     revalidatePath("/admin/change-requests");
-    revalidatePath("/dashboard/change-requests");
+    revalidatePath("/change-requests");
 
     return {
       status: "success",

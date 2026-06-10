@@ -15,7 +15,7 @@ import { createClient } from "@/lib/supabase/server";
 function loginRedirect(
   request: NextRequest,
   message: string,
-  nextPath = "/dashboard",
+  nextPath = "/home",
 ) {
   const redirectUrl = request.nextUrl.clone();
   redirectUrl.pathname = resolveLoginPathForNext(nextPath);

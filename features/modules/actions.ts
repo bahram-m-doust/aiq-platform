@@ -81,7 +81,7 @@ export async function sendModuleToClientReviewAction(
 
     revalidatePath("/admin/modules");
     revalidatePath(`/admin/modules/${moduleId}`);
-    revalidatePath("/dashboard/modules");
+    revalidatePath("/modules");
 
     return {
       status: "success",
@@ -103,8 +103,8 @@ export async function addClientModuleCommentAction(
 ): Promise<ModuleActionFormState> {
   const validation = validateClientModuleCommentFormData(formData);
   const nextPath = validation.data
-    ? `/dashboard/modules/${validation.data.moduleId}`
-    : "/dashboard/modules";
+    ? `/modules/${validation.data.moduleId}`
+    : "/modules";
   const { profile } = await requireUserProfile(nextPath);
 
   if (validation.error || !validation.data) {
@@ -118,7 +118,7 @@ export async function addClientModuleCommentAction(
       comment: validation.data.comment,
     });
 
-    revalidatePath(`/dashboard/modules/${validation.data.moduleId}`);
+    revalidatePath(`/modules/${validation.data.moduleId}`);
 
     return {
       status: "success",
@@ -143,8 +143,8 @@ export async function approveClientModuleAction(
     requireComment: false,
   });
   const nextPath = validation.data
-    ? `/dashboard/modules/${validation.data.moduleId}`
-    : "/dashboard/modules";
+    ? `/modules/${validation.data.moduleId}`
+    : "/modules";
   const { profile } = await requireUserProfile(nextPath);
 
   if (validation.error || !validation.data) {
@@ -159,8 +159,8 @@ export async function approveClientModuleAction(
       comment: validation.data.comment,
     });
 
-    revalidatePath("/dashboard/modules");
-    revalidatePath(`/dashboard/modules/${validation.data.moduleId}`);
+    revalidatePath("/modules");
+    revalidatePath(`/modules/${validation.data.moduleId}`);
     revalidatePath("/admin/modules");
     revalidatePath(`/admin/modules/${validation.data.moduleId}`);
 
@@ -187,8 +187,8 @@ export async function requestClientModuleChangeAction(
     requireComment: true,
   });
   const nextPath = validation.data
-    ? `/dashboard/modules/${validation.data.moduleId}`
-    : "/dashboard/modules";
+    ? `/modules/${validation.data.moduleId}`
+    : "/modules";
   const { profile } = await requireUserProfile(nextPath);
 
   if (validation.error || !validation.data) {
@@ -203,8 +203,8 @@ export async function requestClientModuleChangeAction(
       comment: validation.data.comment,
     });
 
-    revalidatePath("/dashboard/modules");
-    revalidatePath(`/dashboard/modules/${validation.data.moduleId}`);
+    revalidatePath("/modules");
+    revalidatePath(`/modules/${validation.data.moduleId}`);
     revalidatePath("/admin/modules");
     revalidatePath(`/admin/modules/${validation.data.moduleId}`);
 
@@ -223,5 +223,5 @@ export async function requestClientModuleChangeAction(
 }
 
 export async function returnToModulesAction() {
-  redirect("/dashboard/modules");
+  redirect("/modules");
 }

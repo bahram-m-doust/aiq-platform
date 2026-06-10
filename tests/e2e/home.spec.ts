@@ -35,7 +35,7 @@ test("renders the generic not found page", async ({ page }) => {
   expect(response?.status()).toBe(404);
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Back to dashboard" }),
+    page.getByRole("link", { name: "Back to home" }),
   ).toBeVisible();
   await expect(
     page.locator(

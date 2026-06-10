@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { requireUserProfile } from "@/features/auth/queries";
 import { canViewAdminModulesRole } from "@/features/modules/schema";
 import { StakeholderUploadForm } from "@/features/stakeholder-interviews/components/StakeholderUploadForm";
@@ -20,7 +18,7 @@ export default async function AdminStakeholderInterviewsPage() {
   const { profile } = await requireUserProfile("/admin/stakeholder-interviews");
 
   if (!canViewAdminModulesRole(profile.global_role)) {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   const overview = await getStakeholderAdminOverview();
@@ -89,9 +87,7 @@ export default async function AdminStakeholderInterviewsPage() {
           </table>
         </div>
 
-        <Button asChild variant="outline">
-          <Link href="/admin">Return to Admin</Link>
-        </Button>
+        
       </section>
     </main>
   );

@@ -1,4 +1,4 @@
-const defaultRedirectPath = "/dashboard";
+const defaultRedirectPath = "/home";
 const adminLoginPath = "/admin/login";
 const userLoginPath = "/login";
 const internalRedirectOrigin = "https://bextudio.internal";

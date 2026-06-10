@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeftIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -54,12 +51,7 @@ export default async function AdminBrandIconsPage() {
               Brand icons
             </h1>
           </div>
-          <Button asChild variant="outline">
-            <Link href="/admin">
-              <ArrowLeftIcon className="size-4" />
-              Back to admin
-            </Link>
-          </Button>
+          
         </div>
 
         <Card>

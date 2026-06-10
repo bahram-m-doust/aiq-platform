@@ -1,6 +1,6 @@
 ﻿# Bextudio Platform
 
-Bextudio Platform is a private Next.js application for managing brand strategy workflows. It combines Supabase-backed authentication, role-based workspaces, intake forms, private file handling, module review flows, RAG approval, and AI-assisted brand/agent workflows.
+Bextudio Platform is a private Next.js application for managing brand strategy workflows. It combines Supabase-backed authentication, role-based workspaces, the brand questionnaire, private file handling, deliverable review flows (stakeholder interviews, futures research, city model), module review flows, RAG approval, and AI-assisted brand/agent workflows.
 
 ## Stack
 
@@ -13,8 +13,8 @@ Bextudio Platform is a private Next.js application for managing brand strategy w
 
 ## Main Areas
 
-- `app/` - Next.js routes for auth, dashboard, admin, and public invitation flows.
-- `features/` - Product workflows grouped by domain: auth, access keys, brands, intake, files, modules, change requests, invitations, RAG, agents, and admin.
+- `app/` - Next.js routes for auth, the app (home, brand-integrated-brain, agents, …), admin, and public invitation flows.
+- `features/` - Product workflows grouped by domain: auth, access keys, brands, questionnaire, files, modules, change requests, invitations, RAG, agents, and admin. (Note: the questionnaire's database tables remain named `intake_*`.)
 - `lib/` - Shared platform utilities for Supabase, audit logging, email, security helpers, and common utilities.
 - `supabase/` - Database migrations, seed data, and Supabase setup notes.
 - `tests/` - Unit tests, test helpers, mocks, and Playwright E2E tests.

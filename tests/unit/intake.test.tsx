@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/features/intake/actions", () => ({
+vi.mock("@/features/questionnaire/actions", () => ({
   autosaveIntakeAnswerAction: vi.fn(),
   finalSubmitIntakeAction: vi.fn(),
   initialFinalSubmitIntakeFormState: { status: "idle" },
@@ -14,9 +14,9 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-import { FinalSubmitReadiness } from "@/features/intake/components/FinalSubmitReadiness";
-import { LockedIntakeView } from "@/features/intake/components/LockedIntakeView";
-import { QuestionRenderer } from "@/features/intake/components/QuestionRenderer";
+import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalSubmitReadiness";
+import { LockedIntakeView } from "@/features/questionnaire/components/LockedIntakeView";
+import { QuestionRenderer } from "@/features/questionnaire/components/QuestionRenderer";
 import {
   buildIntakeFinalSubmitAfterAudit,
   buildIntakeSnapshotJson,
@@ -28,14 +28,14 @@ import {
   parseQuestionOptions,
   resolveQuestionInputKind,
   validateFinalSubmitCompletion,
-} from "@/features/intake/schemas";
+} from "@/features/questionnaire/schemas";
 import type {
   IntakeCompletion,
   IntakePageData,
   IntakeQuestion,
   IntakeSession,
   IntakeSectionWithQuestions,
-} from "@/features/intake/types";
+} from "@/features/questionnaire/types";
 
 const question: IntakeQuestion = {
   id: "question-1",
@@ -506,7 +506,7 @@ describe("intake UI components", () => {
     expect(screen.getByText("Strategic answer")).toBeVisible();
     expect(
       screen.getByRole("link", { name: "Create Change Request" }),
-    ).toHaveAttribute("href", "/dashboard/change-requests");
+    ).toHaveAttribute("href", "/change-requests");
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Final Submit" }),

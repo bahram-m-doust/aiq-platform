@@ -166,8 +166,8 @@ Requirements:
 - Create register page.
 - Create logout action.
 - Create users_profile on first login.
-- Protect /dashboard and /admin routes.
-- Redirect logged-in user to /dashboard.
+- Protect /home and /admin routes.
+- Redirect logged-in user to /home.
 - User without access sees inactive Dashboard.
 
 Security:
@@ -189,7 +189,7 @@ Task:
 Build inactive Dashboard state for authenticated users without active brand access.
 
 Requirements:
-- Route: /dashboard
+- Route: /home
 - Show formal executive copy.
 - Include Access Key form placeholder.
 - Include Request Demo Access CTA.

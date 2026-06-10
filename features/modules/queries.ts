@@ -30,7 +30,9 @@ import {
   paginatedRows,
   toSupabaseRange,
 } from "@/lib/pagination";
+import { logServerError } from "@/lib/logging/server";
 import { rowAsArray, rowsOrEmpty } from "@/lib/supabase/rows";
+import { isUuid } from "@/lib/utils";
 import type { UserProfile } from "@/features/auth/types";
 
 type ModuleRow = {
@@ -276,7 +278,10 @@ function toReviewRecord({
 }
 
 async function fetchBrandsById(brandIds: string[]) {
-  if (brandIds.length === 0) {
+  // Only valid UUIDs may hit a uuid `.in("id", …)` — a stray malformed id would
+  // make Postgres reject the whole batch with 22P02 (invalid_text_representation).
+  const validIds = Array.from(new Set(brandIds.filter(isUuid)));
+  if (validIds.length === 0) {
     return new Map<string, string>();
   }
 
@@ -284,7 +289,7 @@ async function fetchBrandsById(brandIds: string[]) {
   const { data, error } = await admin
     .from("brands")
     .select("id, name")
-    .in("id", brandIds);
+    .in("id", validIds);
 
   if (error) {
     throw error;
@@ -296,7 +301,9 @@ async function fetchBrandsById(brandIds: string[]) {
 }
 
 async function fetchProfilesById(profileIds: string[]) {
-  if (profileIds.length === 0) {
+  // Guard the uuid `.in("id", …)` against any malformed id (see fetchBrandsById).
+  const validIds = Array.from(new Set(profileIds.filter(isUuid)));
+  if (validIds.length === 0) {
     return new Map<string, string>();
   }
 
@@ -304,7 +311,7 @@ async function fetchProfilesById(profileIds: string[]) {
   const { data, error } = await admin
     .from("users_profile")
     .select("id, email")
-    .in("id", profileIds);
+    .in("id", validIds);
 
   if (error) {
     throw error;
@@ -320,11 +327,7 @@ async function fetchProfilesById(profileIds: string[]) {
 
 async function fetchFilesForArtifacts(artifactRows: ArtifactRow[]) {
   const fileIds = Array.from(
-    new Set(
-      artifactRows
-        .map((artifact) => artifact.file_id)
-        .filter((fileId): fileId is string => Boolean(fileId)),
-    ),
+    new Set(artifactRows.map((artifact) => artifact.file_id).filter(isUuid)),
   );
 
   if (fileIds.length === 0) {
@@ -365,6 +368,7 @@ async function fetchFilesForArtifacts(artifactRows: ArtifactRow[]) {
 }
 
 async function mapModuleRows(rows: ModuleRow[]) {
+  // fetchBrandsById / fetchProfilesById validate the ids before querying.
   const brandIds = Array.from(new Set(rows.map((row) => row.brand_id)));
   const profileIds = Array.from(
     new Set(
@@ -395,7 +399,8 @@ async function mapModuleRows(rows: ModuleRow[]) {
 }
 
 async function fetchArtifactsForModules(moduleIds: string[]) {
-  if (moduleIds.length === 0) {
+  const validIds = Array.from(new Set(moduleIds.filter(isUuid)));
+  if (validIds.length === 0) {
     return new Map<string, ModuleArtifactRecord[]>();
   }
 
@@ -403,7 +408,7 @@ async function fetchArtifactsForModules(moduleIds: string[]) {
   const { data, error } = await admin
     .from("module_artifacts")
     .select(artifactColumns)
-    .in("module_id", moduleIds)
+    .in("module_id", validIds)
     .order("version", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -539,13 +544,43 @@ export async function getAdminModuleBrandGroups(
 
   const { data, error } = await query;
   if (error) {
+    // Surface the full Postgres error (code/message/details/hint) under a clear
+    // label so it's findable in the server logs alongside the page's reference.
+    logServerError({
+      label: "[admin] module board query failed",
+      error,
+      metadata: { actorRole: profile.global_role },
+    });
     throw error;
   }
 
-  const modules = await mapModuleRows(rowAsArray<ModuleRow>(data));
-  const artifactsByModuleId = await fetchArtifactsForModules(
-    modules.map((brandModule) => brandModule.id),
-  );
+  // This is a list query — use rowsOrEmpty, not rowAsArray (which is for a
+  // single .maybeSingle() row and would wrap the whole array as one bad "row",
+  // feeding `undefined` ids into `.in("id", …)` → 22P02).
+  const rows = rowsOrEmpty<ModuleRow>(data);
+
+  // The core module list has already loaded. The secondary brand/profile/
+  // artifact lookups only enrich the display, so a failure there (e.g. a legacy
+  // row whose id doesn't cast) must degrade gracefully — show the modules with
+  // minimal data rather than crash the whole board.
+  let modules: ModuleRecord[];
+  let artifactsByModuleId: Map<string, ModuleArtifactRecord[]>;
+  try {
+    modules = await mapModuleRows(rows);
+    artifactsByModuleId = await fetchArtifactsForModules(
+      modules.map((brandModule) => brandModule.id),
+    );
+  } catch (enrichError) {
+    logServerError({
+      label: "[admin] module board enrichment failed",
+      error: enrichError,
+      metadata: { actorRole: profile.global_role, moduleCount: rows.length },
+    });
+    modules = rows.map((row) =>
+      toModuleRecord({ row, brandName: "Unknown brand" }),
+    );
+    artifactsByModuleId = new Map();
+  }
 
   const groupByBrand = new Map<
     string,
@@ -581,6 +616,12 @@ export async function getAdminModuleBrandGroups(
 }
 
 export async function getModuleById(moduleId: string) {
+  // A non-UUID id (e.g. a mistyped URL segment) would make Postgres throw
+  // 22P02 and crash the page — treat it as "not found" instead.
+  if (!isUuid(moduleId)) {
+    return null;
+  }
+
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("brand_modules")

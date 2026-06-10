@@ -9,7 +9,7 @@ export function ClientModuleList({
   return (
     <ModuleBoard
       actionLabel="Open review"
-      basePath="/dashboard/modules"
+      basePath="/modules"
       emptyDescription="Modules will appear here after Supervisor approval for client review."
       emptyTitle="No client-review modules"
       modules={workspace.modules}

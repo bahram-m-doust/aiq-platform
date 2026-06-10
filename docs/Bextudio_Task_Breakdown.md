@@ -84,14 +84,14 @@ Spec-first Vibe Coding.
 01.04 Create logout action
 01.05 Create middleware for protected routes
 01.06 Create users_profile on first login
-01.07 Redirect logged-in user to /dashboard
+01.07 Redirect logged-in user to /home
 ```
 
 ## Acceptance Criteria
 
 ```text
 - User can register/login/logout.
-- /dashboard requires authentication.
+- /home requires authentication.
 - New user gets users_profile.
 ```
 

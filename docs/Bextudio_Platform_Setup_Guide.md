@@ -457,7 +457,7 @@ ADMIN_BASE_URL
 bextudio-platform/
 ├── app/
 │   ├── (auth)/
-│   ├── (dashboard)/
+│   ├── (app)/
 │   ├── (admin)/
 │   └── api/
 ├── components/

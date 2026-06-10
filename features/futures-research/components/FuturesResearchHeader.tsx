@@ -1,44 +1,13 @@
-import { cn } from "@/lib/utils";
-
-type StatusBadge = { label: string; className: string };
-
-// Maps the report lifecycle to the status pill shown next to the step label.
-const STATUS_BADGES: Record<string, StatusBadge> = {
-  PENDING_UPLOAD: {
-    label: "Preparing",
-    className: "border-border bg-muted text-muted-foreground",
-  },
-  CLIENT_REVIEW: {
-    label: "In review",
-    className: "border-[#fdf5d3] bg-[#fffcf0] text-[#dc7609]",
-  },
-  CHANGES_REQUESTED: {
-    label: "Changes requested",
-    className: "border-[#fdf5d3] bg-[#fffcf0] text-[#dc7609]",
-  },
-  APPROVED: {
-    label: "Approved",
-    className: "border-[#bbf7d0] bg-[#f0fdf4] text-[#008a2e]",
-  },
-};
+import { DeliverableStatusBadge } from "@/features/review-deliverables/components/DeliverableStatusBadge";
 
 export function FuturesResearchHeader({ status }: { status: string }) {
-  const badge = STATUS_BADGES[status] ?? STATUS_BADGES.PENDING_UPLOAD;
-
   return (
     <div className="flex flex-col gap-[9px]">
       <div className="flex items-center gap-4">
         <span className="text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
           Brand Research · Step 03
         </span>
-        <span
-          className={cn(
-            "inline-flex items-center rounded-md border px-2 py-0.5 text-[12px] font-semibold leading-4",
-            badge.className,
-          )}
-        >
-          {badge.label}
-        </span>
+        <DeliverableStatusBadge status={status} />
       </div>
 
       <h1 className="text-xl font-semibold leading-7 tracking-[-0.01em] text-foreground">

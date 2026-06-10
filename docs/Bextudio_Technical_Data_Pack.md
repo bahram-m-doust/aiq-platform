@@ -114,11 +114,11 @@ bextudio-platform/
 │   ├── (auth)/login
 │   ├── (auth)/register
 │   ├── (auth)/access
-│   ├── (dashboard)/dashboard
-│   ├── (dashboard)/dashboard/intake
-│   ├── (dashboard)/dashboard/modules
-│   ├── (dashboard)/dashboard/agents
-│   ├── (dashboard)/dashboard/team
+│   ├── (app)/home
+│   ├── (app)/brand-integrated-brain/roadmap/questionnaire
+│   ├── (app)/modules
+│   ├── (app)/agents
+│   ├── (app)/team
 │   ├── (admin)/admin
 │   └── api/webhooks/stripe
 ├── components/

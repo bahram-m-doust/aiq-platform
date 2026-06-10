@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/features/admin/intake-builder/actions", () => ({
+vi.mock("@/features/admin/questionnaire-builder/actions", () => ({
   archiveIntakeQuestionAction: vi.fn(async () => ({ status: "success" })),
   archiveIntakeSectionAction: vi.fn(async () => ({ status: "success" })),
   createIntakeQuestionAction: vi.fn(async () => ({ status: "success" })),
@@ -26,7 +26,7 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-import { IntakeBuilderWorkspace } from "@/features/admin/intake-builder/components/IntakeBuilderWorkspace";
+import { IntakeBuilderWorkspace } from "@/features/admin/questionnaire-builder/components/IntakeBuilderWorkspace";
 import {
   buildUniqueTechnicalKey,
   optionsTextFromValidationSchema,
@@ -34,9 +34,9 @@ import {
   validateQuestionFormData,
   validateSectionFormData,
   validationSchemaFromOptions,
-} from "@/features/admin/intake-builder/schema";
-import type { IntakeBuilderSection } from "@/features/admin/intake-builder/types";
-import { getIntakeSectionsWithQuestions } from "@/features/intake/queries";
+} from "@/features/admin/questionnaire-builder/schema";
+import type { IntakeBuilderSection } from "@/features/admin/questionnaire-builder/types";
+import { getIntakeSectionsWithQuestions } from "@/features/questionnaire/queries";
 import { auditActions } from "@/lib/audit/logAudit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formData } from "@/tests/helpers/formData";

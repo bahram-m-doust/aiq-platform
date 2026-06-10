@@ -26,7 +26,7 @@ export function ModuleBoard({
   actionLabel,
 }: {
   modules: AdminModuleBoardItem[];
-  basePath: "/admin/modules" | "/dashboard/modules";
+  basePath: "/admin/modules" | "/modules";
   emptyTitle: string;
   emptyDescription: string;
   actionLabel: string;

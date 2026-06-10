@@ -25,7 +25,7 @@ import type {
   ChangeRequestRecord,
   ChangeRequestReviewItem,
 } from "@/features/change-requests/types";
-import type { IntakeQuestion, IntakeSectionWithQuestions } from "@/features/intake/types";
+import type { IntakeQuestion, IntakeSectionWithQuestions } from "@/features/questionnaire/types";
 import { formData } from "@/tests/helpers/formData";
 
 const question: IntakeQuestion = {

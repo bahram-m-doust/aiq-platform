@@ -23,7 +23,7 @@ export default async function AdminModulesPage({
   const board = await getAdminModuleBrandGroups(profile);
 
   if (!board) {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   const resolved = (await searchParams) ?? {};
@@ -124,9 +124,7 @@ export default async function AdminModulesPage({
           </p>
         )}
 
-        <Button asChild variant="outline">
-          <Link href="/admin">Return to Admin</Link>
-        </Button>
+        
       </section>
     </main>
   );

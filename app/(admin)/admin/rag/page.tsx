@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import { requireUserProfile } from "@/features/auth/queries";
 import { RagApprovalQueue } from "@/features/rag/components/RagApprovalQueue";
 import { RagSyncPanel } from "@/features/rag/components/RagSyncPanel";
@@ -22,7 +20,7 @@ export default async function AdminRagApprovalPage() {
   const { user, profile } = await requireUserProfile("/admin/rag");
 
   if (!canViewRagApprovalQueueRole(profile.global_role)) {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   const [items, syncGroups] = await Promise.all([
@@ -54,9 +52,7 @@ export default async function AdminRagApprovalPage() {
           <RagSyncPanel groups={syncGroups} />
         ) : null}
 
-        <Button asChild variant="outline">
-          <Link href="/admin">Return to Admin</Link>
-        </Button>
+        
       </section>
     </main>
   );

@@ -53,7 +53,7 @@ export default function NotFound() {
 
         <div className="mt-9 flex justify-center">
           <Button asChild size="lg">
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/home">Back to home</Link>
           </Button>
         </div>
       </section>

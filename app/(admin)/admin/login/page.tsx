@@ -12,7 +12,7 @@ const defaultAdminPath = "/admin";
 
 function sanitizeAdminNext(value: string | undefined) {
   const path = sanitizeRedirectPath(value ?? null);
-  if (path === "/dashboard") {
+  if (path === "/home") {
     return defaultAdminPath;
   }
   return path;

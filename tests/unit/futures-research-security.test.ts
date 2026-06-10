@@ -59,9 +59,8 @@ describe("Futures Research upload security", () => {
       path.join(
         process.cwd(),
         "app",
-        "(dashboard)",
-        "dashboard",
-        "brain",
+        "(app)",
+        "brand-integrated-brain",
         "roadmap",
         "futures-research",
         "page.tsx",

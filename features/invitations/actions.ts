@@ -41,7 +41,7 @@ export async function createSpecialistInvitationAction(
   _previousState: SpecialistInvitationFormState,
   formData: FormData,
 ): Promise<SpecialistInvitationFormState> {
-  const { user, profile } = await requireUserProfile("/dashboard/invitations");
+  const { user, profile } = await requireUserProfile("/invitations");
   const validation = validateSpecialistInvitationFormData(formData);
 
   if (validation.error || !validation.data) {
@@ -69,7 +69,7 @@ export async function createSpecialistInvitationAction(
       appOrigin: await getTrustedRequestOrigin(),
     });
 
-    revalidatePath("/dashboard/invitations");
+    revalidatePath("/invitations");
 
     return {
       status: "success",
@@ -172,6 +172,6 @@ export async function acceptSpecialistInvitationAction(
     return acceptErrorState("Invitation could not be accepted.");
   }
 
-  revalidatePath("/dashboard");
-  redirect("/dashboard");
+  revalidatePath("/home");
+  redirect("/home");
 }

@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import { AdminChangeRequestsList } from "@/features/change-requests/components/AdminChangeRequestsList";
 import { canReviewChangeRequestRole } from "@/features/change-requests/schema";
 import { getAdminChangeRequests } from "@/features/change-requests/queries";
@@ -24,7 +22,7 @@ export default async function AdminChangeRequestsPage({
   const { user, profile } = await requireUserProfile("/admin/change-requests");
 
   if (!canReviewChangeRequestRole(profile.global_role)) {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   const { requests, pagination } = await getAdminChangeRequests(
@@ -52,9 +50,7 @@ export default async function AdminChangeRequestsPage({
           pagination={pagination}
         />
 
-        <Button asChild variant="outline">
-          <Link href="/admin">Return to Admin</Link>
-        </Button>
+        
       </section>
     </main>
   );

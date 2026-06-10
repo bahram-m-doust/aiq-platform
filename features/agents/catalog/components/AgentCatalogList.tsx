@@ -50,7 +50,7 @@ export function AgentCatalogList({
             </p>
             <div className="flex items-start md:justify-end">
               <Button asChild variant="outline">
-                <Link href={`/dashboard/agents/${agent.slug}`}>
+                <Link href={`/agents/${agent.slug}`}>
                   Open agent
                 </Link>
               </Button>

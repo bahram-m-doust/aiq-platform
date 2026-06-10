@@ -29,7 +29,7 @@ vi.mock("@/features/auth/profile", () => ({
 import {
   autosaveIntakeAnswer,
   autosaveIntakeAnswers,
-} from "@/features/intake/services";
+} from "@/features/questionnaire/services";
 import { loadUserProfileByAuthUserId } from "@/features/auth/profile";
 import { logAudit } from "@/lib/audit/logAudit";
 import { logServerError } from "@/lib/logging/server";

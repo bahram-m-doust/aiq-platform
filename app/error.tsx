@@ -15,8 +15,8 @@ export default function Error({
 }) {
   const pathname = usePathname();
   const inAdmin = pathname?.startsWith("/admin") ?? false;
-  const backHref = inAdmin ? "/admin" : "/dashboard";
-  const backLabel = inAdmin ? "Back to admin" : "Back to dashboard";
+  const backHref = inAdmin ? "/admin" : "/home";
+  const backLabel = inAdmin ? "Back to admin" : "Back to home";
 
   useEffect(() => {
     // Surface the failure in the console for local debugging.

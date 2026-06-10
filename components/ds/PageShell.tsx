@@ -29,7 +29,7 @@ export function PageShell({
   return (
     <main
       className="min-h-svh px-4 py-6 sm:px-6 sm:py-10"
-      style={{ background: "var(--bv-bg)", color: "var(--bv-ink)" }}
+      style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
       <section
         className={cn("mx-auto w-full space-y-6", maxWidthClass, className)}

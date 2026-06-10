@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/features/intake/actions", () => ({
+vi.mock("@/features/questionnaire/actions", () => ({
   autosaveIntakeAnswerAction: vi.fn(),
   autosaveIntakeAnswersAction: vi.fn(),
   finalSubmitIntakeAction: vi.fn(),
@@ -13,14 +13,14 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-import { FinalSubmitReadiness } from "@/features/intake/components/FinalSubmitReadiness";
-import { SectionQuestionnaire } from "@/features/intake/components/SectionQuestionnaire";
-import { autosaveIntakeAnswersAction } from "@/features/intake/actions";
+import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalSubmitReadiness";
+import { SectionQuestionnaire } from "@/features/questionnaire/components/SectionQuestionnaire";
+import { autosaveIntakeAnswersAction } from "@/features/questionnaire/actions";
 import type {
   IntakeCompletion,
   IntakeSectionWithQuestions,
   IntakeSession,
-} from "@/features/intake/types";
+} from "@/features/questionnaire/types";
 
 const mockedAutosaveIntakeAnswersAction = vi.mocked(
   autosaveIntakeAnswersAction,

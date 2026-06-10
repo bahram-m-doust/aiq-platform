@@ -9,7 +9,7 @@ fastest path is the Supabase Dashboard SQL Editor.
 2. Paste and run `supabase/migrations/setup-all.sql`.
    - This generated script is intended only for an empty project.
    - It includes every numbered migration through
-     `0039_rag_approval_consistency.sql`.
+     `0040_city_model_district_files.sql`.
    - Regenerate it after adding a migration with
      `npm run db:generate-bundles`.
    - On Supabase Cloud the script intentionally does **not** run
@@ -75,6 +75,7 @@ migrations in numeric order:
 - `0037_atomic_intake_reordering.sql`
 - `0038_atomic_redeemed_brand_membership.sql`
 - `0039_rag_approval_consistency.sql`
+- `0040_city_model_district_files.sql`
 
 ## Required Supabase Dashboard Configuration
 

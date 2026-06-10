@@ -42,10 +42,10 @@ test("register page renders", async ({ page }) => {
   await expect(page.getByLabel("Password")).toBeVisible();
 });
 
-test("dashboard redirects unauthenticated users to login", async ({ page }) => {
-  await page.goto("/dashboard");
+test("home redirects unauthenticated users to login", async ({ page }) => {
+  await page.goto("/home");
 
-  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fhome$/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
@@ -99,93 +99,97 @@ test("admin entitlements redirects unauthenticated users to admin login", async 
 test("create brand redirects unauthenticated users to login", async ({
   page,
 }) => {
-  await page.goto("/dashboard/create-brand");
+  await page.goto("/create-brand");
 
-  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%2Fcreate-brand$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fcreate-brand$/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
-test("intake redirects unauthenticated users to login", async ({ page }) => {
-  await page.goto("/dashboard/intake");
-
-  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%2Fintake$/);
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-});
-
-test("dashboard change requests redirects unauthenticated users to login", async ({
+test("questionnaire redirects unauthenticated users to login", async ({
   page,
 }) => {
-  await page.goto("/dashboard/change-requests");
+  await page.goto("/brand-integrated-brain/roadmap/questionnaire");
 
   await expect(page).toHaveURL(
-    /\/login\?next=%2Fdashboard%2Fchange-requests$/,
+    /\/login\?next=%2Fbrand-integrated-brain%2Froadmap%2Fquestionnaire$/,
   );
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
-test("dashboard invitations redirects unauthenticated users to login", async ({
+test("change requests redirects unauthenticated users to login", async ({
   page,
 }) => {
-  await page.goto("/dashboard/invitations");
-
-  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%2Finvitations$/);
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-});
-
-test("dashboard documents redirects unauthenticated users to login", async ({
-  page,
-}) => {
-  await page.goto("/dashboard/documents");
-
-  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%2Fdocuments$/);
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-});
-
-test("dashboard modules redirects unauthenticated users to login", async ({
-  page,
-}) => {
-  await page.goto("/dashboard/modules");
-
-  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%2Fmodules$/);
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-});
-
-test("dashboard module detail redirects unauthenticated users to login", async ({
-  page,
-}) => {
-  await page.goto("/dashboard/modules/module-1");
+  await page.goto("/change-requests");
 
   await expect(page).toHaveURL(
-    /\/login\?next=%2Fdashboard%2Fmodules%2Fmodule-1$/,
+    /\/login\?next=%2Fchange-requests$/,
   );
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
-test("dashboard brain redirects unauthenticated users to login", async ({
+test("invitations redirects unauthenticated users to login", async ({
   page,
 }) => {
-  await page.goto("/dashboard/brain");
+  await page.goto("/invitations");
 
-  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%2Fbrain$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Finvitations$/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
-test("dashboard agents redirects unauthenticated users to login", async ({
+test("documents redirects unauthenticated users to login", async ({
   page,
 }) => {
-  await page.goto("/dashboard/agents");
+  await page.goto("/documents");
 
-  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard%2Fagents$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fdocuments$/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
-test("dashboard agent detail redirects unauthenticated users to login", async ({
+test("modules redirects unauthenticated users to login", async ({
   page,
 }) => {
-  await page.goto("/dashboard/agents/story-teller");
+  await page.goto("/modules");
+
+  await expect(page).toHaveURL(/\/login\?next=%2Fmodules$/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+});
+
+test("module detail redirects unauthenticated users to login", async ({
+  page,
+}) => {
+  await page.goto("/modules/module-1");
 
   await expect(page).toHaveURL(
-    /\/login\?next=%2Fdashboard%2Fagents%2Fstory-teller$/,
+    /\/login\?next=%2Fmodules%2Fmodule-1$/,
+  );
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+});
+
+test("brain redirects unauthenticated users to login", async ({
+  page,
+}) => {
+  await page.goto("/brand-integrated-brain");
+
+  await expect(page).toHaveURL(/\/login\?next=%2Fbrand-integrated-brain$/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+});
+
+test("agents redirects unauthenticated users to login", async ({
+  page,
+}) => {
+  await page.goto("/agents");
+
+  await expect(page).toHaveURL(/\/login\?next=%2Fagents$/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+});
+
+test("agent detail redirects unauthenticated users to login", async ({
+  page,
+}) => {
+  await page.goto("/agents/story-teller");
+
+  await expect(page).toHaveURL(
+    /\/login\?next=%2Fagents%2Fstory-teller$/,
   );
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
@@ -252,7 +256,7 @@ test("admin audit logs redirects unauthenticated users to admin login", async ({
 test("admin intake builder redirects unauthenticated users to admin login", async ({
   page,
 }) => {
-  await page.goto("/admin/intake-builder");
+  await page.goto("/admin/questionnaire-builder");
 
   await expect(page).toHaveURL(
     /\/admin\/login\?next=%2Fadmin%2Fintake-builder$/,

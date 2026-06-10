@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  Building2Icon,
   FileTextIcon,
   ImageIcon,
   KeyRoundIcon,
@@ -14,6 +15,8 @@ import {
   BrainIcon,
   MessageSquareTextIcon,
   TagIcon,
+  TelescopeIcon,
+  UsersIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -83,6 +86,10 @@ export default async function AdminPage() {
           <h1 className="mt-3 text-3xl font-semibold tracking-normal">
             Admin
           </h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Operational tools for the Bextudio team — grouped by what you&apos;re
+            doing. Every action is scoped to a brand and audited.
+          </p>
         </div>
         <Card>
           <CardHeader>
@@ -182,9 +189,9 @@ export default async function AdminPage() {
                 size="lg"
                 variant="outline"
               >
-                <Link href="/admin/intake-builder">
+                <Link href="/admin/questionnaire-builder">
                   <PencilRulerIcon className="size-4" />
-                  Intake Builder
+                  Questionnaire Builder
                 </Link>
               </Button>
               <Button
@@ -205,7 +212,7 @@ export default async function AdminPage() {
                 variant="outline"
               >
                 <Link href="/admin/stakeholder-interviews">
-                  <LayoutDashboardIcon className="size-4" />
+                  <UsersIcon className="size-4" />
                   Stakeholder Interviews
                 </Link>
               </Button>
@@ -216,8 +223,19 @@ export default async function AdminPage() {
                 variant="outline"
               >
                 <Link href="/admin/futures-research">
-                  <LayoutDashboardIcon className="size-4" />
+                  <TelescopeIcon className="size-4" />
                   Futures Research
+                </Link>
+              </Button>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/city-model">
+                  <Building2Icon className="size-4" />
+                  City Model
                 </Link>
               </Button>
               <Button

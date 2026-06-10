@@ -16,7 +16,7 @@ export async function createBrandFromAccessKeyAction(
   _previousState: CreateBrandFormState,
   formData: FormData,
 ): Promise<CreateBrandFormState> {
-  const { profile } = await requireUserProfile("/dashboard/create-brand");
+  const { profile } = await requireUserProfile("/create-brand");
   const validation = validateCreateBrandFormData(formData);
 
   if (validation.error || !validation.data) {
@@ -37,6 +37,6 @@ export async function createBrandFromAccessKeyAction(
     return errorState("Brand workspace could not be created.");
   }
 
-  revalidatePath("/dashboard");
-  redirect("/dashboard");
+  revalidatePath("/home");
+  redirect("/home");
 }

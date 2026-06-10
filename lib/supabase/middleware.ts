@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { ROUTES, APP_ROOT_SEGMENTS } from "@/lib/routes";
 import {
   getPublicSupabaseEnv,
   hasPublicSupabaseEnv,
@@ -8,7 +9,6 @@ import {
 
 const adminPathPrefix = "/admin";
 const adminLoginPath = "/admin/login";
-const dashboardPathPrefix = "/dashboard";
 const userLoginPath = "/login";
 const userAuthPathPrefixes = ["/login", "/register"];
 
@@ -24,8 +24,15 @@ function isAdminLogin(pathname: string) {
   return pathname === adminLoginPath;
 }
 
+// App pages live under the `(app)` route group, so they have no shared
+// URL prefix — their first path segment is the discriminator.
+function isAppPath(pathname: string) {
+  const firstSegment = pathname.split("/").filter(Boolean)[0];
+  return firstSegment !== undefined && APP_ROOT_SEGMENTS.has(firstSegment);
+}
+
 function isProtectedPath(pathname: string) {
-  if (isPrefixedPath(pathname, dashboardPathPrefix)) {
+  if (isAppPath(pathname)) {
     return true;
   }
   return isAdminArea(pathname) && !isAdminLogin(pathname);
@@ -89,7 +96,7 @@ export async function updateSession(request: NextRequest) {
 
   if (hasUser && isAuthPath(pathname)) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = isAdminLogin(pathname) ? "/admin" : "/dashboard";
+    redirectUrl.pathname = isAdminLogin(pathname) ? "/admin" : ROUTES.home;
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }
