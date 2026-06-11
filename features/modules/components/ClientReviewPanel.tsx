@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
-import {
-  CheckCircleIcon,
-  MessageSquareIcon,
-  RotateCcwIcon,
-} from "lucide-react";
+import { useActionState, useMemo } from "react";
+import { CheckCircleIcon, RotateCcwIcon } from "lucide-react";
 
+import {
+  ReviewableDocumentViewer,
+  type ReviewCommentActions,
+} from "@/components/review/ReviewableDocumentViewer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  addClientModuleCommentAction,
   approveClientModuleAction,
   requestClientModuleChangeAction,
 } from "@/features/modules/actions";
@@ -28,6 +27,20 @@ import type {
   ClientModuleReviewPageData,
   ModuleActionFormState,
 } from "@/features/modules/types";
+import {
+  addReviewCommentAction,
+  deleteReviewCommentAction,
+  editReviewCommentAction,
+  resolveReviewCommentAction,
+} from "@/features/review-comments/actions";
+import { splitMarkdownIntoBlocks } from "@/lib/markdown/blocks";
+
+const commentActions: ReviewCommentActions = {
+  add: addReviewCommentAction,
+  edit: editReviewCommentAction,
+  remove: deleteReviewCommentAction,
+  resolve: resolveReviewCommentAction,
+};
 
 function StateAlert({ state }: { state: ModuleActionFormState }) {
   if (state.status === "idle") {
@@ -43,13 +56,11 @@ function StateAlert({ state }: { state: ModuleActionFormState }) {
 
 export function ClientReviewPanel({
   data,
+  currentUserId,
 }: {
   data: ClientModuleReviewPageData;
+  currentUserId: string;
 }) {
-  const [commentState, commentAction] = useActionState(
-    addClientModuleCommentAction,
-    initialModuleActionFormState,
-  );
   const [approveState, approveAction] = useActionState(
     approveClientModuleAction,
     initialModuleActionFormState,
@@ -61,65 +72,42 @@ export function ClientReviewPanel({
   const canDecide = data.module.status === "CLIENT_REVIEW";
   const fileName =
     data.latestClientArtifact?.file?.originalName ?? "Client review PDF";
+  const blocks = useMemo(
+    () => (data.markdown ? splitMarkdownIntoBlocks(data.markdown) : []),
+    [data.markdown],
+  );
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Client review file</CardTitle>
-          <CardDescription>
-            {fileName}
-            {data.signedUrlExpiresInSeconds
-              ? ` | Signed URL expires in ${data.signedUrlExpiresInSeconds} seconds`
-              : ""}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {data.signedUrl ? (
-            <iframe
-              className="h-[72vh] w-full rounded-lg border border-border bg-muted"
-              src={data.signedUrl}
-              title={`${data.module.title} PDF preview`}
-            />
-          ) : (
+      {blocks.length > 0 ? (
+        <ReviewableDocumentViewer
+          actions={commentActions}
+          blocks={blocks}
+          canComment={canDecide}
+          currentUserId={currentUserId}
+          downloadName={fileName}
+          downloadUrl={data.signedUrl}
+          eyebrow="Module · Client review"
+          initialComments={data.comments}
+          subjectId={data.module.id}
+          subjectType="MODULE"
+          title={data.module.title}
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Client review file</CardTitle>
+            <CardDescription>{fileName}</CardDescription>
+          </CardHeader>
+          <CardContent>
             <Alert variant="destructive">
               <AlertDescription>
-                A client-review PDF is not available for this module.
+                A client-review document is not available for this module yet.
               </AlertDescription>
             </Alert>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Client comments</CardTitle>
-          <CardDescription>
-            Record review notes for the internal delivery team.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={commentAction} className="grid gap-4">
-            <input name="module_id" type="hidden" value={data.module.id} />
-            <StateAlert state={commentState} />
-            <div className="space-y-2">
-              <Label htmlFor="module-comment">Comment</Label>
-              <Textarea
-                disabled={!canDecide}
-                id="module-comment"
-                name="comment"
-                required
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button disabled={!canDecide} type="submit" variant="outline">
-                <MessageSquareIcon className="size-4" />
-                Add comment
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

@@ -8,24 +8,17 @@ import {
   isFuturesResearchPdf,
   isFuturesResearchStoryline,
   maxFuturesResearchStorylineBytes,
-  validateAnnotationBody,
 } from "@/features/futures-research/schema";
+import { detachDeliverableFile } from "@/features/review-deliverables/detach-service";
 import { requireDeliverableReviewer as requireClientReviewer } from "@/features/review-deliverables/reviewer";
 import {
-  addFuturesResearchAnnotation,
-  deleteFuturesResearchAnnotation,
-  setFuturesResearchAnnotationResolved,
   setFuturesResearchReportStatus,
-  updateFuturesResearchAnnotation,
   uploadFuturesResearchReport,
   uploadFuturesResearchStoryline,
 } from "@/features/futures-research/services";
-import type {
-  AddAnnotationInput,
-  AddAnnotationResult,
-  FuturesResearchActionState,
-} from "@/features/futures-research/types";
+import type { FuturesResearchActionState } from "@/features/futures-research/types";
 import { canViewAdminModulesRole } from "@/features/modules/schema";
+import { logServerError } from "@/lib/logging/server";
 import { validateSecureUpload } from "@/lib/security/file-upload";
 
 const CLIENT_PATH = "/brand-integrated-brain/roadmap/futures-research";
@@ -118,102 +111,35 @@ export async function uploadFuturesResearchStorylineAction(
 }
 
 
-export async function addFuturesResearchAnnotationAction(
-  input: AddAnnotationInput,
-): Promise<AddAnnotationResult> {
-  const reviewer = await requireClientReviewer(CLIENT_PATH);
-  if (!reviewer) {
-    return { ok: false, message: "You cannot comment on this report." };
+export async function deleteFuturesResearchReportAction({
+  brandId,
+}: {
+  brandId: string;
+}): Promise<{ ok: boolean; message?: string }> {
+  const { profile } = await requireUserProfile("/admin/futures-research");
+  if (!canViewAdminModulesRole(profile.global_role)) {
+    return { ok: false, message: "You cannot delete this report." };
+  }
+  if (!brandId) return { ok: false, message: "Select a brand." };
+
+  try {
+    await detachDeliverableFile({
+      table: "futures_research_reports",
+      match: { brand_id: brandId },
+      // Remove both the report PDF and any attached storyline.
+      fileColumns: ["file_id", "storyline_file_id"],
+    });
+  } catch (error) {
+    logServerError({
+      label: "[futures-research] report delete failed",
+      error,
+      metadata: { brandId },
+    });
+    return { ok: false, message: "Could not delete the report. Try again." };
   }
 
-  const { value, error } = validateAnnotationBody(input.body);
-  if (!value) {
-    return { ok: false, message: error ?? "Enter a comment." };
-  }
-
-  const report = await getFuturesResearchReportRowByBrand(reviewer.brandId);
-  if (!report || report.id !== input.reportId) {
-    return { ok: false, message: "Report not found." };
-  }
-
-  const annotation = await addFuturesResearchAnnotation({
-    reportId: report.id,
-    profileId: reviewer.profileId,
-    page: input.page,
-    posX: input.posX,
-    posY: input.posY,
-    body: value,
-    parentId: input.parentId ?? null,
-  });
   revalidateFuturesResearchPaths();
-
-  return {
-    ok: true,
-    annotation: {
-      ...annotation,
-      authorName: reviewer.authorName,
-      authorEmail: reviewer.authorEmail,
-    },
-  };
-}
-
-export async function resolveFuturesResearchAnnotationAction(
-  annotationId: string,
-  resolved: boolean,
-): Promise<{ ok: boolean; message?: string }> {
-  const reviewer = await requireClientReviewer(CLIENT_PATH);
-  if (!reviewer) return { ok: false, message: "Not allowed." };
-
-  const report = await getFuturesResearchReportRowByBrand(reviewer.brandId);
-  if (!report) return { ok: false, message: "Report not found." };
-
-  await setFuturesResearchAnnotationResolved({
-    annotationId,
-    reportId: report.id,
-    resolved,
-  });
-  revalidateFuturesResearchPaths();
-  return { ok: true };
-}
-
-export async function editFuturesResearchAnnotationAction(
-  annotationId: string,
-  body: string,
-): Promise<{ ok: boolean; message?: string }> {
-  const reviewer = await requireClientReviewer(CLIENT_PATH);
-  if (!reviewer) return { ok: false, message: "Not allowed." };
-
-  const { value, error } = validateAnnotationBody(body);
-  if (!value) return { ok: false, message: error ?? "Enter a comment." };
-
-  const report = await getFuturesResearchReportRowByBrand(reviewer.brandId);
-  if (!report) return { ok: false, message: "Report not found." };
-
-  await updateFuturesResearchAnnotation({
-    annotationId,
-    reportId: report.id,
-    authorId: reviewer.profileId,
-    body: value,
-  });
-  revalidateFuturesResearchPaths();
-  return { ok: true };
-}
-
-export async function deleteFuturesResearchAnnotationAction(
-  annotationId: string,
-): Promise<{ ok: boolean; message?: string }> {
-  const reviewer = await requireClientReviewer(CLIENT_PATH);
-  if (!reviewer) return { ok: false, message: "Not allowed." };
-
-  const report = await getFuturesResearchReportRowByBrand(reviewer.brandId);
-  if (!report) return { ok: false, message: "Report not found." };
-
-  await deleteFuturesResearchAnnotation({
-    annotationId,
-    reportId: report.id,
-    authorId: reviewer.profileId,
-  });
-  revalidateFuturesResearchPaths();
+  revalidatePath("/admin/futures-research");
   return { ok: true };
 }
 
@@ -235,6 +161,30 @@ export async function approveFuturesResearchReportAction(): Promise<{
     brandId: reviewer.brandId,
     profileId: reviewer.profileId,
     status: "APPROVED",
+  });
+  revalidateFuturesResearchPaths();
+
+  return { ok: true };
+}
+
+export async function requestFuturesResearchChangesAction(): Promise<{
+  ok: boolean;
+  message?: string;
+}> {
+  const reviewer = await requireClientReviewer(CLIENT_PATH);
+  if (!reviewer) {
+    return { ok: false, message: "You cannot review this report." };
+  }
+
+  const report = await getFuturesResearchReportRowByBrand(reviewer.brandId);
+  if (!report || !report.file_id) {
+    return { ok: false, message: "There is no report to review yet." };
+  }
+
+  await setFuturesResearchReportStatus({
+    brandId: reviewer.brandId,
+    profileId: reviewer.profileId,
+    status: "CHANGES_REQUESTED",
   });
   revalidateFuturesResearchPaths();
 

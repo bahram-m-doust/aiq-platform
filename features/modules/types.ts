@@ -169,6 +169,8 @@ export type ClientModuleDetail = {
 export type ClientModuleReviewPageData = ClientModuleDetail & {
   signedUrl: string | null;
   signedUrlExpiresInSeconds: number | null;
+  markdown: string | null;
+  comments: import("@/features/review-comments/types").ReviewComment[];
 };
 
 export type ModuleUploadFormState =

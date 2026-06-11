@@ -4,12 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUserProfile } from "@/features/auth/queries";
+import { validateClientModuleDecisionFormData } from "@/features/modules/schema";
 import {
-  validateClientModuleCommentFormData,
-  validateClientModuleDecisionFormData,
-} from "@/features/modules/schema";
-import {
-  addClientModuleComment,
   isModuleServiceError,
   sendModuleToClientReview,
   submitClientModuleDecision,
@@ -97,42 +93,6 @@ export async function sendModuleToClientReviewAction(
   }
 }
 
-export async function addClientModuleCommentAction(
-  _previousState: ModuleActionFormState,
-  formData: FormData,
-): Promise<ModuleActionFormState> {
-  const validation = validateClientModuleCommentFormData(formData);
-  const nextPath = validation.data
-    ? `/modules/${validation.data.moduleId}`
-    : "/modules";
-  const { profile } = await requireUserProfile(nextPath);
-
-  if (validation.error || !validation.data) {
-    return actionErrorState(validation.error ?? "Comment details are invalid.");
-  }
-
-  try {
-    await addClientModuleComment({
-      moduleId: validation.data.moduleId,
-      profile,
-      comment: validation.data.comment,
-    });
-
-    revalidatePath(`/modules/${validation.data.moduleId}`);
-
-    return {
-      status: "success",
-      message: "Comment recorded.",
-      moduleId: validation.data.moduleId,
-    };
-  } catch (error) {
-    if (isModuleServiceError(error)) {
-      return actionErrorState(error.message);
-    }
-
-    return actionErrorState("Comment could not be recorded.");
-  }
-}
 
 export async function approveClientModuleAction(
   _previousState: ModuleActionFormState,

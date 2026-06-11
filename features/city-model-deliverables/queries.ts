@@ -15,7 +15,12 @@ import type {
   CityModelDeliverableStatus,
   CityModelDistrictWorkspace,
 } from "@/features/city-model-deliverables/types";
-import { createPrivateFileSignedInlineUrl } from "@/features/documents/storage";
+import {
+  createPrivateFileSignedDownloadUrl,
+  createPrivateFileSignedInlineUrl,
+} from "@/features/documents/storage";
+import { listCommentsForSubject } from "@/features/review-comments/queries";
+import { resolveDeliverableMarkdown } from "@/features/review-content/resolve";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingTableError } from "@/lib/supabase/errors";
 
@@ -57,27 +62,52 @@ export async function getCityModelDistrictWorkspace({
   const status = toCityModelStatus(row?.status);
 
   let signedUrl: string | null = null;
+  let downloadUrl: string | null = null;
   let fileName: string | null = null;
+  let markdown: string | null = null;
   if (row?.file_id) {
     const admin = createAdminClient();
     const { data: fileRow } = await admin
       .from("files")
-      .select("storage_path, original_name")
+      .select("storage_path, original_name, mime_type")
       .eq("id", row.file_id)
-      .maybeSingle<{ storage_path: string; original_name: string }>();
+      .maybeSingle<{
+        storage_path: string;
+        original_name: string;
+        mime_type: string | null;
+      }>();
     if (fileRow) {
       fileName = fileRow.original_name;
       signedUrl = await createPrivateFileSignedInlineUrl({
         storagePath: fileRow.storage_path,
       });
+      downloadUrl = await createPrivateFileSignedDownloadUrl({
+        storagePath: fileRow.storage_path,
+        downloadName: fileRow.original_name,
+      });
+      markdown = await resolveDeliverableMarkdown({
+        fileId: row.file_id,
+        storagePath: fileRow.storage_path,
+        mimeType: fileRow.mime_type,
+        originalName: fileRow.original_name,
+      });
     }
   }
 
+  const comments = await listCommentsForSubject({
+    subjectType: "CITY_MODEL_DISTRICT",
+    subjectId: district.slug,
+  });
+
   return {
     district,
+    brandId: access.brandId,
     status,
     signedUrl,
+    downloadUrl,
     fileName,
+    markdown,
+    comments,
     canReview,
     uploadedAt: row?.uploaded_at ?? null,
     approvedAt: row?.approved_at ?? null,

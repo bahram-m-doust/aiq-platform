@@ -2,16 +2,24 @@
 
 import { useActionState } from "react";
 
+import { DeleteDeliverableButton } from "@/components/admin/DeleteDeliverableButton";
 import { Button } from "@/components/ui/button";
-import { uploadCityModelDistrictFileAction } from "@/features/city-model-deliverables/actions";
+import {
+  deleteCityModelDistrictFileAction,
+  uploadCityModelDistrictFileAction,
+} from "@/features/city-model-deliverables/actions";
 import { initialCityModelUploadState } from "@/features/city-model-deliverables/schema";
 
 export function CityModelAdminUpload({
   brandId,
   districtKey,
+  districtName,
+  hasFile,
 }: {
   brandId: string;
   districtKey: string;
+  districtName: string;
+  hasFile: boolean;
 }) {
   const [state, action, pending] = useActionState(
     uploadCityModelDistrictFileAction,
@@ -29,10 +37,19 @@ export function CityModelAdminUpload({
         required
         type="file"
       />
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button disabled={pending} size="sm" type="submit">
           {pending ? "Uploading…" : "Upload PDF"}
         </Button>
+        {hasFile ? (
+          <DeleteDeliverableButton
+            description={`This permanently removes the uploaded file for “${districtName}”. The district returns to “Awaiting upload”. This cannot be undone.`}
+            onDelete={() =>
+              deleteCityModelDistrictFileAction({ brandId, districtKey })
+            }
+            title={`Delete ${districtName} file?`}
+          />
+        ) : null}
         {state.message ? (
           <span
             className={`text-[11px] ${

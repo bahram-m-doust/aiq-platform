@@ -58,7 +58,7 @@ export default async function ModuleDetailPage({
           </div>
         </DSCardHeader>
         <DSCardBody>
-          <ClientReviewPanel data={data} />
+          <ClientReviewPanel currentUserId={profile.id} data={data} />
         </DSCardBody>
       </DSCard>
 

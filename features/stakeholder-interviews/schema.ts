@@ -7,8 +7,6 @@ import {
   canReviewDeliverableRole,
   deliverableStatusLabels,
   isDeliverablePdf,
-  normalizeReviewPosition,
-  validateReviewAnnotationBody,
 } from "@/features/review-deliverables/schema";
 
 export const stakeholderReportStatusLabels: Record<
@@ -29,15 +27,4 @@ export function canReviewStakeholderInterviewRole(
 
 export function isStakeholderPdf(file: File): boolean {
   return isDeliverablePdf(file);
-}
-
-export function validateAnnotationBody(body: string): {
-  value: string | null;
-  error: string | null;
-} {
-  return validateReviewAnnotationBody(body);
-}
-
-export function normalizePosition(value: number): number {
-  return normalizeReviewPosition(value);
 }

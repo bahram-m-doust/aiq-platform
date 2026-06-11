@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { requireUserProfile } from "@/features/auth/queries";
 import { canViewAdminModulesRole } from "@/features/modules/schema";
+import { StakeholderDeleteButton } from "@/features/stakeholder-interviews/components/StakeholderDeleteButton";
 import { StakeholderUploadForm } from "@/features/stakeholder-interviews/components/StakeholderUploadForm";
 import { getStakeholderAdminOverview } from "@/features/stakeholder-interviews/queries";
 import { stakeholderReportStatusLabels } from "@/features/stakeholder-interviews/schema";
@@ -53,6 +54,7 @@ export default async function AdminStakeholderInterviewsPage() {
                 <th className="px-4 py-2.5 text-left font-medium">Brand</th>
                 <th className="px-4 py-2.5 text-left font-medium">Status</th>
                 <th className="px-4 py-2.5 text-left font-medium">File</th>
+                <th className="px-4 py-2.5 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -71,13 +73,21 @@ export default async function AdminStakeholderInterviewsPage() {
                   <td className="px-4 py-2.5 text-muted-foreground">
                     {row.fileName ?? "—"}
                   </td>
+                  <td className="px-4 py-2.5 text-right">
+                    {row.fileName ? (
+                      <StakeholderDeleteButton
+                        brandId={row.brandId}
+                        brandName={row.brandName}
+                      />
+                    ) : null}
+                  </td>
                 </tr>
               ))}
               {overview.length === 0 ? (
                 <tr className="border-t border-border">
                   <td
                     className="px-4 py-6 text-center text-muted-foreground"
-                    colSpan={3}
+                    colSpan={4}
                   >
                     No brands yet.
                   </td>

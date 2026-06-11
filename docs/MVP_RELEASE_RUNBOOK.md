@@ -43,7 +43,7 @@ Fresh project:
 Existing project:
 
 1. Run missing migrations in numeric order through
-   `0040_city_model_district_files.sql`.
+   `0043_deliverable_markdown.sql`.
 2. Re-run seeds only if the environment is missing plan, agent, or intake
    configuration rows.
 3. Run `NOTIFY pgrst, 'reload schema';`.

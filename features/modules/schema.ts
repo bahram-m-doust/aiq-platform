@@ -204,29 +204,6 @@ export function validateModuleUploadFormData(
   };
 }
 
-export function validateClientModuleCommentFormData(
-  formData: FormData,
-): { data: { moduleId: string; comment: string } | null; error: string | null } {
-  const moduleId = formString(formData, "module_id");
-  const comment = formString(formData, "comment");
-
-  if (!moduleId) {
-    return { data: null, error: "Module is missing." };
-  }
-
-  if (!comment) {
-    return { data: null, error: "Enter a comment." };
-  }
-
-  if (comment.length > maxClientCommentLength) {
-    return {
-      data: null,
-      error: `Comment must be ${maxClientCommentLength} characters or fewer.`,
-    };
-  }
-
-  return { data: { moduleId, comment }, error: null };
-}
 
 export function validateClientModuleDecisionFormData({
   formData,

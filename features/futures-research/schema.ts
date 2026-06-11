@@ -7,8 +7,6 @@ import {
   canReviewDeliverableRole,
   deliverableStatusLabels,
   isDeliverablePdf,
-  normalizeReviewPosition,
-  validateReviewAnnotationBody,
 } from "@/features/review-deliverables/schema";
 
 export const futuresResearchReportStatusLabels: Record<
@@ -41,15 +39,4 @@ export function isFuturesResearchStoryline(file: File): boolean {
     (file.name.toLowerCase().endsWith(".html") ||
       file.name.toLowerCase().endsWith(".htm"))
   );
-}
-
-export function validateAnnotationBody(body: string): {
-  value: string | null;
-  error: string | null;
-} {
-  return validateReviewAnnotationBody(body);
-}
-
-export function normalizePosition(value: number): number {
-  return normalizeReviewPosition(value);
 }

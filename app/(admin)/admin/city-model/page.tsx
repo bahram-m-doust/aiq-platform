@@ -99,6 +99,8 @@ export default async function AdminCityModelPage({
                 <CityModelAdminUpload
                   brandId={selectedBrand.id}
                   districtKey={district.key}
+                  districtName={district.name}
+                  hasFile={Boolean(fileName)}
                 />
               </div>
             ))}

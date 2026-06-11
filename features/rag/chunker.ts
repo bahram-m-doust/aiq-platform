@@ -1,3 +1,5 @@
+import { splitMarkdownIntoBlocks } from "@/lib/markdown/blocks";
+
 export type TextChunk = {
   index: number;
   text: string;
@@ -89,5 +91,41 @@ export function chunkText(
     index: i,
     text: chunk,
     tokenCount: estimateTokens(chunk),
+  }));
+}
+
+// Heading-aware chunking for markdown. Each section (a heading + its body — the
+// same unit a comment anchors to) becomes its own chunk; oversized sections are
+// split further but keep their heading prefixed for retrieval context. This
+// keeps RAG chunks aligned with the section anchors used by the comment system.
+export function chunkMarkdown(
+  markdown: string,
+  options?: { maxTokens?: number; overlap?: number },
+): TextChunk[] {
+  const maxTokens = options?.maxTokens ?? DEFAULT_MAX_TOKENS;
+  const maxChars = maxTokens * CHARS_PER_TOKEN;
+  const blocks = splitMarkdownIntoBlocks(markdown);
+  if (blocks.length === 0) return chunkText(markdown, options);
+
+  const texts: string[] = [];
+  for (const block of blocks) {
+    const section = block.markdown.trim();
+    if (!section) continue;
+    if (section.length <= maxChars) {
+      texts.push(section);
+      continue;
+    }
+    // Oversized section: split its body and prefix each piece with the heading
+    // so every chunk keeps its section context.
+    const heading = block.label ? `${"#".repeat(block.level || 2)} ${block.label}` : "";
+    for (const part of chunkText(section, options)) {
+      texts.push(heading ? `${heading}\n\n${part.text}` : part.text);
+    }
+  }
+
+  return texts.map((text, i) => ({
+    index: i,
+    text,
+    tokenCount: estimateTokens(text),
   }));
 }

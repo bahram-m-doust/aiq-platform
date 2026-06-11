@@ -18,21 +18,6 @@ export type FuturesResearchFile = {
   sizeBytes: number | null;
 };
 
-export type FuturesResearchAnnotation = {
-  id: string;
-  reportId: string;
-  parentId: string | null;
-  authorId: string | null;
-  authorName: string | null;
-  authorEmail: string | null;
-  page: number;
-  posX: number;
-  posY: number;
-  body: string;
-  resolved: boolean;
-  createdAt: string | null;
-};
-
 export type FuturesResearchReport = {
   id: string;
   brandId: string;
@@ -53,7 +38,8 @@ export type FuturesResearchAccess = {
 export type FuturesResearchWorkspace = {
   access: FuturesResearchAccess | null;
   report: FuturesResearchReport | null;
-  annotations: FuturesResearchAnnotation[];
+  markdown: string | null;
+  comments: import("@/features/review-comments/types").ReviewComment[];
   signedUrl: string | null;
   canReview: boolean;
 };
@@ -63,15 +49,3 @@ export type FuturesResearchActionState = {
   message: string;
 };
 
-export type AddAnnotationInput = {
-  reportId: string;
-  page: number;
-  posX: number;
-  posY: number;
-  body: string;
-  parentId?: string | null;
-};
-
-export type AddAnnotationResult =
-  | { ok: true; annotation: FuturesResearchAnnotation }
-  | { ok: false; message: string };

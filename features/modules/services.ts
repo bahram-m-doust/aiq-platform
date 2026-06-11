@@ -17,7 +17,6 @@ import {
   getAdminModuleDetail,
   getClientModuleDetail,
   getLatestModuleArtifact,
-  reviewColumns,
   type ArtifactRow,
   type ReviewRow,
 } from "@/features/modules/queries";
@@ -42,6 +41,8 @@ import type {
   ModuleReviewRecord,
   ModuleUploadInput,
 } from "@/features/modules/types";
+import { listCommentsForSubject } from "@/features/review-comments/queries";
+import { resolveDeliverableMarkdown } from "@/features/review-content/resolve";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -451,17 +452,31 @@ export async function getClientModuleReviewPageData({
 
   const artifact = detail.latestClientArtifact;
 
+  const comments = await listCommentsForSubject({
+    subjectType: "MODULE",
+    subjectId: moduleId,
+  });
+
   if (!latestArtifactIsClientReviewPdf(artifact) || !artifact?.file) {
     return {
       ...detail,
       signedUrl: null,
       signedUrlExpiresInSeconds: null,
+      markdown: null,
+      comments,
     };
   }
 
   const signedUrl = await createPrivateFileSignedDownloadUrl({
     storagePath: artifact.file.storagePath,
     downloadName: artifact.file.originalName,
+  });
+
+  const markdown = await resolveDeliverableMarkdown({
+    fileId: artifact.file.id,
+    storagePath: artifact.file.storagePath,
+    mimeType: artifact.file.mimeType,
+    originalName: artifact.file.originalName,
   });
 
   await insertModuleAuditLog({
@@ -484,49 +499,9 @@ export async function getClientModuleReviewPageData({
     ...detail,
     signedUrl,
     signedUrlExpiresInSeconds: signedDownloadUrlTtlSeconds,
+    markdown,
+    comments,
   };
-}
-
-export async function addClientModuleComment({
-  moduleId,
-  profile,
-  comment,
-}: {
-  moduleId: string;
-  profile: UserProfile;
-  comment: string;
-}) {
-  const detail = await requireClientModuleDetail({
-    moduleId,
-    profileId: profile.id,
-  });
-
-  if (detail.module.status !== "CLIENT_REVIEW") {
-    moduleServiceError("Client comments are available only during review.");
-  }
-
-  if (!latestArtifactIsClientReviewPdf(detail.latestClientArtifact)) {
-    moduleServiceError("A client-review PDF is required before commenting.");
-  }
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("module_reviews")
-    .insert({
-      module_id: detail.module.id,
-      reviewer_id: profile.id,
-      review_type: "CLIENT",
-      decision: "COMMENT",
-      comment,
-    })
-    .select(reviewColumns)
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return toTemporaryReviewRecord(data as unknown as ReviewRow);
 }
 
 export async function submitClientModuleDecision({

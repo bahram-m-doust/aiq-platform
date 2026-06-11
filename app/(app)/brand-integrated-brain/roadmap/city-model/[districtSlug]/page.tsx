@@ -43,7 +43,11 @@ export default async function CityModelDistrictPage({
       <SetBreadcrumbLabels
         labels={{ [cityModelDistrictPath(districtSlug)]: district.name }}
       />
-      <CityModelDistrictView slug={districtSlug} workspace={workspace} />
+      <CityModelDistrictView
+        currentUserId={profile.id}
+        slug={districtSlug}
+        workspace={workspace}
+      />
     </>
   );
 }

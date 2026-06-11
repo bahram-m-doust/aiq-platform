@@ -10,6 +10,10 @@ import { getAgentCatalogWorkspace } from "@/features/agents/catalog/queries";
 import { catalogAgentDefinitions } from "@/features/agents/catalog/schema";
 import { logout } from "@/features/auth/actions";
 import { requireUserProfile } from "@/features/auth/queries";
+import {
+  getUnreadNotificationCount,
+  listNotificationsForProfile,
+} from "@/features/notifications/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const getBrandIconUrl = cache(async (brandId: string) => {
@@ -39,10 +43,19 @@ export default async function AppLayout({
     return <>{children}</>;
   }
 
-  const [catalogWorkspace, brandIconUrl] = await Promise.all([
-    catalogWorkspacePromise,
-    accessSummary.brandId ? getBrandIconUrl(accessSummary.brandId) : null,
-  ]);
+  const [catalogWorkspace, brandIconUrl, notifications, unreadCount] =
+    await Promise.all([
+      catalogWorkspacePromise,
+      accessSummary.brandId ? getBrandIconUrl(accessSummary.brandId) : null,
+      listNotificationsForProfile({
+        profileId: profile.id,
+        globalRole: profile.global_role,
+      }).catch(() => []),
+      getUnreadNotificationCount({
+        profileId: profile.id,
+        globalRole: profile.global_role,
+      }).catch(() => 0),
+    ]);
   const defByKey = new Map(
     catalogAgentDefinitions.map((definition) => [
       definition.key,
@@ -72,6 +85,8 @@ export default async function AppLayout({
             brandIconUrl={brandIconUrl}
             brandName={accessSummary.brandName}
             logoutAction={logout}
+            notifications={notifications}
+            unreadCount={unreadCount}
             userName={profile.full_name ?? user.email ?? profile.email}
           />
           <div className="flex-1 overflow-x-hidden p-4">{children}</div>

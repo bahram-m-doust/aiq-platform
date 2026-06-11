@@ -1,6 +1,6 @@
 -- GENERATED FILE. DO NOT EDIT DIRECTLY.
 -- Source: numbered SQL files in supabase/migrations.
--- Latest migration: 0040_city_model_district_files.sql
+-- Latest migration: 0043_deliverable_markdown.sql
 -- Regenerate with: npm run db:generate-bundles
 
 -- DESTRUCTIVE: this variant removes all public application data.
@@ -4549,6 +4549,182 @@ begin
 end;
 $$;
 -- END 0040_city_model_district_files.sql
+
+-- BEGIN 0041_unified_commenting.sql
+-- Unified commenting & notifications.
+--
+-- Replaces the old PDF-coordinate annotation model with block-anchored comments
+-- that work on any reviewable deliverable (stakeholder interviews, futures
+-- research, city model districts, modules, brand-twin docs — everything except
+-- the client-filled questionnaire). Comments anchor to a stable section slug
+-- (`anchor_id`), not a pixel, so they survive re-render / RTL / re-export and
+-- map 1:1 onto a RAG chunk.
+--
+-- Every comment raises a notification to the internal/admin team, deep-linked to
+-- the exact section so they can apply requested changes.
+--
+-- Additive only: the old annotation tables are dropped in a later migration once
+-- every surface has moved over.
+
+-- Block-anchored, threaded comments attachable to ANY reviewable surface via a
+-- polymorphic (subject_type, subject_id) key.
+create table if not exists public.review_comments (
+  id uuid primary key default gen_random_uuid(),
+  brand_id uuid not null references public.brands(id) on delete cascade,
+  -- which deliverable surface this comment lives on
+  -- STAKEHOLDER_INTERVIEWS | FUTURES_RESEARCH | CITY_MODEL_DISTRICT | MODULE | BRAND_DOC
+  subject_type text not null,
+  -- report id / district key / module id — the surface's stable identifier
+  subject_id text not null,
+  -- threaded replies: root comments keep parent_id null
+  parent_id uuid references public.review_comments(id) on delete cascade,
+  -- stable block anchor (slug of the section heading); null = whole-document
+  anchor_id text,
+  -- human-readable heading captured at comment time, for re-anchoring + display
+  anchor_label text,
+  author_id uuid references public.users_profile(id),
+  body text not null,
+  resolved boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists review_comments_subject_idx
+  on public.review_comments (subject_type, subject_id);
+create index if not exists review_comments_anchor_idx
+  on public.review_comments (subject_type, subject_id, anchor_id);
+create index if not exists review_comments_parent_idx
+  on public.review_comments (parent_id);
+create index if not exists review_comments_brand_idx
+  on public.review_comments (brand_id);
+
+-- In-app notifications. Every comment + review decision notifies the internal
+-- team (and the client on decisions about their deliverables).
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  brand_id uuid references public.brands(id) on delete cascade,
+  -- ADMIN | INTERNAL_TEAM | CLIENT — who should see it
+  audience text not null,
+  -- optional direct recipient; null = anyone in the audience for the brand
+  recipient_id uuid references public.users_profile(id) on delete cascade,
+  -- COMMENT_ADDED | COMMENT_REPLY | CHANGES_REQUESTED | APPROVED
+  type text not null,
+  title text not null,
+  body text,
+  -- deep link back to the exact section, e.g.
+  -- /brand-integrated-brain/roadmap/city-model/purpose-form#anchor
+  link_path text,
+  subject_type text,
+  subject_id text,
+  comment_id uuid references public.review_comments(id) on delete cascade,
+  actor_id uuid references public.users_profile(id),
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists notifications_recipient_idx
+  on public.notifications (recipient_id, read_at);
+create index if not exists notifications_brand_audience_idx
+  on public.notifications (brand_id, audience, read_at);
+create index if not exists notifications_subject_idx
+  on public.notifications (subject_type, subject_id);
+
+-- Deny-by-default RLS; all access is through the service-role admin client
+-- behind app-level authorization, consistent with the rest of the schema.
+alter table public.review_comments enable row level security;
+alter table public.notifications enable row level security;
+
+-- Atomic: insert a comment and fan out a notification to the internal team in
+-- one txn, so a comment can never exist without its notification (or vice versa).
+create or replace function public.add_review_comment(
+  p_brand_id uuid,
+  p_subject_type text,
+  p_subject_id text,
+  p_author_id uuid,
+  p_body text,
+  p_anchor_id text,
+  p_anchor_label text,
+  p_parent_id uuid,
+  p_link_path text,
+  p_notify_title text,
+  p_notify_body text
+)
+returns table (comment_id uuid, created_at timestamptz)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_comment_id uuid;
+  v_created_at timestamptz;
+  v_type text;
+begin
+  insert into public.review_comments (
+    brand_id, subject_type, subject_id, parent_id,
+    anchor_id, anchor_label, author_id, body
+  )
+  values (
+    p_brand_id, p_subject_type, p_subject_id, p_parent_id,
+    p_anchor_id, p_anchor_label, p_author_id, p_body
+  )
+  returning id, public.review_comments.created_at
+    into v_comment_id, v_created_at;
+
+  v_type := case when p_parent_id is null then 'COMMENT_ADDED'
+                 else 'COMMENT_REPLY' end;
+
+  insert into public.notifications (
+    brand_id, audience, type, title, body,
+    link_path, subject_type, subject_id, comment_id, actor_id
+  )
+  values (
+    p_brand_id, 'INTERNAL_TEAM', v_type, p_notify_title, p_notify_body,
+    p_link_path, p_subject_type, p_subject_id, v_comment_id, p_author_id
+  );
+
+  return query select v_comment_id, v_created_at;
+end;
+$$;
+-- END 0041_unified_commenting.sql
+
+-- BEGIN 0042_drop_pdf_annotations.sql
+-- Remove the old PDF-coordinate annotation system. Block-anchored comments now
+-- live in public.review_comments (migration 0041), which covers every
+-- deliverable surface. The report/upload tables are unchanged — only the
+-- coordinate-anchored annotation tables are dropped.
+
+drop table if exists public.stakeholder_interview_annotations cascade;
+drop table if exists public.futures_research_annotations cascade;
+-- END 0042_drop_pdf_annotations.sql
+
+-- BEGIN 0043_deliverable_markdown.sql
+-- LLM-generated markdown cache for uploaded deliverables.
+--
+-- Admins upload a PDF; an automation extracts its text and uses the LLM to
+-- restructure it into clean Markdown with proper headings. That markdown is
+-- cached here (keyed by the source file) so the unified viewer renders it and
+-- the RAG pipeline chunks it by heading — without re-running the LLM on every
+-- page load. Images are not carried (PDF→text drops them); markdown is for the
+-- text + heading structure that RAG and section-anchored comments need.
+
+create table if not exists public.deliverable_markdown (
+  file_id uuid primary key references public.files(id) on delete cascade,
+  subject_type text,
+  subject_id text,
+  markdown text not null,
+  -- PENDING | READY | FAILED — lets the UI show generation state
+  status text not null default 'READY',
+  error text,
+  generated_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists deliverable_markdown_subject_idx
+  on public.deliverable_markdown (subject_type, subject_id);
+
+-- Deny-by-default RLS; all access via the service-role admin client.
+alter table public.deliverable_markdown enable row level security;
+-- END 0043_deliverable_markdown.sql
 
 -- Keep server-side Supabase access explicit after fresh schema creation.
 grant all on all tables in schema public to service_role;

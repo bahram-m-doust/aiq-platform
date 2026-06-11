@@ -8,6 +8,7 @@ import {
   processPendingStorageCleanups,
   removePrivateFileOrQueue,
 } from "@/features/documents/storage-cleanup";
+import { generateAndCacheDeliverableMarkdown } from "@/features/review-content/resolve";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type ReviewWorkflow = "STAKEHOLDER_INTERVIEWS" | "FUTURES_RESEARCH";
@@ -73,6 +74,20 @@ export async function uploadReviewDeliverable({
     await processPendingStorageCleanups(oldFileId);
   }
   await processPendingStorageCleanups(undefined, 3);
+
+  // Structure the uploaded report into markdown with headings for the viewer +
+  // RAG. The storyline is interactive HTML, not a text deliverable — skip it.
+  if (!storyline) {
+    await generateAndCacheDeliverableMarkdown({
+      fileId,
+      brandId,
+      subjectType: workflow,
+      subjectId: reportId,
+      storagePath,
+      mimeType,
+      originalName: file.name,
+    });
+  }
 
   return reportId;
 }

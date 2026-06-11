@@ -231,25 +231,54 @@ export function QuestionRenderer({
     save(localValue);
   }
 
-  // Keyboard fast-fill: Ctrl/Cmd+Enter jumps to the next questionnaire field
-  // (focusing it blurs the current one, which autosaves), so the whole form can
-  // be completed without the mouse. Plain Tab still works as usual.
-  function handleFieldKeyDown(
-    event: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
-  ) {
-    if (!(event.ctrlKey || event.metaKey) || event.key !== "Enter") {
-      return;
-    }
-    event.preventDefault();
+  // Moves focus to the next typeable field that comes after this question in the
+  // DOM, so the user can keep typing without reaching for the mouse. Skips
+  // already-answered (collapsed) questions, which render no input. Scheduled
+  // after the current field collapses so the layout has settled.
+  function focusNextTypeableField() {
+    const card = document.getElementById(`question-card-${question.id}`);
+    if (!card) return;
     const fields = Array.from(
       document.querySelectorAll<HTMLElement>("[data-intake-field]"),
     );
-    const index = fields.indexOf(event.currentTarget);
-    const next = index >= 0 ? fields[index + 1] : undefined;
+    const next = fields.find(
+      (el) =>
+        card.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING,
+    );
     if (next) {
-      next.focus();
-    } else {
-      event.currentTarget.blur();
+      requestAnimationFrame(() => next.focus());
+    }
+  }
+
+  // Keyboard fast-fill: Ctrl/Cmd+Enter jumps to the next questionnaire field
+  // (focusing it blurs the current one, which autosaves), so the whole form can
+  // be completed without the mouse. On a single-line input, plain Enter behaves
+  // like pressing "Done" (save + advance). In a textarea, plain Enter stays a
+  // newline. Tab still works as usual.
+  function handleFieldKeyDown(
+    event: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) {
+    if (event.key !== "Enter") return;
+
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      const fields = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-intake-field]"),
+      );
+      const index = fields.indexOf(event.currentTarget);
+      const next = index >= 0 ? fields[index + 1] : undefined;
+      if (next) {
+        next.focus();
+      } else {
+        event.currentTarget.blur();
+      }
+      return;
+    }
+
+    // Plain Enter on a single-line input commits and advances; textarea keeps it.
+    if (kind !== "textarea" && !event.shiftKey) {
+      event.preventDefault();
+      handleDone();
     }
   }
 
@@ -271,6 +300,7 @@ export function QuestionRenderer({
     const committedValue = isTextKind ? localValue : currentValue;
     if (isIntakeAnswerComplete(committedValue)) {
       setIsEditing(false);
+      focusNextTypeableField();
     }
   }
 

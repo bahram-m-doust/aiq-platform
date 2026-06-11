@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/features/modules/actions", () => ({
   uploadModuleArtifactAction: vi.fn(),
   sendModuleToClientReviewAction: vi.fn(),
-  addClientModuleCommentAction: vi.fn(),
   approveClientModuleAction: vi.fn(),
   requestClientModuleChangeAction: vi.fn(),
   initialModuleUploadFormState: { status: "idle", message: "" },
@@ -116,6 +115,8 @@ function clientReviewData(
     reviews: [],
     signedUrl: "https://signed.example/module.pdf?token=secret",
     signedUrlExpiresInSeconds: 60,
+    markdown: null,
+    comments: [],
     ...overrides,
   };
 }
@@ -245,11 +246,18 @@ describe("module workflow components", () => {
     ).toBeEnabled();
   });
 
-  it("renders client review PDF and decision controls", () => {
-    render(<ClientReviewPanel data={clientReviewData()} />);
+  it("renders the document review surface and decision controls", () => {
+    render(
+      <ClientReviewPanel
+        currentUserId="user-1"
+        data={clientReviewData({
+          markdown: "# Overview\n\nThe brand knowledge summary.",
+        })}
+      />,
+    );
 
-    expect(screen.getByTitle("Brand Knowledge PDF preview")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Add comment" })).toBeVisible();
+    // Unified viewer renders the document content as commentable sections.
+    expect(screen.getByText("Overview")).toBeVisible();
     expect(screen.getByRole("button", { name: "Approve module" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Request change" })).toBeVisible();
   });

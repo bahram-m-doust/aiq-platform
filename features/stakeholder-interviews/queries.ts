@@ -2,9 +2,10 @@ import "server-only";
 
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { createPrivateFileSignedDownloadUrl } from "@/features/documents/storage";
+import { listCommentsForSubject } from "@/features/review-comments/queries";
+import { resolveDeliverableMarkdown } from "@/features/review-content/resolve";
 import { canReviewStakeholderInterviewRole } from "@/features/stakeholder-interviews/schema";
 import type {
-  StakeholderAnnotation,
   StakeholderInterviewReport,
   StakeholderInterviewWorkspace,
   StakeholderReportStatus,
@@ -27,19 +28,6 @@ type FileRow = {
   original_name: string;
   mime_type: string | null;
   size_bytes: number | null;
-};
-
-type AnnotationRow = {
-  id: string;
-  report_id: string;
-  parent_id?: string | null;
-  author_id: string | null;
-  page: number;
-  pos_x: number | string;
-  pos_y: number | string;
-  body: string;
-  resolved: boolean;
-  created_at: string | null;
 };
 
 function toStatus(value: string): StakeholderReportStatus {
@@ -152,7 +140,8 @@ export async function getStakeholderInterviewWorkspace({
     return {
       access: null,
       report: null,
-      annotations: [],
+      markdown: null,
+      comments: [],
       signedUrl: null,
       canReview: false,
     };
@@ -168,75 +157,40 @@ export async function getStakeholderInterviewWorkspace({
 
   const reportRow = await getStakeholderReportRowByBrand(access.brandId);
   if (!reportRow) {
-    return { access, report: null, annotations: [], signedUrl: null, canReview };
+    return {
+      access,
+      report: null,
+      markdown: null,
+      comments: [],
+      signedUrl: null,
+      canReview,
+    };
   }
 
   const admin = createAdminClient();
-  const [fileResult, annotationsResult] = await Promise.all([
-    reportRow.file_id
-      ? admin
-          .from("files")
-          .select("id, storage_path, original_name, mime_type, size_bytes")
-          .eq("id", reportRow.file_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-    admin
-      .from("stakeholder_interview_annotations")
-      .select("*")
-      .eq("report_id", reportRow.id)
-      .order("created_at", { ascending: true }),
-  ]);
+  const fileResult = reportRow.file_id
+    ? await admin
+        .from("files")
+        .select("id, storage_path, original_name, mime_type, size_bytes")
+        .eq("id", reportRow.file_id)
+        .maybeSingle()
+    : { data: null, error: null };
   if (fileResult.error) throw fileResult.error;
-  if (annotationsResult.error) throw annotationsResult.error;
 
   const fileRow = (fileResult.data as FileRow | null) ?? null;
-  const annotationRows = (annotationsResult.data ?? []) as AnnotationRow[];
 
-  const authorIds = [
-    ...new Set(
-      annotationRows
-        .map((row) => row.author_id)
-        .filter((id): id is string => Boolean(id)),
-    ),
-  ];
-  const profileById = new Map<
-    string,
-    { full_name: string | null; email: string | null }
-  >();
-  if (authorIds.length > 0) {
-    const { data: profiles, error: profilesError } = await admin
-      .from("users_profile")
-      .select("id, full_name, email")
-      .in("id", authorIds);
-    if (profilesError) throw profilesError;
-    for (const profile of (profiles ?? []) as Array<{
-      id: string;
-      full_name: string | null;
-      email: string | null;
-    }>) {
-      profileById.set(profile.id, {
-        full_name: profile.full_name,
-        email: profile.email,
-      });
-    }
-  }
+  const markdown = fileRow
+    ? await resolveDeliverableMarkdown({
+        fileId: fileRow.id,
+        storagePath: fileRow.storage_path,
+        mimeType: fileRow.mime_type,
+        originalName: fileRow.original_name,
+      })
+    : null;
 
-  const annotations: StakeholderAnnotation[] = annotationRows.map((row) => {
-    const profile = row.author_id ? profileById.get(row.author_id) : undefined;
-    return {
-      id: row.id,
-      reportId: row.report_id,
-      parentId: row.parent_id ?? null,
-      authorId: row.author_id,
-      authorName: profile?.full_name ?? null,
-      authorEmail: profile?.email ?? null,
-      page: row.page,
-      posX: Number(row.pos_x),
-      posY: Number(row.pos_y),
-      body: row.body,
-      resolved: row.resolved,
-      createdAt: row.created_at,
-    };
+  const comments = await listCommentsForSubject({
+    subjectType: "STAKEHOLDER_INTERVIEWS",
+    subjectId: reportRow.id,
   });
 
   const report: StakeholderInterviewReport = {
@@ -263,5 +217,5 @@ export async function getStakeholderInterviewWorkspace({
       })
     : null;
 
-  return { access, report, annotations, signedUrl, canReview };
+  return { access, report, markdown, comments, signedUrl, canReview };
 }

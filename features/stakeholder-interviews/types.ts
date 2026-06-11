@@ -18,21 +18,6 @@ export type StakeholderInterviewFile = {
   sizeBytes: number | null;
 };
 
-export type StakeholderAnnotation = {
-  id: string;
-  reportId: string;
-  parentId: string | null;
-  authorId: string | null;
-  authorName: string | null;
-  authorEmail: string | null;
-  page: number;
-  posX: number;
-  posY: number;
-  body: string;
-  resolved: boolean;
-  createdAt: string | null;
-};
-
 export type StakeholderInterviewReport = {
   id: string;
   brandId: string;
@@ -52,7 +37,8 @@ export type StakeholderInterviewAccess = {
 export type StakeholderInterviewWorkspace = {
   access: StakeholderInterviewAccess | null;
   report: StakeholderInterviewReport | null;
-  annotations: StakeholderAnnotation[];
+  markdown: string | null;
+  comments: import("@/features/review-comments/types").ReviewComment[];
   signedUrl: string | null;
   canReview: boolean;
 };
@@ -61,16 +47,3 @@ export type StakeholderActionState = {
   status: "idle" | "error" | "success";
   message: string;
 };
-
-export type AddAnnotationInput = {
-  reportId: string;
-  page: number;
-  posX: number;
-  posY: number;
-  body: string;
-  parentId?: string | null;
-};
-
-export type AddAnnotationResult =
-  | { ok: true; annotation: StakeholderAnnotation }
-  | { ok: false; message: string };

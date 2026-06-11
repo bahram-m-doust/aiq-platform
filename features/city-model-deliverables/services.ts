@@ -8,6 +8,7 @@ import {
   processPendingStorageCleanups,
   removePrivateFileOrQueue,
 } from "@/features/documents/storage-cleanup";
+import { generateAndCacheDeliverableMarkdown } from "@/features/review-content/resolve";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function uploadCityModelDistrictFile({
@@ -64,6 +65,16 @@ export async function uploadCityModelDistrictFile({
     await processPendingStorageCleanups(oldFileId);
   }
   await processPendingStorageCleanups(undefined, 3);
+
+  await generateAndCacheDeliverableMarkdown({
+    fileId,
+    brandId,
+    subjectType: "CITY_MODEL_DISTRICT",
+    subjectId: districtKey,
+    storagePath,
+    mimeType: "application/pdf",
+    originalName: file.name,
+  });
 }
 
 export async function setCityModelDistrictStatus({

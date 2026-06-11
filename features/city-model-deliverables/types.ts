@@ -1,4 +1,5 @@
 import type { CityModelDistrict } from "@/features/app/city-model";
+import type { ReviewComment } from "@/features/review-comments/types";
 
 export type CityModelDeliverableStatus =
   | "PENDING_UPLOAD"
@@ -18,9 +19,13 @@ export type CityModelDeliverableRow = {
 
 export type CityModelDistrictWorkspace = {
   district: CityModelDistrict;
+  brandId: string;
   status: CityModelDeliverableStatus;
   signedUrl: string | null;
+  downloadUrl: string | null;
   fileName: string | null;
+  markdown: string | null;
+  comments: ReviewComment[];
   canReview: boolean;
   uploadedAt: string | null;
   approvedAt: string | null;

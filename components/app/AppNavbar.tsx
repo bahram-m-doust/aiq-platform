@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { BellIcon, ChevronDownIcon, LogOutIcon, UserIcon } from "lucide-react";
+import { ChevronDownIcon, LogOutIcon, UserIcon } from "lucide-react";
 
 import { AppBreadcrumb } from "@/components/app/AppBreadcrumb";
-import { Button } from "@/components/ui/button";
+import { NotificationsBell } from "@/components/app/NotificationsBell";
+import type { NotificationRecord } from "@/features/notifications/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +20,8 @@ type AppNavbarProps = {
   userName: string;
   brandName: string | null;
   brandIconUrl: string | null;
+  notifications: NotificationRecord[];
+  unreadCount: number;
   logoutAction: (formData: FormData) => void | Promise<void>;
 };
 
@@ -26,6 +29,8 @@ export function AppNavbar({
   userName,
   brandName,
   brandIconUrl,
+  notifications,
+  unreadCount,
   logoutAction,
 }: AppNavbarProps) {
   return (
@@ -39,13 +44,10 @@ export function AppNavbar({
 
         {/* Right: notifications + profile */}
         <div className="flex items-center gap-2">
-          <Button
-            aria-label="Notifications"
-            size="icon-lg"
-            variant="ghost"
-          >
-            <BellIcon />
-          </Button>
+          <NotificationsBell
+            notifications={notifications}
+            unreadCount={unreadCount}
+          />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

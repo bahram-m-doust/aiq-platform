@@ -11,6 +11,7 @@ import {
 import { requireUserProfile } from "@/features/auth/queries";
 import { isPdfFile } from "@/features/city-model-deliverables/schema";
 import { getCityModelDeliverableRow } from "@/features/city-model-deliverables/queries";
+import { detachDeliverableFile } from "@/features/review-deliverables/detach-service";
 import { requireDeliverableReviewer } from "@/features/review-deliverables/reviewer";
 import {
   setCityModelDistrictStatus,
@@ -106,6 +107,40 @@ async function decideDistrict(
     status,
   });
   revalidateDistrict(slug);
+  return { ok: true };
+}
+
+export async function deleteCityModelDistrictFileAction({
+  brandId,
+  districtKey,
+}: {
+  brandId: string;
+  districtKey: string;
+}): Promise<{ ok: boolean; message?: string }> {
+  const { profile } = await requireUserProfile("/admin/city-model");
+  if (!canViewAdminModulesRole(profile.global_role)) {
+    return { ok: false, message: "You cannot delete this file." };
+  }
+  if (!brandId) return { ok: false, message: "Select a brand." };
+  if (!isCityModelDistrictKey(districtKey)) {
+    return { ok: false, message: "Unknown district." };
+  }
+
+  try {
+    await detachDeliverableFile({
+      table: "city_model_district_files",
+      match: { brand_id: brandId, district_key: districtKey },
+    });
+  } catch (error) {
+    logServerError({
+      label: "[city-model] district file delete failed",
+      error,
+      metadata: { brandId, districtKey },
+    });
+    return { ok: false, message: "Could not delete the file. Try again." };
+  }
+
+  revalidateDistrict(getCityModelDistrictByKey(districtKey)?.slug);
   return { ok: true };
 }
 

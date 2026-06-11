@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { requireUserProfile } from "@/features/auth/queries";
+import { FuturesResearchDeleteButton } from "@/features/futures-research/components/FuturesResearchDeleteButton";
 import { FuturesResearchStorylineUploadForm } from "@/features/futures-research/components/FuturesResearchStorylineUploadForm";
 import { FuturesResearchUploadForm } from "@/features/futures-research/components/FuturesResearchUploadForm";
 import { getFuturesResearchAdminOverview } from "@/features/futures-research/queries";
@@ -56,6 +57,7 @@ export default async function AdminFuturesResearchPage() {
                 <th className="px-4 py-2.5 text-left font-medium">Brand</th>
                 <th className="px-4 py-2.5 text-left font-medium">Status</th>
                 <th className="px-4 py-2.5 text-left font-medium">File</th>
+                <th className="px-4 py-2.5 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -74,13 +76,21 @@ export default async function AdminFuturesResearchPage() {
                   <td className="px-4 py-2.5 text-muted-foreground">
                     {row.fileName ?? "—"}
                   </td>
+                  <td className="px-4 py-2.5 text-right">
+                    {row.fileName ? (
+                      <FuturesResearchDeleteButton
+                        brandId={row.brandId}
+                        brandName={row.brandName}
+                      />
+                    ) : null}
+                  </td>
                 </tr>
               ))}
               {overview.length === 0 ? (
                 <tr className="border-t border-border">
                   <td
                     className="px-4 py-6 text-center text-muted-foreground"
-                    colSpan={3}
+                    colSpan={4}
                   >
                     No brands yet.
                   </td>
