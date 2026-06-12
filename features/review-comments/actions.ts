@@ -2,13 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 
+import { requireUserProfile } from "@/features/auth/queries";
+import { canViewAdminModulesRole } from "@/features/modules/schema";
 import { requireDeliverableReviewer } from "@/features/review-deliverables/reviewer";
 import {
   createComment,
   deleteComment,
   editComment,
   setCommentResolved,
+  type CommentNotifyAudience,
 } from "@/features/review-comments/mutation-service";
+import { getReplyParent } from "@/features/review-comments/queries";
 import {
   buildSubjectLinkPath,
   commentExcerpt,
@@ -17,15 +21,82 @@ import {
   validateCommentBody,
 } from "@/features/review-comments/schema";
 import {
+  getReviewSubjectBrand,
+  verifyReviewSubject,
+} from "@/features/review-comments/subject-registry";
+import {
   reviewSubjectLabels,
   type AddReviewCommentInput,
   type AddReviewCommentResult,
   type ReviewCommentMutationResult,
+  type ReviewSubjectType,
 } from "@/features/review-comments/types";
+import { slugifyAnchor } from "@/lib/markdown/blocks";
 import { logServerError } from "@/lib/logging/server";
+import { isUuid } from "@/lib/utils";
+
+const MAX_ANCHOR_ID_LENGTH = 200;
+const MAX_ANCHOR_LABEL_LENGTH = 300;
+
+type CommentAuthor = {
+  profileId: string;
+  brandId: string;
+  authorName: string | null;
+  authorEmail: string | null;
+  // Notifications flow toward the other party: a client (brand member) comment
+  // notifies the internal team; an internal-team comment notifies the client.
+  notifyAudience: CommentNotifyAudience;
+};
+
+// Resolves who is commenting. Brand members (OWNER / EXECUTIVE_MANAGER) act for
+// their own brand; internal users (PLATFORM_OWNER / SUPERVISOR /
+// INTERNAL_SPECIALIST) without a membership act for the subject's brand, which
+// must be derivable from the subject row itself.
+async function resolveCommentAuthor(
+  subjectType: ReviewSubjectType,
+  subjectId: string,
+  returnTo: string,
+): Promise<CommentAuthor | null> {
+  const reviewer = await requireDeliverableReviewer(returnTo);
+  if (reviewer) {
+    const ownsSubject = await verifyReviewSubject({
+      subjectType,
+      subjectId,
+      brandId: reviewer.brandId,
+    });
+    if (!ownsSubject) return null;
+    return { ...reviewer, notifyAudience: "INTERNAL_TEAM" };
+  }
+
+  const { profile } = await requireUserProfile(returnTo);
+  if (!canViewAdminModulesRole(profile.global_role)) return null;
+  const brandId = await getReviewSubjectBrand({ subjectType, subjectId });
+  if (!brandId) return null;
+  return {
+    profileId: profile.id,
+    brandId,
+    authorName: profile.full_name ?? null,
+    authorEmail: profile.email ?? null,
+    notifyAudience: "CLIENT",
+  };
+}
 
 function reviewerName(authorName: string | null, authorEmail: string | null) {
   return authorName ?? authorEmail ?? "A reviewer";
+}
+
+// Anchor ids come from the client; re-slugify server-side so only the same
+// alphabet the block splitter produces (unicode letters/digits/hyphens) can be
+// stored or embedded into notification deep links.
+function sanitizeAnchorId(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return slugifyAnchor(value).slice(0, MAX_ANCHOR_ID_LENGTH) || null;
+}
+
+function sanitizeAnchorLabel(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, MAX_ANCHOR_LABEL_LENGTH);
 }
 
 export async function addReviewCommentAction(
@@ -35,45 +106,72 @@ export async function addReviewCommentAction(
     return { ok: false, message: "Unknown document type." };
   }
   const returnTo = subjectPathname(input.subjectType, input.subjectId);
-  const reviewer = await requireDeliverableReviewer(returnTo);
-  if (!reviewer) {
-    return { ok: false, message: "You cannot comment on this document." };
-  }
-
   const { value, error } = validateCommentBody(input.body);
   if (!value) {
     return { ok: false, message: error ?? "Enter a comment." };
   }
 
-  const sectionLabel = input.anchorLabel?.trim() || null;
-  const subjectLabel = reviewSubjectLabels[input.subjectType];
-  const notifyTitle = input.parentId
-    ? `New reply on ${subjectLabel}`
-    : sectionLabel
-      ? `New comment on “${sectionLabel}” — ${subjectLabel}`
-      : `New comment on ${subjectLabel}`;
-  const notifyBody = `${reviewerName(
-    reviewer.authorName,
-    reviewer.authorEmail,
-  )}: ${commentExcerpt(value)}`;
+  // Resolving the author also proves subject ownership: brand members are
+  // checked against their own brand (IDOR guard); internal users derive the
+  // brand from the subject row itself.
+  const reviewer = await resolveCommentAuthor(
+    input.subjectType,
+    input.subjectId,
+    returnTo,
+  );
+  if (!reviewer) {
+    return { ok: false, message: "You cannot comment on this document." };
+  }
 
   try {
+    // A reply must target a root comment on the same subject and brand.
+    const parentId = input.parentId ?? null;
+    if (parentId) {
+      if (!isUuid(parentId)) {
+        return { ok: false, message: "Comment thread not found." };
+      }
+      const parent = await getReplyParent(parentId);
+      if (
+        !parent ||
+        parent.brandId !== reviewer.brandId ||
+        parent.subjectType !== input.subjectType ||
+        parent.subjectId !== input.subjectId ||
+        parent.parentId !== null
+      ) {
+        return { ok: false, message: "Comment thread not found." };
+      }
+    }
+
+    const anchorId = sanitizeAnchorId(input.anchorId);
+    const sectionLabel = sanitizeAnchorLabel(input.anchorLabel);
+    const subjectLabel = reviewSubjectLabels[input.subjectType];
+    const notifyTitle = parentId
+      ? `New reply on ${subjectLabel}`
+      : sectionLabel
+        ? `New comment on “${sectionLabel}” — ${subjectLabel}`
+        : `New comment on ${subjectLabel}`;
+    const notifyBody = `${reviewerName(
+      reviewer.authorName,
+      reviewer.authorEmail,
+    )}: ${commentExcerpt(value)}`;
+
     const comment = await createComment({
       brandId: reviewer.brandId,
       subjectType: input.subjectType,
       subjectId: input.subjectId,
       authorId: reviewer.profileId,
       body: value,
-      anchorId: input.anchorId,
+      anchorId,
       anchorLabel: sectionLabel,
-      parentId: input.parentId ?? null,
+      parentId,
       linkPath: buildSubjectLinkPath(
         input.subjectType,
         input.subjectId,
-        input.anchorId,
+        anchorId,
       ),
       notifyTitle,
       notifyBody,
+      notifyAudience: reviewer.notifyAudience,
     });
     revalidatePath(returnTo);
     return {
@@ -108,8 +206,15 @@ export async function editReviewCommentAction(args: {
     return { ok: false, message: "Unknown document type." };
   }
   const returnTo = subjectPathname(args.subjectType, args.subjectId);
-  const reviewer = await requireDeliverableReviewer(returnTo);
+  const reviewer = await resolveCommentAuthor(
+    args.subjectType,
+    args.subjectId,
+    returnTo,
+  );
   if (!reviewer) return { ok: false, message: "Not allowed." };
+  if (!isUuid(args.commentId)) {
+    return { ok: false, message: "Comment not found." };
+  }
 
   const { value, error } = validateCommentBody(args.body);
   if (!value) return { ok: false, message: error ?? "Enter a comment." };
@@ -118,6 +223,7 @@ export async function editReviewCommentAction(args: {
     await editComment({
       commentId: args.commentId,
       authorId: reviewer.profileId,
+      brandId: reviewer.brandId,
       body: value,
     });
     revalidatePath(returnTo);
@@ -141,13 +247,21 @@ export async function deleteReviewCommentAction(args: {
     return { ok: false, message: "Unknown document type." };
   }
   const returnTo = subjectPathname(args.subjectType, args.subjectId);
-  const reviewer = await requireDeliverableReviewer(returnTo);
+  const reviewer = await resolveCommentAuthor(
+    args.subjectType,
+    args.subjectId,
+    returnTo,
+  );
   if (!reviewer) return { ok: false, message: "Not allowed." };
+  if (!isUuid(args.commentId)) {
+    return { ok: false, message: "Comment not found." };
+  }
 
   try {
     await deleteComment({
       commentId: args.commentId,
       authorId: reviewer.profileId,
+      brandId: reviewer.brandId,
     });
     revalidatePath(returnTo);
     return { ok: true };
@@ -171,12 +285,20 @@ export async function resolveReviewCommentAction(args: {
     return { ok: false, message: "Unknown document type." };
   }
   const returnTo = subjectPathname(args.subjectType, args.subjectId);
-  const reviewer = await requireDeliverableReviewer(returnTo);
+  const reviewer = await resolveCommentAuthor(
+    args.subjectType,
+    args.subjectId,
+    returnTo,
+  );
   if (!reviewer) return { ok: false, message: "Not allowed." };
+  if (!isUuid(args.commentId)) {
+    return { ok: false, message: "Comment not found." };
+  }
 
   try {
     await setCommentResolved({
       commentId: args.commentId,
+      brandId: reviewer.brandId,
       resolved: args.resolved,
     });
     revalidatePath(returnTo);

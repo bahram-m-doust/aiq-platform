@@ -4,11 +4,10 @@ import { randomUUID } from "node:crypto";
 
 import { buildStoragePath } from "@/features/documents/schema";
 import { uploadPrivateFile } from "@/features/documents/storage";
-import {
-  processPendingStorageCleanups,
-  removePrivateFileOrQueue,
-} from "@/features/documents/storage-cleanup";
+import { removePrivateFileOrQueue } from "@/features/documents/storage-cleanup";
+import { removeFileRecordAndStorage } from "@/features/review-deliverables/detach-service";
 import { generateAndCacheDeliverableMarkdown } from "@/features/review-content/resolve";
+import { logServerError } from "@/lib/logging/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function uploadCityModelDistrictFile({
@@ -61,10 +60,23 @@ export async function uploadCityModelDistrictFile({
     result && typeof result.old_file_id === "string"
       ? result.old_file_id
       : null;
+  // The attach RPC swaps file_id but leaves the previous files row and storage
+  // object behind — remove them here so re-uploads don't accumulate orphans.
+  // Best-effort: a cleanup failure must not fail the upload that succeeded.
   if (oldFileId && oldFileId !== fileId) {
-    await processPendingStorageCleanups(oldFileId);
+    try {
+      await removeFileRecordAndStorage({
+        fileId: oldFileId,
+        reason: "REVIEW_DELIVERABLE_REPLACED",
+      });
+    } catch (cleanupError) {
+      logServerError({
+        label: "[city-model] replaced file cleanup failed",
+        error: cleanupError,
+        metadata: { brandId, districtKey, oldFileId },
+      });
+    }
   }
-  await processPendingStorageCleanups(undefined, 3);
 
   await generateAndCacheDeliverableMarkdown({
     fileId,

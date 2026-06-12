@@ -7,10 +7,13 @@ import type {
 import { DomainError } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// Creates a comment and fans out an internal-team notification in one txn (via
-// the add_review_comment RPC), so a comment can never exist without its
-// notification. Returns the new comment with author fields left null — the
-// caller fills them from the signed-in profile.
+export type CommentNotifyAudience = "INTERNAL_TEAM" | "CLIENT";
+
+// Creates a comment and fans out a notification to the other party in one txn
+// (via the add_review_comment RPC), so a comment can never exist without its
+// notification. A client comment notifies INTERNAL_TEAM; an internal reply
+// notifies the brand's CLIENT reviewers. Returns the new comment with author
+// fields left null — the caller fills them from the signed-in profile.
 export async function createComment({
   brandId,
   subjectType,
@@ -23,6 +26,7 @@ export async function createComment({
   linkPath,
   notifyTitle,
   notifyBody,
+  notifyAudience,
 }: {
   brandId: string;
   subjectType: ReviewSubjectType;
@@ -35,9 +39,10 @@ export async function createComment({
   linkPath: string | null;
   notifyTitle: string;
   notifyBody: string | null;
+  notifyAudience: CommentNotifyAudience;
 }): Promise<ReviewComment> {
   const admin = createAdminClient();
-  const { data, error } = await admin.rpc("add_review_comment", {
+  const baseArgs = {
     p_brand_id: brandId,
     p_subject_type: subjectType,
     p_subject_id: subjectId,
@@ -49,7 +54,18 @@ export async function createComment({
     p_link_path: linkPath,
     p_notify_title: notifyTitle,
     p_notify_body: notifyBody,
+  };
+
+  let { data, error } = await admin.rpc("add_review_comment", {
+    ...baseArgs,
+    p_notify_audience: notifyAudience,
   });
+
+  // Until migration 0044 is applied the RPC has no audience parameter; retry
+  // with the original signature (audience falls back to INTERNAL_TEAM).
+  if (error && error.code === "PGRST202") {
+    ({ data, error } = await admin.rpc("add_review_comment", baseArgs));
+  }
 
   if (error) throw error;
 
@@ -93,13 +109,17 @@ async function requireOwnedComment(
   }
 }
 
+// Every mutation is double-keyed: by author (edit/delete are author-only) AND
+// by brand, so a forged commentId belonging to another brand never matches.
 export async function editComment({
   commentId,
   authorId,
+  brandId,
   body,
 }: {
   commentId: string;
   authorId: string;
+  brandId: string;
   body: string;
 }): Promise<void> {
   const admin = createAdminClient();
@@ -109,6 +129,7 @@ export async function editComment({
       .update({ body, updated_at: new Date().toISOString() })
       .eq("id", commentId)
       .eq("author_id", authorId)
+      .eq("brand_id", brandId)
       .select("id")
       .maybeSingle(),
   );
@@ -117,9 +138,11 @@ export async function editComment({
 export async function deleteComment({
   commentId,
   authorId,
+  brandId,
 }: {
   commentId: string;
   authorId: string;
+  brandId: string;
 }): Promise<void> {
   const admin = createAdminClient();
   await requireOwnedComment(
@@ -128,23 +151,31 @@ export async function deleteComment({
       .delete()
       .eq("id", commentId)
       .eq("author_id", authorId)
+      .eq("brand_id", brandId)
       .select("id")
       .maybeSingle(),
   );
 }
 
-// Resolving is a review-team action, so it is not restricted to the author.
+// Resolving is a review-team action, so it is not restricted to the author —
+// but it is still scoped to the reviewer's brand.
 export async function setCommentResolved({
   commentId,
+  brandId,
   resolved,
 }: {
   commentId: string;
+  brandId: string;
   resolved: boolean;
 }): Promise<void> {
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("review_comments")
-    .update({ resolved, updated_at: new Date().toISOString() })
-    .eq("id", commentId);
-  if (error) throw error;
+  await requireOwnedComment(
+    admin
+      .from("review_comments")
+      .update({ resolved, updated_at: new Date().toISOString() })
+      .eq("id", commentId)
+      .eq("brand_id", brandId)
+      .select("id")
+      .maybeSingle(),
+  );
 }

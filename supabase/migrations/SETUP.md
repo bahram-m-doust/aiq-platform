@@ -9,7 +9,7 @@ fastest path is the Supabase Dashboard SQL Editor.
 2. Paste and run `supabase/migrations/setup-all.sql`.
    - This generated script is intended only for an empty project.
    - It includes every numbered migration through
-     `0043_deliverable_markdown.sql`.
+     `0045_commenting_constraints.sql`.
    - Regenerate it after adding a migration with
      `npm run db:generate-bundles`.
    - On Supabase Cloud the script intentionally does **not** run
@@ -79,6 +79,8 @@ migrations in numeric order:
 - `0041_unified_commenting.sql`
 - `0042_drop_pdf_annotations.sql`
 - `0043_deliverable_markdown.sql`
+- `0044_review_comment_audience.sql`
+- `0045_commenting_constraints.sql`
 
 ## Required Supabase Dashboard Configuration
 

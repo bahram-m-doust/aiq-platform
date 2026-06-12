@@ -13,6 +13,15 @@ import {
 import type { NotificationRecord } from "@/features/notifications/types";
 import { cn } from "@/lib/utils";
 
+// Only in-app paths may be navigated to. linkPath is written by our own server
+// code, but defense-in-depth: reject absolute/protocol-relative URLs so a
+// tampered row can never become an open redirect.
+function safeLinkPath(value: string | null): string | null {
+  if (!value) return null;
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
 function timeAgo(value: string | null): string {
   if (!value) return "";
   const then = new Date(value).getTime();
@@ -46,8 +55,15 @@ export function NotificationsBell({
         setOpen(false);
       }
     };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [open]);
 
   const openNotification = (notification: NotificationRecord) => {
@@ -56,8 +72,9 @@ export function NotificationsBell({
       if (!notification.readAt) {
         await markNotificationReadAction(notification.id);
       }
-      if (notification.linkPath) {
-        router.push(notification.linkPath);
+      const target = safeLinkPath(notification.linkPath);
+      if (target) {
+        router.push(target);
       } else {
         router.refresh();
       }
@@ -74,6 +91,8 @@ export function NotificationsBell({
   return (
     <div className="relative" ref={containerRef}>
       <Button
+        aria-expanded={open}
+        aria-haspopup="dialog"
         aria-label="Notifications"
         onClick={() => setOpen((v) => !v)}
         size="icon-lg"
@@ -82,7 +101,7 @@ export function NotificationsBell({
         <span className="relative">
           <BellIcon />
           {unreadCount > 0 ? (
-            <span className="absolute -end-1.5 -top-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-4 text-white">
+            <span className="absolute -end-1.5 -top-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-4 text-white">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           ) : null}
@@ -114,6 +133,7 @@ export function NotificationsBell({
               <ul className="divide-y divide-border">
                 {notifications.map((notification) => {
                   const unread = !notification.readAt;
+                  const linkPath = safeLinkPath(notification.linkPath);
                   const inner = (
                     <div
                       className={cn(
@@ -124,7 +144,7 @@ export function NotificationsBell({
                       <span
                         className={cn(
                           "mt-1.5 size-2 shrink-0 rounded-full",
-                          unread ? "bg-red-500" : "bg-transparent",
+                          unread ? "bg-destructive" : "bg-transparent",
                         )}
                       />
                       <div className="min-w-0">
@@ -148,9 +168,9 @@ export function NotificationsBell({
 
                   return (
                     <li key={notification.id}>
-                      {notification.linkPath ? (
+                      {linkPath ? (
                         <Link
-                          href={notification.linkPath}
+                          href={linkPath}
                           onClick={(event) => {
                             event.preventDefault();
                             openNotification(notification);

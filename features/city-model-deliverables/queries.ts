@@ -15,12 +15,7 @@ import type {
   CityModelDeliverableStatus,
   CityModelDistrictWorkspace,
 } from "@/features/city-model-deliverables/types";
-import {
-  createPrivateFileSignedDownloadUrl,
-  createPrivateFileSignedInlineUrl,
-} from "@/features/documents/storage";
-import { listCommentsForSubject } from "@/features/review-comments/queries";
-import { resolveDeliverableMarkdown } from "@/features/review-content/resolve";
+import { resolveReviewSurface } from "@/features/review-content/surface";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingTableError } from "@/lib/supabase/errors";
 
@@ -61,10 +56,13 @@ export async function getCityModelDistrictWorkspace({
   const row = await getCityModelDeliverableRow(access.brandId, district.key);
   const status = toCityModelStatus(row?.status);
 
-  let signedUrl: string | null = null;
-  let downloadUrl: string | null = null;
   let fileName: string | null = null;
-  let markdown: string | null = null;
+  let file: {
+    id: string;
+    storagePath: string;
+    originalName: string;
+    mimeType: string | null;
+  } | null = null;
   if (row?.file_id) {
     const admin = createAdminClient();
     const { data: fileRow } = await admin
@@ -78,36 +76,32 @@ export async function getCityModelDistrictWorkspace({
       }>();
     if (fileRow) {
       fileName = fileRow.original_name;
-      signedUrl = await createPrivateFileSignedInlineUrl({
+      file = {
+        id: row.file_id,
         storagePath: fileRow.storage_path,
-      });
-      downloadUrl = await createPrivateFileSignedDownloadUrl({
-        storagePath: fileRow.storage_path,
-        downloadName: fileRow.original_name,
-      });
-      markdown = await resolveDeliverableMarkdown({
-        fileId: row.file_id,
-        storagePath: fileRow.storage_path,
-        mimeType: fileRow.mime_type,
         originalName: fileRow.original_name,
-      });
+        mimeType: fileRow.mime_type,
+      };
     }
   }
 
-  const comments = await listCommentsForSubject({
+  const surface = await resolveReviewSurface({
     subjectType: "CITY_MODEL_DISTRICT",
     subjectId: district.slug,
+    brandId: access.brandId,
+    file,
   });
 
   return {
     district,
     brandId: access.brandId,
     status,
-    signedUrl,
-    downloadUrl,
+    // City Model's `signedUrl` is the inline preview; `downloadUrl` the download.
+    signedUrl: surface.inlineUrl,
+    downloadUrl: surface.signedUrl,
     fileName,
-    markdown,
-    comments,
+    markdown: surface.markdown,
+    comments: surface.comments,
     canReview,
     uploadedAt: row?.uploaded_at ?? null,
     approvedAt: row?.approved_at ?? null,

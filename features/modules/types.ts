@@ -166,8 +166,32 @@ export type ClientModuleDetail = {
   reviews: ModuleReviewRecord[];
 };
 
-export type ClientModuleReviewPageData = ClientModuleDetail & {
+// Client-safe projections: ONLY what the client review UI renders. The page
+// hands this object to a "use client" component, so every field here is
+// serialized into the browser payload — internal staff emails, storage paths
+// and internal draft artifacts must never appear in it.
+export type ClientModuleSummary = Omit<
+  ModuleRecord,
+  "assignedTo" | "assignedToEmail" | "supervisorId" | "supervisorEmail"
+>;
+
+export type ClientReviewEntry = {
+  id: string;
+  reviewType: ModuleReviewType;
+  decision: ModuleReviewDecision;
+  // Role label instead of a reviewer email — staff PII stays internal.
+  reviewerLabel: string;
+  comment: string | null;
+  createdAt: string | null;
+};
+
+export type ClientModuleReviewPageData = {
+  access: ClientModuleWorkspace["access"];
+  module: ClientModuleSummary;
+  clientFileName: string | null;
+  reviews: ClientReviewEntry[];
   signedUrl: string | null;
+  inlineUrl: string | null;
   signedUrlExpiresInSeconds: number | null;
   markdown: string | null;
   comments: import("@/features/review-comments/types").ReviewComment[];

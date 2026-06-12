@@ -62,7 +62,20 @@ export async function uploadFuturesResearchReportAction(
     return { status: "error", message: validation.message };
   }
 
-  await uploadFuturesResearchReport({ brandId, profileId: profile.id, file });
+  try {
+    await uploadFuturesResearchReport({ brandId, profileId: profile.id, file });
+  } catch (error) {
+    logServerError({
+      label: "[futures-research] report upload failed",
+      error,
+      metadata: { profileId: profile.id, brandId },
+    });
+    return {
+      status: "error",
+      message: "Could not upload the report. Please try again.",
+    };
+  }
+
   revalidateFuturesResearchPaths();
   revalidatePath("/admin/futures-research");
 
@@ -103,7 +116,24 @@ export async function uploadFuturesResearchStorylineAction(
     return { status: "error", message: validation.message };
   }
 
-  await uploadFuturesResearchStoryline({ brandId, profileId: profile.id, file });
+  try {
+    await uploadFuturesResearchStoryline({
+      brandId,
+      profileId: profile.id,
+      file,
+    });
+  } catch (error) {
+    logServerError({
+      label: "[futures-research] storyline upload failed",
+      error,
+      metadata: { profileId: profile.id, brandId },
+    });
+    return {
+      status: "error",
+      message: "Could not upload the storyline. Please try again.",
+    };
+  }
+
   revalidateFuturesResearchPaths();
   revalidatePath("/admin/futures-research");
 
@@ -157,11 +187,20 @@ export async function approveFuturesResearchReportAction(): Promise<{
     return { ok: false, message: "There is no report to review yet." };
   }
 
-  await setFuturesResearchReportStatus({
-    brandId: reviewer.brandId,
-    profileId: reviewer.profileId,
-    status: "APPROVED",
-  });
+  try {
+    await setFuturesResearchReportStatus({
+      brandId: reviewer.brandId,
+      profileId: reviewer.profileId,
+      status: "APPROVED",
+    });
+  } catch (error) {
+    logServerError({
+      label: "[futures-research] approve failed",
+      error,
+      metadata: { brandId: reviewer.brandId },
+    });
+    return { ok: false, message: "Could not record the decision. Try again." };
+  }
   revalidateFuturesResearchPaths();
 
   return { ok: true };
@@ -181,11 +220,20 @@ export async function requestFuturesResearchChangesAction(): Promise<{
     return { ok: false, message: "There is no report to review yet." };
   }
 
-  await setFuturesResearchReportStatus({
-    brandId: reviewer.brandId,
-    profileId: reviewer.profileId,
-    status: "CHANGES_REQUESTED",
-  });
+  try {
+    await setFuturesResearchReportStatus({
+      brandId: reviewer.brandId,
+      profileId: reviewer.profileId,
+      status: "CHANGES_REQUESTED",
+    });
+  } catch (error) {
+    logServerError({
+      label: "[futures-research] request-changes failed",
+      error,
+      metadata: { brandId: reviewer.brandId },
+    });
+    return { ok: false, message: "Could not record the decision. Try again." };
+  }
   revalidateFuturesResearchPaths();
 
   return { ok: true };

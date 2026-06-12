@@ -8,6 +8,55 @@ type DeliverableTable =
   | "stakeholder_interview_reports"
   | "futures_research_reports";
 
+// knowledge_files.file_id has no ON DELETE action, so a files-row delete with a
+// surviving RAG reference raises an FK violation mid-flow. Clear the RAG rows
+// first (knowledge_chunks cascade off knowledge_files), which also stops the
+// vector search from serving content whose source file is gone.
+async function clearRagReferences(fileIds: string[]): Promise<void> {
+  if (fileIds.length === 0) return;
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("knowledge_files")
+    .delete()
+    .in("file_id", fileIds);
+  if (error) throw error;
+}
+
+// Fully removes a file record: RAG references → files row → storage object
+// (queued for retry if storage is unavailable). Used for detached deliverables
+// and for old files left behind when a deliverable is re-uploaded.
+export async function removeFileRecordAndStorage({
+  fileId,
+  reason,
+}: {
+  fileId: string;
+  reason: "ADMIN_FILE_DELETED" | "REVIEW_DELIVERABLE_REPLACED";
+}): Promise<void> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("files")
+    .select("id, storage_path")
+    .eq("id", fileId)
+    .maybeSingle();
+  if (error) throw error;
+  const row = data as { id: string; storage_path: string } | null;
+  if (!row) return;
+
+  await clearRagReferences([row.id]);
+
+  const { error: deleteError } = await admin
+    .from("files")
+    .delete()
+    .eq("id", row.id);
+  if (deleteError) throw deleteError;
+
+  await removePrivateFileOrQueue({
+    storagePath: row.storage_path,
+    fileId: row.id,
+    reason,
+  });
+}
+
 // Removes the uploaded file from a review deliverable and resets the row back to
 // PENDING_UPLOAD, then deletes the file record and its storage object. Mirrors
 // the upload flow in reverse. Safe to call when nothing is attached (no-op).
@@ -65,7 +114,10 @@ export async function detachDeliverableFile({
   const { error: updateError } = await updateQuery;
   if (updateError) throw updateError;
 
-  // Delete the file rows, then remove (or queue) their storage objects.
+  // Clear RAG references first (knowledge_files has a non-cascading FK), then
+  // delete the file rows and remove (or queue) their storage objects.
+  await clearRagReferences(fileIds);
+
   const { error: deleteError } = await admin
     .from("files")
     .delete()

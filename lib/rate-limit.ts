@@ -84,15 +84,15 @@ function firstHeaderValue(value: string | null) {
 
 export async function getRequestRateLimitIdentity() {
   const headerList = await headers();
-  const netlifyClientIp = firstHeaderValue(
-    headerList.get("x-nf-client-connection-ip"),
-  );
-  const developmentClientIp =
-    process.env.NODE_ENV === "production"
-      ? null
-      : firstHeaderValue(headerList.get("x-forwarded-for")) ??
-        firstHeaderValue(headerList.get("x-real-ip"));
-  const clientIp = netlifyClientIp ?? developmentClientIp ?? "unknown";
+  // Prefer the platform-set header (not client-forgeable on Netlify), then the
+  // proxy-standard x-forwarded-for/x-real-ip. Without the fallback, every
+  // client on a non-Netlify host shares one "unknown" bucket and a single
+  // abuser rate-limits the whole site.
+  const clientIp =
+    firstHeaderValue(headerList.get("x-nf-client-connection-ip")) ??
+    firstHeaderValue(headerList.get("x-forwarded-for")) ??
+    firstHeaderValue(headerList.get("x-real-ip")) ??
+    "unknown";
 
   return {
     clientIp,

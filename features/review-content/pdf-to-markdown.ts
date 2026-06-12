@@ -10,6 +10,11 @@ import {
 // context window. ~48k chars ≈ a long report; longer docs are truncated with a
 // marker (good enough for headings; full fidelity needs a `.md` source).
 const MAX_INPUT_CHARS = 48_000;
+// Restructuring roughly preserves length; cap the output and the wall-clock so
+// a slow provider can never stall an upload request indefinitely. On timeout
+// the caller falls back to the raw extracted text.
+const MAX_OUTPUT_TOKENS = 16_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 
 const SYSTEM_PROMPT = [
   "You convert raw text extracted from a document into clean Markdown.",
@@ -44,14 +49,18 @@ export async function structureTextAsMarkdown({
       : trimmed;
 
   const client = await getOpenRouterClientForBrand(brandId);
-  const response = await client.chat.completions.create({
-    model: getOpenRouterModel(),
-    temperature: 0,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: input },
-    ],
-  });
+  const response = await client.chat.completions.create(
+    {
+      model: getOpenRouterModel(),
+      temperature: 0,
+      max_tokens: MAX_OUTPUT_TOKENS,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: input },
+      ],
+    },
+    { timeout: REQUEST_TIMEOUT_MS },
+  );
 
   const content = response.choices[0]?.message?.content ?? "";
   return content.trim();

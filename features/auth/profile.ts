@@ -97,6 +97,14 @@ export function describeProfileProvisioningError(error: unknown): string {
   const message =
     typeof summary.message === "string" ? summary.message : "Unknown error.";
 
+  // The detailed remediation hints below name env vars, SQL commands and raw
+  // DB error text — invaluable while setting the project up, but they must not
+  // reach end users in production. Operators get the details from the server
+  // log (logProfileProvisioningError) instead.
+  if (process.env.NODE_ENV === "production") {
+    return "Your account could not be prepared. Please try again, or contact support if the problem persists.";
+  }
+
   if (code === "42P01") {
     return "Database is not set up: the users_profile table is missing. Apply Supabase migrations 0001–0006.";
   }

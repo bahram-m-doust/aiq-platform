@@ -3,7 +3,10 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const privateFilesBucket = "bextudio-files";
-export const signedDownloadUrlTtlSeconds = 60;
+// Signed URLs are embedded into server-rendered pages (download buttons, PDF
+// preview iframes). A 60s TTL broke them for anyone reading for over a minute;
+// one hour comfortably covers a review session while staying short-lived.
+export const signedDownloadUrlTtlSeconds = 60 * 60;
 
 export async function uploadPrivateFile({
   storagePath,

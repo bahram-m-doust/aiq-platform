@@ -44,17 +44,23 @@ export async function createNotification({
   if (error) throw error;
 }
 
+// The audience filter is mandatory: without it any authenticated user could
+// mark any notification read by iterating ids (IDOR). The same filter that
+// scopes the inbox queries scopes the write.
 export async function markNotificationRead({
   notificationId,
+  audienceFilter,
 }: {
   notificationId: string;
+  audienceFilter: string;
 }): Promise<void> {
   const admin = createAdminClient();
   const { error } = await admin
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("id", notificationId)
-    .is("read_at", null);
+    .is("read_at", null)
+    .or(audienceFilter);
   if (error) throw error;
 }
 

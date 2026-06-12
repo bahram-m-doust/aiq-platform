@@ -1,6 +1,6 @@
 -- GENERATED FILE. DO NOT EDIT DIRECTLY.
 -- Source: numbered SQL files in supabase/migrations.
--- Latest migration: 0043_deliverable_markdown.sql
+-- Latest migration: 0045_commenting_constraints.sql
 -- Regenerate with: npm run db:generate-bundles
 
 -- DESTRUCTIVE: this variant removes all public application data.
@@ -4725,6 +4725,114 @@ create index if not exists deliverable_markdown_subject_idx
 -- Deny-by-default RLS; all access via the service-role admin client.
 alter table public.deliverable_markdown enable row level security;
 -- END 0043_deliverable_markdown.sql
+
+-- BEGIN 0044_review_comment_audience.sql
+-- Directional comment notifications.
+--
+-- A comment notifies the OTHER party: a client comment notifies the internal
+-- team; an internal-team reply notifies the brand's client reviewers (audience
+-- CLIENT, scoped by brand_id). The audience is decided by the caller from the
+-- author's role and passed in; it defaults to INTERNAL_TEAM so 11-argument
+-- callers keep working.
+--
+-- The old fixed-audience signature is dropped first — keeping both would make
+-- 11-argument calls ambiguous between the two overloads.
+
+drop function if exists public.add_review_comment(
+  uuid, text, text, uuid, text, text, text, uuid, text, text, text
+);
+
+create or replace function public.add_review_comment(
+  p_brand_id uuid,
+  p_subject_type text,
+  p_subject_id text,
+  p_author_id uuid,
+  p_body text,
+  p_anchor_id text,
+  p_anchor_label text,
+  p_parent_id uuid,
+  p_link_path text,
+  p_notify_title text,
+  p_notify_body text,
+  p_notify_audience text default 'INTERNAL_TEAM'
+)
+returns table (comment_id uuid, created_at timestamptz)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_comment_id uuid;
+  v_created_at timestamptz;
+  v_type text;
+begin
+  insert into public.review_comments (
+    brand_id, subject_type, subject_id, parent_id,
+    anchor_id, anchor_label, author_id, body
+  )
+  values (
+    p_brand_id, p_subject_type, p_subject_id, p_parent_id,
+    p_anchor_id, p_anchor_label, p_author_id, p_body
+  )
+  returning id, public.review_comments.created_at
+    into v_comment_id, v_created_at;
+
+  v_type := case when p_parent_id is null then 'COMMENT_ADDED'
+                 else 'COMMENT_REPLY' end;
+
+  insert into public.notifications (
+    brand_id, audience, type, title, body,
+    link_path, subject_type, subject_id, comment_id, actor_id
+  )
+  values (
+    p_brand_id, p_notify_audience, v_type, p_notify_title, p_notify_body,
+    p_link_path, p_subject_type, p_subject_id, v_comment_id, p_author_id
+  );
+
+  return query select v_comment_id, v_created_at;
+end;
+$$;
+-- END 0044_review_comment_audience.sql
+
+-- BEGIN 0045_commenting_constraints.sql
+-- Production-hardening for the commenting/notification tables (0041/0043):
+-- CHECK constraints on the enum-like text columns so a code bug can never
+-- write an unknown state, missing FK indexes for cascade targets and inbox
+-- filters, and a guard that CLIENT-audience notifications always carry the
+-- brand that scopes who may read them.
+
+alter table public.review_comments
+  add constraint review_comments_subject_type_check
+  check (subject_type in (
+    'STAKEHOLDER_INTERVIEWS',
+    'FUTURES_RESEARCH',
+    'CITY_MODEL_DISTRICT',
+    'MODULE',
+    'BRAND_DOC'
+  ));
+
+alter table public.notifications
+  add constraint notifications_audience_check
+  check (audience in ('ADMIN', 'INTERNAL_TEAM', 'CLIENT'));
+
+-- A CLIENT notification without a brand would be readable by no one (the
+-- client inbox filter is brand-scoped) — reject it at write time instead.
+alter table public.notifications
+  add constraint notifications_client_brand_check
+  check (audience <> 'CLIENT' or brand_id is not null);
+
+alter table public.deliverable_markdown
+  add constraint deliverable_markdown_status_check
+  check (status in ('PENDING', 'RAW', 'READY', 'FAILED'));
+
+-- Cascade target: deleting a comment must not seq-scan notifications.
+create index if not exists notifications_comment_idx
+  on public.notifications (comment_id);
+
+-- The inbox excludes the viewer's own activity (actor_id filter on every load).
+create index if not exists notifications_actor_idx
+  on public.notifications (actor_id);
+-- END 0045_commenting_constraints.sql
 
 -- Keep server-side Supabase access explicit after fresh schema creation.
 grant all on all tables in schema public to service_role;

@@ -100,12 +100,21 @@ async function decideDistrict(
     return { ok: false, message: "There is nothing to review yet." };
   }
 
-  await setCityModelDistrictStatus({
-    brandId: reviewer.brandId,
-    districtKey: district.key,
-    profileId: reviewer.profileId,
-    status,
-  });
+  try {
+    await setCityModelDistrictStatus({
+      brandId: reviewer.brandId,
+      districtKey: district.key,
+      profileId: reviewer.profileId,
+      status,
+    });
+  } catch (error) {
+    logServerError({
+      label: "[city-model] review decision failed",
+      error,
+      metadata: { brandId: reviewer.brandId, districtKey: district.key },
+    });
+    return { ok: false, message: "Could not record the decision. Try again." };
+  }
   revalidateDistrict(slug);
   return { ok: true };
 }

@@ -19,9 +19,11 @@ function isMarkdownFile(mimeType: string | null, name: string | null): boolean {
 }
 
 // Resolves the markdown a deliverable should render. Order of preference:
-//   1. LLM-generated markdown cached for this file (headings already structured).
+//   1. Markdown cached for this file (LLM-structured READY, or RAW backfill).
 //   2. A `.md` upload (the format the brand skills emit) — used verbatim.
-//   3. Live text extraction from docx/pdf/txt (no headings — legacy fallback).
+//   3. Live text extraction from docx/pdf/txt (no headings — legacy fallback);
+//      the result is backfilled into the cache as RAW so the whole file is
+//      downloaded and parsed at most once, not on every page view.
 // Returns null when there is no file or the type can't be extracted.
 export async function resolveDeliverableMarkdown({
   fileId,
@@ -45,7 +47,19 @@ export async function resolveDeliverableMarkdown({
     if (isMarkdownFile(mimeType, originalName)) {
       return buffer.toString("utf-8").trim();
     }
-    return (await extractTextFromFile(buffer, mimeType)).trim();
+    const text = (await extractTextFromFile(buffer, mimeType)).trim();
+    if (text && fileId) {
+      // RAW (not READY): the RAG sync still upgrades it to LLM-structured
+      // markdown; the viewer just stops re-extracting on every request.
+      await setCachedMarkdown({
+        fileId,
+        subjectType: null,
+        subjectId: null,
+        markdown: text,
+        status: "RAW",
+      });
+    }
+    return text;
   } catch {
     return null;
   }

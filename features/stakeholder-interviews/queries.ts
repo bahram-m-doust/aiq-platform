@@ -1,9 +1,7 @@
 import "server-only";
 
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
-import { createPrivateFileSignedDownloadUrl } from "@/features/documents/storage";
-import { listCommentsForSubject } from "@/features/review-comments/queries";
-import { resolveDeliverableMarkdown } from "@/features/review-content/resolve";
+import { resolveReviewSurface } from "@/features/review-content/surface";
 import { canReviewStakeholderInterviewRole } from "@/features/stakeholder-interviews/schema";
 import type {
   StakeholderInterviewReport,
@@ -143,6 +141,7 @@ export async function getStakeholderInterviewWorkspace({
       markdown: null,
       comments: [],
       signedUrl: null,
+      inlineUrl: null,
       canReview: false,
     };
   }
@@ -163,6 +162,7 @@ export async function getStakeholderInterviewWorkspace({
       markdown: null,
       comments: [],
       signedUrl: null,
+      inlineUrl: null,
       canReview,
     };
   }
@@ -179,18 +179,18 @@ export async function getStakeholderInterviewWorkspace({
 
   const fileRow = (fileResult.data as FileRow | null) ?? null;
 
-  const markdown = fileRow
-    ? await resolveDeliverableMarkdown({
-        fileId: fileRow.id,
-        storagePath: fileRow.storage_path,
-        mimeType: fileRow.mime_type,
-        originalName: fileRow.original_name,
-      })
-    : null;
-
-  const comments = await listCommentsForSubject({
+  const surface = await resolveReviewSurface({
     subjectType: "STAKEHOLDER_INTERVIEWS",
     subjectId: reportRow.id,
+    brandId: access.brandId,
+    file: fileRow
+      ? {
+          id: fileRow.id,
+          storagePath: fileRow.storage_path,
+          originalName: fileRow.original_name,
+          mimeType: fileRow.mime_type,
+        }
+      : null,
   });
 
   const report: StakeholderInterviewReport = {
@@ -210,12 +210,13 @@ export async function getStakeholderInterviewWorkspace({
     approvedAt: reportRow.approved_at,
   };
 
-  const signedUrl = fileRow
-    ? await createPrivateFileSignedDownloadUrl({
-        storagePath: fileRow.storage_path,
-        downloadName: fileRow.original_name,
-      })
-    : null;
-
-  return { access, report, markdown, comments, signedUrl, canReview };
+  return {
+    access,
+    report,
+    markdown: surface.markdown,
+    comments: surface.comments,
+    signedUrl: surface.signedUrl,
+    inlineUrl: surface.inlineUrl,
+    canReview,
+  };
 }

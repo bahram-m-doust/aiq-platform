@@ -100,7 +100,6 @@ function clientReviewData(
   overrides: Partial<ClientModuleReviewPageData> = {},
 ): ClientModuleReviewPageData {
   const reviewModule = brandModule({ status: "CLIENT_REVIEW" });
-  const latestClientArtifact = artifact();
 
   return {
     access: {
@@ -109,11 +108,13 @@ function clientReviewData(
       membershipRole: "OWNER",
       planName: "ADVANCED",
     },
+    // Client payload carries only the sanitized module summary — no staff
+    // emails, assignment ids, artifacts or storage paths.
     module: reviewModule,
-    artifacts: [latestClientArtifact],
-    latestClientArtifact,
+    clientFileName: "Brand Knowledge.pdf",
     reviews: [],
     signedUrl: "https://signed.example/module.pdf?token=secret",
+    inlineUrl: "https://signed.example/module.pdf?inline=1",
     signedUrlExpiresInSeconds: 60,
     markdown: null,
     comments: [],

@@ -1,12 +1,9 @@
 "use client";
 
-import { useActionState, useMemo } from "react";
+import { useActionState } from "react";
 import { CheckCircleIcon, RotateCcwIcon } from "lucide-react";
 
-import {
-  ReviewableDocumentViewer,
-  type ReviewCommentActions,
-} from "@/components/review/ReviewableDocumentViewer";
+import { ReviewSurface } from "@/components/review/ReviewSurface";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,20 +24,6 @@ import type {
   ClientModuleReviewPageData,
   ModuleActionFormState,
 } from "@/features/modules/types";
-import {
-  addReviewCommentAction,
-  deleteReviewCommentAction,
-  editReviewCommentAction,
-  resolveReviewCommentAction,
-} from "@/features/review-comments/actions";
-import { splitMarkdownIntoBlocks } from "@/lib/markdown/blocks";
-
-const commentActions: ReviewCommentActions = {
-  add: addReviewCommentAction,
-  edit: editReviewCommentAction,
-  remove: deleteReviewCommentAction,
-  resolve: resolveReviewCommentAction,
-};
 
 function StateAlert({ state }: { state: ModuleActionFormState }) {
   if (state.status === "idle") {
@@ -61,53 +44,49 @@ export function ClientReviewPanel({
   data: ClientModuleReviewPageData;
   currentUserId: string;
 }) {
-  const [approveState, approveAction] = useActionState(
+  const [approveState, approveAction, approvePending] = useActionState(
     approveClientModuleAction,
     initialModuleActionFormState,
   );
-  const [changeState, changeAction] = useActionState(
+  const [changeState, changeAction, changePending] = useActionState(
     requestClientModuleChangeAction,
     initialModuleActionFormState,
   );
-  const canDecide = data.module.status === "CLIENT_REVIEW";
-  const fileName =
-    data.latestClientArtifact?.file?.originalName ?? "Client review PDF";
-  const blocks = useMemo(
-    () => (data.markdown ? splitMarkdownIntoBlocks(data.markdown) : []),
-    [data.markdown],
-  );
+  const decisionPending = approvePending || changePending;
+  const canDecide =
+    data.module.status === "CLIENT_REVIEW" && !decisionPending;
+  const fileName = data.clientFileName ?? "Client review PDF";
 
   return (
     <div className="space-y-6">
-      {blocks.length > 0 ? (
-        <ReviewableDocumentViewer
-          actions={commentActions}
-          blocks={blocks}
-          canComment={canDecide}
-          currentUserId={currentUserId}
-          downloadName={fileName}
-          downloadUrl={data.signedUrl}
-          eyebrow="Module · Client review"
-          initialComments={data.comments}
-          subjectId={data.module.id}
-          subjectType="MODULE"
-          title={data.module.title}
-        />
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Client review file</CardTitle>
-            <CardDescription>{fileName}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Alert variant="destructive">
-              <AlertDescription>
-                A client-review document is not available for this module yet.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      )}
+      <ReviewSurface
+        canComment={canDecide}
+        comments={data.comments}
+        currentUserId={currentUserId}
+        downloadName={fileName}
+        emptyState={
+          <Card>
+            <CardHeader>
+              <CardTitle>Client review file</CardTitle>
+              <CardDescription>{fileName}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Alert variant="destructive">
+                <AlertDescription>
+                  A client-review document is not available for this module yet.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        }
+        eyebrow="Module · Client review"
+        inlineUrl={data.inlineUrl}
+        markdown={data.markdown}
+        signedUrl={data.signedUrl}
+        subjectId={data.module.id}
+        subjectType="MODULE"
+        title={data.module.title}
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

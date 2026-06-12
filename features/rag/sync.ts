@@ -5,7 +5,10 @@ import type { UserProfile } from "@/features/auth/types";
 import { hasEmbeddingEnv } from "@/features/rag/embeddings";
 import { syncFileToChunks } from "@/features/rag/pgvector-sync";
 import { getRagApprovedFilesForSync } from "@/features/rag/queries";
-import { toRagSyncAuditMetadata } from "@/features/rag/schema";
+import {
+  ragRetryableSyncStatuses,
+  toRagSyncAuditMetadata,
+} from "@/features/rag/schema";
 import type { RagApprovedSyncFile, RagSyncResult } from "@/features/rag/types";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
@@ -127,7 +130,7 @@ async function markFilesSyncing({
     .from("knowledge_files")
     .update({ rag_status: "SYNCING" })
     .eq("brand_id", brandId)
-    .eq("rag_status", "RAG_APPROVED")
+    .in("rag_status", [...ragRetryableSyncStatuses])
     .in("id", knowledgeFileIds(files));
 
   if (error) {

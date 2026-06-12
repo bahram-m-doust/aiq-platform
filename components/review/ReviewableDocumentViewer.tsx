@@ -35,6 +35,12 @@ import { cn } from "@/lib/utils";
 
 const GENERAL_KEY = "__general__";
 
+// "Active section" comment highlight. Amber deliberately sits apart from the
+// cyan brand so a selected/commented section reads as a comment marker (the
+// Google-Docs convention), not as a primary action.
+const ACTIVE_SECTION_CLASS = "bg-amber-50/60 ring-1 ring-amber-200";
+const ACTIVE_MARKER_CLASS = "border-amber-300 text-amber-700";
+
 export type ReviewCommentActions = {
   add: (input: AddReviewCommentInput) => Promise<AddReviewCommentResult>;
   edit: (args: {
@@ -98,6 +104,7 @@ export function ReviewableDocumentViewer({
   canComment,
   downloadUrl,
   downloadName,
+  fileUrl,
   decision,
   actions,
 }: {
@@ -113,6 +120,10 @@ export function ReviewableDocumentViewer({
   canComment: boolean;
   downloadUrl?: string | null;
   downloadName?: string | null;
+  // Inline (preview) URL of the original file. Rendered when there is no
+  // extracted markdown to show — e.g. an image/scanned PDF — so an uploaded
+  // deliverable is never hidden and whole-document comments still work.
+  fileUrl?: string | null;
   decision?: ReviewDecision | null;
   actions: ReviewCommentActions;
 }) {
@@ -169,9 +180,7 @@ export function ReviewableDocumentViewer({
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1.5">
           {eyebrow ? (
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              {eyebrow}
-            </p>
+            <p className="ds-eyebrow">{eyebrow}</p>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
@@ -206,6 +215,22 @@ export function ReviewableDocumentViewer({
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
         {/* Content */}
         <div className="min-w-0 flex-1">
+          {blocks.length === 0 && fileUrl ? (
+            <div className="space-y-2">
+              <p className="text-[13px] text-muted-foreground">
+                No text could be extracted from this file (it may be image-based).
+                The original is shown below — use the comment panel to leave
+                notes on the document.
+              </p>
+              <div className="overflow-hidden rounded-lg border border-border bg-white">
+                <iframe
+                  className="h-[78vh] w-full"
+                  src={fileUrl}
+                  title={`${title} preview`}
+                />
+              </div>
+            </div>
+          ) : null}
           {blocks.map((block) => {
             const count = countByAnchor.get(anchorKey(block.anchorId)) ?? 0;
             const isActive = target.anchorId === block.anchorId;
@@ -213,7 +238,7 @@ export function ReviewableDocumentViewer({
               <section
                 className={cn(
                   "group relative scroll-mt-24 rounded-lg px-3 py-1 transition-colors",
-                  isActive && "bg-amber-50/60 ring-1 ring-amber-200",
+                  isActive && ACTIVE_SECTION_CLASS,
                 )}
                 id={block.anchorId}
                 key={block.anchorId}
@@ -221,9 +246,9 @@ export function ReviewableDocumentViewer({
                 <button
                   aria-label="Comment on this section"
                   className={cn(
-                    "absolute end-0 top-2 z-10 flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground opacity-0 shadow-sm transition group-hover:opacity-100",
+                    "absolute end-0 top-2 z-10 flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground opacity-0 shadow-sm transition group-hover:opacity-100 focus-visible:opacity-100",
                     count > 0 && "opacity-100",
-                    isActive && "border-amber-300 text-amber-700",
+                    isActive && ACTIVE_MARKER_CLASS,
                   )}
                   onClick={() =>
                     setTarget({
@@ -304,7 +329,7 @@ function DecisionBar({ decision }: { decision: ReviewDecision }) {
       >
         <RotateCcwIcon className="size-4" /> Request changes
       </Button>
-      {error ? <span className="text-[12px] text-red-600">{error}</span> : null}
+      {error ? <span className="text-[12px] text-destructive">{error}</span> : null}
     </div>
   );
 }
@@ -503,7 +528,7 @@ function AddCommentForm({
         placeholder={placeholder ?? "Add a comment…"}
         value={body}
       />
-      {error ? <p className="text-[12px] text-red-600">{error}</p> : null}
+      {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
       <div className="flex items-center justify-end gap-2">
         {onDone ? (
           <Button onClick={onDone} size="sm" type="button" variant="ghost">
@@ -631,11 +656,13 @@ function CommentItem({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const isOwn = comment.authorId === currentUserId;
 
   const saveEdit = () => {
     if (!draft.trim()) return;
+    setActionError(null);
     startTransition(async () => {
       const result = await actions.edit({
         subjectType,
@@ -646,23 +673,31 @@ function CommentItem({
       if (result.ok) {
         onPatch(comment.id, { body: draft.trim() });
         setEditing(false);
+      } else {
+        setActionError(result.message ?? "Could not update the comment.");
       }
     });
   };
 
   const doDelete = () => {
+    setActionError(null);
     startTransition(async () => {
       const result = await actions.remove({
         subjectType,
         subjectId,
         commentId: comment.id,
       });
-      if (result.ok) onRemove(comment.id);
+      if (result.ok) {
+        onRemove(comment.id);
+      } else {
+        setActionError(result.message ?? "Could not delete the comment.");
+      }
     });
   };
 
   const toggleResolve = () => {
     const next = !comment.resolved;
+    setActionError(null);
     startTransition(async () => {
       const result = await actions.resolve({
         subjectType,
@@ -670,7 +705,11 @@ function CommentItem({
         commentId: comment.id,
         resolved: next,
       });
-      if (result.ok) onPatch(comment.id, { resolved: next });
+      if (result.ok) {
+        onPatch(comment.id, { resolved: next });
+      } else {
+        setActionError(result.message ?? "Could not update the comment.");
+      }
     });
   };
 
@@ -693,6 +732,7 @@ function CommentItem({
           />
           <div className="flex justify-end gap-2">
             <Button
+              aria-label="Cancel editing"
               onClick={() => {
                 setDraft(comment.body);
                 setEditing(false);
@@ -719,6 +759,12 @@ function CommentItem({
         </p>
       )}
 
+      {actionError ? (
+        <p className="mt-1 text-[12px] text-destructive" role="alert">
+          {actionError}
+        </p>
+      ) : null}
+
       {!editing ? (
         <div className="mt-1.5 flex items-center gap-3 text-[12px] text-muted-foreground">
           {canResolve ? (
@@ -742,7 +788,7 @@ function CommentItem({
                 <PencilIcon className="size-3.5" /> Edit
               </button>
               <button
-                className="flex items-center gap-1 hover:text-red-600"
+                className="flex items-center gap-1 hover:text-destructive"
                 disabled={pending}
                 onClick={doDelete}
                 type="button"

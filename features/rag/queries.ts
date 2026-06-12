@@ -8,6 +8,7 @@ import {
   isEligibleRagModuleStatus,
   isRagApprovedSyncEligible,
   isRagSyncDisplayEligible,
+  ragRetryableSyncStatuses,
   safeRagStatus,
 } from "@/features/rag/schema";
 import type {
@@ -507,7 +508,9 @@ function isStandaloneEligible(
 
   if (approvedOnly) {
     return (
-      row.rag_status === "RAG_APPROVED" && file.status === "RAG_APPROVED"
+      (ragRetryableSyncStatuses as readonly string[]).includes(
+        row.rag_status,
+      ) && file.status === "RAG_APPROVED"
     );
   }
 
@@ -622,7 +625,7 @@ export async function getRagApprovedFilesForSync({
   let query = admin
     .from("knowledge_files")
     .select(knowledgeFileColumns)
-    .eq("rag_status", "RAG_APPROVED")
+    .in("rag_status", [...ragRetryableSyncStatuses])
     .not("file_id", "is", null);
 
   if (brandId) {

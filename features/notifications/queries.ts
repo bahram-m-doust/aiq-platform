@@ -41,20 +41,30 @@ function mapRow(row: NotificationRow): NotificationRecord {
   };
 }
 
+// Never show someone their own activity: notifications they caused (e.g. a
+// comment they wrote) are excluded from their inbox and badge. Chained `.or()`
+// calls are ANDed by PostgREST, so this composes with the audience filter.
+function actorSelfExclusion(profileId: string): string {
+  return `actor_id.is.null,actor_id.neq.${profileId}`;
+}
+
 export async function listNotificationsForProfile({
   profileId,
   globalRole,
+  brandId,
   limit = 30,
 }: {
   profileId: string;
   globalRole: string | null;
+  brandId: string | null;
   limit?: number;
 }): Promise<NotificationRecord[]> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("notifications")
     .select(NOTIFICATION_SELECT)
-    .or(notificationAudienceFilter(profileId, globalRole))
+    .or(notificationAudienceFilter(profileId, globalRole, brandId))
+    .or(actorSelfExclusion(profileId))
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -65,15 +75,18 @@ export async function listNotificationsForProfile({
 export async function getUnreadNotificationCount({
   profileId,
   globalRole,
+  brandId,
 }: {
   profileId: string;
   globalRole: string | null;
+  brandId: string | null;
 }): Promise<number> {
   const admin = createAdminClient();
   const { count, error } = await admin
     .from("notifications")
     .select("id", { count: "exact", head: true })
-    .or(notificationAudienceFilter(profileId, globalRole))
+    .or(notificationAudienceFilter(profileId, globalRole, brandId))
+    .or(actorSelfExclusion(profileId))
     .is("read_at", null);
 
   if (error) throw error;

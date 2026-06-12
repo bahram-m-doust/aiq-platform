@@ -63,7 +63,7 @@ const components = {
     <a
       {...props}
       className="font-medium text-primary underline underline-offset-2"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       target="_blank"
     />
   ),

@@ -45,6 +45,7 @@ describe("release readiness docs", () => {
       "EMAIL_FROM",
       "KEY_ENCRYPTION_ACTIVE_KEY_ID",
       "KEY_ENCRYPTION_KEY",
+      "KEY_ENCRYPTION_KEYS",
       "NEXT_PUBLIC_SUPABASE_ANON_KEY",
       "NEXT_PUBLIC_SUPABASE_URL",
       "OPENROUTER_API_KEY",

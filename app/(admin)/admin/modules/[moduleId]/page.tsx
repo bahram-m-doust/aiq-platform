@@ -93,7 +93,12 @@ export default async function AdminModuleDetailPage({
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
             <ModuleArtifactList artifacts={detail.artifacts} />
-            <ModuleReviewTimeline reviews={detail.reviews} />
+            <ModuleReviewTimeline
+              reviews={detail.reviews.map((review) => ({
+                ...review,
+                reviewerLabel: review.reviewerEmail ?? "Unknown reviewer",
+              }))}
+            />
           </div>
           <div className="space-y-6">
             <ModuleArtifactUploadForm module={detail.module} />

@@ -118,11 +118,20 @@ export async function approveStakeholderReportAction(): Promise<{
     return { ok: false, message: "There is no report to review yet." };
   }
 
-  await setStakeholderReportStatus({
-    brandId: reviewer.brandId,
-    profileId: reviewer.profileId,
-    status: "APPROVED",
-  });
+  try {
+    await setStakeholderReportStatus({
+      brandId: reviewer.brandId,
+      profileId: reviewer.profileId,
+      status: "APPROVED",
+    });
+  } catch (error) {
+    logServerError({
+      label: "[stakeholder] approve failed",
+      error,
+      metadata: { brandId: reviewer.brandId },
+    });
+    return { ok: false, message: "Could not record the decision. Try again." };
+  }
   revalidateStakeholderPaths();
 
   return { ok: true };
@@ -142,11 +151,20 @@ export async function requestStakeholderChangesAction(): Promise<{
     return { ok: false, message: "There is no report to review yet." };
   }
 
-  await setStakeholderReportStatus({
-    brandId: reviewer.brandId,
-    profileId: reviewer.profileId,
-    status: "CHANGES_REQUESTED",
-  });
+  try {
+    await setStakeholderReportStatus({
+      brandId: reviewer.brandId,
+      profileId: reviewer.profileId,
+      status: "CHANGES_REQUESTED",
+    });
+  } catch (error) {
+    logServerError({
+      label: "[stakeholder] request-changes failed",
+      error,
+      metadata: { brandId: reviewer.brandId },
+    });
+    return { ok: false, message: "Could not record the decision. Try again." };
+  }
   revalidateStakeholderPaths();
 
   return { ok: true };

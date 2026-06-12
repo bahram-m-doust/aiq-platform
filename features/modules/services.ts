@@ -5,7 +5,6 @@ import { randomUUID } from "node:crypto";
 import type { UserProfile } from "@/features/auth/types";
 import { buildStoragePath } from "@/features/documents/schema";
 import {
-  createPrivateFileSignedDownloadUrl,
   signedDownloadUrlTtlSeconds,
   uploadPrivateFile,
 } from "@/features/documents/storage";
@@ -36,13 +35,14 @@ import {
 } from "@/features/modules/schema";
 import type {
   ClientModuleReviewPageData,
+  ClientModuleSummary,
+  ClientReviewEntry,
   ModuleArtifactRecord,
   ModuleRecord,
   ModuleReviewRecord,
   ModuleUploadInput,
 } from "@/features/modules/types";
-import { listCommentsForSubject } from "@/features/review-comments/queries";
-import { resolveDeliverableMarkdown } from "@/features/review-content/resolve";
+import { resolveReviewSurface } from "@/features/review-content/surface";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -450,33 +450,45 @@ export async function getClientModuleReviewPageData({
     return null;
   }
 
+  // Everything returned from here is serialized into the client browser via a
+  // "use client" prop — project down to client-safe fields only (no staff
+  // emails, no storage paths, no internal draft artifacts).
+  const clientBase = {
+    access: detail.access,
+    module: toClientModuleSummary(detail.module),
+    reviews: detail.reviews.map(toClientReviewEntry),
+  };
+
   const artifact = detail.latestClientArtifact;
 
-  const comments = await listCommentsForSubject({
-    subjectType: "MODULE",
-    subjectId: moduleId,
-  });
-
   if (!latestArtifactIsClientReviewPdf(artifact) || !artifact?.file) {
+    const surface = await resolveReviewSurface({
+      subjectType: "MODULE",
+      subjectId: moduleId,
+      brandId: detail.module.brandId,
+      file: null,
+    });
     return {
-      ...detail,
+      ...clientBase,
+      clientFileName: null,
       signedUrl: null,
+      inlineUrl: null,
       signedUrlExpiresInSeconds: null,
       markdown: null,
-      comments,
+      comments: surface.comments,
     };
   }
 
-  const signedUrl = await createPrivateFileSignedDownloadUrl({
-    storagePath: artifact.file.storagePath,
-    downloadName: artifact.file.originalName,
-  });
-
-  const markdown = await resolveDeliverableMarkdown({
-    fileId: artifact.file.id,
-    storagePath: artifact.file.storagePath,
-    mimeType: artifact.file.mimeType,
-    originalName: artifact.file.originalName,
+  const surface = await resolveReviewSurface({
+    subjectType: "MODULE",
+    subjectId: moduleId,
+    brandId: detail.module.brandId,
+    file: {
+      id: artifact.file.id,
+      storagePath: artifact.file.storagePath,
+      originalName: artifact.file.originalName,
+      mimeType: artifact.file.mimeType,
+    },
   });
 
   await insertModuleAuditLog({
@@ -496,11 +508,36 @@ export async function getClientModuleReviewPageData({
   });
 
   return {
-    ...detail,
-    signedUrl,
+    ...clientBase,
+    clientFileName: artifact.file.originalName,
+    signedUrl: surface.signedUrl,
+    inlineUrl: surface.inlineUrl,
     signedUrlExpiresInSeconds: signedDownloadUrlTtlSeconds,
-    markdown,
-    comments,
+    markdown: surface.markdown,
+    comments: surface.comments,
+  };
+}
+
+function toClientModuleSummary(module: ModuleRecord): ClientModuleSummary {
+  const {
+    assignedTo: _assignedTo,
+    assignedToEmail: _assignedToEmail,
+    supervisorId: _supervisorId,
+    supervisorEmail: _supervisorEmail,
+    ...clientSafe
+  } = module;
+  return clientSafe;
+}
+
+function toClientReviewEntry(review: ModuleReviewRecord): ClientReviewEntry {
+  return {
+    id: review.id,
+    reviewType: review.reviewType,
+    decision: review.decision,
+    reviewerLabel:
+      review.reviewType === "CLIENT" ? "Brand reviewer" : "Bextudio team",
+    comment: review.comment,
+    createdAt: review.createdAt,
   };
 }
 

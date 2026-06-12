@@ -1,15 +1,13 @@
 import "server-only";
 
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
-import { createPrivateFileSignedDownloadUrl } from "@/features/documents/storage";
 import { canReviewFuturesResearchRole } from "@/features/futures-research/schema";
 import type {
   FuturesResearchReport,
   FuturesResearchReportStatus,
   FuturesResearchWorkspace,
 } from "@/features/futures-research/types";
-import { listCommentsForSubject } from "@/features/review-comments/queries";
-import { resolveDeliverableMarkdown } from "@/features/review-content/resolve";
+import { resolveReviewSurface } from "@/features/review-content/surface";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingTableError } from "@/lib/supabase/errors";
 
@@ -172,6 +170,7 @@ export async function getFuturesResearchWorkspace({
       markdown: null,
       comments: [],
       signedUrl: null,
+      inlineUrl: null,
       canReview: false,
     };
   }
@@ -192,6 +191,7 @@ export async function getFuturesResearchWorkspace({
       markdown: null,
       comments: [],
       signedUrl: null,
+      inlineUrl: null,
       canReview,
     };
   }
@@ -208,18 +208,18 @@ export async function getFuturesResearchWorkspace({
 
   const fileRow = (fileResult.data as FileRow | null) ?? null;
 
-  const markdown = fileRow
-    ? await resolveDeliverableMarkdown({
-        fileId: fileRow.id,
-        storagePath: fileRow.storage_path,
-        mimeType: fileRow.mime_type,
-        originalName: fileRow.original_name,
-      })
-    : null;
-
-  const comments = await listCommentsForSubject({
+  const surface = await resolveReviewSurface({
     subjectType: "FUTURES_RESEARCH",
     subjectId: reportRow.id,
+    brandId: access.brandId,
+    file: fileRow
+      ? {
+          id: fileRow.id,
+          storagePath: fileRow.storage_path,
+          originalName: fileRow.original_name,
+          mimeType: fileRow.mime_type,
+        }
+      : null,
   });
 
   const report: FuturesResearchReport = {
@@ -240,12 +240,13 @@ export async function getFuturesResearchWorkspace({
     approvedAt: reportRow.approved_at,
   };
 
-  const signedUrl = fileRow
-    ? await createPrivateFileSignedDownloadUrl({
-        storagePath: fileRow.storage_path,
-        downloadName: fileRow.original_name,
-      })
-    : null;
-
-  return { access, report, markdown, comments, signedUrl, canReview };
+  return {
+    access,
+    report,
+    markdown: surface.markdown,
+    comments: surface.comments,
+    signedUrl: surface.signedUrl,
+    inlineUrl: surface.inlineUrl,
+    canReview,
+  };
 }

@@ -41,6 +41,7 @@ export type FuturesResearchWorkspace = {
   markdown: string | null;
   comments: import("@/features/review-comments/types").ReviewComment[];
   signedUrl: string | null;
+  inlineUrl: string | null;
   canReview: boolean;
 };
 

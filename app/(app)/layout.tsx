@@ -50,10 +50,12 @@ export default async function AppLayout({
       listNotificationsForProfile({
         profileId: profile.id,
         globalRole: profile.global_role,
+        brandId: accessSummary.brandId ?? null,
       }).catch(() => []),
       getUnreadNotificationCount({
         profileId: profile.id,
         globalRole: profile.global_role,
+        brandId: accessSummary.brandId ?? null,
       }).catch(() => 0),
     ]);
   const defByKey = new Map(

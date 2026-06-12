@@ -166,6 +166,17 @@ export function toRagApprovalAuditMetadata({
   };
 }
 
+// Statuses a sync run may (re-)process: freshly approved files, failed syncs
+// (retry), and files stuck in SYNCING after a crashed/timed-out run — without
+// the latter two, one bad run would strand a file forever with no recovery
+// path. Sync runs are manual, brand-scoped admin actions, so taking over a
+// stale SYNCING row is safe in practice.
+export const ragRetryableSyncStatuses = [
+  "RAG_APPROVED",
+  "SYNC_FAILED",
+  "SYNCING",
+] as const;
+
 export function isRagApprovedSyncEligible({
   ragStatus,
   fileStatus,
@@ -183,7 +194,7 @@ export function isRagApprovedSyncEligible({
 }) {
   return (
     brandMatches &&
-    ragStatus === "RAG_APPROVED" &&
+    (ragRetryableSyncStatuses as readonly string[]).includes(ragStatus ?? "") &&
     fileStatus === "RAG_APPROVED" &&
     moduleStatus === "RAG_APPROVED" &&
     artifactType === "PDF" &&

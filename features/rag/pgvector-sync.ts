@@ -34,7 +34,9 @@ async function resolveRagText(
   buffer: Buffer,
 ): Promise<{ text: string; isMarkdown: boolean }> {
   const cached = await getCachedMarkdown(file.fileId);
-  if (cached?.markdown.trim()) {
+  // RAW entries are viewer backfills of plain extracted text — skip them here
+  // so the LLM structuring pass still runs (and upgrades the cache to READY).
+  if (cached?.markdown.trim() && cached.status !== "RAW") {
     return { text: cached.markdown.trim(), isMarkdown: true };
   }
 

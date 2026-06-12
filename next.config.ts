@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Don't advertise the framework in responses.
+  poweredByHeader: false,
   experimental: {
     serverActions: {
       bodySizeLimit: "12mb",
@@ -26,6 +28,12 @@ const nextConfig: NextConfig = {
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=(), payment=()",
+          },
+          {
+            // Browsers ignore HSTS on plain HTTP (local dev), so this is safe
+            // to send unconditionally; production always serves HTTPS.
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains",
           },
         ],
       },

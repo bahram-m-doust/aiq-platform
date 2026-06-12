@@ -5,13 +5,28 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { ModuleReviewRecord } from "@/features/modules/types";
+import type {
+  ModuleReviewDecision,
+  ModuleReviewType,
+} from "@/features/modules/types";
+
+// Display-only projection: the caller decides what the reviewer label is — the
+// admin page shows staff emails, the client page shows a role label so staff
+// PII never reaches client browsers.
+export type ReviewTimelineEntry = {
+  id: string;
+  reviewType: ModuleReviewType;
+  decision: ModuleReviewDecision;
+  reviewerLabel: string;
+  comment: string | null;
+  createdAt: string | null;
+};
 
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString() : "Not recorded";
 }
 
-function decisionLabel(decision: ModuleReviewRecord["decision"]) {
+function decisionLabel(decision: ModuleReviewDecision) {
   if (decision === "APPROVED_FOR_CLIENT_REVIEW") {
     return "Approved for client review";
   }
@@ -26,7 +41,7 @@ function decisionLabel(decision: ModuleReviewRecord["decision"]) {
 export function ModuleReviewTimeline({
   reviews,
 }: {
-  reviews: ModuleReviewRecord[];
+  reviews: ReviewTimelineEntry[];
 }) {
   if (reviews.length === 0) {
     return (
@@ -56,8 +71,7 @@ export function ModuleReviewTimeline({
                   {decisionLabel(review.decision)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {review.reviewType} by{" "}
-                  {review.reviewerEmail ?? "Unknown reviewer"}
+                  {review.reviewType} by {review.reviewerLabel}
                 </p>
               </div>
               <span className="font-mono text-xs text-muted-foreground">
