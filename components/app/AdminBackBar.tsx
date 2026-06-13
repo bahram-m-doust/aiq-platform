@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronLeftIcon } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+
 // One consistent "back" control for every admin page. Lives in the admin
 // layout so it always sits in the same place. On the /admin overview there is
 // nothing to go back to, but the bar still renders for the right-side actions
@@ -27,13 +29,12 @@ export function AdminBackBar({ actions }: { actions?: ReactNode }) {
         {isOverview ? (
           <span />
         ) : (
-          <Link
-            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            href={backHref}
-          >
-            <ChevronLeftIcon className="size-4" />
-            {label}
-          </Link>
+          <Button asChild className="text-muted-foreground hover:text-foreground" variant="ghost">
+            <Link href={backHref}>
+              <ChevronLeftIcon className="size-4" />
+              {label}
+            </Link>
+          </Button>
         )}
         {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
       </div>

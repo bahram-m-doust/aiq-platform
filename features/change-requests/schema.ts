@@ -184,21 +184,31 @@ export function validateChangeRequestTargetContext({
       return "Intake Change Requests are available only after Final Submit locks the intake.";
     }
 
-    const section = context.sections.find(
-      (item) => item.key === input.sectionKey,
-    );
-
-    if (!section) {
-      return "Choose a valid intake section.";
-    }
-
     if (input.targetType === "INTAKE_QUESTION") {
+      const section = context.sections.find(
+        (item) => item.key === input.sectionKey,
+      );
+
+      if (!section) {
+        return "Choose a valid intake section.";
+      }
+
       const question = section.questions.find(
         (item) => item.id === input.questionId,
       );
 
       if (!question) {
         return "Choose a valid intake question.";
+      }
+    }
+
+    if (input.targetType === "INTAKE_SECTION" && input.sectionKey) {
+      const section = context.sections.find(
+        (item) => item.key === input.sectionKey,
+      );
+
+      if (!section) {
+        return "Choose a valid intake section.";
       }
     }
   }
@@ -238,6 +248,10 @@ export function targetLabelForRequest({
   const section = sections.find((item) => item.key === request.sectionKey);
 
   if (request.targetType === "INTAKE_SECTION") {
+    if (!request.sectionKey) {
+      return "Questionnaire";
+    }
+
     return section
       ? `Intake section: ${section.title}`
       : `Intake section: ${request.sectionKey ?? "Unknown"}`;

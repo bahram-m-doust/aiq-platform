@@ -23,7 +23,7 @@ export default async function ChangeRequestsPage() {
   return (
     <PageShell
       eyebrow="Change Requests"
-      subtitle="Request a reviewed correction to your locked intake or approved modules."
+      subtitle="Request a reviewed correction to your locked questionnaire answers."
       title="Request a Correction"
     >
       <ChangeRequestCreateForm options={options} />

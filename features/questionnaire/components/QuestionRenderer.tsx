@@ -92,14 +92,16 @@ function SaveIndicator({
 
   if (status === "error") {
     return (
-      <button
-        className="inline-flex items-center gap-1 text-xs text-destructive transition-colors hover:underline"
+      <Button
+        className="gap-1 text-xs text-destructive hover:text-destructive"
         onClick={onRetry}
+        size="sm"
         type="button"
+        variant="link"
       >
         <AlertCircleIcon className="size-3" />
         {message || "Failed - tap to retry"}
-      </button>
+      </Button>
     );
   }
 

@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalSubmitReadiness";
+import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import {
   canApproveIntakeRole,
   isIntakeSessionLocked,
@@ -111,6 +112,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
           </div>
 
           {locked && (
+            <>
             <Alert className="mt-4" variant="success">
               <LockIcon />
               <AlertDescription>
@@ -136,6 +138,10 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
                 )}
               </div>
             </Alert>
+            <div className="mt-2">
+              <QuestionnaireChangeRequestDialog />
+            </div>
+            </>
           )}
         </div>
 

@@ -42,7 +42,6 @@ export function ReviewSurface({
   comments,
   signedUrl,
   inlineUrl,
-  downloadName,
   currentUserId,
   canComment,
   contextBrandId,
@@ -59,7 +58,6 @@ export function ReviewSurface({
   comments: ReviewComment[];
   signedUrl: string | null;
   inlineUrl: string | null;
-  downloadName?: string | null;
   currentUserId: string;
   canComment: boolean;
   // Internal admin review surface only — see ReviewableDocumentViewer.
@@ -86,8 +84,6 @@ export function ReviewSurface({
       currentUserId={currentUserId}
       decision={decision}
       description={description}
-      downloadName={downloadName}
-      downloadUrl={signedUrl}
       eyebrow={eyebrow}
       fileUrl={inlineUrl}
       initialComments={comments}

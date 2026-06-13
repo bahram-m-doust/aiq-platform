@@ -39,13 +39,11 @@ const targetTypeLabels: Record<ChangeRequestTargetType, string> = {
   MODULE: "Module",
 };
 
-function defaultTargetType(options: ChangeRequestCreateOptions) {
+function defaultTargetType(
+  options: ChangeRequestCreateOptions,
+): ChangeRequestTargetType {
   if (options.intakeLocked) {
     return "INTAKE_SECTION";
-  }
-
-  if (options.modules.length > 0) {
-    return "MODULE";
   }
 
   return "INTAKE_SECTION";
@@ -68,7 +66,6 @@ export function ChangeRequestCreateForm({
     [options.sections],
   );
   const intakeTargetsDisabled = !options.intakeLocked;
-  const moduleTargetsDisabled = options.modules.length === 0;
 
   return (
     <div className="space-y-6">
@@ -77,7 +74,7 @@ export function ChangeRequestCreateForm({
           <CardTitle>Create Change Request</CardTitle>
           <CardDescription>
             Submit a reviewed correction request for {options.brandName}.
-            Locked intake answers and module content are not edited directly.
+            Locked intake answers are not edited directly.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -123,12 +120,6 @@ export function ChangeRequestCreateForm({
                       value="INTAKE_QUESTION"
                     >
                       {targetTypeLabels.INTAKE_QUESTION}
-                    </SelectItem>
-                    <SelectItem
-                      disabled={moduleTargetsDisabled}
-                      value="MODULE"
-                    >
-                      {targetTypeLabels.MODULE}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -176,23 +167,7 @@ export function ChangeRequestCreateForm({
                 </div>
               ) : null}
 
-              {targetType === "MODULE" ? (
-                <div className="space-y-2">
-                  <Label htmlFor="module_id">Module</Label>
-                  <Select disabled={moduleTargetsDisabled} name="module_id">
-                    <SelectTrigger id="module_id">
-                      <SelectValue placeholder="Select module" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {options.modules.map((module) => (
-                        <SelectItem key={module.id} value={module.id}>
-                          {module.title} ({module.status})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
+              <input name="module_id" type="hidden" value="" />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

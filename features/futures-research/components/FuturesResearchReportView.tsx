@@ -2,10 +2,7 @@
 
 import { DeliverablePendingState } from "@/components/review/DeliverablePendingState";
 import { ReviewSurface } from "@/components/review/ReviewSurface";
-import {
-  approveFuturesResearchReportAction,
-  requestFuturesResearchChangesAction,
-} from "@/features/futures-research/actions";
+import { approveFuturesResearchReportAction } from "@/features/futures-research/actions";
 import type { FuturesResearchWorkspace } from "@/features/futures-research/types";
 import { DeliverableStatusBadge } from "@/features/review-deliverables/components/DeliverableStatusBadge";
 
@@ -45,9 +42,7 @@ export function FuturesResearchReportView({
         canDecide,
         isApproved: status === "APPROVED",
         onApprove: approveFuturesResearchReportAction,
-        onRequestChanges: requestFuturesResearchChangesAction,
       }}
-      downloadName={report?.file?.originalName}
       emptyState={<PreparingState />}
       eyebrow="Brand Research · Futures Research"
       inlineUrl={inlineUrl}

@@ -1,6 +1,3 @@
-import Link from "next/link";
-
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { IntakeProgress } from "@/features/questionnaire/components/IntakeProgress";
+import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import { SectionNav } from "@/features/questionnaire/components/SectionNav";
 import type { IntakeAnswerValue, IntakePageData } from "@/features/questionnaire/types";
 
@@ -64,11 +62,7 @@ export function LockedIntakeView({
               </span>
             </p>
           </div>
-          <Button asChild>
-            <Link href="/change-requests">
-              Create Change Request
-            </Link>
-          </Button>
+          <QuestionnaireChangeRequestDialog />
           <IntakeProgress completion={data.completion} />
           <SectionNav
             completion={data.completion}
