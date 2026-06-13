@@ -15,7 +15,9 @@ import {
   CheckIcon,
   ChevronsUpDownIcon,
   DownloadIcon,
+  EllipsisIcon,
   Loader2Icon,
+  MessageSquareIcon,
   MessageSquarePlusIcon,
   PencilIcon,
   ReplyIcon,
@@ -26,6 +28,13 @@ import {
 
 import { MarkdownContent } from "@/components/markdown/MarkdownContent";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   AddReviewCommentInput,
@@ -52,6 +61,9 @@ const GENERAL_KEY = "__general__";
 // Google-Docs convention), not as a primary action.
 const ACTIVE_SECTION_CLASS = "bg-amber-50/60 ring-1 ring-amber-200";
 const ACTIVE_MARKER_CLASS = "border-amber-300 text-amber-700";
+
+// The "Solved" status colour from the Figma design (sonner success green).
+const SOLVED_COLOR = "text-[#008a2e]";
 
 export type ReviewCommentActions = {
   add: (input: AddReviewCommentInput) => Promise<AddReviewCommentResult>;
@@ -112,9 +124,11 @@ function formatDate(value: string | null): string {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString(undefined, {
+  // Matches the Figma comment card, e.g. "Jun 6, 2026, 02:31 PM".
+  return date.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
+    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -202,12 +216,12 @@ export function ReviewableDocumentViewer({
     return map;
   }, [comments]);
 
-  const selectedRoots = useMemo(() => {
-    const key = anchorKey(target.anchorId);
-    return comments.filter(
-      (c) => !c.parentId && anchorKey(c.anchorId) === key,
-    );
-  }, [comments, target.anchorId]);
+  // Every root comment, newest last — the rail shows the whole document's
+  // thread (the Figma comments column is not section-filtered).
+  const rootComments = useMemo(
+    () => comments.filter((c) => !c.parentId),
+    [comments],
+  );
 
   const repliesByParent = useMemo(() => {
     const map = new Map<string, ReviewComment[]>();
@@ -437,20 +451,17 @@ export function ReviewableDocumentViewer({
     ],
   );
 
+  const isPdfOnly = blocks.length === 0 && Boolean(fileUrl);
+
   return (
-    <main className="w-full px-2 pt-[15px] sm:px-4">
+    <main className="w-full pt-[15px]">
       <style dangerouslySetInnerHTML={{ __html: HIGHLIGHT_STYLES }} />
       <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
-        {/* Left column — header, hint, document/PDF reviewer, approve.
-            Centered in the space that remains beside the right-anchored
-            comments rail. */}
-        <div className="flex min-w-0 flex-1 lg:justify-center">
-          <div
-            className="flex w-full flex-col gap-4 lg:max-w-[756px]"
-            onClick={handleContentClick}
-            onMouseUp={captureSelection}
-            ref={contentRef}
-          >
+        {/* Left column — header, hint, the framed document/PDF area, and the
+            centred Approve action. Centred in the space beside the rail. */}
+        <div className="flex min-w-0 flex-1 flex-col items-center gap-6 px-2 sm:px-6">
+          <div className="flex w-full max-w-[708px] flex-col gap-4">
+            {/* Report header */}
             <div className="flex flex-col gap-[9px]">
               <div className="flex flex-wrap items-center gap-4">
                 {eyebrow ? (
@@ -460,7 +471,7 @@ export function ReviewableDocumentViewer({
                 ) : null}
                 {statusBadge}
               </div>
-              <h1 className="text-xl font-semibold leading-7 tracking-[-0.01em] text-foreground">
+              <h1 className="text-[20px] font-semibold leading-7 text-foreground">
                 {title}
               </h1>
               {description ? (
@@ -470,90 +481,98 @@ export function ReviewableDocumentViewer({
               ) : null}
             </div>
 
+            {/* Comment instruction */}
             {canComment ? (
               <div className="flex items-center gap-[9px]">
-                <MessageSquarePlusIcon className="size-4 shrink-0 text-muted-foreground" />
-                <span className="text-[12px] font-light text-muted-foreground">
-                  {blocks.length > 0
-                    ? "Select any text to highlight it and leave a comment."
-                    : "Use the comment panel to leave notes on this document."}
+                <MessageSquareIcon className="size-4 shrink-0 text-muted-foreground" />
+                <span className="text-[12px] font-light leading-4 text-muted-foreground">
+                  Click anywhere on the page to add a comment.
                 </span>
               </div>
             ) : null}
 
-            {/* PDF reviewer — the original file is shown in the framed viewer
-                when there is no extracted markdown (e.g. image-based PDFs). */}
-            {blocks.length === 0 && fileUrl ? (
-              <div className="w-full overflow-hidden rounded-[10px] border border-border bg-card shadow-xs">
-                <div className="p-3">
-                  <iframe
-                    className="h-[78vh] w-full rounded-[6px]"
-                    src={fileUrl}
-                    title={`${title} preview`}
-                  />
-                </div>
-              </div>
-            ) : null}
-
-            {blocks.map((block) => {
-              const count = countByAnchor.get(anchorKey(block.anchorId)) ?? 0;
-              const isActive = target.anchorId === block.anchorId;
-              return (
-                <section
-                  className={cn(
-                    "group relative scroll-mt-24 rounded-lg px-3 py-1 transition-colors",
-                    isActive && ACTIVE_SECTION_CLASS,
-                  )}
-                  id={block.anchorId}
-                  key={block.anchorId}
+            {/* Pdf area — the framed document. Holds either the original file
+                (image-based PDFs) or the extracted markdown, with inline
+                text-selection commenting. */}
+            <div className="w-full overflow-hidden rounded-[10px] border border-border bg-card shadow-xs">
+              {isPdfOnly ? (
+                <iframe
+                  className="h-[479px] w-full lg:h-[70vh]"
+                  src={fileUrl ?? undefined}
+                  title={`${title} preview`}
+                />
+              ) : (
+                <div
+                  className="flex min-h-[479px] flex-col gap-4 p-4 sm:p-6"
+                  onClick={handleContentClick}
+                  onMouseUp={captureSelection}
+                  ref={contentRef}
                 >
-                  <button
-                    aria-label="Comment on this section"
-                    className={cn(
-                      "absolute end-0 top-2 z-10 flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground opacity-0 shadow-sm transition group-hover:opacity-100 focus-visible:opacity-100",
-                      count > 0 && "opacity-100",
-                      isActive && ACTIVE_MARKER_CLASS,
-                    )}
-                    onClick={() =>
-                      setTarget({
-                        anchorId: block.anchorId,
-                        label: block.label,
-                      })
-                    }
-                    type="button"
-                  >
-                    <MessageSquarePlusIcon className="size-3.5" />
-                    {count > 0 ? count : "Comment"}
-                  </button>
-                  <div
-                    data-block-content={block.anchorId}
-                    data-block-label={block.label ?? undefined}
-                  >
-                    <MarkdownContent markdown={block.markdown} />
-                  </div>
-                </section>
-              );
-            })}
-
-            {decision?.canDecide ? (
-              <DecisionBar decision={decision} />
-            ) : decision?.isApproved ? (
-              <div className="flex justify-center pt-2">
-                <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700">
-                  <CheckCircle2Icon className="size-4" /> You approved this
-                  document.
-                </span>
-              </div>
-            ) : null}
+                  {blocks.map((block) => {
+                    const count =
+                      countByAnchor.get(anchorKey(block.anchorId)) ?? 0;
+                    const isActive = target.anchorId === block.anchorId;
+                    return (
+                      <section
+                        className={cn(
+                          "group relative scroll-mt-24 rounded-lg px-3 py-1 transition-colors",
+                          isActive && ACTIVE_SECTION_CLASS,
+                        )}
+                        id={block.anchorId}
+                        key={block.anchorId}
+                      >
+                        <button
+                          aria-label="Comment on this section"
+                          className={cn(
+                            "absolute end-0 top-2 z-10 flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground opacity-0 shadow-sm transition group-hover:opacity-100 focus-visible:opacity-100",
+                            count > 0 && "opacity-100",
+                            isActive && ACTIVE_MARKER_CLASS,
+                          )}
+                          onClick={() =>
+                            setTarget({
+                              anchorId: block.anchorId,
+                              label: block.label,
+                            })
+                          }
+                          type="button"
+                        >
+                          <MessageSquarePlusIcon className="size-3.5" />
+                          {count > 0 ? count : "Comment"}
+                        </button>
+                        <div
+                          data-block-content={block.anchorId}
+                          data-block-label={block.label ?? undefined}
+                        >
+                          <MarkdownContent markdown={block.markdown} />
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Centred Approve action */}
+          {decision?.canDecide ? (
+            <DecisionBar decision={decision} />
+          ) : decision?.isApproved ? (
+            <div className="flex justify-center">
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700">
+                <CheckCircle2Icon className="size-4" /> You approved this
+                document.
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {/* Right column — download + comments, anchored to the right edge. */}
-        <aside className="flex w-full shrink-0 flex-col gap-4 lg:w-[300px]">
-          <div className="flex items-center justify-end gap-3">
+        <aside className="flex w-full shrink-0 flex-col gap-4 lg:sticky lg:top-2 lg:w-[244px] lg:py-4">
+          <div className="flex items-center justify-end gap-4">
             {downloadUrl ? (
               <Button
                 asChild
+                className="size-9"
                 size="icon"
                 title="Download original"
                 variant="secondary"
@@ -565,7 +584,7 @@ export function ReviewableDocumentViewer({
             ) : null}
             <Button
               aria-pressed={showComments}
-              className="flex-1 justify-center lg:w-[184px] lg:flex-none"
+              className="h-9 flex-1 justify-center lg:w-[184px] lg:flex-none"
               onClick={() => setShowComments((value) => !value)}
               type="button"
               variant="secondary"
@@ -576,32 +595,51 @@ export function ReviewableDocumentViewer({
           </div>
 
           {showComments ? (
-            <>
-              <div className="rounded-xl border border-border bg-card">
-                <CommentRail
-                  actions={boundActions}
-                  activeCommentId={activeCommentId}
-                  canComment={canComment}
-                  currentUserId={currentUserId}
-                  onActivate={activateComment}
-                  onAdd={upsertComment}
-                  onPatch={patchComment}
-                  onRemove={removeComment}
-                  repliesByParent={repliesByParent}
-                  roots={selectedRoots}
-                  subjectId={subjectId}
-                  subjectType={subjectType}
-                  target={target}
-                />
-              </div>
-              <SectionNav
-                blocks={blocks}
-                countByAnchor={countByAnchor}
-                generalCount={countByAnchor.get(GENERAL_KEY) ?? 0}
-                onSelect={setTarget}
-                target={target}
-              />
-            </>
+            <div className="flex flex-col gap-3">
+              {rootComments.length === 0 ? (
+                <p className="rounded-[10px] border border-border bg-card px-3 py-6 text-center text-[12px] text-muted-foreground shadow-xs">
+                  No comments yet.
+                </p>
+              ) : (
+                rootComments.map((root) => (
+                  <CommentThread
+                    actions={boundActions}
+                    currentUserId={currentUserId}
+                    isActive={root.id === activeCommentId}
+                    key={root.id}
+                    onActivate={activateComment}
+                    onAdd={upsertComment}
+                    onPatch={patchComment}
+                    onRemove={removeComment}
+                    replies={repliesByParent.get(root.id) ?? []}
+                    root={root}
+                    subjectId={subjectId}
+                    subjectType={subjectType}
+                  />
+                ))
+              )}
+
+              {canComment ? (
+                <div className="rounded-[10px] border border-border bg-card p-2.5 shadow-xs">
+                  {target.anchorId ? (
+                    <p
+                      className="mb-2 truncate text-[11px] text-muted-foreground"
+                      dir="auto"
+                    >
+                      On: {target.label ?? "Selected section"}
+                    </p>
+                  ) : null}
+                  <AddCommentForm
+                    anchorId={target.anchorId}
+                    anchorLabel={target.label}
+                    onAdd={upsertComment}
+                    onSubmit={boundActions.add}
+                    subjectId={subjectId}
+                    subjectType={subjectType}
+                  />
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </aside>
       </div>
@@ -715,19 +753,14 @@ function DecisionBar({ decision }: { decision: ReviewDecision }) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-2 pt-2">
+    <div className="flex flex-col items-center gap-2">
       <Button
-        className="min-w-[166px]"
+        className="h-10 rounded-md px-8"
         disabled={pending}
         onClick={() => run(decision.onApprove)}
-        size="lg"
         type="button"
       >
-        {pending ? (
-          <Loader2Icon className="size-4 animate-spin" />
-        ) : (
-          <CheckIcon className="size-4" />
-        )}
+        {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
         Approve
       </Button>
       <button
@@ -738,149 +771,8 @@ function DecisionBar({ decision }: { decision: ReviewDecision }) {
       >
         <RotateCcwIcon className="size-3.5" /> Request changes
       </button>
-      {error ? <span className="text-[12px] text-destructive">{error}</span> : null}
-    </div>
-  );
-}
-
-function SectionNav({
-  blocks,
-  countByAnchor,
-  generalCount,
-  target,
-  onSelect,
-}: {
-  blocks: MarkdownBlock[];
-  countByAnchor: Map<string, number>;
-  generalCount: number;
-  target: Target;
-  onSelect: (target: Target) => void;
-}) {
-  const withComments = blocks.filter(
-    (b) => (countByAnchor.get(anchorKey(b.anchorId)) ?? 0) > 0,
-  );
-  if (withComments.length === 0 && generalCount === 0) return null;
-
-  return (
-    <div className="mt-3 rounded-xl border border-border bg-card p-3">
-      <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        Sections with comments
-      </p>
-      <ul className="space-y-0.5">
-        <li>
-          <button
-            className={cn(
-              "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-start text-[13px] hover:bg-muted",
-              target.anchorId === null && "bg-muted font-medium",
-            )}
-            onClick={() => onSelect({ anchorId: null, label: null })}
-            type="button"
-          >
-            <span>General</span>
-            {generalCount > 0 ? (
-              <span className="text-muted-foreground">{generalCount}</span>
-            ) : null}
-          </button>
-        </li>
-        {withComments.map((b) => (
-          <li key={b.anchorId}>
-            <button
-              className={cn(
-                "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-start text-[13px] hover:bg-muted",
-                target.anchorId === b.anchorId && "bg-muted font-medium",
-              )}
-              onClick={() =>
-                onSelect({ anchorId: b.anchorId, label: b.label })
-              }
-              type="button"
-            >
-              <span className="truncate" dir="auto">
-                {b.label ?? "Section"}
-              </span>
-              <span className="text-muted-foreground">
-                {countByAnchor.get(anchorKey(b.anchorId))}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function CommentRail({
-  subjectType,
-  subjectId,
-  target,
-  roots,
-  repliesByParent,
-  currentUserId,
-  canComment,
-  actions,
-  activeCommentId,
-  onActivate,
-  onAdd,
-  onPatch,
-  onRemove,
-}: {
-  subjectType: ReviewSubjectType;
-  subjectId: string;
-  target: Target;
-  roots: ReviewComment[];
-  repliesByParent: Map<string, ReviewComment[]>;
-  currentUserId: string;
-  canComment: boolean;
-  actions: ReviewCommentActions;
-  activeCommentId: string | null;
-  onActivate: (comment: ReviewComment) => void;
-  onAdd: (comment: ReviewComment) => void;
-  onPatch: (id: string, patch: Partial<ReviewComment>) => void;
-  onRemove: (id: string) => void;
-}) {
-  return (
-    <div className="flex max-h-[78vh] flex-col">
-      <div className="border-b border-border px-4 py-2.5">
-        <p className="truncate text-[12px] text-muted-foreground" dir="auto">
-          {target.anchorId ? (target.label ?? "Selected section") : "Whole document"}
-        </p>
-      </div>
-
-      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-        {roots.length === 0 ? (
-          <p className="py-6 text-center text-[13px] text-muted-foreground">
-            No comments here yet.
-          </p>
-        ) : (
-          roots.map((root) => (
-            <CommentThread
-              actions={actions}
-              isActive={root.id === activeCommentId}
-              currentUserId={currentUserId}
-              key={root.id}
-              onActivate={onActivate}
-              onAdd={onAdd}
-              onPatch={onPatch}
-              onRemove={onRemove}
-              replies={repliesByParent.get(root.id) ?? []}
-              root={root}
-              subjectId={subjectId}
-              subjectType={subjectType}
-            />
-          ))
-        )}
-      </div>
-
-      {canComment ? (
-        <div className="border-t border-border px-4 py-3">
-          <AddCommentForm
-            anchorId={target.anchorId}
-            anchorLabel={target.label}
-            onAdd={onAdd}
-            onSubmit={actions.add}
-            subjectId={subjectId}
-            subjectType={subjectType}
-          />
-        </div>
+      {error ? (
+        <span className="text-[12px] text-destructive">{error}</span>
       ) : null}
     </div>
   );
@@ -936,7 +828,7 @@ function AddCommentForm({
   return (
     <div className="space-y-2">
       <Textarea
-        className="min-h-[64px] text-sm"
+        className="min-h-[60px] text-sm"
         dir="auto"
         onChange={(e) => setBody(e.target.value)}
         placeholder={placeholder ?? "Add a comment…"}
@@ -963,6 +855,9 @@ function AddCommentForm({
   );
 }
 
+// A root comment rendered as a Figma comment card: author/date header with an
+// ellipsis action menu, the body, the "Solved" status, then nested replies and
+// an inline reply composer.
 function CommentThread({
   subjectType,
   subjectId,
@@ -993,20 +888,21 @@ function CommentThread({
   return (
     <div
       className={cn(
-        "cursor-pointer rounded-lg border border-border p-3 transition-colors",
+        "cursor-pointer rounded-[10px] border border-border bg-card p-2.5 shadow-xs transition-colors",
         isActive && "border-amber-300 bg-amber-50/60",
-        root.resolved && "bg-muted/40 opacity-70",
+        root.resolved && "opacity-80",
       )}
       onClick={() => onActivate(root)}
     >
       {root.highlightText ? (
         <p
-          className="mb-2 border-s-2 border-amber-300 ps-2 text-[12px] text-muted-foreground line-clamp-2"
+          className="mb-2 line-clamp-2 border-s-2 border-amber-300 ps-2 text-[12px] text-muted-foreground"
           dir="auto"
         >
           {root.highlightText}
         </p>
       ) : null}
+
       <CommentItem
         actions={actions}
         canResolve
@@ -1014,6 +910,7 @@ function CommentThread({
         currentUserId={currentUserId}
         onPatch={onPatch}
         onRemove={onRemove}
+        onReply={() => setReplying((value) => !value)}
         subjectId={subjectId}
         subjectType={subjectType}
       />
@@ -1037,7 +934,7 @@ function CommentThread({
       ) : null}
 
       {replying ? (
-        <div className="mt-2">
+        <div className="mt-2" onClick={(e) => e.stopPropagation()}>
           <AddCommentForm
             anchorId={root.anchorId}
             anchorLabel={root.anchorLabel}
@@ -1050,15 +947,7 @@ function CommentThread({
             subjectType={subjectType}
           />
         </div>
-      ) : (
-        <button
-          className="mt-2 flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
-          onClick={() => setReplying(true)}
-          type="button"
-        >
-          <ReplyIcon className="size-3.5" /> Reply
-        </button>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -1072,6 +961,7 @@ function CommentItem({
   actions,
   onPatch,
   onRemove,
+  onReply,
 }: {
   subjectType: ReviewSubjectType;
   subjectId: string;
@@ -1081,6 +971,8 @@ function CommentItem({
   actions: ReviewCommentActions;
   onPatch: (id: string, patch: Partial<ReviewComment>) => void;
   onRemove: (id: string) => void;
+  // Present on root comments only — toggles the inline reply composer.
+  onReply?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
@@ -1141,17 +1033,81 @@ function CommentItem({
     });
   };
 
+  const hasMenu = Boolean(onReply) || isOwn || canResolve;
+
   return (
     <div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[13px] font-medium">{authorLabel(comment)}</span>
-        <span className="text-[11px] text-muted-foreground">
-          {formatDate(comment.createdAt)}
-        </span>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="truncate text-[12px] font-medium leading-none text-card-foreground">
+            {authorLabel(comment)}
+          </span>
+          <span className="text-[12px] font-light leading-4 text-muted-foreground">
+            {formatDate(comment.createdAt)}
+          </span>
+        </div>
+
+        {hasMenu && !editing ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                aria-label="Comment actions"
+                className="-mr-1 -mt-1 size-7 text-muted-foreground"
+                onClick={(e) => e.stopPropagation()}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <EllipsisIcon className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-32"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {onReply ? (
+                <DropdownMenuItem onSelect={() => onReply()}>
+                  <ReplyIcon className="size-4" />
+                  Reply
+                </DropdownMenuItem>
+              ) : null}
+              {isOwn ? (
+                <DropdownMenuItem onSelect={() => setEditing(true)}>
+                  <PencilIcon className="size-4" />
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
+              {canResolve ? (
+                <DropdownMenuItem disabled={pending} onSelect={toggleResolve}>
+                  {comment.resolved ? (
+                    <RotateCcwIcon className="size-4" />
+                  ) : (
+                    <CheckCircle2Icon className="size-4" />
+                  )}
+                  {comment.resolved ? "Reopen" : "Resolve"}
+                </DropdownMenuItem>
+              ) : null}
+              {isOwn ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    disabled={pending}
+                    onSelect={doDelete}
+                    variant="destructive"
+                  >
+                    <Trash2Icon className="size-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
 
       {editing ? (
-        <div className="mt-1.5 space-y-2">
+        <div className="mt-1.5 space-y-2" onClick={(e) => e.stopPropagation()}>
           <Textarea
             className="min-h-[56px] text-sm"
             dir="auto"
@@ -1171,18 +1127,16 @@ function CommentItem({
             >
               <XIcon className="size-4" />
             </Button>
-            <Button
-              disabled={pending}
-              onClick={saveEdit}
-              size="sm"
-              type="button"
-            >
+            <Button disabled={pending} onClick={saveEdit} size="sm" type="button">
               <CheckIcon className="size-4" /> Save
             </Button>
           </div>
         </div>
       ) : (
-        <p className="mt-1 whitespace-pre-wrap text-[13px] text-foreground/90" dir="auto">
+        <p
+          className="mt-2 whitespace-pre-wrap text-[12px] leading-4 text-muted-foreground"
+          dir="auto"
+        >
           {comment.body}
         </p>
       )}
@@ -1193,39 +1147,10 @@ function CommentItem({
         </p>
       ) : null}
 
-      {!editing ? (
-        <div className="mt-1.5 flex items-center gap-3 text-[12px] text-muted-foreground">
-          {canResolve ? (
-            <button
-              className="flex items-center gap-1 hover:text-foreground"
-              disabled={pending}
-              onClick={toggleResolve}
-              type="button"
-            >
-              <CheckCircle2Icon className="size-3.5" />
-              {comment.resolved ? "Reopen" : "Resolve"}
-            </button>
-          ) : null}
-          {isOwn ? (
-            <>
-              <button
-                className="flex items-center gap-1 hover:text-foreground"
-                onClick={() => setEditing(true)}
-                type="button"
-              >
-                <PencilIcon className="size-3.5" /> Edit
-              </button>
-              <button
-                className="flex items-center gap-1 hover:text-destructive"
-                disabled={pending}
-                onClick={doDelete}
-                type="button"
-              >
-                <Trash2Icon className="size-3.5" /> Delete
-              </button>
-            </>
-          ) : null}
-        </div>
+      {!editing && canResolve && comment.resolved ? (
+        <p className={cn("mt-2 text-[12px] font-medium leading-4", SOLVED_COLOR)}>
+          Solved
+        </p>
       ) : null}
     </div>
   );
