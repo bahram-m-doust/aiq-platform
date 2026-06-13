@@ -1,7 +1,6 @@
 import "server-only";
 
 import JSZip from "jszip";
-import { PDFParse } from "pdf-parse";
 
 import { DomainError } from "@/lib/errors";
 
@@ -43,6 +42,12 @@ async function extractFromDocx(buffer: Buffer): Promise<string> {
 }
 
 async function extractFromPdf(buffer: Buffer): Promise<string> {
+  // Loaded lazily: pdf-parse pulls in pdfjs-dist (which needs a very recent
+  // Node and uses Promise.withResolvers). A top-level import made every module
+  // that transitively imports this file crash at load on the deploy runtime —
+  // including pages that never extract a PDF. Importing it only here keeps PDF
+  // parsing isolated to the one path that actually needs it.
+  const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   const result = await parser.getText();
   return result.text.trim();
