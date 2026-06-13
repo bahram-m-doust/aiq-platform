@@ -156,7 +156,3 @@ export async function deleteCityModelDistrictFileAction({
 export async function approveCityModelDistrictAction(slug: string) {
   return decideDistrict(slug, "APPROVED");
 }
-
-export async function requestCityModelDistrictChangesAction(slug: string) {
-  return decideDistrict(slug, "CHANGES_REQUESTED");
-}

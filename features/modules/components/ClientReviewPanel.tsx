@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { CheckCircleIcon, RotateCcwIcon } from "lucide-react";
+import { CheckCircleIcon } from "lucide-react";
 
 import { ReviewSurface } from "@/components/review/ReviewSurface";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -15,10 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  approveClientModuleAction,
-  requestClientModuleChangeAction,
-} from "@/features/modules/actions";
+import { approveClientModuleAction } from "@/features/modules/actions";
 import { initialModuleActionFormState } from "@/features/modules/schema";
 import type {
   ClientModuleReviewPageData,
@@ -48,13 +45,8 @@ export function ClientReviewPanel({
     approveClientModuleAction,
     initialModuleActionFormState,
   );
-  const [changeState, changeAction, changePending] = useActionState(
-    requestClientModuleChangeAction,
-    initialModuleActionFormState,
-  );
-  const decisionPending = approvePending || changePending;
   const canDecide =
-    data.module.status === "CLIENT_REVIEW" && !decisionPending;
+    data.module.status === "CLIENT_REVIEW" && !approvePending;
   const fileName = data.clientFileName ?? "Client review PDF";
 
   return (
@@ -63,21 +55,23 @@ export function ClientReviewPanel({
         canComment={canDecide}
         comments={data.comments}
         currentUserId={currentUserId}
-        downloadName={fileName}
         emptyState={
-          <Card>
-            <CardHeader>
-              <CardTitle>Client review file</CardTitle>
-              <CardDescription>{fileName}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Alert variant="destructive">
-                <AlertDescription>
-                  A client-review document is not available for this module yet.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
+          <div className="mx-auto w-full max-w-[756px]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Client review file</CardTitle>
+                <CardDescription>{fileName}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    A client-review document is not available for this module
+                    yet.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </div>
         }
         eyebrow="Module · Client review"
         inlineUrl={data.inlineUrl}
@@ -88,7 +82,7 @@ export function ClientReviewPanel({
         title={data.module.title}
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Approve module</CardTitle>
@@ -111,34 +105,6 @@ export function ClientReviewPanel({
               <Button disabled={!canDecide} type="submit">
                 <CheckCircleIcon className="size-4" />
                 Approve module
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Request change</CardTitle>
-            <CardDescription>
-              Change requests reopen the module for internal revision.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={changeAction} className="grid gap-4">
-              <input name="module_id" type="hidden" value={data.module.id} />
-              <StateAlert state={changeState} />
-              <div className="space-y-2">
-                <Label htmlFor="change-comment">Required comment</Label>
-                <Textarea
-                  disabled={!canDecide}
-                  id="change-comment"
-                  name="comment"
-                  required
-                />
-              </div>
-              <Button disabled={!canDecide} type="submit" variant="outline">
-                <RotateCcwIcon className="size-4" />
-                Request change
               </Button>
             </form>
           </CardContent>

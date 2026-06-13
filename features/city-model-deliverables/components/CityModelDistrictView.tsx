@@ -2,10 +2,7 @@
 
 import { DeliverablePendingState } from "@/components/review/DeliverablePendingState";
 import { ReviewSurface } from "@/components/review/ReviewSurface";
-import {
-  approveCityModelDistrictAction,
-  requestCityModelDistrictChangesAction,
-} from "@/features/city-model-deliverables/actions";
+import { approveCityModelDistrictAction } from "@/features/city-model-deliverables/actions";
 import type { CityModelDistrictWorkspace } from "@/features/city-model-deliverables/types";
 import { DeliverableStatusBadge } from "@/features/review-deliverables/components/DeliverableStatusBadge";
 
@@ -44,10 +41,8 @@ export function CityModelDistrictView({
         canDecide,
         isApproved: status === "APPROVED",
         onApprove: () => approveCityModelDistrictAction(slug),
-        onRequestChanges: () => requestCityModelDistrictChangesAction(slug),
       }}
       description={district.description}
-      downloadName={workspace.fileName}
       emptyState={emptyState}
       eyebrow="City Model · District"
       inlineUrl={signedUrl}

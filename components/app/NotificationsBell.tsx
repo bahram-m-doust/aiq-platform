@@ -113,14 +113,16 @@ export function NotificationsBell({
           <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
             <span className="text-sm font-semibold">Notifications</span>
             {unreadCount > 0 ? (
-              <button
-                className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
+              <Button
+                className="gap-1 text-[12px] text-muted-foreground hover:text-foreground"
                 disabled={pending}
                 onClick={markAll}
+                size="sm"
                 type="button"
+                variant="link"
               >
                 <CheckCheckIcon className="size-3.5" /> Mark all read
-              </button>
+              </Button>
             ) : null}
           </div>
 

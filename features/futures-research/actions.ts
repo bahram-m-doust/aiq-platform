@@ -205,36 +205,3 @@ export async function approveFuturesResearchReportAction(): Promise<{
 
   return { ok: true };
 }
-
-export async function requestFuturesResearchChangesAction(): Promise<{
-  ok: boolean;
-  message?: string;
-}> {
-  const reviewer = await requireClientReviewer(CLIENT_PATH);
-  if (!reviewer) {
-    return { ok: false, message: "You cannot review this report." };
-  }
-
-  const report = await getFuturesResearchReportRowByBrand(reviewer.brandId);
-  if (!report || !report.file_id) {
-    return { ok: false, message: "There is no report to review yet." };
-  }
-
-  try {
-    await setFuturesResearchReportStatus({
-      brandId: reviewer.brandId,
-      profileId: reviewer.profileId,
-      status: "CHANGES_REQUESTED",
-    });
-  } catch (error) {
-    logServerError({
-      label: "[futures-research] request-changes failed",
-      error,
-      metadata: { brandId: reviewer.brandId },
-    });
-    return { ok: false, message: "Could not record the decision. Try again." };
-  }
-  revalidateFuturesResearchPaths();
-
-  return { ok: true };
-}

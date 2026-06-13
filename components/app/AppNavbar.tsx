@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 type AppNavbarProps = {
@@ -51,10 +52,7 @@ export function AppNavbar({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
-                className="flex items-center gap-2 rounded-md outline-none"
-                type="button"
-              >
+              <Button className="gap-2 px-2" type="button" variant="ghost">
                 <span className="flex size-8 items-center justify-center overflow-hidden rounded-full bg-secondary text-muted-foreground">
                   {brandIconUrl ? (
                     <Image
@@ -71,7 +69,7 @@ export function AppNavbar({
                 </span>
                 <span className="text-sm">{userName}</span>
                 <ChevronDownIcon className="size-4 text-muted-foreground" />
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel className="truncate">

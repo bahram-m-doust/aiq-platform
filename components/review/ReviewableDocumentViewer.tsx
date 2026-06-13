@@ -14,10 +14,8 @@ import {
   CheckCircle2Icon,
   CheckIcon,
   ChevronsUpDownIcon,
-  DownloadIcon,
   EllipsisIcon,
   Loader2Icon,
-  MessageSquareIcon,
   MessageSquarePlusIcon,
   PencilIcon,
   ReplyIcon,
@@ -32,7 +30,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
@@ -93,7 +90,6 @@ export type ReviewDecision = {
   canDecide: boolean;
   isApproved: boolean;
   onApprove: () => Promise<{ ok: boolean; message?: string }>;
-  onRequestChanges: () => Promise<{ ok: boolean; message?: string }>;
 };
 
 type Target = { anchorId: string | null; label: string | null };
@@ -153,8 +149,6 @@ export function ReviewableDocumentViewer({
   initialComments,
   currentUserId,
   canComment,
-  downloadUrl,
-  downloadName,
   fileUrl,
   contextBrandId,
   decision,
@@ -170,8 +164,6 @@ export function ReviewableDocumentViewer({
   initialComments: ReviewComment[];
   currentUserId: string;
   canComment: boolean;
-  downloadUrl?: string | null;
-  downloadName?: string | null;
   // Inline (preview) URL of the original file. Rendered when there is no
   // extracted markdown to show — e.g. an image/scanned PDF — so an uploaded
   // deliverable is never hidden and whole-document comments still work.
@@ -460,7 +452,7 @@ export function ReviewableDocumentViewer({
         {/* Left column — header, hint, the framed document/PDF area, and the
             centred Approve action. Centred in the space beside the rail. */}
         <div className="flex min-w-0 flex-1 flex-col items-center gap-6 px-2 sm:px-6">
-          <div className="flex w-full max-w-[708px] flex-col gap-4">
+          <div className="flex w-full max-w-[900px] flex-col gap-4">
             {/* Report header */}
             <div className="flex flex-col gap-[9px]">
               <div className="flex flex-wrap items-center gap-4">
@@ -480,16 +472,6 @@ export function ReviewableDocumentViewer({
                 </p>
               ) : null}
             </div>
-
-            {/* Comment instruction */}
-            {canComment ? (
-              <div className="flex items-center gap-[9px]">
-                <MessageSquareIcon className="size-4 shrink-0 text-muted-foreground" />
-                <span className="text-[12px] font-light leading-4 text-muted-foreground">
-                  Click anywhere on the page to add a comment.
-                </span>
-              </div>
-            ) : null}
 
             {/* Pdf area — the framed document. Holds either the original file
                 (image-based PDFs) or the extracted markdown, with inline
@@ -521,10 +503,10 @@ export function ReviewableDocumentViewer({
                         id={block.anchorId}
                         key={block.anchorId}
                       >
-                        <button
+                        <Button
                           aria-label="Comment on this section"
                           className={cn(
-                            "absolute end-0 top-2 z-10 flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground opacity-0 shadow-sm transition group-hover:opacity-100 focus-visible:opacity-100",
+                            "absolute end-0 top-2 z-10 h-7 rounded-full px-2 text-[11px] text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
                             count > 0 && "opacity-100",
                             isActive && ACTIVE_MARKER_CLASS,
                           )}
@@ -534,11 +516,13 @@ export function ReviewableDocumentViewer({
                               label: block.label,
                             })
                           }
+                          size="sm"
                           type="button"
+                          variant="outline"
                         >
                           <MessageSquarePlusIcon className="size-3.5" />
                           {count > 0 ? count : "Comment"}
-                        </button>
+                        </Button>
                         <div
                           data-block-content={block.anchorId}
                           data-block-label={block.label ?? undefined}
@@ -566,25 +550,12 @@ export function ReviewableDocumentViewer({
           ) : null}
         </div>
 
-        {/* Right column — download + comments, anchored to the right edge. */}
+        {/* Right column — comments, anchored to the right edge. */}
         <aside className="flex w-full shrink-0 flex-col gap-4 lg:sticky lg:top-2 lg:w-[244px] lg:py-4">
           <div className="flex items-center justify-end gap-4">
-            {downloadUrl ? (
-              <Button
-                asChild
-                className="size-9"
-                size="icon"
-                title="Download original"
-                variant="secondary"
-              >
-                <a href={downloadUrl} download={downloadName ?? undefined}>
-                  <DownloadIcon className="size-4" />
-                </a>
-              </Button>
-            ) : null}
             <Button
               aria-pressed={showComments}
-              className="h-9 flex-1 justify-center lg:w-[184px] lg:flex-none"
+              className="h-9 w-full justify-center"
               onClick={() => setShowComments((value) => !value)}
               type="button"
               variant="secondary"
@@ -605,9 +576,7 @@ export function ReviewableDocumentViewer({
                   <CommentThread
                     actions={boundActions}
                     currentUserId={currentUserId}
-                    isActive={root.id === activeCommentId}
                     key={root.id}
-                    onActivate={activateComment}
                     onAdd={upsertComment}
                     onPatch={patchComment}
                     onRemove={removeComment}
@@ -755,22 +724,14 @@ function DecisionBar({ decision }: { decision: ReviewDecision }) {
   return (
     <div className="flex flex-col items-center gap-2">
       <Button
-        className="h-10 rounded-md px-8"
         disabled={pending}
         onClick={() => run(decision.onApprove)}
+        size="lg"
         type="button"
       >
         {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
         Approve
       </Button>
-      <button
-        className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
-        disabled={pending}
-        onClick={() => run(decision.onRequestChanges)}
-        type="button"
-      >
-        <RotateCcwIcon className="size-3.5" /> Request changes
-      </button>
       {error ? (
         <span className="text-[12px] text-destructive">{error}</span>
       ) : null}
@@ -865,8 +826,6 @@ function CommentThread({
   replies,
   currentUserId,
   actions,
-  isActive,
-  onActivate,
   onAdd,
   onPatch,
   onRemove,
@@ -877,8 +836,6 @@ function CommentThread({
   replies: ReviewComment[];
   currentUserId: string;
   actions: ReviewCommentActions;
-  isActive: boolean;
-  onActivate: (comment: ReviewComment) => void;
   onAdd: (comment: ReviewComment) => void;
   onPatch: (id: string, patch: Partial<ReviewComment>) => void;
   onRemove: (id: string) => void;
@@ -888,11 +845,9 @@ function CommentThread({
   return (
     <div
       className={cn(
-        "cursor-pointer rounded-[10px] border border-border bg-card p-2.5 shadow-xs transition-colors",
-        isActive && "border-amber-300 bg-amber-50/60",
+        "rounded-[10px] border border-border bg-card p-2.5 shadow-xs",
         root.resolved && "opacity-80",
       )}
-      onClick={() => onActivate(root)}
     >
       {root.highlightText ? (
         <p
@@ -1089,17 +1044,10 @@ function CommentItem({
                 </DropdownMenuItem>
               ) : null}
               {isOwn ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    disabled={pending}
-                    onSelect={doDelete}
-                    variant="destructive"
-                  >
-                    <Trash2Icon className="size-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </>
+                <DropdownMenuItem disabled={pending} onSelect={doDelete}>
+                  <Trash2Icon className="size-4" />
+                  Delete
+                </DropdownMenuItem>
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>

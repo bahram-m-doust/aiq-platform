@@ -138,50 +138,6 @@ export async function approveClientModuleAction(
   }
 }
 
-export async function requestClientModuleChangeAction(
-  _previousState: ModuleActionFormState,
-  formData: FormData,
-): Promise<ModuleActionFormState> {
-  const validation = validateClientModuleDecisionFormData({
-    formData,
-    requireComment: true,
-  });
-  const nextPath = validation.data
-    ? `/modules/${validation.data.moduleId}`
-    : "/modules";
-  const { profile } = await requireUserProfile(nextPath);
-
-  if (validation.error || !validation.data) {
-    return actionErrorState(validation.error ?? "Module decision is invalid.");
-  }
-
-  try {
-    await submitClientModuleDecision({
-      moduleId: validation.data.moduleId,
-      profile,
-      decision: "REQUEST_CHANGE",
-      comment: validation.data.comment,
-    });
-
-    revalidatePath("/modules");
-    revalidatePath(`/modules/${validation.data.moduleId}`);
-    revalidatePath("/admin/modules");
-    revalidatePath(`/admin/modules/${validation.data.moduleId}`);
-
-    return {
-      status: "success",
-      message: "Module change request recorded.",
-      moduleId: validation.data.moduleId,
-    };
-  } catch (error) {
-    if (isModuleServiceError(error)) {
-      return actionErrorState(error.message);
-    }
-
-    return actionErrorState("Module change request could not be recorded.");
-  }
-}
-
 export async function returnToModulesAction() {
   redirect("/modules");
 }

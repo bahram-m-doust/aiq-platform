@@ -136,36 +136,3 @@ export async function approveStakeholderReportAction(): Promise<{
 
   return { ok: true };
 }
-
-export async function requestStakeholderChangesAction(): Promise<{
-  ok: boolean;
-  message?: string;
-}> {
-  const reviewer = await requireClientReviewer(CLIENT_PATH);
-  if (!reviewer) {
-    return { ok: false, message: "You cannot review this report." };
-  }
-
-  const report = await getStakeholderReportRowByBrand(reviewer.brandId);
-  if (!report || !report.file_id) {
-    return { ok: false, message: "There is no report to review yet." };
-  }
-
-  try {
-    await setStakeholderReportStatus({
-      brandId: reviewer.brandId,
-      profileId: reviewer.profileId,
-      status: "CHANGES_REQUESTED",
-    });
-  } catch (error) {
-    logServerError({
-      label: "[stakeholder] request-changes failed",
-      error,
-      metadata: { brandId: reviewer.brandId },
-    });
-    return { ok: false, message: "Could not record the decision. Try again." };
-  }
-  revalidateStakeholderPaths();
-
-  return { ok: true };
-}
