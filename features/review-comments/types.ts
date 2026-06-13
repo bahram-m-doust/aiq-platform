@@ -28,6 +28,11 @@ export type ReviewComment = {
   parentId: string | null;
   anchorId: string | null;
   anchorLabel: string | null;
+  // Inline highlight: character offsets into the anchored block's plain text,
+  // plus the quoted text. All null for whole-document / section-level comments.
+  highlightStart: number | null;
+  highlightEnd: number | null;
+  highlightText: string | null;
   authorId: string | null;
   authorName: string | null;
   authorEmail: string | null;
@@ -37,6 +42,12 @@ export type ReviewComment = {
   updatedAt: string | null;
 };
 
+export type CommentHighlight = {
+  start: number;
+  end: number;
+  text: string;
+};
+
 export type AddReviewCommentInput = {
   subjectType: ReviewSubjectType;
   subjectId: string;
@@ -44,6 +55,8 @@ export type AddReviewCommentInput = {
   anchorLabel: string | null;
   body: string;
   parentId?: string | null;
+  // Present only when the comment is anchored to a selected text range.
+  highlight?: CommentHighlight | null;
   // Set only by the internal admin review surface (where the staff member has
   // no brand membership). The server verifies the subject belongs to this
   // brand before trusting it; client-membership callers leave it undefined.

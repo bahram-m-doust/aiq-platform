@@ -1,15 +1,19 @@
 "use client";
 
 import {
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
 import {
   CheckCircle2Icon,
   CheckIcon,
+  ChevronsUpDownIcon,
   DownloadIcon,
   Loader2Icon,
   MessageSquarePlusIcon,
@@ -26,10 +30,18 @@ import { Textarea } from "@/components/ui/textarea";
 import type {
   AddReviewCommentInput,
   AddReviewCommentResult,
+  CommentHighlight,
   ReviewComment,
   ReviewCommentMutationResult,
   ReviewSubjectType,
 } from "@/features/review-comments/types";
+import {
+  createRangeFromOffsets,
+  findQuoteOffsets,
+  getSelectionOffsets,
+  offsetUnderPoint,
+  supportsHighlightApi,
+} from "@/lib/highlight/text-range";
 import type { MarkdownBlock } from "@/lib/markdown/blocks";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +85,28 @@ export type ReviewDecision = {
 };
 
 type Target = { anchorId: string | null; label: string | null };
+
+// A live text selection inside a block, captured on mouse-up and offered as the
+// anchor for a new highlight comment. `rect` positions the floating composer.
+type PendingSelection = {
+  anchorId: string;
+  label: string | null;
+  highlight: CommentHighlight;
+  rect: { top: number; left: number; width: number };
+};
+
+const HIGHLIGHT_NAME = "review-comment";
+const HIGHLIGHT_ACTIVE_NAME = "review-comment-active";
+
+// Injected at runtime rather than via globals.css: the build's CSS parser
+// rejects the `::highlight()` pseudo-element and drops the rule, but the browser
+// (which supports the Custom Highlight API) parses it fine from a live <style>.
+// Muted amber matches the comment-marker convention; the active range paints
+// stronger and on top.
+const HIGHLIGHT_STYLES = `
+::highlight(${HIGHLIGHT_NAME}){background-color:rgba(245,158,11,0.20);}
+::highlight(${HIGHLIGHT_ACTIVE_NAME}){background-color:rgba(245,158,11,0.45);border-radius:2px;}
+`;
 
 function formatDate(value: string | null): string {
   if (!value) return "";
@@ -137,6 +171,14 @@ export function ReviewableDocumentViewer({
 }) {
   const [comments, setComments] = useState<ReviewComment[]>(initialComments);
   const [target, setTarget] = useState<Target>({ anchorId: null, label: null });
+  const [showComments, setShowComments] = useState(true);
+  // The comment whose highlight is painted "active" (selected in the rail or
+  // clicked on the page).
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+  // The live selection awaiting a "Comment" click, then its inline composer.
+  const [selection, setSelection] = useState<PendingSelection | null>(null);
+  const [composing, setComposing] = useState(false);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   // Bind the admin-context brand into every mutation once, so the comment
   // sub-components don't each need to know about it.
@@ -195,125 +237,468 @@ export function ReviewableDocumentViewer({
     );
   }, []);
 
+  // The rendered markdown container for a block anchor (the basis for offsets,
+  // painting, and scroll). Scoped to this viewer so anchors never collide with
+  // another surface on the page.
+  const blockElement = useCallback((anchorId: string): HTMLElement | null => {
+    const root = contentRef.current;
+    if (!root) return null;
+    return root.querySelector<HTMLElement>(
+      `[data-block-content="${CSS.escape(anchorId)}"]`,
+    );
+  }, []);
+
+  // Resolve a stored comment range against the current DOM, re-anchoring via the
+  // quoted text if the offsets have drifted (e.g. after a re-export).
+  const rangeForComment = useCallback(
+    (comment: ReviewComment): Range | null => {
+      if (
+        !comment.anchorId ||
+        comment.highlightStart == null ||
+        comment.highlightEnd == null
+      ) {
+        return null;
+      }
+      const el = blockElement(comment.anchorId);
+      if (!el) return null;
+      let range = createRangeFromOffsets(
+        el,
+        comment.highlightStart,
+        comment.highlightEnd,
+      );
+      const quote = comment.highlightText;
+      if (quote && (!range || range.toString() !== quote)) {
+        const alt = findQuoteOffsets(el, quote);
+        if (alt) range = createRangeFromOffsets(el, alt.start, alt.end);
+      }
+      return range;
+    },
+    [blockElement],
+  );
+
+  // Paint every highlight via the CSS Custom Highlight API — no DOM mutation, so
+  // the markdown renderer is untouched. Re-runs whenever the comment set or the
+  // active selection changes.
+  useEffect(() => {
+    if (!supportsHighlightApi()) return;
+    const muted = new Highlight();
+    const active = new Highlight();
+    for (const comment of comments) {
+      if (comment.parentId || comment.highlightStart == null) continue;
+      const range = rangeForComment(comment);
+      if (!range) continue;
+      if (comment.id === activeCommentId) active.add(range);
+      else muted.add(range);
+    }
+    CSS.highlights.set(HIGHLIGHT_NAME, muted);
+    CSS.highlights.set(HIGHLIGHT_ACTIVE_NAME, active);
+    return () => {
+      CSS.highlights.delete(HIGHLIGHT_NAME);
+      CSS.highlights.delete(HIGHLIGHT_ACTIVE_NAME);
+    };
+  }, [comments, activeCommentId, rangeForComment]);
+
+  // Capture a text selection inside a single block and offer it as a highlight
+  // anchor. Selections that are collapsed, escape a block, or span two blocks
+  // are ignored.
+  const captureSelection = useCallback(() => {
+    if (!canComment) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+      setSelection(null);
+      setComposing(false);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    const startBlock = (range.startContainer instanceof Element
+      ? range.startContainer
+      : range.startContainer.parentElement
+    )?.closest<HTMLElement>("[data-block-content]");
+    const endBlock = (range.endContainer instanceof Element
+      ? range.endContainer
+      : range.endContainer.parentElement
+    )?.closest<HTMLElement>("[data-block-content]");
+    if (!startBlock || startBlock !== endBlock) {
+      setSelection(null);
+      return;
+    }
+    const offsets = getSelectionOffsets(startBlock, range);
+    if (!offsets) {
+      setSelection(null);
+      return;
+    }
+    const rect = range.getBoundingClientRect();
+    setSelection({
+      anchorId: startBlock.dataset.blockContent ?? "",
+      label: startBlock.dataset.blockLabel || null,
+      highlight: { ...offsets, text: range.toString() },
+      rect: { top: rect.top, left: rect.left, width: rect.width },
+    });
+    setComposing(false);
+  }, [canComment]);
+
+  const clearSelection = useCallback(() => {
+    setSelection(null);
+    setComposing(false);
+    window.getSelection()?.removeAllRanges();
+  }, []);
+
+  const scrollToComment = useCallback(
+    (comment: ReviewComment) => {
+      const range = rangeForComment(comment);
+      const el =
+        range?.startContainer.parentElement ??
+        (comment.anchorId ? blockElement(comment.anchorId) : null);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    },
+    [rangeForComment, blockElement],
+  );
+
+  // Selecting a comment paints its highlight active, reveals the rail, focuses
+  // its section thread, and scrolls the highlight into view.
+  const activateComment = useCallback(
+    (comment: ReviewComment) => {
+      setActiveCommentId(comment.id);
+      setShowComments(true);
+      if (comment.highlightStart != null) {
+        setTarget({ anchorId: comment.anchorId, label: comment.anchorLabel });
+        scrollToComment(comment);
+      }
+    },
+    [scrollToComment],
+  );
+
+  // Reverse direction: clicking a painted highlight on the page selects its
+  // comment. Ignored while text is being selected.
+  const handleContentClick = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) return;
+      const root = contentRef.current;
+      if (!root) return;
+      const block = (event.target as HTMLElement).closest<HTMLElement>(
+        "[data-block-content]",
+      );
+      if (!block) return;
+      const offset = offsetUnderPoint(block, event.clientX, event.clientY);
+      if (offset == null) return;
+      const hit = comments.find(
+        (c) =>
+          !c.parentId &&
+          c.anchorId === block.dataset.blockContent &&
+          c.highlightStart != null &&
+          c.highlightEnd != null &&
+          offset >= c.highlightStart &&
+          offset < c.highlightEnd,
+      );
+      if (hit) activateComment(hit);
+      else setActiveCommentId(null);
+    },
+    [comments, activateComment],
+  );
+
+  const [creatingHighlight, startCreateHighlight] = useTransition();
+  const [highlightError, setHighlightError] = useState<string | null>(null);
+
+  const createHighlightComment = useCallback(
+    (body: string) => {
+      if (!selection || !body.trim()) return;
+      setHighlightError(null);
+      startCreateHighlight(async () => {
+        const result = await boundActions.add({
+          subjectType,
+          subjectId,
+          anchorId: selection.anchorId,
+          anchorLabel: selection.label,
+          highlight: selection.highlight,
+          body,
+          parentId: null,
+        });
+        if (result.ok) {
+          upsertComment(result.comment);
+          setActiveCommentId(result.comment.id);
+          setTarget({
+            anchorId: result.comment.anchorId,
+            label: result.comment.anchorLabel,
+          });
+          clearSelection();
+        } else {
+          setHighlightError(result.message);
+        }
+      });
+    },
+    [
+      selection,
+      boundActions,
+      subjectType,
+      subjectId,
+      upsertComment,
+      clearSelection,
+    ],
+  );
+
   return (
-    <main className="mx-auto w-full max-w-[1180px] px-4 py-6 sm:px-6 sm:py-8">
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1.5">
-          {eyebrow ? (
-            <p className="ds-eyebrow">{eyebrow}</p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-            {statusBadge}
+    <main className="w-full px-2 pt-[15px] sm:px-4">
+      <style dangerouslySetInnerHTML={{ __html: HIGHLIGHT_STYLES }} />
+      <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
+        {/* Left column — header, hint, document/PDF reviewer, approve.
+            Centered in the space that remains beside the right-anchored
+            comments rail. */}
+        <div className="flex min-w-0 flex-1 lg:justify-center">
+          <div
+            className="flex w-full flex-col gap-4 lg:max-w-[756px]"
+            onClick={handleContentClick}
+            onMouseUp={captureSelection}
+            ref={contentRef}
+          >
+            <div className="flex flex-col gap-[9px]">
+              <div className="flex flex-wrap items-center gap-4">
+                {eyebrow ? (
+                  <span className="text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
+                    {eyebrow}
+                  </span>
+                ) : null}
+                {statusBadge}
+              </div>
+              <h1 className="text-xl font-semibold leading-7 tracking-[-0.01em] text-foreground">
+                {title}
+              </h1>
+              {description ? (
+                <p className="max-w-[545px] text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
+                  {description}
+                </p>
+              ) : null}
+            </div>
+
+            {canComment ? (
+              <div className="flex items-center gap-[9px]">
+                <MessageSquarePlusIcon className="size-4 shrink-0 text-muted-foreground" />
+                <span className="text-[12px] font-light text-muted-foreground">
+                  {blocks.length > 0
+                    ? "Select any text to highlight it and leave a comment."
+                    : "Use the comment panel to leave notes on this document."}
+                </span>
+              </div>
+            ) : null}
+
+            {/* PDF reviewer — the original file is shown in the framed viewer
+                when there is no extracted markdown (e.g. image-based PDFs). */}
+            {blocks.length === 0 && fileUrl ? (
+              <div className="w-full overflow-hidden rounded-[10px] border border-border bg-card shadow-xs">
+                <div className="p-3">
+                  <iframe
+                    className="h-[78vh] w-full rounded-[6px]"
+                    src={fileUrl}
+                    title={`${title} preview`}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            {blocks.map((block) => {
+              const count = countByAnchor.get(anchorKey(block.anchorId)) ?? 0;
+              const isActive = target.anchorId === block.anchorId;
+              return (
+                <section
+                  className={cn(
+                    "group relative scroll-mt-24 rounded-lg px-3 py-1 transition-colors",
+                    isActive && ACTIVE_SECTION_CLASS,
+                  )}
+                  id={block.anchorId}
+                  key={block.anchorId}
+                >
+                  <button
+                    aria-label="Comment on this section"
+                    className={cn(
+                      "absolute end-0 top-2 z-10 flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground opacity-0 shadow-sm transition group-hover:opacity-100 focus-visible:opacity-100",
+                      count > 0 && "opacity-100",
+                      isActive && ACTIVE_MARKER_CLASS,
+                    )}
+                    onClick={() =>
+                      setTarget({
+                        anchorId: block.anchorId,
+                        label: block.label,
+                      })
+                    }
+                    type="button"
+                  >
+                    <MessageSquarePlusIcon className="size-3.5" />
+                    {count > 0 ? count : "Comment"}
+                  </button>
+                  <div
+                    data-block-content={block.anchorId}
+                    data-block-label={block.label ?? undefined}
+                  >
+                    <MarkdownContent markdown={block.markdown} />
+                  </div>
+                </section>
+              );
+            })}
+
+            {decision?.canDecide ? (
+              <DecisionBar decision={decision} />
+            ) : decision?.isApproved ? (
+              <div className="flex justify-center pt-2">
+                <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700">
+                  <CheckCircle2Icon className="size-4" /> You approved this
+                  document.
+                </span>
+              </div>
+            ) : null}
           </div>
-          {description ? (
-            <p className="max-w-xl text-sm text-muted-foreground">
-              {description}
-            </p>
-          ) : null}
         </div>
-        <div className="flex items-center gap-2">
-          {downloadUrl ? (
-            <Button asChild size="sm" variant="outline">
-              <a href={downloadUrl} download={downloadName ?? undefined}>
-                <DownloadIcon className="size-4" />
-                Download original
-              </a>
+
+        {/* Right column — download + comments, anchored to the right edge. */}
+        <aside className="flex w-full shrink-0 flex-col gap-4 lg:w-[300px]">
+          <div className="flex items-center justify-end gap-3">
+            {downloadUrl ? (
+              <Button
+                asChild
+                size="icon"
+                title="Download original"
+                variant="secondary"
+              >
+                <a href={downloadUrl} download={downloadName ?? undefined}>
+                  <DownloadIcon className="size-4" />
+                </a>
+              </Button>
+            ) : null}
+            <Button
+              aria-pressed={showComments}
+              className="flex-1 justify-center lg:w-[184px] lg:flex-none"
+              onClick={() => setShowComments((value) => !value)}
+              type="button"
+              variant="secondary"
+            >
+              Comments
+              <ChevronsUpDownIcon className="size-4" />
             </Button>
-          ) : null}
-        </div>
-      </header>
+          </div>
 
-      {decision?.canDecide ? (
-        <DecisionBar decision={decision} />
-      ) : decision?.isApproved ? (
-        <p className="mb-6 flex items-center gap-2 text-[13px] font-medium text-emerald-700">
-          <CheckCircle2Icon className="size-4" /> You approved this document.
-        </p>
-      ) : null}
-
-      <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-        {/* Content */}
-        <div className="min-w-0 flex-1">
-          {blocks.length === 0 && fileUrl ? (
-            <div className="space-y-2">
-              <p className="text-[13px] text-muted-foreground">
-                No text could be extracted from this file (it may be image-based).
-                The original is shown below — use the comment panel to leave
-                notes on the document.
-              </p>
-              <div className="overflow-hidden rounded-lg border border-border bg-white">
-                <iframe
-                  className="h-[78vh] w-full"
-                  src={fileUrl}
-                  title={`${title} preview`}
+          {showComments ? (
+            <>
+              <div className="rounded-xl border border-border bg-card">
+                <CommentRail
+                  actions={boundActions}
+                  activeCommentId={activeCommentId}
+                  canComment={canComment}
+                  currentUserId={currentUserId}
+                  onActivate={activateComment}
+                  onAdd={upsertComment}
+                  onPatch={patchComment}
+                  onRemove={removeComment}
+                  repliesByParent={repliesByParent}
+                  roots={selectedRoots}
+                  subjectId={subjectId}
+                  subjectType={subjectType}
+                  target={target}
                 />
               </div>
-            </div>
+              <SectionNav
+                blocks={blocks}
+                countByAnchor={countByAnchor}
+                generalCount={countByAnchor.get(GENERAL_KEY) ?? 0}
+                onSelect={setTarget}
+                target={target}
+              />
+            </>
           ) : null}
-          {blocks.map((block) => {
-            const count = countByAnchor.get(anchorKey(block.anchorId)) ?? 0;
-            const isActive = target.anchorId === block.anchorId;
-            return (
-              <section
-                className={cn(
-                  "group relative scroll-mt-24 rounded-lg px-3 py-1 transition-colors",
-                  isActive && ACTIVE_SECTION_CLASS,
-                )}
-                id={block.anchorId}
-                key={block.anchorId}
-              >
-                <button
-                  aria-label="Comment on this section"
-                  className={cn(
-                    "absolute end-0 top-2 z-10 flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground opacity-0 shadow-sm transition group-hover:opacity-100 focus-visible:opacity-100",
-                    count > 0 && "opacity-100",
-                    isActive && ACTIVE_MARKER_CLASS,
-                  )}
-                  onClick={() =>
-                    setTarget({
-                      anchorId: block.anchorId,
-                      label: block.label,
-                    })
-                  }
-                  type="button"
-                >
-                  <MessageSquarePlusIcon className="size-3.5" />
-                  {count > 0 ? count : "Comment"}
-                </button>
-                <MarkdownContent markdown={block.markdown} />
-              </section>
-            );
-          })}
-        </div>
-
-        {/* Comment rail */}
-        <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-[360px]">
-          <div className="rounded-xl border border-border bg-card">
-            <CommentRail
-              actions={boundActions}
-              canComment={canComment}
-              currentUserId={currentUserId}
-              onAdd={upsertComment}
-              onPatch={patchComment}
-              onRemove={removeComment}
-              repliesByParent={repliesByParent}
-              roots={selectedRoots}
-              subjectId={subjectId}
-              subjectType={subjectType}
-              target={target}
-            />
-          </div>
-          <SectionNav
-            blocks={blocks}
-            countByAnchor={countByAnchor}
-            generalCount={countByAnchor.get(GENERAL_KEY) ?? 0}
-            onSelect={setTarget}
-            target={target}
-          />
         </aside>
       </div>
+
+      {selection ? (
+        <SelectionPopover
+          composing={composing}
+          error={highlightError}
+          onCancel={clearSelection}
+          onStartComposing={() => setComposing(true)}
+          onSubmit={createHighlightComment}
+          pending={creatingHighlight}
+          rect={selection.rect}
+        />
+      ) : null}
     </main>
+  );
+}
+
+// The Google-Docs-style floating control over a text selection: first a small
+// "Comment" pill, then an inline composer once clicked. Positioned in viewport
+// coordinates (the rect comes from Range.getBoundingClientRect).
+function SelectionPopover({
+  rect,
+  composing,
+  pending,
+  error,
+  onStartComposing,
+  onSubmit,
+  onCancel,
+}: {
+  rect: { top: number; left: number; width: number };
+  composing: boolean;
+  pending: boolean;
+  error: string | null;
+  onStartComposing: () => void;
+  onSubmit: (body: string) => void;
+  onCancel: () => void;
+}) {
+  const [body, setBody] = useState("");
+
+  if (!composing) {
+    return (
+      <div
+        className="fixed z-50 -translate-x-1/2"
+        style={{
+          top: Math.max(8, rect.top - 44),
+          left: rect.left + rect.width / 2,
+        }}
+      >
+        <Button
+          onClick={onStartComposing}
+          onMouseDown={(e) => e.preventDefault()}
+          size="sm"
+          type="button"
+        >
+          <MessageSquarePlusIcon className="size-4" /> Comment
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed z-50 w-72 -translate-x-1/2 rounded-[10px] border border-border bg-popover p-3 shadow-md"
+      onMouseUp={(e) => e.stopPropagation()}
+      style={{
+        top: rect.top + 12,
+        left: Math.max(160, rect.left + rect.width / 2),
+      }}
+    >
+      <Textarea
+        autoFocus
+        className="min-h-[64px] text-sm"
+        dir="auto"
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="Add a comment…"
+        value={body}
+      />
+      {error ? (
+        <p className="mt-1 text-[12px] text-destructive">{error}</p>
+      ) : null}
+      <div className="mt-2 flex items-center justify-end gap-2">
+        <Button onClick={onCancel} size="sm" type="button" variant="ghost">
+          Cancel
+        </Button>
+        <Button
+          disabled={pending || !body.trim()}
+          onClick={() => onSubmit(body)}
+          size="sm"
+          type="button"
+        >
+          {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
+          Comment
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -330,25 +715,29 @@ function DecisionBar({ decision }: { decision: ReviewDecision }) {
   };
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-4 py-3">
-      <span className="me-1 text-sm font-medium">Ready to decide?</span>
+    <div className="flex flex-col items-center gap-2 pt-2">
       <Button
+        className="min-w-[166px]"
         disabled={pending}
         onClick={() => run(decision.onApprove)}
-        size="sm"
+        size="lg"
         type="button"
       >
-        <CheckIcon className="size-4" /> Approve
+        {pending ? (
+          <Loader2Icon className="size-4 animate-spin" />
+        ) : (
+          <CheckIcon className="size-4" />
+        )}
+        Approve
       </Button>
-      <Button
+      <button
+        className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
         disabled={pending}
         onClick={() => run(decision.onRequestChanges)}
-        size="sm"
         type="button"
-        variant="outline"
       >
-        <RotateCcwIcon className="size-4" /> Request changes
-      </Button>
+        <RotateCcwIcon className="size-3.5" /> Request changes
+      </button>
       {error ? <span className="text-[12px] text-destructive">{error}</span> : null}
     </div>
   );
@@ -428,6 +817,8 @@ function CommentRail({
   currentUserId,
   canComment,
   actions,
+  activeCommentId,
+  onActivate,
   onAdd,
   onPatch,
   onRemove,
@@ -440,15 +831,16 @@ function CommentRail({
   currentUserId: string;
   canComment: boolean;
   actions: ReviewCommentActions;
+  activeCommentId: string | null;
+  onActivate: (comment: ReviewComment) => void;
   onAdd: (comment: ReviewComment) => void;
   onPatch: (id: string, patch: Partial<ReviewComment>) => void;
   onRemove: (id: string) => void;
 }) {
   return (
     <div className="flex max-h-[78vh] flex-col">
-      <div className="border-b border-border px-4 py-3">
-        <p className="text-sm font-semibold">Comments</p>
-        <p className="mt-0.5 truncate text-[12px] text-muted-foreground" dir="auto">
+      <div className="border-b border-border px-4 py-2.5">
+        <p className="truncate text-[12px] text-muted-foreground" dir="auto">
           {target.anchorId ? (target.label ?? "Selected section") : "Whole document"}
         </p>
       </div>
@@ -462,8 +854,10 @@ function CommentRail({
           roots.map((root) => (
             <CommentThread
               actions={actions}
+              isActive={root.id === activeCommentId}
               currentUserId={currentUserId}
               key={root.id}
+              onActivate={onActivate}
               onAdd={onAdd}
               onPatch={onPatch}
               onRemove={onRemove}
@@ -576,6 +970,8 @@ function CommentThread({
   replies,
   currentUserId,
   actions,
+  isActive,
+  onActivate,
   onAdd,
   onPatch,
   onRemove,
@@ -586,6 +982,8 @@ function CommentThread({
   replies: ReviewComment[];
   currentUserId: string;
   actions: ReviewCommentActions;
+  isActive: boolean;
+  onActivate: (comment: ReviewComment) => void;
   onAdd: (comment: ReviewComment) => void;
   onPatch: (id: string, patch: Partial<ReviewComment>) => void;
   onRemove: (id: string) => void;
@@ -595,10 +993,20 @@ function CommentThread({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border p-3",
+        "cursor-pointer rounded-lg border border-border p-3 transition-colors",
+        isActive && "border-amber-300 bg-amber-50/60",
         root.resolved && "bg-muted/40 opacity-70",
       )}
+      onClick={() => onActivate(root)}
     >
+      {root.highlightText ? (
+        <p
+          className="mb-2 border-s-2 border-amber-300 ps-2 text-[12px] text-muted-foreground line-clamp-2"
+          dir="auto"
+        >
+          {root.highlightText}
+        </p>
+      ) : null}
       <CommentItem
         actions={actions}
         canResolve

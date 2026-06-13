@@ -28,6 +28,7 @@ import {
   reviewSubjectLabels,
   type AddReviewCommentInput,
   type AddReviewCommentResult,
+  type CommentHighlight,
   type ReviewCommentMutationResult,
   type ReviewSubjectType,
 } from "@/features/review-comments/types";
@@ -37,6 +38,10 @@ import { isUuid } from "@/lib/utils";
 
 const MAX_ANCHOR_ID_LENGTH = 200;
 const MAX_ANCHOR_LABEL_LENGTH = 300;
+const MAX_HIGHLIGHT_TEXT_LENGTH = 2000;
+// Guard against absurd offsets from a forged request; a block's plain text is
+// never anywhere near this long.
+const MAX_HIGHLIGHT_OFFSET = 1_000_000;
 
 type CommentAuthor = {
   profileId: string;
@@ -114,6 +119,23 @@ function sanitizeAnchorLabel(value: string | null | undefined): string | null {
   return trimmed.slice(0, MAX_ANCHOR_LABEL_LENGTH);
 }
 
+// A highlight range is trusted only if it is internally consistent: both
+// offsets are non-negative integers, the range is non-empty, and it carries the
+// quoted text. Anything malformed degrades to a section-level comment (null)
+// rather than rejecting the whole comment.
+function sanitizeHighlight(
+  value: CommentHighlight | null | undefined,
+): CommentHighlight | null {
+  if (!value) return null;
+  const { start, end, text } = value;
+  if (!Number.isInteger(start) || !Number.isInteger(end)) return null;
+  if (start < 0 || end <= start) return null;
+  if (end > MAX_HIGHLIGHT_OFFSET) return null;
+  const trimmed = typeof text === "string" ? text.trim() : "";
+  if (!trimmed) return null;
+  return { start, end, text: trimmed.slice(0, MAX_HIGHLIGHT_TEXT_LENGTH) };
+}
+
 export async function addReviewCommentAction(
   input: AddReviewCommentInput,
 ): Promise<AddReviewCommentResult> {
@@ -159,7 +181,13 @@ export async function addReviewCommentAction(
     }
 
     const anchorId = sanitizeAnchorId(input.anchorId);
-    const sectionLabel = sanitizeAnchorLabel(input.anchorLabel);
+    // Only root comments carry a highlight; a reply inherits its parent's range.
+    const highlight = parentId ? null : sanitizeHighlight(input.highlight);
+    // A highlight's quoted text is the most useful section label (it is what the
+    // reviewer actually selected); fall back to the block heading otherwise.
+    const sectionLabel = highlight
+      ? sanitizeAnchorLabel(highlight.text)
+      : sanitizeAnchorLabel(input.anchorLabel);
     const subjectLabel = reviewSubjectLabels[input.subjectType];
     const notifyTitle = parentId
       ? `New reply on ${subjectLabel}`
@@ -179,6 +207,7 @@ export async function addReviewCommentAction(
       body: value,
       anchorId,
       anchorLabel: sectionLabel,
+      highlight,
       parentId,
       // The link targets whoever receives the notification (the other party).
       linkPath: buildNotificationLink({

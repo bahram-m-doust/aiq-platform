@@ -5,7 +5,10 @@ import type {
   ReviewSubjectType,
 } from "@/features/review-comments/types";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isMissingTableError } from "@/lib/supabase/errors";
+import {
+  isMissingColumnError,
+  isMissingTableError,
+} from "@/lib/supabase/errors";
 
 type AuthorEmbed =
   | { full_name: string | null; email: string | null }
@@ -20,6 +23,9 @@ type CommentRow = {
   parent_id: string | null;
   anchor_id: string | null;
   anchor_label: string | null;
+  highlight_start: number | null;
+  highlight_end: number | null;
+  highlight_text: string | null;
   author_id: string | null;
   body: string;
   resolved: boolean;
@@ -29,6 +35,11 @@ type CommentRow = {
 };
 
 const COMMENT_SELECT =
+  "id, brand_id, subject_type, subject_id, parent_id, anchor_id, anchor_label, highlight_start, highlight_end, highlight_text, author_id, body, resolved, created_at, updated_at, author:users_profile(full_name, email)";
+
+// Pre-0046 select, without the highlight columns. Used as a fallback so the
+// review surfaces keep rendering before the highlight migration is applied.
+const COMMENT_SELECT_BASE =
   "id, brand_id, subject_type, subject_id, parent_id, anchor_id, anchor_label, author_id, body, resolved, created_at, updated_at, author:users_profile(full_name, email)";
 
 function firstAuthor(
@@ -48,6 +59,9 @@ function mapRow(row: CommentRow): ReviewComment {
     parentId: row.parent_id,
     anchorId: row.anchor_id,
     anchorLabel: row.anchor_label,
+    highlightStart: row.highlight_start ?? null,
+    highlightEnd: row.highlight_end ?? null,
+    highlightText: row.highlight_text ?? null,
     authorId: row.author_id,
     authorName: author?.full_name ?? null,
     authorEmail: author?.email ?? null,
@@ -73,20 +87,29 @@ export async function listCommentsForSubject({
   brandId: string;
 }): Promise<ReviewComment[]> {
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("review_comments")
-    .select(COMMENT_SELECT)
-    .eq("subject_type", subjectType)
-    .eq("subject_id", subjectId)
-    .eq("brand_id", brandId)
-    .order("created_at", { ascending: true });
+  const run = (columns: string) =>
+    admin
+      .from("review_comments")
+      .select(columns)
+      .eq("subject_type", subjectType)
+      .eq("subject_id", subjectId)
+      .eq("brand_id", brandId)
+      .order("created_at", { ascending: true });
+
+  let { data, error } = await run(COMMENT_SELECT);
+
+  // Before migration 0046 the highlight columns don't exist — retry without
+  // them so existing comments still load (highlights just aren't painted yet).
+  if (error && isMissingColumnError(error)) {
+    ({ data, error } = await run(COMMENT_SELECT_BASE));
+  }
 
   if (error) {
     // Degrade gracefully until migration 0041 is applied.
     if (isMissingTableError(error)) return [];
     throw error;
   }
-  return ((data ?? []) as CommentRow[]).map(mapRow);
+  return ((data ?? []) as unknown as CommentRow[]).map(mapRow);
 }
 
 // Minimal lookup used to validate a reply target before inserting: the parent

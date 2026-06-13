@@ -1,6 +1,7 @@
 import "server-only";
 
 import type {
+  CommentHighlight,
   ReviewComment,
   ReviewSubjectType,
 } from "@/features/review-comments/types";
@@ -22,6 +23,7 @@ export async function createComment({
   body,
   anchorId,
   anchorLabel,
+  highlight = null,
   parentId = null,
   linkPath,
   notifyTitle,
@@ -35,6 +37,7 @@ export async function createComment({
   body: string;
   anchorId: string | null;
   anchorLabel: string | null;
+  highlight?: CommentHighlight | null;
   parentId?: string | null;
   linkPath: string | null;
   notifyTitle: string;
@@ -55,14 +58,26 @@ export async function createComment({
     p_notify_title: notifyTitle,
     p_notify_body: notifyBody,
   };
+  const highlightArgs = {
+    p_highlight_start: highlight?.start ?? null,
+    p_highlight_end: highlight?.end ?? null,
+    p_highlight_text: highlight?.text ?? null,
+  };
 
   let { data, error } = await admin.rpc("add_review_comment", {
     ...baseArgs,
     p_notify_audience: notifyAudience,
+    ...highlightArgs,
   });
 
-  // Until migration 0044 is applied the RPC has no audience parameter; retry
-  // with the original signature (audience falls back to INTERNAL_TEAM).
+  // Retry against older RPC signatures so a not-yet-migrated DB keeps working:
+  // first drop the highlight params (pre-0046), then the audience too (pre-0044).
+  if (error && error.code === "PGRST202") {
+    ({ data, error } = await admin.rpc("add_review_comment", {
+      ...baseArgs,
+      p_notify_audience: notifyAudience,
+    }));
+  }
   if (error && error.code === "PGRST202") {
     ({ data, error } = await admin.rpc("add_review_comment", baseArgs));
   }
@@ -86,6 +101,9 @@ export async function createComment({
     parentId: parentId ?? null,
     anchorId,
     anchorLabel,
+    highlightStart: highlight?.start ?? null,
+    highlightEnd: highlight?.end ?? null,
+    highlightText: highlight?.text ?? null,
     authorId,
     authorName: null,
     authorEmail: null,
