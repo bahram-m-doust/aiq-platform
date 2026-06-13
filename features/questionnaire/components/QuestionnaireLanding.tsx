@@ -117,16 +117,24 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
                 This questionnaire has been submitted and locked. Sections are
                 read-only — open one to review your answers.
               </AlertDescription>
-              {data.latestSnapshotId && (
-                <a
-                  className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-                  download
-                  href={`/api/questionnaire/${data.latestSnapshotId}/docx`}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Link
+                  className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[var(--bv-line)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                  href="/change-requests"
                 >
-                  <DownloadIcon className="size-3.5" />
-                  Download answers (Word)
-                </a>
-              )}
+                  Change Request
+                </Link>
+                {data.latestSnapshotId && (
+                  <a
+                    className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[var(--bv-line)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                    download
+                    href={`/api/questionnaire/${data.latestSnapshotId}/docx`}
+                  >
+                    <DownloadIcon className="size-3.5" />
+                    Download answers (Word)
+                  </a>
+                )}
+              </div>
             </Alert>
           )}
         </div>
