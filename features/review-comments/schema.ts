@@ -59,3 +59,35 @@ export function buildSubjectLinkPath(
   const base = subjectPathname(subjectType, subjectId);
   return anchorId ? `${base}#${anchorId}` : base;
 }
+
+// The route on which internal staff (no brand membership) review a deliverable.
+export const ADMIN_REVIEW_PATH = "/admin/review";
+
+// Deep link for a notification, pointed at the recipient's route: clients land
+// on the client review page; the internal team lands on the admin review page
+// (which carries the brand, since internal staff have no membership to infer
+// it from). Always relative, so the bell's open-redirect guard accepts it.
+export function buildNotificationLink({
+  subjectType,
+  subjectId,
+  anchorId,
+  audience,
+  brandId,
+}: {
+  subjectType: ReviewSubjectType;
+  subjectId: string;
+  anchorId: string | null;
+  audience: "INTERNAL_TEAM" | "CLIENT";
+  brandId: string;
+}): string {
+  if (audience === "CLIENT") {
+    return buildSubjectLinkPath(subjectType, subjectId, anchorId);
+  }
+  const params = new URLSearchParams({
+    subjectType,
+    subjectId,
+    brandId,
+  });
+  const base = `${ADMIN_REVIEW_PATH}?${params.toString()}`;
+  return anchorId ? `${base}#${anchorId}` : base;
+}

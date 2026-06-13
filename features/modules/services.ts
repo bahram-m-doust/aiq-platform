@@ -519,14 +519,20 @@ export async function getClientModuleReviewPageData({
 }
 
 function toClientModuleSummary(module: ModuleRecord): ClientModuleSummary {
-  const {
-    assignedTo: _assignedTo,
-    assignedToEmail: _assignedToEmail,
-    supervisorId: _supervisorId,
-    supervisorEmail: _supervisorEmail,
-    ...clientSafe
-  } = module;
-  return clientSafe;
+  // Explicit allow-list (not omit-by-destructure) so adding a sensitive field
+  // to ModuleRecord can never silently leak it into the client payload.
+  return {
+    id: module.id,
+    brandId: module.brandId,
+    brandName: module.brandName,
+    moduleType: module.moduleType,
+    moduleTypeLabel: module.moduleTypeLabel,
+    title: module.title,
+    status: module.status,
+    currentVersion: module.currentVersion,
+    createdAt: module.createdAt,
+    updatedAt: module.updatedAt,
+  };
 }
 
 function toClientReviewEntry(review: ModuleReviewRecord): ClientReviewEntry {

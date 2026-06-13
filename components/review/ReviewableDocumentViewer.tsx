@@ -48,17 +48,20 @@ export type ReviewCommentActions = {
     subjectId: string;
     commentId: string;
     body: string;
+    brandId?: string;
   }) => Promise<ReviewCommentMutationResult>;
   remove: (args: {
     subjectType: string;
     subjectId: string;
     commentId: string;
+    brandId?: string;
   }) => Promise<ReviewCommentMutationResult>;
   resolve: (args: {
     subjectType: string;
     subjectId: string;
     commentId: string;
     resolved: boolean;
+    brandId?: string;
   }) => Promise<ReviewCommentMutationResult>;
 };
 
@@ -105,6 +108,7 @@ export function ReviewableDocumentViewer({
   downloadUrl,
   downloadName,
   fileUrl,
+  contextBrandId,
   decision,
   actions,
 }: {
@@ -124,11 +128,27 @@ export function ReviewableDocumentViewer({
   // extracted markdown to show — e.g. an image/scanned PDF — so an uploaded
   // deliverable is never hidden and whole-document comments still work.
   fileUrl?: string | null;
+  // Set only on the internal admin review surface, where the staff member has
+  // no brand membership; threaded into every comment mutation so the server can
+  // resolve (and re-verify) the brand. Undefined for client-membership callers.
+  contextBrandId?: string;
   decision?: ReviewDecision | null;
   actions: ReviewCommentActions;
 }) {
   const [comments, setComments] = useState<ReviewComment[]>(initialComments);
   const [target, setTarget] = useState<Target>({ anchorId: null, label: null });
+
+  // Bind the admin-context brand into every mutation once, so the comment
+  // sub-components don't each need to know about it.
+  const boundActions = useMemo<ReviewCommentActions>(() => {
+    if (!contextBrandId) return actions;
+    return {
+      add: (input) => actions.add({ ...input, brandId: contextBrandId }),
+      edit: (args) => actions.edit({ ...args, brandId: contextBrandId }),
+      remove: (args) => actions.remove({ ...args, brandId: contextBrandId }),
+      resolve: (args) => actions.resolve({ ...args, brandId: contextBrandId }),
+    };
+  }, [actions, contextBrandId]);
 
   const countByAnchor = useMemo(() => {
     const map = new Map<string, number>();
@@ -271,7 +291,7 @@ export function ReviewableDocumentViewer({
         <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-[360px]">
           <div className="rounded-xl border border-border bg-card">
             <CommentRail
-              actions={actions}
+              actions={boundActions}
               canComment={canComment}
               currentUserId={currentUserId}
               onAdd={upsertComment}

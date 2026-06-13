@@ -14,7 +14,7 @@ import {
 } from "@/features/review-comments/mutation-service";
 import { getReplyParent } from "@/features/review-comments/queries";
 import {
-  buildSubjectLinkPath,
+  buildNotificationLink,
   commentExcerpt,
   isReviewSubjectType,
   subjectPathname,
@@ -50,12 +50,14 @@ type CommentAuthor = {
 
 // Resolves who is commenting. Brand members (OWNER / EXECUTIVE_MANAGER) act for
 // their own brand; internal users (PLATFORM_OWNER / SUPERVISOR /
-// INTERNAL_SPECIALIST) without a membership act for the subject's brand, which
-// must be derivable from the subject row itself.
+// INTERNAL_SPECIALIST) without a membership act for a brand resolved from the
+// admin review context, the parent comment (replies), or the subject row —
+// always re-verified to actually own the subject before it is trusted.
 async function resolveCommentAuthor(
   subjectType: ReviewSubjectType,
   subjectId: string,
   returnTo: string,
+  contextBrandId?: string,
 ): Promise<CommentAuthor | null> {
   const reviewer = await requireDeliverableReviewer(returnTo);
   if (reviewer) {
@@ -70,11 +72,24 @@ async function resolveCommentAuthor(
 
   const { profile } = await requireUserProfile(returnTo);
   if (!canViewAdminModulesRole(profile.global_role)) return null;
-  const brandId = await getReviewSubjectBrand({ subjectType, subjectId });
-  if (!brandId) return null;
+
+  // Prefer the admin-context brand (from the verified deep link); fall back to
+  // deriving it from the subject. Either way it must own the subject.
+  const candidateBrandId =
+    contextBrandId && isUuid(contextBrandId)
+      ? contextBrandId
+      : await getReviewSubjectBrand({ subjectType, subjectId });
+  if (!candidateBrandId) return null;
+  const ownsSubject = await verifyReviewSubject({
+    subjectType,
+    subjectId,
+    brandId: candidateBrandId,
+  });
+  if (!ownsSubject) return null;
+
   return {
     profileId: profile.id,
-    brandId,
+    brandId: candidateBrandId,
     authorName: profile.full_name ?? null,
     authorEmail: profile.email ?? null,
     notifyAudience: "CLIENT",
@@ -118,6 +133,7 @@ export async function addReviewCommentAction(
     input.subjectType,
     input.subjectId,
     returnTo,
+    input.brandId,
   );
   if (!reviewer) {
     return { ok: false, message: "You cannot comment on this document." };
@@ -164,11 +180,14 @@ export async function addReviewCommentAction(
       anchorId,
       anchorLabel: sectionLabel,
       parentId,
-      linkPath: buildSubjectLinkPath(
-        input.subjectType,
-        input.subjectId,
+      // The link targets whoever receives the notification (the other party).
+      linkPath: buildNotificationLink({
+        subjectType: input.subjectType,
+        subjectId: input.subjectId,
         anchorId,
-      ),
+        audience: reviewer.notifyAudience,
+        brandId: reviewer.brandId,
+      }),
       notifyTitle,
       notifyBody,
       notifyAudience: reviewer.notifyAudience,
@@ -201,6 +220,7 @@ export async function editReviewCommentAction(args: {
   subjectId: string;
   commentId: string;
   body: string;
+  brandId?: string;
 }): Promise<ReviewCommentMutationResult> {
   if (!isReviewSubjectType(args.subjectType)) {
     return { ok: false, message: "Unknown document type." };
@@ -210,6 +230,7 @@ export async function editReviewCommentAction(args: {
     args.subjectType,
     args.subjectId,
     returnTo,
+    args.brandId,
   );
   if (!reviewer) return { ok: false, message: "Not allowed." };
   if (!isUuid(args.commentId)) {
@@ -242,6 +263,7 @@ export async function deleteReviewCommentAction(args: {
   subjectType: string;
   subjectId: string;
   commentId: string;
+  brandId?: string;
 }): Promise<ReviewCommentMutationResult> {
   if (!isReviewSubjectType(args.subjectType)) {
     return { ok: false, message: "Unknown document type." };
@@ -251,6 +273,7 @@ export async function deleteReviewCommentAction(args: {
     args.subjectType,
     args.subjectId,
     returnTo,
+    args.brandId,
   );
   if (!reviewer) return { ok: false, message: "Not allowed." };
   if (!isUuid(args.commentId)) {
@@ -280,6 +303,7 @@ export async function resolveReviewCommentAction(args: {
   subjectId: string;
   commentId: string;
   resolved: boolean;
+  brandId?: string;
 }): Promise<ReviewCommentMutationResult> {
   if (!isReviewSubjectType(args.subjectType)) {
     return { ok: false, message: "Unknown document type." };
@@ -289,6 +313,7 @@ export async function resolveReviewCommentAction(args: {
     args.subjectType,
     args.subjectId,
     returnTo,
+    args.brandId,
   );
   if (!reviewer) return { ok: false, message: "Not allowed." };
   if (!isUuid(args.commentId)) {

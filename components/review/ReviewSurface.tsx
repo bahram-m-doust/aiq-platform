@@ -45,6 +45,7 @@ export function ReviewSurface({
   downloadName,
   currentUserId,
   canComment,
+  contextBrandId,
   decision,
   emptyState,
 }: {
@@ -61,6 +62,8 @@ export function ReviewSurface({
   downloadName?: string | null;
   currentUserId: string;
   canComment: boolean;
+  // Internal admin review surface only — see ReviewableDocumentViewer.
+  contextBrandId?: string;
   decision?: ReviewDecision | null;
   emptyState: ReactNode;
 }) {
@@ -79,6 +82,7 @@ export function ReviewSurface({
       actions={reviewCommentActions}
       blocks={blocks}
       canComment={canComment}
+      contextBrandId={contextBrandId}
       currentUserId={currentUserId}
       decision={decision}
       description={description}

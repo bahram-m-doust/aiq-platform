@@ -44,6 +44,10 @@ export type AddReviewCommentInput = {
   anchorLabel: string | null;
   body: string;
   parentId?: string | null;
+  // Set only by the internal admin review surface (where the staff member has
+  // no brand membership). The server verifies the subject belongs to this
+  // brand before trusting it; client-membership callers leave it undefined.
+  brandId?: string;
 };
 
 export type AddReviewCommentResult =
