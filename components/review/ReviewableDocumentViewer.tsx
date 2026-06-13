@@ -32,7 +32,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
@@ -1089,17 +1088,10 @@ function CommentItem({
                 </DropdownMenuItem>
               ) : null}
               {isOwn ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    disabled={pending}
-                    onSelect={doDelete}
-                    variant="destructive"
-                  >
-                    <Trash2Icon className="size-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </>
+                <DropdownMenuItem disabled={pending} onSelect={doDelete}>
+                  <Trash2Icon className="size-4" />
+                  Delete
+                </DropdownMenuItem>
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
