@@ -1,51 +1,61 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getBrandBuildProgress } from "@/features/app/build-progress";
+import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
+import { getAgentCatalogWorkspace } from "@/features/agents/catalog/queries";
+import { getIntakePageData } from "@/features/questionnaire/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// TEMPORARY diagnostic endpoint. Reproduces the exact admin-client queries that
-// app/(app)/layout.tsx runs, so we can read the real Postgres/PostgREST error
-// that is otherwise hidden behind the production "Internal Server Error" page.
-// Returns ONLY error metadata (no row data). DELETE this file once diagnosed.
+// TEMPORARY diagnostic endpoint. Reproduces the exact server work that
+// app/(app)/layout.tsx and the roadmap page run, so we can read the real error
+// hidden behind the production "Internal Server Error" page. DELETE after use.
 const PROBE_TOKEN = "bx_probe_7Kq9mZ2vR8nL4pT";
 
-type ProbeResult = {
-  name: string;
-  ok: boolean;
-  code: string | null;
-  message: string | null;
-  details: string | null;
-  hint: string | null;
-};
-
-function describe(error: unknown): Omit<ProbeResult, "name" | "ok"> {
+function describe(error: unknown) {
   if (error && typeof error === "object") {
     const e = error as Record<string, unknown>;
     return {
+      name: typeof e.name === "string" ? e.name : null,
       code: typeof e.code === "string" ? e.code : null,
       message: typeof e.message === "string" ? e.message : String(error),
       details: typeof e.details === "string" ? e.details : null,
       hint: typeof e.hint === "string" ? e.hint : null,
+      stack:
+        typeof e.stack === "string"
+          ? e.stack.split("\n").slice(0, 6).join("\n")
+          : null,
     };
   }
-  return { code: null, message: String(error), details: null, hint: null };
+  return {
+    name: null,
+    code: null,
+    message: String(error),
+    details: null,
+    hint: null,
+    stack: null,
+  };
 }
 
-async function probe(
-  name: string,
-  run: () => PromiseLike<{ error: unknown }>,
-): Promise<ProbeResult> {
+async function step<T>(name: string, run: () => Promise<T>) {
   try {
-    const { error } = await run();
-    if (error) {
-      return { name, ok: false, ...describe(error) };
-    }
-    return { name, ok: true, code: null, message: null, details: null, hint: null };
+    const value = await run();
+    return { name, ok: true, error: null, value: summarize(value) };
   } catch (error) {
-    return { name, ok: false, ...describe(error) };
+    return { name, ok: false, error: describe(error), value: null };
   }
+}
+
+function summarize(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (typeof value !== "object") return value;
+  // Avoid dumping large payloads — just report shape/status.
+  const v = value as Record<string, unknown>;
+  if ("status" in v) return { status: v.status };
+  return { keys: Object.keys(v).slice(0, 8) };
 }
 
 export async function GET(request: NextRequest) {
@@ -53,44 +63,73 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
+  const steps: unknown[] = [];
+
+  // 1) Session/JWT path used by requireUserProfile -> getCurrentUser.
+  steps.push(
+    await step("auth.getClaims", async () => {
+      const supabase = await createClient();
+      const { data, error } = await supabase.auth.getClaims();
+      if (error) throw error;
+      return { hasSession: Boolean(data?.claims?.sub) };
+    }),
+  );
+
+  // 2) Find a real ACTIVE membership to replay the active-user render path.
   const admin = createAdminClient();
+  let profileId: string | null = null;
+  let brandId: string | null = null;
+  let brandName: string | null = null;
 
-  const results = await Promise.all([
-    probe("plans.select", () => admin.from("plans").select("id").limit(1)),
-    probe("users_profile.select", () =>
-      admin.from("users_profile").select("id").limit(1),
-    ),
-    probe("brand_memberships.select", () =>
-      admin.from("brand_memberships").select("brand_id, role").limit(1),
-    ),
-    probe("brand_memberships.join_brands", () =>
-      admin
+  steps.push(
+    await step("find.active_membership", async () => {
+      const { data, error } = await admin
         .from("brand_memberships")
-        .select("brand_id, role, brands(id, name)")
-        .limit(1),
-    ),
-    probe("brand_entitlements.select", () =>
-      admin
-        .from("brand_entitlements")
-        .select("brand_id, status, starts_at, expires_at")
-        .limit(1),
-    ),
-    probe("brand_entitlements.join_plans", () =>
-      admin
-        .from("brand_entitlements")
-        .select("brand_id, status, plans(name, credits)")
-        .limit(1),
-    ),
-    probe("brands.icon_path", () =>
-      admin.from("brands").select("icon_path").limit(1),
-    ),
-    probe("notifications.select", () =>
-      admin.from("notifications").select("id").limit(1),
-    ),
-  ]);
+        .select("user_id, brand_id, brands(name)")
+        .eq("status", "ACTIVE")
+        .limit(1)
+        .maybeSingle<{
+          user_id: string;
+          brand_id: string;
+          brands: { name: string } | { name: string }[] | null;
+        }>();
+      if (error) throw error;
+      profileId = data?.user_id ?? null;
+      brandId = data?.brand_id ?? null;
+      const b = Array.isArray(data?.brands) ? data?.brands[0] : data?.brands;
+      brandName = b?.name ?? null;
+      return { profileId, brandId, brandName };
+    }),
+  );
 
+  if (profileId) {
+    steps.push(
+      await step("getBrandAccessSummaryForProfile", () =>
+        getBrandAccessSummaryForProfile(profileId as string),
+      ),
+    );
+    steps.push(
+      await step("getAgentCatalogWorkspace", () =>
+        getAgentCatalogWorkspace(profileId as string),
+      ),
+    );
+    steps.push(
+      await step("getIntakePageData", () =>
+        getIntakePageData({ profileId: profileId as string }),
+      ),
+    );
+    if (brandId && brandName) {
+      steps.push(
+        await step("getBrandBuildProgress", () =>
+          getBrandBuildProgress(brandId as string, brandName as string, {}),
+        ),
+      );
+    }
+  }
+
+  const ok = steps.every((s) => (s as { ok: boolean }).ok);
   return NextResponse.json(
-    { ok: results.every((r) => r.ok), results },
+    { ok, steps },
     { status: 200, headers: { "Cache-Control": "no-store" } },
   );
 }
