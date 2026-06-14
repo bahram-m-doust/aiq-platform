@@ -20,6 +20,7 @@ import {
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
 import { QuestionRenderer } from "@/features/questionnaire/components/QuestionRenderer";
+import { SimpleChangeRequestDialog } from "@/features/change-requests/components/SimpleChangeRequestDialog";
 import { useIntakeAutosaveQueue } from "@/features/questionnaire/components/useIntakeAutosaveQueue";
 import type {
   IntakeAnswerMap,
@@ -94,21 +95,26 @@ export function SectionQuestionnaire({
 
   return (
     <div
-      className="min-h-svh px-4 py-6 sm:px-6 sm:py-8"
+      className="min-h-svh px-4 pb-6 pt-12 sm:px-6 sm:pb-8"
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
       <div className="mx-auto max-w-[1057px]">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 space-y-4">
           <Button asChild size="sm" variant="outline">
             <Link href="/brand-integrated-brain/roadmap/questionnaire">
               <ArrowLeftIcon className="size-3.5" />
               All sections
             </Link>
           </Button>
-          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
-            Section {sectionIndex} of {allSections.length} - {sectionAnswered}/
-            {sectionTotal} answered
-          </span>
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <ProgressBar color="green" value={sectionPercent} />
+            </div>
+            <span className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
+              Section {sectionIndex} of {allSections.length} ·{" "}
+              {sectionAnswered}/{sectionTotal} answered · {sectionPercent}%
+            </span>
+          </div>
         </div>
 
         <div className="mb-9">
@@ -131,13 +137,6 @@ export function SectionQuestionnaire({
             </p>
           )}
 
-          <div className="mt-5">
-            <div className="mb-1.5 text-right font-mono text-[11.5px] text-[var(--bv-ink-2)]">
-              {sectionPercent}%
-            </div>
-            <ProgressBar color="green" value={sectionPercent} />
-          </div>
-
           {locked && (
             <Alert className="mt-4" variant="success">
               <LockIcon />
@@ -145,16 +144,26 @@ export function SectionQuestionnaire({
                 This questionnaire is submitted and locked - answers are shown
                 for reference only.
               </AlertDescription>
-              {latestSnapshotId && (
-                <a
-                  className="mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-                  download
-                  href={`/api/questionnaire/${latestSnapshotId}/docx`}
-                >
-                  <DownloadIcon className="size-3.5" />
-                  Download answers (Word)
-                </a>
-              )}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <SimpleChangeRequestDialog sectionKey={section.key}>
+                  <button
+                    className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                    type="button"
+                  >
+                    Request a Change
+                  </button>
+                </SimpleChangeRequestDialog>
+                {latestSnapshotId && (
+                  <a
+                    className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                    download
+                    href={`/api/questionnaire/${latestSnapshotId}/docx`}
+                  >
+                    <DownloadIcon className="size-3.5" />
+                    Download answers (Word)
+                  </a>
+                )}
+              </div>
             </Alert>
           )}
 
