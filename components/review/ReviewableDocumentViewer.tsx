@@ -873,15 +873,6 @@ function CommentThread({
         root.resolved && "opacity-80",
       )}
     >
-      {root.highlightText ? (
-        <p
-          className="mb-2 line-clamp-2 border-s-2 border-amber-300 ps-2 text-[12px] text-muted-foreground"
-          dir="auto"
-        >
-          {root.highlightText}
-        </p>
-      ) : null}
-
       <CommentItem
         actions={actions}
         canResolve
