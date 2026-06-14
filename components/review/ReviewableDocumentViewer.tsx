@@ -96,12 +96,16 @@ export type ReviewDecision = {
 type Target = { anchorId: string | null; label: string | null };
 
 // A live text selection inside a block, captured on mouse-up and offered as the
-// anchor for a new highlight comment. `rect` positions the floating composer.
+// anchor for a new highlight comment. `rect` is the selection's vertical extent
+// and `frameRight` the document frame's right edge, so the button and composer
+// dock in the right margin beside the frame (the Google-Docs comment gutter)
+// rather than floating over the text.
 type PendingSelection = {
   anchorId: string;
   label: string | null;
   highlight: CommentHighlight;
-  rect: { top: number; left: number; width: number };
+  rect: { top: number; bottom: number };
+  frameRight: number;
 };
 
 const HIGHLIGHT_NAME = "review-comment";
@@ -341,11 +345,13 @@ export function ReviewableDocumentViewer({
       return;
     }
     const rect = range.getBoundingClientRect();
+    const frame = contentRef.current?.getBoundingClientRect();
     setSelection({
       anchorId: startBlock.dataset.blockContent ?? "",
       label: startBlock.dataset.blockLabel || null,
       highlight: { ...offsets, text: range.toString() },
-      rect: { top: rect.top, left: rect.left, width: rect.width },
+      rect: { top: rect.top, bottom: rect.bottom },
+      frameRight: frame?.right ?? rect.right,
     });
     setComposing(false);
   }, [canComment]);
@@ -630,6 +636,7 @@ export function ReviewableDocumentViewer({
         <SelectionPopover
           composing={composing}
           error={highlightError}
+          frameRight={selection.frameRight}
           onCancel={clearSelection}
           onStartComposing={() => setComposing(true)}
           onSubmit={createHighlightComment}
@@ -646,6 +653,7 @@ export function ReviewableDocumentViewer({
 // coordinates (the rect comes from Range.getBoundingClientRect).
 function SelectionPopover({
   rect,
+  frameRight,
   composing,
   pending,
   error,
@@ -653,7 +661,8 @@ function SelectionPopover({
   onSubmit,
   onCancel,
 }: {
-  rect: { top: number; left: number; width: number };
+  rect: { top: number; bottom: number };
+  frameRight: number;
   composing: boolean;
   pending: boolean;
   error: string | null;
@@ -663,35 +672,37 @@ function SelectionPopover({
 }) {
   const [body, setBody] = useState("");
 
+  // Dock in the right margin beside the document frame (the Google-Docs comment
+  // gutter), vertically aligned to the selection — never over the text. Clamp to
+  // the viewport so it stays visible on narrow screens where the frame is wide.
+  const viewportWidth = typeof window === "undefined" ? 1280 : window.innerWidth;
+  const viewportHeight =
+    typeof window === "undefined" ? 800 : window.innerHeight;
+  const composerWidth = 288;
+  const top = Math.min(Math.max(8, rect.top), viewportHeight - 220);
+
   if (!composing) {
+    const left = Math.min(frameRight + 12, viewportWidth - 160);
     return (
-      <div
-        className="fixed z-50 -translate-x-1/2"
-        style={{
-          top: Math.max(8, rect.top - 44),
-          left: rect.left + rect.width / 2,
-        }}
-      >
+      <div className="fixed z-50" style={{ top, left }}>
         <Button
           onClick={onStartComposing}
           onMouseDown={(e) => e.preventDefault()}
           size="sm"
           type="button"
         >
-          <MessageSquarePlusIcon className="size-4" /> Comment
+          <MessageSquarePlusIcon className="size-4" /> Add comment
         </Button>
       </div>
     );
   }
 
+  const left = Math.min(frameRight + 12, viewportWidth - composerWidth - 8);
   return (
     <div
-      className="fixed z-50 w-72 -translate-x-1/2 rounded-[10px] border border-border bg-popover p-3 shadow-md"
+      className="fixed z-50 w-72 rounded-[10px] border border-border bg-popover p-3 shadow-md"
       onMouseUp={(e) => e.stopPropagation()}
-      style={{
-        top: rect.top + 12,
-        left: Math.max(160, rect.left + rect.width / 2),
-      }}
+      style={{ top, left }}
     >
       <Textarea
         autoFocus
