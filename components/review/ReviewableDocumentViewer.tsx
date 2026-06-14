@@ -47,7 +47,6 @@ import {
   findQuoteOffsets,
   getSelectionOffsets,
   offsetUnderPoint,
-  supportsHighlightApi,
 } from "@/lib/highlight/text-range";
 import type { MarkdownBlock } from "@/lib/markdown/blocks";
 import { cn } from "@/lib/utils";
@@ -108,18 +107,36 @@ type PendingSelection = {
   frameRight: number;
 };
 
-const HIGHLIGHT_NAME = "review-comment";
-const HIGHLIGHT_ACTIVE_NAME = "review-comment-active";
+// One painted highlight rectangle (a single line of a comment's range), in
+// padding-box coordinates relative to the document container.
+type HighlightRect = {
+  key: string;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  active: boolean;
+};
 
-// Injected at runtime rather than via globals.css: the build's CSS parser
-// rejects the `::highlight()` pseudo-element and drops the rule, but the browser
-// (which supports the Custom Highlight API) parses it fine from a live <style>.
-// Muted amber matches the comment-marker convention; the active range paints
-// stronger and on top.
-const HIGHLIGHT_STYLES = `
-::highlight(${HIGHLIGHT_NAME}){background-color:rgba(245,158,11,0.20);}
-::highlight(${HIGHLIGHT_ACTIVE_NAME}){background-color:rgba(245,158,11,0.45);border-radius:2px;}
-`;
+// Muted/active amber fills — translucent so the text (or PDF canvas) reads
+// clearly through them, matching the comment-marker convention.
+const HIGHLIGHT_FILL = "rgba(245,158,11,0.28)";
+const HIGHLIGHT_FILL_ACTIVE = "rgba(245,158,11,0.45)";
+
+// The line-height of the text a range sits in, so a content-box-tall client rect
+// can be grown to fill the whole line and meet the line above/below it.
+function lineHeightForRange(range: Range): number {
+  const node = range.startContainer;
+  const el = node instanceof Element ? node : node.parentElement;
+  if (!el) return 0;
+  const style = getComputedStyle(el);
+  const lineHeight = Number.parseFloat(style.lineHeight);
+  if (Number.isNaN(lineHeight)) {
+    const fontSize = Number.parseFloat(style.fontSize);
+    return Number.isNaN(fontSize) ? 0 : fontSize * 1.2;
+  }
+  return lineHeight;
+}
 
 function formatDate(value: string | null): string {
   if (!value) return "";
@@ -189,6 +206,9 @@ export function ReviewableDocumentViewer({
   // The live selection awaiting a "Comment" click, then its inline composer.
   const [selection, setSelection] = useState<PendingSelection | null>(null);
   const [composing, setComposing] = useState(false);
+  // Overlay highlight rectangles (one per range client rect), painted behind the
+  // text instead of via the CSS Custom Highlight API so they fill the full line.
+  const [highlightRects, setHighlightRects] = useState<HighlightRect[]>([]);
   const contentRef = useRef<HTMLDivElement | null>(null);
   // Bumped when the PDF viewer finishes laying out its pages, so the highlight
   // painter re-runs against text layers that did not exist on first render.
@@ -293,25 +313,83 @@ export function ReviewableDocumentViewer({
     [blockElement],
   );
 
-  // Paint every highlight via the CSS Custom Highlight API — no DOM mutation, so
-  // the markdown renderer is untouched. Re-runs whenever the comment set or the
-  // active selection changes.
+  // Paint highlights as absolutely-positioned overlay rectangles instead of the
+  // CSS Custom Highlight API. The Highlight API only fills the text's content box
+  // (~font height), so on loosely-spaced text the bands leave vertical gaps
+  // between lines and read as choppy. Here every client rect of a comment's range
+  // is expanded to the full line-height, so consecutive lines touch and the
+  // highlight is one continuous block, like Google Docs. Recomputed on the comment
+  // set, the active selection, PDF (re)render, and any layout change.
   useEffect(() => {
-    if (!supportsHighlightApi()) return;
-    const muted = new Highlight();
-    const active = new Highlight();
-    for (const comment of comments) {
-      if (comment.parentId || comment.highlightStart == null) continue;
-      const range = rangeForComment(comment);
-      if (!range) continue;
-      if (comment.id === activeCommentId) active.add(range);
-      else muted.add(range);
+    const root = contentRef.current;
+    if (!root) {
+      setHighlightRects([]);
+      return;
     }
-    CSS.highlights.set(HIGHLIGHT_NAME, muted);
-    CSS.highlights.set(HIGHLIGHT_ACTIVE_NAME, active);
+    const compute = () => {
+      const rootRect = root.getBoundingClientRect();
+      const out: HighlightRect[] = [];
+      for (const comment of comments) {
+        if (comment.parentId || comment.highlightStart == null) continue;
+        const range = rangeForComment(comment);
+        if (!range) continue;
+        const lineHeight = lineHeightForRange(range);
+        const isActive = comment.id === activeCommentId;
+        // Merge the range's per-fragment client rects into one continuous band
+        // per visual line. A PDF text layer renders each glyph as its own span,
+        // so getClientRects returns many gapped rects per line; collapsing them
+        // to [minLeft, maxRight] makes the highlight solid rather than striped.
+        const lines: Array<{
+          left: number;
+          right: number;
+          top: number;
+          bottom: number;
+        }> = [];
+        for (const r of range.getClientRects()) {
+          if (r.width === 0 || r.height === 0) continue;
+          const center = (r.top + r.bottom) / 2;
+          const line = lines.find(
+            (l) =>
+              Math.abs((l.top + l.bottom) / 2 - center) <=
+              Math.max(3, Math.min(r.height, l.bottom - l.top) / 2),
+          );
+          if (line) {
+            line.left = Math.min(line.left, r.left);
+            line.right = Math.max(line.right, r.right);
+            line.top = Math.min(line.top, r.top);
+            line.bottom = Math.max(line.bottom, r.bottom);
+          } else {
+            lines.push({
+              left: r.left,
+              right: r.right,
+              top: r.top,
+              bottom: r.bottom,
+            });
+          }
+        }
+        lines.forEach((line, i) => {
+          const height = line.bottom - line.top;
+          const extra = Math.max(0, lineHeight - height);
+          out.push({
+            key: `${comment.id}-${i}`,
+            // Content-relative (includes the scroll offset): the overlay is an
+            // absolute child of the document container and scrolls with its
+            // content, so these coordinates stay aligned at any scroll position
+            // without a per-scroll recompute.
+            top: line.top - rootRect.top + root.scrollTop - extra / 2,
+            left: line.left - rootRect.left + root.scrollLeft,
+            width: line.right - line.left,
+            height: height + extra,
+            active: isActive,
+          });
+        });
+      }
+      setHighlightRects(out);
+    };
+    compute();
+    window.addEventListener("resize", compute);
     return () => {
-      CSS.highlights.delete(HIGHLIGHT_NAME);
-      CSS.highlights.delete(HIGHLIGHT_ACTIVE_NAME);
+      window.removeEventListener("resize", compute);
     };
   }, [comments, activeCommentId, rangeForComment, pdfRenderNonce]);
 
@@ -460,7 +538,6 @@ export function ReviewableDocumentViewer({
 
   return (
     <main className="w-full pt-[15px]">
-      <style dangerouslySetInnerHTML={{ __html: HIGHLIGHT_STYLES }} />
       <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
         {/* Left column — header, hint, the framed document/PDF area, and the
             centred Approve action. Centred in the space beside the rail. */}
@@ -492,7 +569,7 @@ export function ReviewableDocumentViewer({
             <div className="w-full overflow-hidden rounded-[10px] border border-border bg-card shadow-xs">
               {isPdfOnly ? (
                 <div
-                  className="max-h-[70vh] min-h-[479px] overflow-auto bg-muted/30"
+                  className="relative max-h-[70vh] min-h-[479px] overflow-auto bg-muted/30"
                   onClick={handleContentClick}
                   onMouseUp={captureSelection}
                   ref={contentRef}
@@ -501,14 +578,16 @@ export function ReviewableDocumentViewer({
                     fileUrl={fileUrl ?? ""}
                     onRendered={handlePdfRendered}
                   />
+                  <HighlightLayer rects={highlightRects} />
                 </div>
               ) : (
                 <div
-                  className="flex min-h-[479px] flex-col gap-4 p-4 sm:p-6"
+                  className="relative flex min-h-[479px] flex-col gap-4 p-4 sm:p-6"
                   onClick={handleContentClick}
                   onMouseUp={captureSelection}
                   ref={contentRef}
                 >
+                  <HighlightLayer rects={highlightRects} />
                   {blocks.map((block) => {
                     const count =
                       countByAnchor.get(anchorKey(block.anchorId)) ?? 0;
@@ -637,6 +716,33 @@ export function ReviewableDocumentViewer({
         />
       ) : null}
     </main>
+  );
+}
+
+// The painted highlights: one translucent rectangle per line of each commented
+// range, grown to fill the line-height so multi-line highlights are continuous
+// (no gaps between lines). `pointer-events-none` lets clicks and text selection
+// fall through to the document underneath.
+function HighlightLayer({ rects }: { rects: HighlightRect[] }) {
+  if (rects.length === 0) return null;
+  return (
+    <div aria-hidden className="pointer-events-none absolute left-0 top-0 z-0">
+      {rects.map((rect) => (
+        <div
+          className="absolute rounded-[2px]"
+          key={rect.key}
+          style={{
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+            backgroundColor: rect.active
+              ? HIGHLIGHT_FILL_ACTIVE
+              : HIGHLIGHT_FILL,
+          }}
+        />
+      ))}
+    </div>
   );
 }
 
