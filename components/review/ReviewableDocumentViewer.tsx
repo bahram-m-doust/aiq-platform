@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { MarkdownContent } from "@/components/markdown/MarkdownContent";
+import { PdfTextLayerViewer } from "@/components/review/PdfTextLayerViewer";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -185,6 +186,12 @@ export function ReviewableDocumentViewer({
   const [selection, setSelection] = useState<PendingSelection | null>(null);
   const [composing, setComposing] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  // Bumped when the PDF viewer finishes laying out its pages, so the highlight
+  // painter re-runs against text layers that did not exist on first render.
+  const [pdfRenderNonce, setPdfRenderNonce] = useState(0);
+  const handlePdfRendered = useCallback(() => {
+    setPdfRenderNonce((value) => value + 1);
+  }, []);
 
   // Bind the admin-context brand into every mutation once, so the comment
   // sub-components don't each need to know about it.
@@ -302,7 +309,7 @@ export function ReviewableDocumentViewer({
       CSS.highlights.delete(HIGHLIGHT_NAME);
       CSS.highlights.delete(HIGHLIGHT_ACTIVE_NAME);
     };
-  }, [comments, activeCommentId, rangeForComment]);
+  }, [comments, activeCommentId, rangeForComment, pdfRenderNonce]);
 
   // Capture a text selection inside a single block and offer it as a highlight
   // anchor. Selections that are collapsed, escape a block, or span two blocks
@@ -478,11 +485,17 @@ export function ReviewableDocumentViewer({
                 text-selection commenting. */}
             <div className="w-full overflow-hidden rounded-[10px] border border-border bg-card shadow-xs">
               {isPdfOnly ? (
-                <iframe
-                  className="h-[479px] w-full lg:h-[70vh]"
-                  src={fileUrl ?? undefined}
-                  title={`${title} preview`}
-                />
+                <div
+                  className="max-h-[70vh] min-h-[479px] overflow-auto bg-muted/30"
+                  onClick={handleContentClick}
+                  onMouseUp={captureSelection}
+                  ref={contentRef}
+                >
+                  <PdfTextLayerViewer
+                    fileUrl={fileUrl ?? ""}
+                    onRendered={handlePdfRendered}
+                  />
+                </div>
               ) : (
                 <div
                   className="flex min-h-[479px] flex-col gap-4 p-4 sm:p-6"

@@ -29,6 +29,7 @@
     "next": "16.2.6",
     "openai": "^6.38.0",
     "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^4.8.69",
     "radix-ui": "^1.4.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
