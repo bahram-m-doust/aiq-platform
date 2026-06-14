@@ -609,14 +609,6 @@ export function ReviewableDocumentViewer({
 
               {canComment ? (
                 <div className="rounded-[10px] border border-border bg-card p-2.5 shadow-xs">
-                  {target.anchorId ? (
-                    <p
-                      className="mb-2 truncate text-[11px] text-muted-foreground"
-                      dir="auto"
-                    >
-                      On: {target.label ?? "Selected section"}
-                    </p>
-                  ) : null}
                   <AddCommentForm
                     anchorId={target.anchorId}
                     anchorLabel={target.label}
