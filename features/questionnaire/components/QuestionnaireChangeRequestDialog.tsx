@@ -4,6 +4,7 @@ import { useActionState, useState, type ReactNode } from "react";
 import { BadgeCheckIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -18,23 +19,26 @@ import { SubmitButton } from "@/features/auth/components/SubmitButton";
 import { createChangeRequestAction } from "@/features/change-requests/actions";
 import { initialCreateChangeRequestFormState } from "@/features/change-requests/schema";
 
-export function SimpleChangeRequestDialog({
+export function QuestionnaireChangeRequestDialog({
   children,
   sectionKey,
 }: {
-  children: ReactNode;
+  children?: ReactNode;
   sectionKey: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
   const [state, formAction] = useActionState(
     createChangeRequestAction,
     initialCreateChangeRequestFormState,
   );
-  const [reason, setReason] = useState("");
   const reasonIsEmpty = reason.trim().length === 0;
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog onOpenChange={setOpen} open={open}>
+      <DialogTrigger asChild>
+        {children ?? <Button type="button">Request a Change</Button>}
+      </DialogTrigger>
       <DialogContent
         className="max-w-xl"
         onOpenAutoFocus={(event) => event.preventDefault()}
@@ -46,10 +50,11 @@ export function SimpleChangeRequestDialog({
             before any locked answers are changed.
           </DialogDescription>
         </DialogHeader>
-
         <form action={formAction} className="grid gap-4">
           <input name="target_type" type="hidden" value="INTAKE_SECTION" />
           <input name="section_key" type="hidden" value={sectionKey} />
+          <input name="question_target" type="hidden" value="" />
+          <input name="module_id" type="hidden" value="" />
           <input name="comment" type="hidden" value={reason} />
 
           {state.status === "error" ? (

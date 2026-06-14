@@ -22,6 +22,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar as SidebarRoot,
   SidebarContent,
@@ -235,13 +236,14 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
             <p className="flex-1 text-sm font-medium text-card-foreground">
               {planName ?? "Free plan"}
             </p>
-            <button
-              className="flex h-9 items-center gap-1 rounded-md py-2 pr-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            <Button
+              className="h-9 px-2.5 text-muted-foreground hover:text-foreground"
               type="button"
+              variant="ghost"
             >
               Manage Plan
               <ChevronRightIcon className="size-4" />
-            </button>
+            </Button>
           </div>
           <CreditCounter credits={credits} />
         </div>

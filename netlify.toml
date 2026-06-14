@@ -2,5 +2,28 @@
   command = "npm run build"
   publish = ".next"
 
+# pdfjs-dist (via pdf-parse, used for document text extraction) requires
+# Promise.withResolvers, which only exists on Node 22+. Pin it so build and the
+# serverless runtime both use a Node that supports it.
+[build.environment]
+  NODE_VERSION = "22"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Canonicalize the domain. The Netlify-assigned subdomains serve the full app on
+# a DIFFERENT origin from the custom domain, so a user who lands on them has no
+# platform.bextudio.com session cookie and every protected page bounces to login
+# ("pages won't connect"). Force both to the custom domain. (Deploy-preview and
+# commit permalinks are intentionally not matched, so PR previews still work.)
+[[redirects]]
+  from = "https://bextudio.netlify.app/*"
+  to = "https://platform.bextudio.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://main--bextudio.netlify.app/*"
+  to = "https://platform.bextudio.com/:splat"
+  status = 301
+  force = true

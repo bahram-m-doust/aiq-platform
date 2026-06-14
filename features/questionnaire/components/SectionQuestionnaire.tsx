@@ -20,7 +20,7 @@ import {
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
 import { QuestionRenderer } from "@/features/questionnaire/components/QuestionRenderer";
-import { SimpleChangeRequestDialog } from "@/features/change-requests/components/SimpleChangeRequestDialog";
+import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import { useIntakeAutosaveQueue } from "@/features/questionnaire/components/useIntakeAutosaveQueue";
 import type {
   IntakeAnswerMap,
@@ -145,14 +145,14 @@ export function SectionQuestionnaire({
                 for reference only.
               </AlertDescription>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <SimpleChangeRequestDialog sectionKey={section.key}>
+                <QuestionnaireChangeRequestDialog sectionKey={section.key}>
                   <button
                     className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
                     type="button"
                   >
                     Request a Change
                   </button>
-                </SimpleChangeRequestDialog>
+                </QuestionnaireChangeRequestDialog>
                 {latestSnapshotId && (
                   <a
                     className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
@@ -299,13 +299,12 @@ export function SectionQuestionnaire({
           </Pagination>
 
           <div className="flex items-center justify-between">
-            <Link
-              className="inline-flex items-center gap-2 text-sm text-[var(--bv-ink-3)] transition-colors hover:text-[var(--bv-ink)]"
-              href="/brand-integrated-brain/roadmap/questionnaire"
-            >
-              <ArrowLeftIcon className="size-3.5" />
-              All sections
-            </Link>
+            <Button asChild className="text-[var(--bv-ink-3)] hover:text-[var(--bv-ink)]" variant="ghost">
+              <Link href="/brand-integrated-brain/roadmap/questionnaire">
+                <ArrowLeftIcon className="size-3.5" />
+                All sections
+              </Link>
+            </Button>
 
             {sectionIndex < allSections.length ? (
               <Button asChild className="group" variant="outline">

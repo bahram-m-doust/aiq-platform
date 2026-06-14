@@ -14,16 +14,9 @@ import {
   sanitizeRedirectPath,
 } from "@/features/auth/redirects";
 import { isPlatformOwnerProfile } from "@/features/auth/roles";
+import { resolveAuthUser } from "@/lib/supabase/auth-user";
 import { hasPublicSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
-
-function claimString(
-  claims: Record<string, unknown> | null | undefined,
-  key: string,
-) {
-  const value = claims?.[key];
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
 
 const getCachedCurrentUser = cache(async (): Promise<User | null> => {
   if (!hasPublicSupabaseEnv()) {
@@ -31,17 +24,18 @@ const getCachedCurrentUser = cache(async (): Promise<User | null> => {
   }
 
   const supabase = await createClient();
-  const { data: claimsData, error: claimsError } =
-    await supabase.auth.getClaims();
+  // resolveAuthUser guards getClaims() (which can throw during JWT decode /
+  // WebCrypto verify, e.g. with ES256 signing keys) and falls back to a
+  // server-side getUser() check instead of crashing the render with a 500.
+  const authUser = await resolveAuthUser(supabase);
 
-  if (claimsError || !claimsData?.claims?.sub) {
+  if (!authUser) {
     return null;
   }
 
-  const claims = claimsData.claims as Record<string, unknown>;
   return {
-    id: String(claimsData.claims.sub),
-    email: claimString(claims, "email"),
+    id: authUser.id,
+    email: authUser.email,
   } as User;
 });
 

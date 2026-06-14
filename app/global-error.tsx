@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 // Catches render errors in the root layout itself — the one place app/error.tsx
 // cannot reach. Must render its own <html>/<body> because the layout crashed.
 export default function GlobalError({
@@ -40,7 +42,7 @@ export default function GlobalError({
             An unexpected error occurred. Your work is safe — try again, or
             contact the Bextudio team if the problem persists.
           </p>
-          <button
+          <Button
             onClick={() => reset()}
             style={{
               background: "#0891b2",
@@ -56,7 +58,7 @@ export default function GlobalError({
             type="button"
           >
             Try again
-          </button>
+          </Button>
         </div>
       </body>
     </html>

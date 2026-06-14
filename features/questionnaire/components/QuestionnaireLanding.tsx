@@ -9,8 +9,8 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { SimpleChangeRequestDialog } from "@/features/change-requests/components/SimpleChangeRequestDialog";
 import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalSubmitReadiness";
+import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import {
   canApproveIntakeRole,
   isIntakeSessionLocked,
@@ -114,16 +114,14 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
               </AlertDescription>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {sections[0] ? (
-                  <SimpleChangeRequestDialog
-                    sectionKey={sections[0].key}
-                  >
+                  <QuestionnaireChangeRequestDialog sectionKey={sections[0].key}>
                     <button
                       className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[var(--bv-line)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
                       type="button"
                     >
                       Request a Change
                     </button>
-                  </SimpleChangeRequestDialog>
+                  </QuestionnaireChangeRequestDialog>
                 ) : null}
                 {data.latestSnapshotId && (
                   <a

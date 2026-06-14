@@ -7,8 +7,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { IntakeProgress } from "@/features/questionnaire/components/IntakeProgress";
+import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import { SectionNav } from "@/features/questionnaire/components/SectionNav";
-import { SimpleChangeRequestDialog } from "@/features/change-requests/components/SimpleChangeRequestDialog";
 import type { IntakeAnswerValue, IntakePageData } from "@/features/questionnaire/types";
 
 function formatAnswerValue(value: IntakeAnswerValue) {
@@ -64,11 +64,9 @@ export function LockedIntakeView({
             </p>
           </div>
           {selectedSection ? (
-            <SimpleChangeRequestDialog
-              sectionKey={selectedSection.key}
-            >
+            <QuestionnaireChangeRequestDialog sectionKey={selectedSection.key}>
               <Button type="button">Request a Change</Button>
-            </SimpleChangeRequestDialog>
+            </QuestionnaireChangeRequestDialog>
           ) : null}
           <IntakeProgress completion={data.completion} />
           <SectionNav

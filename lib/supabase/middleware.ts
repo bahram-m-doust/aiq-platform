@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { ROUTES, APP_ROOT_SEGMENTS } from "@/lib/routes";
+import { resolveAuthUser } from "@/lib/supabase/auth-user";
 import {
   getPublicSupabaseEnv,
   hasPublicSupabaseEnv,
@@ -86,9 +87,13 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const { data: claimsData, error: claimsError } =
-    await supabase.auth.getClaims();
-  const hasUser = !claimsError && Boolean(claimsData?.claims?.sub);
+  // NOTE: getClaims() verifies the JWT locally and can THROW (not just return
+  // an error) while decoding the token or running the WebCrypto signature check
+  // — e.g. with asymmetric (ES256) signing keys or a stale cookie. resolveAuthUser
+  // guards that and falls back to a server-side getUser() check so a bad token
+  // redirects to login instead of crashing every protected route with a 500.
+  const authUser = await resolveAuthUser(supabase);
+  const hasUser = Boolean(authUser);
 
   if (protectedPath && !hasUser) {
     return redirectToLogin(request);
