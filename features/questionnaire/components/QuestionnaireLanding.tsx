@@ -130,7 +130,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
                     href={`/api/questionnaire/${data.latestSnapshotId}/docx`}
                   >
                     <DownloadIcon className="size-3.5" />
-                    Download answers (Word)
+                    Download answers
                   </a>
                 )}
               </div>

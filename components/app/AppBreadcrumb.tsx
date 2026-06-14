@@ -20,6 +20,7 @@ import { APP_ROOT_SEGMENTS } from "@/lib/routes";
 const SEGMENT_LABELS: Record<string, string> = {
   agents: "Agents",
   "brand-integrated-brain": "Brand Integrated Brain",
+  "brand-brain": "Brand Brain",
   roadmap: "Build Roadmap",
   "city-model": "City Model",
   documents: "Documents",

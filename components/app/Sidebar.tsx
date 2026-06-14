@@ -59,11 +59,11 @@ const primaryNav = [
     label: "Home",
     icon: HomeIcon,
   },
-  {
-    href: ROUTES.brain,
-    label: "Brand Integrated Brain",
-    icon: BrainCircuitIcon,
-  },
+];
+
+const brainNav = [
+  { href: ROUTES.brainRoadmap, label: "Build Roadmap" },
+  { href: ROUTES.brainBrand, label: "Brand Brain" },
 ];
 
 const secondaryNav = [
@@ -80,6 +80,7 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
       : pathname.startsWith(href);
 
   const agentsOpen = pathname.startsWith(ROUTES.agents);
+  const brainOpen = pathname.startsWith(ROUTES.brain);
   const adminOpen =
     pathname.startsWith(ROUTES.invitations) || pathname.startsWith("/admin");
 
@@ -127,6 +128,39 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
+
+            {/* Brand Integrated Brain */}
+            <Collapsible
+              asChild
+              defaultOpen={brainOpen}
+              className="group/collapsible"
+            >
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton tooltip="Brand Integrated Brain">
+                    <BrainCircuitIcon />
+                    <span>Brand Integrated Brain</span>
+                    <ChevronDownIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub className="border-l-0">
+                    {brainNav.map((item) => (
+                      <SidebarMenuSubItem key={item.href}>
+                        <SidebarMenuSubButton
+                          asChild
+                          isActive={isActive(item.href)}
+                        >
+                          <Link href={item.href}>
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
 
             {/* Agents (collapsible) */}
             {agents.length > 0 && (

@@ -160,7 +160,7 @@ export function SectionQuestionnaire({
                     href={`/api/questionnaire/${latestSnapshotId}/docx`}
                   >
                     <DownloadIcon className="size-3.5" />
-                    Download answers (Word)
+                    Download answers
                   </a>
                 )}
               </div>

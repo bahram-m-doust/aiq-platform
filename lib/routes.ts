@@ -4,6 +4,7 @@
 export const ROUTES = {
   home: "/home",
   brain: "/brand-integrated-brain",
+  brainBrand: "/brand-integrated-brain/brand-brain",
   brainRoadmap: "/brand-integrated-brain/roadmap",
   brainRoadmapFuturesResearch:
     "/brand-integrated-brain/roadmap/futures-research",
