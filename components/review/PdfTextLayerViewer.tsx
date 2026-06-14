@@ -33,7 +33,7 @@ const TEXT_LAYER_STYLES = `
 .pdf-page .textLayer span.markedContent{top:0;height:0;}
 .pdf-page .textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:0;cursor:default;user-select:none;}
 .pdf-page .textLayer.selecting .endOfContent{top:0;}
-.pdf-page .textLayer ::selection{background:rgba(37,99,235,0.25);}
+.pdf-page .textLayer ::selection{background:transparent;}
 `;
 
 type RenderState = "loading" | "ready" | "error";
