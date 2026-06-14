@@ -76,13 +76,16 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
 
   return (
     <div
-      className="min-h-svh px-4 py-6 sm:px-6 sm:py-8"
+      className="min-h-svh px-4 pb-6 pt-12 sm:px-6 sm:pb-8"
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
       <div className="mx-auto max-w-[1057px]">
         {/* Summary (navigation handled by the global breadcrumb) */}
-        <div className="mb-6 flex items-center justify-end">
-          <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--bv-ink-4)]">
+        <div className="mb-6 flex items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <ProgressBar color={overallColor} value={completion.completionPercent} />
+          </div>
+          <span className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
             {completion.answeredQuestions}/{completion.totalQuestions} answered ·{" "}
             {completion.completionPercent}%
           </span>
@@ -102,17 +105,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
             your answers save automatically as you go.
           </p>
 
-          <div className="mt-5 flex items-center gap-3">
-            <div className="flex-1">
-              <ProgressBar color={overallColor} value={completion.completionPercent} />
-            </div>
-            <span className="min-w-[38px] text-right font-mono text-[11.5px] text-[var(--bv-ink-2)]">
-              {completion.completionPercent}%
-            </span>
-          </div>
-
           {locked && (
-            <>
             <Alert className="mt-4" variant="success">
               <LockIcon />
               <AlertDescription>
@@ -120,12 +113,16 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
                 read-only — open one to review your answers.
               </AlertDescription>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Link
-                  className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[var(--bv-line)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-                  href="/change-requests"
-                >
-                  Change Request
-                </Link>
+                {sections[0] ? (
+                  <QuestionnaireChangeRequestDialog sectionKey={sections[0].key}>
+                    <button
+                      className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[var(--bv-line)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                      type="button"
+                    >
+                      Request a Change
+                    </button>
+                  </QuestionnaireChangeRequestDialog>
+                ) : null}
                 {data.latestSnapshotId && (
                   <a
                     className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[var(--bv-line)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
@@ -138,10 +135,6 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
                 )}
               </div>
             </Alert>
-            <div className="mt-2">
-              <QuestionnaireChangeRequestDialog />
-            </div>
-            </>
           )}
         </div>
 

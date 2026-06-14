@@ -505,8 +505,8 @@ describe("intake UI components", () => {
     expect(screen.getByText("Strategic Intake is locked")).toBeVisible();
     expect(screen.getByText("Strategic answer")).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Create Change Request" }),
-    ).toHaveAttribute("href", "/change-requests");
+      screen.getByRole("button", { name: "Request a Change" }),
+    ).toBeVisible();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Final Submit" }),

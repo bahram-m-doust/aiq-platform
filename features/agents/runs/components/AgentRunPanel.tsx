@@ -12,6 +12,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { DSCard, DSCardBody } from "@/components/ds/Card";
+import { Textarea } from "@/components/ui/textarea";
 import type { AgentCatalogItem } from "@/features/agents/catalog/types";
 import {
   resolveAgentImageUrlsAction,
@@ -237,7 +238,7 @@ export function AgentChatPanel({
           ) : null}
 
           <div className="px-5 pt-4">
-            <textarea
+            <Textarea
               ref={textareaRef}
               id="agent-run-prompt"
               name="prompt"
@@ -248,7 +249,7 @@ export function AgentChatPanel({
               value={draft}
               onChange={autoResize}
               onKeyDown={onKeyDown}
-              className="block w-full resize-none border-0 bg-transparent text-[15px] leading-6 focus:outline-none"
+              className="block min-h-11 resize-none border-0 bg-transparent text-[15px] leading-6 shadow-none focus-visible:border-transparent focus-visible:ring-0"
               style={{ color: "var(--bv-ink)", minHeight: "44px" }}
             />
           </div>

@@ -193,7 +193,7 @@ export function ChangeRequestCreateForm({
             </div>
 
             <div className="flex justify-end">
-              <SubmitButton idleLabel="Submit request" pendingLabel="Submitting" />
+              <SubmitButton idleLabel="Request a Change" pendingLabel="Submitting" />
             </div>
           </form>
         </CardContent>
