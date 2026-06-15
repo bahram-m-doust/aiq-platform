@@ -14,6 +14,7 @@ import {
   CheckCircle2Icon,
   CheckIcon,
   ChevronsUpDownIcon,
+  DownloadIcon,
   EllipsisIcon,
   Loader2Icon,
   MessageSquarePlusIcon,
@@ -59,7 +60,7 @@ const GENERAL_KEY = "__general__";
 const ACTIVE_SECTION_CLASS = "bg-amber-50/60 ring-1 ring-amber-200";
 const ACTIVE_MARKER_CLASS = "border-amber-300 text-amber-700";
 
-// The "Solved" status colour from the Figma design (sonner success green).
+// The resolved status colour from the Figma design (sonner success green).
 const SOLVED_COLOR = "text-[#008a2e]";
 
 export type ReviewCommentActions = {
@@ -111,6 +112,7 @@ type PendingSelection = {
 // padding-box coordinates relative to the document container.
 type HighlightRect = {
   key: string;
+  commentId?: string;
   top: number;
   left: number;
   width: number;
@@ -122,8 +124,8 @@ type HighlightRect = {
 // text selection — all translucent so the text (or PDF canvas) reads clearly
 // through them. Saved is amber, the in-progress selection is blue, matching the
 // Google-Docs convention.
-const HIGHLIGHT_FILL = "rgba(245,158,11,0.28)";
-const HIGHLIGHT_FILL_ACTIVE = "rgba(245,158,11,0.45)";
+const HIGHLIGHT_FILL = "rgba(250,204,21,0.18)";
+const HIGHLIGHT_FILL_ACTIVE = "rgba(250,204,21,0.32)";
 const SELECTION_FILL = "rgba(37,99,235,0.28)";
 
 // The line-height of the text a range sits in, so a content-box-tall client rect
@@ -214,6 +216,15 @@ function anchorKey(anchorId: string | null): string {
   return anchorId ?? GENERAL_KEY;
 }
 
+function isCommentCardControl(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(
+    target.closest(
+      "button, a, textarea, input, select, [role='menuitem'], [data-comment-control]",
+    ),
+  );
+}
+
 export function ReviewableDocumentViewer({
   subjectType,
   subjectId,
@@ -225,6 +236,7 @@ export function ReviewableDocumentViewer({
   initialComments,
   currentUserId,
   canComment,
+  downloadUrl,
   fileUrl,
   contextBrandId,
   decision,
@@ -240,6 +252,9 @@ export function ReviewableDocumentViewer({
   initialComments: ReviewComment[];
   currentUserId: string;
   canComment: boolean;
+  // Download URL for the original uploaded PDF. Usually attachment-disposition,
+  // while fileUrl stays optimized for inline preview.
+  downloadUrl?: string | null;
   // Inline (preview) URL of the original file. Rendered when there is no
   // extracted markdown to show — e.g. an image/scanned PDF — so an uploaded
   // deliverable is never hidden and whole-document comments still work.
@@ -266,6 +281,7 @@ export function ReviewableDocumentViewer({
   const [highlightRects, setHighlightRects] = useState<HighlightRect[]>([]);
   const [selectionRects, setSelectionRects] = useState<HighlightRect[]>([]);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const commentCardRefs = useRef(new Map<string, HTMLDivElement>());
   // Bumped when the PDF viewer finishes laying out its pages, so the highlight
   // painter re-runs against text layers that did not exist on first render.
   const [pdfRenderNonce, setPdfRenderNonce] = useState(0);
@@ -391,7 +407,12 @@ export function ReviewableDocumentViewer({
             ? HIGHLIGHT_FILL_ACTIVE
             : HIGHLIGHT_FILL;
         rangeToMergedLineRects(range, root).forEach((geo, i) => {
-          out.push({ key: `${comment.id}-${i}`, color, ...geo });
+          out.push({
+            key: `${comment.id}-${i}`,
+            commentId: comment.id,
+            color,
+            ...geo,
+          });
         });
       }
       setHighlightRects(out);
@@ -509,6 +530,23 @@ export function ReviewableDocumentViewer({
     [scrollToComment],
   );
 
+  const registerCommentCard = useCallback(
+    (commentId: string, node: HTMLDivElement | null) => {
+      if (node) {
+        commentCardRefs.current.set(commentId, node);
+      } else {
+        commentCardRefs.current.delete(commentId);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!activeCommentId || !showComments) return;
+    const node = commentCardRefs.current.get(activeCommentId);
+    node?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [activeCommentId, showComments]);
+
   // Reverse direction: clicking a painted highlight on the page selects its
   // comment. Ignored while text is being selected.
   const handleContentClick = useCallback(
@@ -534,6 +572,14 @@ export function ReviewableDocumentViewer({
       );
       if (hit) activateComment(hit);
       else setActiveCommentId(null);
+    },
+    [comments, activateComment],
+  );
+
+  const activateCommentById = useCallback(
+    (commentId: string) => {
+      const comment = comments.find((c) => c.id === commentId);
+      if (comment) activateComment(comment);
     },
     [comments, activateComment],
   );
@@ -598,23 +644,46 @@ export function ReviewableDocumentViewer({
         <div className="flex min-w-0 flex-1 flex-col items-center gap-6 px-2 sm:px-6">
           <div className="flex w-full max-w-[900px] flex-col gap-4">
             {/* Report header */}
-            <div className="flex flex-col gap-[9px]">
-              <div className="flex flex-wrap items-center gap-4">
-                {eyebrow ? (
-                  <span className="text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
-                    {eyebrow}
-                  </span>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 flex-col gap-[9px]">
+                <div className="flex flex-wrap items-center gap-4">
+                  {eyebrow ? (
+                    <span className="text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
+                      {eyebrow}
+                    </span>
+                  ) : null}
+                  {statusBadge}
+                </div>
+                <h1 className="text-[20px] font-semibold leading-7 text-foreground">
+                  {title}
+                </h1>
+                {description ? (
+                  <p className="max-w-[545px] text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
+                    {description}
+                  </p>
                 ) : null}
-                {statusBadge}
               </div>
-              <h1 className="text-[20px] font-semibold leading-7 text-foreground">
-                {title}
-              </h1>
-              {description ? (
-                <p className="max-w-[545px] text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
-                  {description}
-                </p>
+
+              {downloadUrl ? (
+                <Button
+                  asChild
+                  className="h-8 gap-2 self-start whitespace-nowrap shadow-xs"
+                  size="sm"
+                  variant="outline"
+                >
+                  <a download href={downloadUrl} rel="noreferrer" target="_blank">
+                    <DownloadIcon className="size-4" />
+                    Download PDF
+                  </a>
+                </Button>
               ) : null}
+            </div>
+
+            <div className="flex">
+              <p className="flex max-w-full items-center gap-1.5 text-[12px] font-medium leading-4 text-muted-foreground">
+                <MessageSquarePlusIcon className="size-3.5 shrink-0 text-primary" />
+                Highlight any text to add a comment
+              </p>
             </div>
 
             {/* Pdf area — the framed document. Holds either the original file
@@ -632,7 +701,10 @@ export function ReviewableDocumentViewer({
                     fileUrl={fileUrl ?? ""}
                     onRendered={handlePdfRendered}
                   />
-                  <HighlightLayer rects={highlightRects} />
+                  <HighlightLayer
+                    onActivate={activateCommentById}
+                    rects={highlightRects}
+                  />
                   <HighlightLayer rects={selectionRects} />
                 </div>
               ) : (
@@ -642,7 +714,10 @@ export function ReviewableDocumentViewer({
                   onMouseUp={captureSelection}
                   ref={contentRef}
                 >
-                  <HighlightLayer rects={highlightRects} />
+                  <HighlightLayer
+                    onActivate={activateCommentById}
+                    rects={highlightRects}
+                  />
                   <HighlightLayer rects={selectionRects} />
                   {blocks.map((block) => {
                     const count =
@@ -697,8 +772,8 @@ export function ReviewableDocumentViewer({
           ) : decision?.isApproved ? (
             <div className="flex justify-center">
               <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700">
-                <CheckCircle2Icon className="size-4" /> You approved this
-                document.
+                <CheckCircle2Icon className="size-4" /> You&apos;ve approved this
+                report
               </span>
             </div>
           ) : null}
@@ -728,11 +803,14 @@ export function ReviewableDocumentViewer({
               ) : (
                 rootComments.map((root) => (
                   <CommentThread
+                    active={activeCommentId === root.id}
                     actions={boundActions}
                     currentUserId={currentUserId}
                     key={root.id}
                     onAdd={upsertComment}
+                    onActivate={() => activateComment(root)}
                     onPatch={patchComment}
+                    onRegister={registerCommentCard}
                     onRemove={removeComment}
                     replies={repliesByParent.get(root.id) ?? []}
                     root={root}
@@ -779,14 +857,35 @@ export function ReviewableDocumentViewer({
 // range, grown to fill the line-height so multi-line highlights are continuous
 // (no gaps between lines). `pointer-events-none` lets clicks and text selection
 // fall through to the document underneath.
-function HighlightLayer({ rects }: { rects: HighlightRect[] }) {
+function HighlightLayer({
+  rects,
+  onActivate,
+}: {
+  rects: HighlightRect[];
+  onActivate?: (commentId: string) => void;
+}) {
   if (rects.length === 0) return null;
+  const interactive = Boolean(onActivate);
   return (
-    <div aria-hidden className="pointer-events-none absolute left-0 top-0 z-0">
+    <div
+      aria-hidden
+      className={cn(
+        "absolute left-0 top-0 z-10",
+        interactive ? "pointer-events-none" : "pointer-events-none",
+      )}
+    >
       {rects.map((rect) => (
         <div
-          className="absolute rounded-[2px]"
+          className={cn(
+            "absolute rounded-[2px]",
+            interactive && rect.commentId && "pointer-events-auto cursor-pointer",
+          )}
           key={rect.key}
+          onClick={(event) => {
+            if (!rect.commentId || !onActivate) return;
+            event.stopPropagation();
+            onActivate(rect.commentId);
+          }}
           style={{
             top: rect.top,
             left: rect.left,
@@ -838,12 +937,14 @@ function SelectionPopover({
     return (
       <div className="fixed z-50" style={{ top, left }}>
         <Button
+          className="text-primary shadow-md hover:text-primary"
           onClick={onStartComposing}
           onMouseDown={(e) => e.preventDefault()}
           size="sm"
           type="button"
+          variant="secondary"
         >
-          <MessageSquarePlusIcon className="size-4" /> Add comment
+          <MessageSquarePlusIcon className="size-4" /> Add Comment
         </Button>
       </div>
     );
@@ -861,7 +962,7 @@ function SelectionPopover({
         className="min-h-[64px] text-sm"
         dir="auto"
         onChange={(e) => setBody(e.target.value)}
-        placeholder="Add a comment…"
+        placeholder="Write a comment"
         value={body}
       />
       {error ? (
@@ -878,7 +979,7 @@ function SelectionPopover({
           type="button"
         >
           {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
-          Comment
+          Post comment
         </Button>
       </div>
     </div>
@@ -968,7 +1069,7 @@ function AddCommentForm({
         className="min-h-[60px] text-sm"
         dir="auto"
         onChange={(e) => setBody(e.target.value)}
-        placeholder={placeholder ?? "Add a comment…"}
+        placeholder={placeholder ?? "Write a comment"}
         value={body}
       />
       {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
@@ -985,7 +1086,7 @@ function AddCommentForm({
           type="button"
         >
           {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
-          {parentId ? "Reply" : "Comment"}
+          {parentId ? "Reply" : "Post comment"}
         </Button>
       </div>
     </div>
@@ -993,7 +1094,7 @@ function AddCommentForm({
 }
 
 // A root comment rendered as a Figma comment card: author/date header with an
-// ellipsis action menu, the body, the "Solved" status, then nested replies and
+// ellipsis action menu, the body, the resolved status, then nested replies and
 // an inline reply composer.
 function CommentThread({
   subjectType,
@@ -1002,8 +1103,11 @@ function CommentThread({
   replies,
   currentUserId,
   actions,
+  active,
   onAdd,
+  onActivate,
   onPatch,
+  onRegister,
   onRemove,
 }: {
   subjectType: ReviewSubjectType;
@@ -1012,18 +1116,41 @@ function CommentThread({
   replies: ReviewComment[];
   currentUserId: string;
   actions: ReviewCommentActions;
+  active: boolean;
   onAdd: (comment: ReviewComment) => void;
+  onActivate: () => void;
   onPatch: (id: string, patch: Partial<ReviewComment>) => void;
+  onRegister: (commentId: string, node: HTMLDivElement | null) => void;
   onRemove: (id: string) => void;
 }) {
   const [replying, setReplying] = useState(false);
 
   return (
     <div
+      aria-pressed={active}
+      data-state={active ? "active" : "default"}
+      ref={(node) => onRegister(root.id, node)}
       className={cn(
-        "rounded-[10px] border border-border bg-card p-2.5 shadow-xs",
+        "cursor-pointer rounded-[10px] border border-border bg-card p-2.5 shadow-xs outline-hidden transition-[background-color,border-color,box-shadow]",
+        "hover:border-border hover:bg-[var(--bv-card-soft)]",
+        "focus-visible:ring-2 focus-visible:ring-border",
+        "data-[state=active]:border-border data-[state=active]:bg-[#ededef]",
         root.resolved && "opacity-80",
       )}
+      onClick={(event) => {
+        if (!isCommentCardControl(event.target)) onActivate();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onActivate();
+        }
+      }}
+      onPointerDown={(event) => {
+        if (!isCommentCardControl(event.target)) onActivate();
+      }}
+      role="button"
+      tabIndex={0}
     >
       <CommentItem
         actions={actions}
@@ -1264,7 +1391,7 @@ function CommentItem({
 
       {!editing && canResolve && comment.resolved ? (
         <p className={cn("mt-2 text-[12px] font-medium leading-4", SOLVED_COLOR)}>
-          Solved
+          Resolved
         </p>
       ) : null}
     </div>

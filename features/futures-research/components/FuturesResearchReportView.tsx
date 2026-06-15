@@ -38,6 +38,7 @@ export function FuturesResearchReportView({
       canComment={canReview}
       comments={comments}
       currentUserId={currentUserId}
+      description="A forward looking analysis of your market, industry, and competitors. We'll use these insights to build your Brand Brain. Read it through, comment on anything unclear, and approve it once it's accurate."
       decision={{
         canDecide,
         isApproved: status === "APPROVED",

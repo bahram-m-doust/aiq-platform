@@ -38,6 +38,7 @@ export function StakeholderReviewView({
       canComment={canReview}
       comments={comments}
       currentUserId={currentUserId}
+      description="This report summarizes the stakeholder interviews conducted by the Bextudio team. We'll use these insights to build your Brand Brain. Read it through, comment on anything unclear, and approve it once it's accurate."
       decision={{
         canDecide,
         isApproved: status === "APPROVED",

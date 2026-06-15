@@ -84,6 +84,7 @@ export function ReviewSurface({
       currentUserId={currentUserId}
       decision={decision}
       description={description}
+      downloadUrl={signedUrl ?? inlineUrl}
       eyebrow={eyebrow}
       fileUrl={inlineUrl}
       initialComments={comments}
