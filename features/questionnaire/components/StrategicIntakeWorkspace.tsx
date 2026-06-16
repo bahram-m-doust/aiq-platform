@@ -18,7 +18,6 @@ import { IntakeProgress } from "@/features/questionnaire/components/IntakeProgre
 import { LockedIntakeView } from "@/features/questionnaire/components/LockedIntakeView";
 import { QuestionRenderer } from "@/features/questionnaire/components/QuestionRenderer";
 import { useIntakeAutosaveQueue } from "@/features/questionnaire/components/useIntakeAutosaveQueue";
-import { SectionNav } from "@/features/questionnaire/components/SectionNav";
 import type {
   IntakePageData,
 } from "@/features/questionnaire/types";
@@ -83,10 +82,8 @@ export function StrategicIntakeWorkspace({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <IntakeProgress completion={completion} />
-          <SectionNav
+          <IntakeProgress
             completion={completion}
-            sections={data.sections}
             selectedSectionKey={selectedSection?.key ?? null}
           />
         </CardContent>

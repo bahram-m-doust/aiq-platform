@@ -159,7 +159,6 @@ features/
 ├── intake/
 │   ├── components/
 │   │   ├── IntakeProgress.tsx
-│   │   ├── SectionNav.tsx
 │   │   ├── QuestionRenderer.tsx
 │   │   ├── FinalSubmitModal.tsx
 │   │   └── LockedIntakeNotice.tsx
