@@ -1,140 +1,167 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { IntakeProgress } from "@/features/questionnaire/components/IntakeProgress";
-import type { IntakeCompletion } from "@/features/questionnaire/types";
+import { SectionQuestionnaire } from "@/features/questionnaire/components/SectionQuestionnaire";
+import type {
+  IntakeAnswerMap,
+  IntakeCompletion,
+  IntakeQuestion,
+  IntakeSectionWithQuestions,
+  IntakeSession,
+} from "@/features/questionnaire/types";
 
-// Standalone, auth-free preview of the step-based intake progress indicator.
-// Not part of the product flow — it exists purely so the component can be
-// reviewed locally without Supabase or a signed-in session.
+// Standalone, auth-free preview of the questionnaire section page so the
+// progress indicator can be reviewed locally without Supabase or a signed-in
+// session. Editing a field here will fail to autosave (no backend) — that's
+// expected; this page only exists to inspect the layout.
 //
 // View at: http://localhost:3000/preview/questionnaire-progress
 
 function makeSection(
+  orderIndex: number,
+  key: string,
   title: string,
-  answered: number,
-  total: number,
-): IntakeCompletion["sections"][number] {
-  const sectionKey = title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  return {
-    sectionId: `preview-${sectionKey}`,
-    sectionKey,
-    title,
-    totalQuestions: total,
-    answeredQuestions: answered,
-    completionPercent:
-      total === 0 ? 0 : Math.round((answered / total) * 100),
-  };
+  description: string,
+  questionTexts: string[],
+): IntakeSectionWithQuestions {
+  const id = `preview-sec-${key}`;
+  const questions: IntakeQuestion[] = questionTexts.map((text, index) => ({
+    id: `${key}-q${index + 1}`,
+    sectionId: id,
+    key: `${key}_q${index + 1}`,
+    questionText: text,
+    helpText: null,
+    inputType: "textarea",
+    isRequired: true,
+    orderIndex: index + 1,
+    validationSchema: null,
+  }));
+
+  return { id, key, title, description, orderIndex, isRequired: true, questions };
 }
 
-function buildCompletion(
-  sections: IntakeCompletion["sections"],
-): IntakeCompletion {
-  const totalQuestions = sections.reduce((sum, s) => sum + s.totalQuestions, 0);
-  const answeredQuestions = sections.reduce(
-    (sum, s) => sum + s.answeredQuestions,
+const sections: IntakeSectionWithQuestions[] = [
+  makeSection(1, "COMPANY", "Company", "Who you are and what you do.", [
+    "Company name and one-line description",
+    "Founding story and mission",
+    "Core offering",
+    "Stage and size",
+  ]),
+  makeSection(
+    2,
+    "CONSUMER_MARKET_SEGMENTATION",
+    "Consumer / Market Segmentation",
+    "Define your primary, main, and secondary target audiences.",
+    [
+      "Definition of primary, main, and secondary target audiences",
+      "Target Audience Demographics Definition",
+      "Target Audience Psychographics Definition",
+      "Target Audience Economic Characteristics",
+      "Market segments you compete in",
+    ],
+  ),
+  makeSection(3, "USER_PERSONA", "User Persona", "Who you are speaking to.", [
+    "Primary persona snapshot",
+    "Goals and motivations",
+    "Pain points",
+    "Buying triggers",
+  ]),
+  makeSection(
+    4,
+    "PRODUCTS_SERVICES",
+    "Products / Services",
+    "What you sell and how it is positioned.",
+    [
+      "Product / service line-up",
+      "Key differentiators",
+      "Pricing posture",
+      "Proof points",
+    ],
+  ),
+  makeSection(5, "CONTEXT", "Context", "The world your brand lives in.", [
+    "Competitive landscape",
+    "Category trends",
+    "Constraints and risks",
+  ]),
+  makeSection(
+    6,
+    "STYLE_TONE_OF_VOICE",
+    "Style / Tone of Voice",
+    "How the brand should sound.",
+    [
+      "Voice in three words",
+      "Words and phrases to embrace",
+      "Words and phrases to avoid",
+      "Reference brands for tone",
+    ],
+  ),
+];
+
+// Mirror the reported screenshot: the first two sections are fully answered —
+// including the *current* one — while the rest of the journey is untouched.
+// The old bar showed 100% here (current section only); the new bar shows the
+// true overall progress.
+const answers: IntakeAnswerMap = {};
+for (const section of sections.slice(0, 2)) {
+  for (const question of section.questions) {
+    answers[question.id] = `Sample answer for "${question.questionText}".`;
+  }
+}
+
+function buildCompletion(): IntakeCompletion {
+  const sectionProgress = sections.map((section) => {
+    const total = section.questions.length;
+    const answered = section.questions.filter((question) => {
+      const value = answers[question.id];
+      return typeof value === "string" && value.trim().length > 0;
+    }).length;
+    return {
+      sectionId: section.id,
+      sectionKey: section.key,
+      title: section.title,
+      totalQuestions: total,
+      answeredQuestions: answered,
+      completionPercent: total > 0 ? Math.round((answered / total) * 100) : 0,
+    };
+  });
+
+  const totalQuestions = sectionProgress.reduce((n, s) => n + s.totalQuestions, 0);
+  const answeredQuestions = sectionProgress.reduce(
+    (n, s) => n + s.answeredQuestions,
     0,
   );
+
   return {
     totalQuestions,
     answeredQuestions,
     completionPercent:
-      totalQuestions === 0
-        ? 0
-        : Math.round((answeredQuestions / totalQuestions) * 100),
-    sections,
+      totalQuestions > 0
+        ? Math.round((answeredQuestions / totalQuestions) * 100)
+        : 0,
+    sections: sectionProgress,
   };
 }
 
-// A realistic mid-progress journey: two sections done, the user sitting in the
-// third, and the rest still ahead.
-const inProgress = buildCompletion([
-  makeSection("Brand Foundation", 5, 5),
-  makeSection("Audience & Market", 4, 4),
-  makeSection("Positioning", 2, 6),
-  makeSection("Voice & Messaging", 0, 5),
-  makeSection("Visual Direction", 0, 4),
-  makeSection("Goals & Metrics", 0, 3),
-]);
-
-// A fresh start: nothing answered yet.
-const justStarted = buildCompletion([
-  makeSection("Brand Foundation", 0, 5),
-  makeSection("Audience & Market", 0, 4),
-  makeSection("Positioning", 0, 6),
-  makeSection("Voice & Messaging", 0, 5),
-  makeSection("Visual Direction", 0, 4),
-  makeSection("Goals & Metrics", 0, 3),
-]);
-
-// Almost there: a single section left to nudge the user over the line.
-const nearlyDone = buildCompletion([
-  makeSection("Brand Foundation", 5, 5),
-  makeSection("Audience & Market", 4, 4),
-  makeSection("Positioning", 6, 6),
-  makeSection("Voice & Messaging", 5, 5),
-  makeSection("Visual Direction", 4, 4),
-  makeSection("Goals & Metrics", 1, 3),
-]);
+const session: IntakeSession = {
+  id: "preview-session",
+  brandId: "preview-brand",
+  status: "IN_PROGRESS",
+  completionPercent: buildCompletion().completionPercent,
+  lockedAt: null,
+  lockedBy: null,
+};
 
 export default function QuestionnaireProgressPreviewPage() {
+  // Show the current user sitting inside section 2 — fully answered — so the
+  // header bar reflects the whole journey, not just this section.
+  const currentSection = sections[1];
+
   return (
-    <main className="mx-auto max-w-3xl space-y-8 px-4 py-10">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">
-          Intake progress — preview
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Mock-only view of the step-based progression indicator. Steps link to
-          section routes that won&apos;t resolve here — that&apos;s expected.
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>In progress</CardTitle>
-          <CardDescription>
-            Two sections complete, currently working through &ldquo;Positioning&rdquo;.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <IntakeProgress
-            completion={inProgress}
-            selectedSectionKey="positioning"
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Just started</CardTitle>
-          <CardDescription>
-            Nothing answered yet — the first section is highlighted as current.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <IntakeProgress completion={justStarted} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Nearly done</CardTitle>
-          <CardDescription>
-            Finish line in sight — only the last section remains.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <IntakeProgress
-            completion={nearlyDone}
-            selectedSectionKey="goals-metrics"
-          />
-        </CardContent>
-      </Card>
-    </main>
+    <SectionQuestionnaire
+      allSections={sections}
+      answers={answers}
+      brandName="Preview Brand"
+      completion={buildCompletion()}
+      latestSnapshotId={null}
+      section={currentSection}
+      session={session}
+    />
   );
 }

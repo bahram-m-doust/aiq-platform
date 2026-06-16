@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, CheckCircleIcon, DownloadIcon, LockIcon } from "lucide-react";
+import { ArrowLeftIcon, CheckIcon, DownloadIcon, LockIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -71,10 +71,33 @@ export function SectionQuestionnaire({
     isIntakeAnswerComplete(displayedAnswers[id] ?? null),
   ).length;
   const sectionTotal = section.questions.length;
-  const sectionPercent =
-    sectionTotal > 0 ? Math.round((sectionAnswered / sectionTotal) * 100) : 0;
 
   const sectionIndex = allSections.findIndex((item) => item.id === section.id) + 1;
+
+  // Live progress across every section, recomputed from the autosaved answers.
+  // The header bar tracks this running total — the whole journey toward Final
+  // Submit — rather than just the current section, so finishing one section no
+  // longer makes the bar look "100% done".
+  const sectionStats = allSections.map((item) => {
+    const questionIds = item.questions.map((question) => question.id);
+    const answered = questionIds.filter((id) =>
+      isIntakeAnswerComplete(displayedAnswers[id] ?? null),
+    ).length;
+    return {
+      section: item,
+      answered,
+      total: item.questions.length,
+      isComplete: item.questions.length > 0 && answered === item.questions.length,
+    };
+  });
+  const overallTotal = sectionStats.reduce((sum, stat) => sum + stat.total, 0);
+  const overallAnswered = sectionStats.reduce(
+    (sum, stat) => sum + stat.answered,
+    0,
+  );
+  const overallPercent =
+    overallTotal > 0 ? Math.round((overallAnswered / overallTotal) * 100) : 0;
+  const completedSections = sectionStats.filter((stat) => stat.isComplete).length;
 
   const [showErrors] = useState(autoValidate);
 
@@ -106,14 +129,24 @@ export function SectionQuestionnaire({
               All sections
             </Link>
           </Button>
-          <div className="flex min-w-0 flex-1 items-center gap-4">
-            <div className="min-w-0 flex-1">
-              <ProgressBar color="green" value={sectionPercent} />
+          <div className="space-y-2">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="min-w-0 flex-1">
+                <ProgressBar color="green" value={overallPercent} />
+              </div>
+              <span className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
+                {overallAnswered}/{overallTotal} answered · {overallPercent}%
+              </span>
             </div>
-            <span className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
-              Section {sectionIndex} of {allSections.length} ·{" "}
-              {sectionAnswered}/{sectionTotal} answered · {sectionPercent}%
-            </span>
+            <div className="flex items-center justify-between gap-3 font-mono text-[11px] tracking-[0.04em] text-[var(--bv-ink-4)]">
+              <span>
+                Section {sectionIndex} of {allSections.length} ·{" "}
+                {completedSections}/{allSections.length} sections complete
+              </span>
+              <span className="shrink-0">
+                {sectionAnswered}/{sectionTotal} in this section
+              </span>
+            </div>
           </div>
         </div>
 
@@ -167,47 +200,62 @@ export function SectionQuestionnaire({
             </Alert>
           )}
 
-          <div className="mt-5">
-            <div className="flex items-center gap-1 overflow-x-auto rounded-2xl bg-muted p-3 scrollbar-hide">
-              {allSections.map((item) => {
+          {/* Step tracker — the full journey at a glance: which sections are
+              done, where you are now, and what's still ahead. */}
+          <nav aria-label="All sections" className="mt-5">
+            <ol className="flex items-stretch gap-1 overflow-x-auto rounded-2xl bg-muted p-2 scrollbar-hide">
+              {sectionStats.map(({ section: item, isComplete }, stepIndex) => {
                 const isActive = item.id === section.id;
-                const questionIds = item.questions.map((question) => question.id);
-                const answered = questionIds.filter((id) =>
-                  isIntakeAnswerComplete(displayedAnswers[id] ?? null),
-                ).length;
-                const isComplete =
-                  answered === item.questions.length && item.questions.length > 0;
+                const status = isComplete
+                  ? "complete"
+                  : isActive
+                    ? "current"
+                    : "upcoming";
 
                 return (
-                  <Link
-                    aria-current={isActive ? "page" : undefined}
-                    className={cn(
-                      // Tabs / Trigger — base (grow to fill the frame evenly)
-                      "inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap outline-none transition-[color,background-color,box-shadow]",
-                      // Keyboard focus accessibility
-                      "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                      isActive
-                        ? // Current page — active surface: white + sm shadow
-                          "bg-background text-foreground shadow-sm"
-                        : // Other tabs — plain muted label, no background
-                          "text-muted-foreground hover:text-foreground",
-                    )}
-                    href={
-                      isComplete
-                        ? `/brand-integrated-brain/roadmap/questionnaire/${item.key}`
-                        : `/brand-integrated-brain/roadmap/questionnaire/${item.key}?validate=1`
-                    }
-                    key={item.id}
-                  >
-                    {isComplete && (
-                      <CheckCircleIcon className="size-3.5 text-emerald-500" />
-                    )}
-                    {item.title}
-                  </Link>
+                  <li className="flex-1" key={item.id}>
+                    <Link
+                      aria-current={isActive ? "page" : undefined}
+                      className={cn(
+                        // Step / Trigger — base (grow to fill the frame evenly)
+                        "flex h-full items-center justify-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium whitespace-nowrap outline-none transition-[color,background-color,box-shadow]",
+                        // Keyboard focus accessibility
+                        "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                        isActive
+                          ? // Current step — active surface: white + sm shadow
+                            "bg-background text-foreground shadow-sm"
+                          : // Other steps — plain muted label, no background
+                            "text-muted-foreground hover:text-foreground",
+                      )}
+                      href={
+                        isComplete
+                          ? `/brand-integrated-brain/roadmap/questionnaire/${item.key}`
+                          : `/brand-integrated-brain/roadmap/questionnaire/${item.key}?validate=1`
+                      }
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
+                          status === "complete" && "bg-emerald-500 text-white",
+                          status === "current" && "bg-foreground text-background",
+                          status === "upcoming" &&
+                            "border border-[var(--bv-line-2)] text-[var(--bv-ink-4)]",
+                        )}
+                      >
+                        {isComplete ? (
+                          <CheckIcon className="size-3" strokeWidth={3} />
+                        ) : (
+                          stepIndex + 1
+                        )}
+                      </span>
+                      {item.title}
+                    </Link>
+                  </li>
                 );
               })}
-            </div>
-          </div>
+            </ol>
+          </nav>
         </div>
 
         <div className="space-y-4">
