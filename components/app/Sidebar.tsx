@@ -137,7 +137,10 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                  <SidebarMenuButton tooltip="Brand Integrated Brain">
+                  <SidebarMenuButton
+                    className="cursor-pointer"
+                    tooltip="Brand Integrated Brain"
+                  >
                     <BrainCircuitIcon />
                     <span>Brand Integrated Brain</span>
                     <ChevronDownIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
@@ -171,7 +174,10 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
               >
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip="Agents">
+                    <SidebarMenuButton
+                      className="cursor-pointer"
+                      tooltip="Agents"
+                    >
                       <BotIcon />
                       <span>Agents</span>
                       <ChevronDownIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
@@ -208,7 +214,10 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                  <SidebarMenuButton tooltip="Administration">
+                  <SidebarMenuButton
+                    className="cursor-pointer"
+                    tooltip="Administration"
+                  >
                     <SquareUserIcon />
                     <span>Administration</span>
                     <ChevronDownIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />

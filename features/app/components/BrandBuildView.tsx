@@ -200,6 +200,25 @@ function PhaseCard({
   const cardAnimation = justUnlocked
     ? "ds-unlock 800ms var(--bv-ease)"
     : undefined;
+  const panelContentRef = useRef<HTMLDivElement>(null);
+  const [panelHeight, setPanelHeight] = useState(0);
+
+  useEffect(() => {
+    const measurePanel = () => {
+      setPanelHeight(panelContentRef.current?.scrollHeight ?? 0);
+    };
+
+    measurePanel();
+
+    if (!panelContentRef.current || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(measurePanel);
+    observer.observe(panelContentRef.current);
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div
@@ -351,12 +370,12 @@ function PhaseCard({
         className="overflow-hidden border-t border-transparent transition-all duration-500"
         id={`${phase.key}-panel`}
         style={{
-          maxHeight: open ? 1600 : 0,
+          maxHeight: open ? panelHeight : 0,
           borderTopColor: open ? "var(--bv-line)" : "transparent",
           transitionTimingFunction: "var(--bv-ease)",
         }}
       >
-        <div className="grid gap-2 p-3 pt-3">
+        <div className="grid gap-2 p-3 pt-3" ref={panelContentRef}>
           <div className="mx-1 mb-1 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
             <span>Sub-steps</span>
             <span className="text-[var(--bv-ink-4)]">

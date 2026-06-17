@@ -53,7 +53,13 @@ const STATE_LABEL: Record<SectionState, string> = {
   "not-started": "Not started",
 };
 
-export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
+export function QuestionnaireLanding({
+  data,
+  showSubmitReview = false,
+}: {
+  data: IntakePageData;
+  showSubmitReview?: boolean;
+}) {
   const { sections, completion, session, access } = data;
   const locked = isIntakeSessionLocked(session);
   const canApprove = canApproveIntakeRole(access.membershipRole);
@@ -158,11 +164,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
             return (
               <Link
                 className="group flex items-center gap-3 rounded-xl border bg-[var(--bv-card)] px-5 py-4 transition-all duration-200 hover:border-[var(--bv-line-2)] hover:shadow-sm"
-                href={
-                  state === "done"
-                    ? `/brand-integrated-brain/roadmap/questionnaire/${section.key}`
-                    : `/brand-integrated-brain/roadmap/questionnaire/${section.key}?validate=1`
-                }
+                href={`/brand-integrated-brain/roadmap/questionnaire/${section.key}`}
                 key={section.id}
                 style={{ borderColor: "var(--bv-line)" }}
               >
@@ -192,7 +194,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
         </div>
 
         {/* Submit */}
-        {!locked && (
+        {!locked && showSubmitReview && (
           <div className="mt-8">
             <FinalSubmitReadiness
               canApprove={canApprove}
@@ -200,7 +202,7 @@ export function QuestionnaireLanding({ data }: { data: IntakePageData }) {
               sessionId={session.id}
             />
             {completion.completionPercent < 100 && incompleteSections.length > 0 && (
-              <Alert className="mt-4" variant="warning">
+              <Alert variant="warning">
                 <TriangleAlertIcon />
                 <AlertTitle>
                   {totalRemaining}{" "}

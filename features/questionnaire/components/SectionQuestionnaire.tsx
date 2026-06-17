@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  type MouseEvent,
+  type PointerEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { ArrowLeftIcon, CheckCircleIcon, DownloadIcon, LockIcon } from "lucide-react";
 
@@ -14,12 +22,14 @@ import {
   PaginationLink,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import {
   isIntakeAnswerComplete,
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
-import { QuestionRenderer } from "@/features/questionnaire/components/QuestionRenderer";
+import {
+  QuestionRenderer,
+  type IntakeQuestionCardStatus,
+} from "@/features/questionnaire/components/QuestionRenderer";
 import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import { useIntakeAutosaveQueue } from "@/features/questionnaire/components/useIntakeAutosaveQueue";
 import type {
@@ -39,6 +49,22 @@ function formatAnswerValue(value: IntakeAnswerValue) {
   if (typeof value === "number") return String(value);
   if (typeof value === "string" && value.trim().length > 0) return value;
   return "No answer recorded";
+}
+
+function getQuestionCardStatusLabel(
+  isRequired: boolean,
+  answer: IntakeAnswerValue,
+  status?: IntakeQuestionCardStatus,
+) {
+  const resolvedStatus =
+    status ??
+    (isIntakeAnswerComplete(answer) ? "completed" : "not_answered");
+
+  if (resolvedStatus === "completed") return "Completed";
+  if (resolvedStatus === "answered_not_done") {
+    return "Answered · Not marked done";
+  }
+  return isRequired ? "Required · Not answered" : "Optional · Not answered";
 }
 
 export function SectionQuestionnaire({
@@ -66,17 +92,149 @@ export function SectionQuestionnaire({
     });
   const displayedAnswers = locked ? initialAnswers : answers;
 
-  const sectionQuestionIds = section.questions.map((question) => question.id);
-  const sectionAnswered = sectionQuestionIds.filter((id) =>
-    isIntakeAnswerComplete(displayedAnswers[id] ?? null),
-  ).length;
-  const sectionTotal = section.questions.length;
-  const sectionPercent =
-    sectionTotal > 0 ? Math.round((sectionAnswered / sectionTotal) * 100) : 0;
-
   const sectionIndex = allSections.findIndex((item) => item.id === section.id) + 1;
 
+  const tabListRef = useRef<HTMLDivElement>(null);
+  const activeTabRef = useRef<HTMLAnchorElement>(null);
+  const hasMeasuredTabIndicatorRef = useRef(false);
+  const tabIndicatorFrameRef = useRef<number | null>(null);
+  const [pendingSection, setPendingSection] = useState<{
+    fromId: string;
+    toId: string;
+  } | null>(null);
+  const [tabIndicator, setTabIndicator] = useState({
+    left: 0,
+    ready: false,
+    width: 0,
+  });
+  const [animateTabIndicator, setAnimateTabIndicator] = useState(false);
   const [showErrors] = useState(autoValidate);
+  const [questionCardStatuses, setQuestionCardStatuses] = useState<
+    Record<string, IntakeQuestionCardStatus>
+  >({});
+  const visualSectionId =
+    pendingSection?.fromId === section.id ? pendingSection.toId : section.id;
+
+  const handleQuestionCardStatusChange = useCallback(
+    (questionId: string, status: IntakeQuestionCardStatus) => {
+      setQuestionCardStatuses((current) => {
+        if (current[questionId] === status) return current;
+        return { ...current, [questionId]: status };
+      });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (tabIndicatorFrameRef.current) {
+        window.cancelAnimationFrame(tabIndicatorFrameRef.current);
+      }
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const measureActiveTab = (animate: boolean) => {
+      const activeTab = activeTabRef.current;
+
+      if (!activeTab) return;
+
+      setAnimateTabIndicator(animate);
+      setTabIndicator({
+        left: activeTab.offsetLeft,
+        ready: true,
+        width: activeTab.offsetWidth,
+      });
+
+      if (!hasMeasuredTabIndicatorRef.current) {
+        hasMeasuredTabIndicatorRef.current = true;
+        tabIndicatorFrameRef.current = window.requestAnimationFrame(() => {
+          setAnimateTabIndicator(true);
+          tabIndicatorFrameRef.current = null;
+        });
+      }
+    };
+
+    measureActiveTab(hasMeasuredTabIndicatorRef.current);
+
+    const tabList = tabListRef.current;
+    const activeTab = activeTabRef.current;
+
+    if (typeof ResizeObserver === "undefined") {
+      const handleResize = () =>
+        measureActiveTab(hasMeasuredTabIndicatorRef.current);
+
+      window.addEventListener("resize", handleResize);
+
+      return () => window.removeEventListener("resize", handleResize);
+    }
+
+    const observer = new ResizeObserver(() =>
+      measureActiveTab(hasMeasuredTabIndicatorRef.current),
+    );
+
+    if (tabList) observer.observe(tabList);
+    if (activeTab) observer.observe(activeTab);
+
+    const handleResize = () =>
+      measureActiveTab(hasMeasuredTabIndicatorRef.current);
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [allSections.length, visualSectionId]);
+
+  const moveTabIndicatorTo = (
+    target: HTMLAnchorElement,
+    nextSectionId: string,
+  ) => {
+    setPendingSection({ fromId: section.id, toId: nextSectionId });
+    setAnimateTabIndicator(true);
+    setTabIndicator({
+      left: target.offsetLeft,
+      ready: true,
+      width: target.offsetWidth,
+    });
+  };
+
+  const handleSectionTabPointerDown = (
+    event: PointerEvent<HTMLAnchorElement>,
+    nextSectionId: string,
+  ) => {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      nextSectionId === section.id
+    ) {
+      return;
+    }
+
+    moveTabIndicatorTo(event.currentTarget, nextSectionId);
+  };
+
+  const handleSectionTabClick = (
+    event: MouseEvent<HTMLAnchorElement>,
+    nextSectionId: string,
+  ) => {
+    if (
+      event.defaultPrevented ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      nextSectionId === section.id
+    ) {
+      return;
+    }
+
+    moveTabIndicatorTo(event.currentTarget, nextSectionId);
+  };
 
   // Arrived here from the overview's "fix this" link — highlight the gaps and
   // jump to the first unanswered question.
@@ -103,18 +261,9 @@ export function SectionQuestionnaire({
           <Button asChild size="sm" variant="outline">
             <Link href="/brand-integrated-brain/roadmap/questionnaire">
               <ArrowLeftIcon className="size-3.5" />
-              All sections
+              Questionnaire overview
             </Link>
           </Button>
-          <div className="flex min-w-0 flex-1 items-center gap-4">
-            <div className="min-w-0 flex-1">
-              <ProgressBar color="green" value={sectionPercent} />
-            </div>
-            <span className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
-              Section {sectionIndex} of {allSections.length} ·{" "}
-              {sectionAnswered}/{sectionTotal} answered · {sectionPercent}%
-            </span>
-          </div>
         </div>
 
         <div className="mb-9">
@@ -168,44 +317,81 @@ export function SectionQuestionnaire({
           )}
 
           <div className="mt-5">
-            <div className="flex items-center gap-1 overflow-x-auto rounded-2xl bg-muted p-3 scrollbar-hide">
-              {allSections.map((item) => {
-                const isActive = item.id === section.id;
-                const questionIds = item.questions.map((question) => question.id);
-                const answered = questionIds.filter((id) =>
-                  isIntakeAnswerComplete(displayedAnswers[id] ?? null),
-                ).length;
-                const isComplete =
-                  answered === item.questions.length && item.questions.length > 0;
+            <div className="overflow-x-auto rounded-lg bg-muted p-1.5 scrollbar-hide">
+              <div
+                className="relative flex min-w-max w-full items-center gap-0.5"
+                ref={tabListRef}
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "pointer-events-none absolute inset-y-0 left-0 z-0 rounded-md border border-transparent bg-background shadow-sm",
+                    animateTabIndicator
+                      ? "transition-[transform,width,opacity] duration-500"
+                      : "transition-none",
+                  )}
+                  style={{
+                    opacity: tabIndicator.ready ? 1 : 0,
+                    transform: `translateX(${tabIndicator.left}px)`,
+                    transitionTimingFunction: "var(--bv-ease)",
+                    width: tabIndicator.width,
+                  }}
+                />
+                {allSections.map((item) => {
+                  const isActive = item.id === section.id;
+                  const isVisualActive = item.id === visualSectionId;
+                  const href = `/brand-integrated-brain/roadmap/questionnaire/${item.key}`;
+                  const questionIds = item.questions.map(
+                    (question) => question.id,
+                  );
+                  const answered = questionIds.filter((id) =>
+                    isIntakeAnswerComplete(displayedAnswers[id] ?? null),
+                  ).length;
+                  const isComplete =
+                    answered === item.questions.length &&
+                    item.questions.length > 0;
 
-                return (
-                  <Link
-                    aria-current={isActive ? "page" : undefined}
-                    className={cn(
-                      // Tabs / Trigger — base (grow to fill the frame evenly)
-                      "inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-4 py-2 text-sm font-medium whitespace-nowrap outline-none transition-[color,background-color,box-shadow]",
-                      // Keyboard focus accessibility
-                      "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                      isActive
-                        ? // Current page — active surface: white + sm shadow
-                          "bg-background text-foreground shadow-sm"
-                        : // Other tabs — plain muted label, no background
-                          "text-muted-foreground hover:text-foreground",
-                    )}
-                    href={
-                      isComplete
-                        ? `/brand-integrated-brain/roadmap/questionnaire/${item.key}`
-                        : `/brand-integrated-brain/roadmap/questionnaire/${item.key}?validate=1`
-                    }
-                    key={item.id}
-                  >
-                    {isComplete && (
-                      <CheckCircleIcon className="size-3.5 text-emerald-500" />
-                    )}
-                    {item.title}
-                  </Link>
-                );
-              })}
+                  return (
+                    <Link
+                      aria-label={`${item.title} ${answered}/${item.questions.length}`}
+                      aria-current={isActive ? "page" : undefined}
+                      className={cn(
+                        "relative z-10 inline-flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md border border-transparent px-2 text-sm font-medium whitespace-nowrap outline-none transition-colors duration-200",
+                        "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                        isVisualActive
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                      href={href}
+                      key={item.id}
+                      onClick={(event) =>
+                        handleSectionTabClick(event, item.id)
+                      }
+                      onPointerDown={(event) =>
+                        handleSectionTabPointerDown(event, item.id)
+                      }
+                      ref={isVisualActive ? activeTabRef : undefined}
+                    >
+                      <span className="inline-flex w-full min-w-0 items-center justify-center gap-1 leading-5">
+                        {isComplete && (
+                          <CheckCircleIcon className="size-3.5 text-emerald-500" />
+                        )}
+                        <span className="truncate">{item.title}</span>
+                      </span>
+                      <span
+                        className={cn(
+                          "shrink-0 font-mono text-[10px] font-medium leading-3",
+                          isVisualActive
+                            ? "text-[var(--bv-ink-3)]"
+                            : "text-muted-foreground/75",
+                        )}
+                      >
+                        {answered}/{item.questions.length}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -218,34 +404,43 @@ export function SectionQuestionnaire({
           ) : (
             section.questions.map((question, index) => (
               <div
-                className="rounded-lg border border-border bg-card px-6 py-5 shadow-xs"
+                className="flex flex-col gap-12 rounded-lg border border-border bg-card p-6 shadow-xs transition-colors duration-200 focus-within:bg-[#F2F2F2]"
                 id={`question-card-${question.id}`}
                 key={question.id}
               >
-                <div className="flex items-center justify-between font-mono text-xs text-muted-foreground">
-                  <span>
-                    {sectionIndex}.{String(index + 1).padStart(2, "0")}
+                <div className="flex w-full items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <span className="shrink-0 font-mono text-xs leading-4 text-muted-foreground">
+                      {sectionIndex}.{String(index + 1).padStart(2, "0")}
+                    </span>
+                    <h2 className="min-w-0 text-sm font-medium leading-none text-foreground">
+                      {question.questionText}
+                    </h2>
+                  </div>
+                  <span className="shrink-0 text-right text-xs font-medium leading-4 text-muted-foreground">
+                    {getQuestionCardStatusLabel(
+                      question.isRequired,
+                      displayedAnswers[question.id] ?? null,
+                      questionCardStatuses[question.id],
+                    )}
                   </span>
-                  {!locked && question.isRequired && <span>REQUIRED</span>}
                 </div>
-                <div className="mt-3">
+
+                <div className="flex w-full flex-col gap-6">
+                  {question.helpText && (
+                    <p className="text-sm font-medium leading-none text-muted-foreground">
+                      {question.helpText}
+                    </p>
+                  )}
                   {locked ? (
-                    <div className="space-y-2">
-                      <h2 className="text-sm font-medium leading-snug text-foreground">
-                        {question.questionText}
-                      </h2>
-                      {question.helpText && (
-                        <p className="text-sm text-muted-foreground">
-                          {question.helpText}
-                        </p>
-                      )}
-                      <div className="mt-1 rounded-md border border-input bg-muted/40 px-3 py-2 text-sm leading-6 whitespace-pre-wrap text-foreground shadow-xs">
-                        {formatAnswerValue(displayedAnswers[question.id] ?? null)}
-                      </div>
+                    <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm leading-6 whitespace-pre-wrap text-foreground shadow-xs">
+                      {formatAnswerValue(displayedAnswers[question.id] ?? null)}
                     </div>
                   ) : (
                     <QuestionRenderer
+                      hidePrompt
                       key={question.id}
+                      onCardStatusChange={handleQuestionCardStatusChange}
                       onQueuedChange={enqueueAnswer}
                       onRetryQueuedSave={retryQuestion}
                       question={question}
@@ -302,14 +497,14 @@ export function SectionQuestionnaire({
             <Button asChild className="text-[var(--bv-ink-3)] hover:text-[var(--bv-ink)]" variant="ghost">
               <Link href="/brand-integrated-brain/roadmap/questionnaire">
                 <ArrowLeftIcon className="size-3.5" />
-                All sections
+                Questionnaire overview
               </Link>
             </Button>
 
             {sectionIndex < allSections.length ? (
               <Button asChild className="group" variant="outline">
                 <Link
-                  href={`/brand-integrated-brain/roadmap/questionnaire/${allSections[sectionIndex].key}?validate=1`}
+                  href={`/brand-integrated-brain/roadmap/questionnaire/${allSections[sectionIndex].key}`}
                 >
                   Next: {allSections[sectionIndex].title}
                   <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
@@ -319,7 +514,7 @@ export function SectionQuestionnaire({
               </Button>
             ) : (
               <Button asChild variant="outline">
-                <Link href="/brand-integrated-brain/roadmap/questionnaire">Review &amp; submit</Link>
+                <Link href="/brand-integrated-brain/roadmap/questionnaire?review=1">Review &amp; submit</Link>
               </Button>
             )}
           </div>

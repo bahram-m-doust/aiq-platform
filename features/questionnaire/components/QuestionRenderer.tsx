@@ -36,10 +36,16 @@ import type {
   IntakeAnswerValue,
   IntakeQuestion,
 } from "@/features/questionnaire/types";
+import { cn } from "@/lib/utils";
 
 type AutosaveAction = (
   input: AutosaveIntakeAnswerInput,
 ) => Promise<AutosaveIntakeAnswerResult>;
+
+export type IntakeQuestionCardStatus =
+  | "answered_not_done"
+  | "completed"
+  | "not_answered";
 
 function valueToString(value: IntakeAnswerValue) {
   if (typeof value === "string" || typeof value === "number") {
@@ -108,6 +114,15 @@ function SaveIndicator({
   return null;
 }
 
+function DoneIndicator() {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
+      <CheckIcon className="size-3" />
+      Done
+    </span>
+  );
+}
+
 export function QuestionRenderer({
   sessionId,
   question,
@@ -117,6 +132,8 @@ export function QuestionRenderer({
   saveState,
   onRetryQueuedSave,
   requiredError = false,
+  hidePrompt = false,
+  onCardStatusChange,
   autosaveAction = autosaveIntakeAnswerAction,
 }: {
   sessionId: string;
@@ -131,6 +148,11 @@ export function QuestionRenderer({
   saveState?: AutosaveQuestionState;
   onRetryQueuedSave?: (questionId: string) => void;
   requiredError?: boolean;
+  hidePrompt?: boolean;
+  onCardStatusChange?: (
+    questionId: string,
+    status: IntakeQuestionCardStatus,
+  ) => void;
   autosaveAction?: AutosaveAction;
 }) {
   const [localValue, setLocalValue] = useState<IntakeAnswerValue>(value);
@@ -157,17 +179,56 @@ export function QuestionRenderer({
   const statusId = `${controlId}-status`;
   const usesQueuedAutosave = Boolean(onQueuedChange);
   const currentValue = usesQueuedAutosave ? value : localValue;
+  const isTextKind =
+    kind === "text" ||
+    kind === "textarea" ||
+    kind === "url" ||
+    kind === "number";
+  const completionValue = isTextKind ? localValue : currentValue;
+  const canMarkDone =
+    !question.isRequired || isIntakeAnswerComplete(completionValue);
+  const committedTextValue = usesQueuedAutosave ? currentValue : savedValue;
+  const hasUncommittedTextDraft =
+    isTextKind &&
+    valueToString(localValue) !== valueToString(committedTextValue);
+  const hasAnswer = isIntakeAnswerComplete(completionValue);
+  const cardStatus: IntakeQuestionCardStatus = hasAnswer
+    ? isEditing
+      ? "answered_not_done"
+      : "completed"
+    : "not_answered";
 
   useEffect(() => {
     if (!isFocusedRef.current) {
       setLocalValue(value);
     }
   }, [value]);
+
+  useEffect(() => {
+    onCardStatusChange?.(question.id, cardStatus);
+  }, [cardStatus, onCardStatusChange, question.id]);
+
   const displayedStatus = saveState?.status ?? status;
   const displayedMessage = saveState?.message ?? message;
+  const missingRequiredAnswer =
+    question.isRequired && !hasAnswer;
+  const indicatorStatus =
+    displayedStatus === "saved" &&
+    (hasUncommittedTextDraft || missingRequiredAnswer)
+      ? "idle"
+      : displayedStatus;
   // Flagged by the parent on a finish attempt when this required answer is empty.
   const showRequiredError =
-    requiredError && !isIntakeAnswerComplete(currentValue);
+    requiredError && missingRequiredAnswer;
+  const hasValidationError = displayedStatus === "error" || showRequiredError;
+  const showSaveProgress =
+    isPending ||
+    ["queued", "saving", "error"].includes(indicatorStatus);
+  const markDoneLabel = canMarkDone
+    ? isTextKind
+      ? "Save & mark done"
+      : "Mark as done"
+    : "Done";
 
   function queueValue(nextValue: IntakeAnswerValue, flush = false) {
     onQueuedChange?.(question.id, nextValue, { flush });
@@ -285,11 +346,7 @@ export function QuestionRenderer({
   }
 
   function handleDone() {
-    const isTextKind =
-      kind === "text" ||
-      kind === "textarea" ||
-      kind === "url" ||
-      kind === "number";
+    if (!canMarkDone) return;
 
     if (isTextKind) {
       handleTextBlur();
@@ -299,8 +356,7 @@ export function QuestionRenderer({
     // answer. For text fields the freshest value lives in the local draft
     // (the committed value updates a render later). An empty Done must keep
     // the field in edit mode.
-    const committedValue = isTextKind ? localValue : currentValue;
-    if (isIntakeAnswerComplete(committedValue)) {
+    if (isIntakeAnswerComplete(completionValue)) {
       setIsEditing(false);
       focusNextTypeableField();
     }
@@ -455,7 +511,7 @@ export function QuestionRenderer({
       return (
         <Textarea
           aria-describedby={statusId}
-          aria-invalid={displayedStatus === "error" || showRequiredError}
+          aria-invalid={hasValidationError ? true : undefined}
           data-intake-field
           dir={detectDir(localValue)}
           id={controlId}
@@ -474,7 +530,7 @@ export function QuestionRenderer({
     return (
       <Input
         aria-describedby={statusId}
-        aria-invalid={displayedStatus === "error" || showRequiredError}
+        aria-invalid={hasValidationError ? true : undefined}
         data-intake-field
         dir={detectDir(localValue)}
         id={controlId}
@@ -493,7 +549,7 @@ export function QuestionRenderer({
 
   return (
     <div>
-      <div className="space-y-1.5">
+      <div className={hidePrompt ? "sr-only" : "space-y-1.5"}>
         <Label
           className="text-sm font-medium leading-relaxed text-foreground"
           htmlFor={controlId}
@@ -508,40 +564,54 @@ export function QuestionRenderer({
       </div>
 
       {isEditing ? (
-        <>
-          <div className="mt-3">{renderControl()}</div>
+        <div>
+          <div className={hidePrompt ? undefined : "mt-3"}>{renderControl()}</div>
 
           {showRequiredError && (
-            <p className="mt-1.5 text-xs text-destructive">
+            <p
+              className={cn(
+                "text-xs text-destructive",
+                hidePrompt ? "mt-2" : "mt-1.5",
+              )}
+            >
               This question needs an answer.
             </p>
           )}
 
-          <div className="mt-2 flex min-h-[28px] items-center justify-between gap-2">
+          <div
+            className={cn(
+              "flex h-9 items-center justify-between gap-2",
+              hidePrompt ? (showRequiredError ? "mt-3" : "mt-[17px]") : "mt-2",
+            )}
+          >
             <span aria-live="polite" id={statusId} role="status">
               <SaveIndicator
                 isPending={isPending && !usesQueuedAutosave}
                 message={displayedMessage}
                 onRetry={retry}
-                status={displayedStatus}
+                status={indicatorStatus}
               />
             </span>
             <Button
-              className="shrink-0"
+              className="h-9 shrink-0 rounded-full px-4 text-sm"
+              disabled={!canMarkDone}
               onClick={handleDone}
-              size="sm"
+              size="default"
               type="button"
               variant="outline"
             >
               <CheckIcon className="size-3.5" />
-              Done
+              {markDoneLabel}
             </Button>
           </div>
-        </>
+        </div>
       ) : (
-        <>
+        <div>
           <div
-            className="mt-3 rounded-[12px] border px-3.5 py-2.5 text-[13.5px] leading-6 whitespace-pre-wrap"
+            className={cn(
+              "min-h-20 rounded-md border px-3.5 py-2.5 text-sm leading-6 whitespace-pre-wrap shadow-xs",
+              !hidePrompt && "mt-3",
+            )}
             dir={detectDir(currentValue)}
             style={{
               background: "var(--bv-card-soft)",
@@ -554,19 +624,28 @@ export function QuestionRenderer({
             {formatDisplay() ?? "No answer yet"}
           </div>
 
-          <div className="mt-2 flex min-h-[28px] items-center justify-between gap-2">
+          <div
+            className={cn(
+              "flex h-9 items-center justify-between gap-2",
+              hidePrompt ? "mt-6" : "mt-2",
+            )}
+          >
             <span aria-live="polite" id={statusId} role="status">
-              <SaveIndicator
-                isPending={isPending && !usesQueuedAutosave}
-                message={displayedMessage}
-                onRetry={retry}
-                status={displayedStatus}
-              />
+              {showSaveProgress ? (
+                <SaveIndicator
+                  isPending={isPending && !usesQueuedAutosave}
+                  message={displayedMessage}
+                  onRetry={retry}
+                  status={indicatorStatus}
+                />
+              ) : (
+                <DoneIndicator />
+              )}
             </span>
             <Button
-              className="shrink-0"
+              className="h-9 shrink-0 rounded-full px-4 text-sm"
               onClick={() => setIsEditing(true)}
-              size="sm"
+              size="default"
               type="button"
               variant="outline"
             >
@@ -574,7 +653,7 @@ export function QuestionRenderer({
               Edit
             </Button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

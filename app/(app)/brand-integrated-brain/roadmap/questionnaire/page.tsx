@@ -11,7 +11,12 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function QuestionnairePage() {
+export default async function QuestionnairePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ review?: string }>;
+}) {
+  const { review } = await searchParams;
   const { profile } = await requireUserProfile("/brand-integrated-brain/roadmap/questionnaire");
   const data = await getIntakePageData({ profileId: profile.id });
 
@@ -19,5 +24,5 @@ export default async function QuestionnairePage() {
     redirect("/home");
   }
 
-  return <QuestionnaireLanding data={data} />;
+  return <QuestionnaireLanding data={data} showSubmitReview={review === "1"} />;
 }

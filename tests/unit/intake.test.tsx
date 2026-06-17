@@ -16,7 +16,9 @@ vi.mock("next/navigation", () => ({
 
 import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalSubmitReadiness";
 import { LockedIntakeView } from "@/features/questionnaire/components/LockedIntakeView";
+import { QuestionnaireLanding } from "@/features/questionnaire/components/QuestionnaireLanding";
 import { QuestionRenderer } from "@/features/questionnaire/components/QuestionRenderer";
+import { SectionQuestionnaire } from "@/features/questionnaire/components/SectionQuestionnaire";
 import {
   buildIntakeFinalSubmitAfterAudit,
   buildIntakeSnapshotJson,
@@ -313,7 +315,26 @@ describe("intake UI components", () => {
     expect(
       screen.getByLabelText("What is the strategic role of the company?"),
     ).toBeVisible();
+    expect(
+      screen.getByLabelText("What is the strategic role of the company?"),
+    ).not.toHaveAttribute("aria-invalid");
     expect(screen.getByText("Use concise executive language.")).toBeVisible();
+  });
+
+  it("marks an empty text area invalid only when validation is requested", () => {
+    render(
+      <QuestionRenderer
+        question={question}
+        requiredError
+        sessionId="session-1"
+        value={null}
+      />,
+    );
+
+    expect(
+      screen.getByLabelText("What is the strategic role of the company?"),
+    ).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("This question needs an answer.")).toBeVisible();
   });
 
   it("collapses an answered question to read-only with an Edit affordance", async () => {
@@ -328,6 +349,7 @@ describe("intake UI components", () => {
     );
 
     expect(screen.getByText("An existing answer")).toBeVisible();
+    expect(screen.getByText("Done")).toBeVisible();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Edit/ }));
@@ -335,8 +357,7 @@ describe("intake UI components", () => {
     expect(screen.getByRole("textbox")).toBeVisible();
   });
 
-  it("keeps a question in edit mode when Done is clicked with an empty answer", async () => {
-    const user = userEvent.setup();
+  it("disables done for an empty required answer", () => {
     render(
       <QuestionRenderer
         autosaveAction={vi.fn()}
@@ -346,13 +367,68 @@ describe("intake UI components", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Done/ }));
-
     expect(screen.getByRole("textbox")).toBeVisible();
-    expect(screen.getByRole("button", { name: /Done/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Done" })).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: /Edit/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("hides a stale saved status after a saved required answer is cleared", async () => {
+    const user = userEvent.setup();
+    render(
+      <QuestionRenderer
+        onQueuedChange={vi.fn()}
+        question={question}
+        saveState={{ status: "saved", message: "" }}
+        sessionId="session-1"
+        value="Previously saved answer"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Edit/ }));
+    await user.clear(
+      screen.getByLabelText("What is the strategic role of the company?"),
+    );
+
+    expect(screen.queryByText("Saved")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Done" })).toBeDisabled();
+  });
+
+  it("enables save and mark done once a required text answer is filled", async () => {
+    const user = userEvent.setup();
+    const autosave = vi.fn().mockResolvedValue({
+      ok: true,
+      questionId: "question-1",
+      value: "A considered answer",
+      completionPercent: 50,
+    });
+    render(
+      <QuestionRenderer
+        autosaveAction={autosave}
+        question={question}
+        sessionId="session-1"
+        value={null}
+      />,
+    );
+
+    const field = screen.getByLabelText(
+      "What is the strategic role of the company?",
+    );
+    await user.type(field, "A considered answer");
+
+    const markDone = screen.getByRole("button", { name: /Save & mark done/ });
+    expect(markDone).toBeEnabled();
+
+    await user.click(markDone);
+
+    expect(autosave).toHaveBeenCalledWith({
+      sessionId: "session-1",
+      questionId: "question-1",
+      value: "A considered answer",
+    });
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Edit/ })).toBeVisible();
   });
 
   it("does not autosave a free-text field on blur when nothing changed", async () => {
@@ -511,5 +587,197 @@ describe("intake UI components", () => {
     expect(
       screen.queryByRole("button", { name: "Final Submit" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps normal questionnaire section links out of validation mode", () => {
+    const data = intakeData({
+      session: session(),
+      answers: {
+        "question-1": "Strategic answer",
+        "question-2": null,
+      },
+      completion: completion(),
+    });
+    const { container } = render(<QuestionnaireLanding data={data} />);
+
+    expect(
+      container.querySelector(
+        'a[href="/brand-integrated-brain/roadmap/questionnaire/COMPANY"]',
+      ),
+    ).not.toBeNull();
+    expect(
+      container.querySelector(
+        'a[href="/brand-integrated-brain/roadmap/questionnaire/COMPANY?validate=1"]',
+      ),
+    ).toBeNull();
+    expect(
+      screen.queryByText(/still need an answer before you can submit/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows unanswered warning links only after review submit", () => {
+    const data = intakeData({
+      session: session(),
+      answers: {
+        "question-1": "Strategic answer",
+        "question-2": null,
+      },
+      completion: completion(),
+    });
+    const { container } = render(
+      <QuestionnaireLanding data={data} showSubmitReview />,
+    );
+
+    expect(
+      screen.getByText(/still need an answer before you can submit/i),
+    ).toBeVisible();
+    expect(
+      container.querySelector(
+        'a[href="/brand-integrated-brain/roadmap/questionnaire/COMPANY?validate=1"]',
+      ),
+    ).not.toBeNull();
+  });
+
+  it("shows approve and lock only after review submit when complete", () => {
+    const data = intakeData({
+      session: session(),
+      answers: {
+        "question-1": "Strategic answer",
+        "question-2": "https://helio.example",
+      },
+      completion: completion({
+        answeredQuestions: 2,
+        completionPercent: 100,
+        sections: [
+          {
+            sectionId: "section-1",
+            sectionKey: "COMPANY",
+            title: "Company",
+            totalQuestions: 2,
+            answeredQuestions: 2,
+            completionPercent: 100,
+          },
+        ],
+      }),
+    });
+    const { rerender } = render(<QuestionnaireLanding data={data} />);
+
+    expect(
+      screen.queryByRole("button", { name: /Approve & Lock/ }),
+    ).not.toBeInTheDocument();
+
+    rerender(<QuestionnaireLanding data={data} showSubmitReview />);
+
+    expect(
+      screen.getByRole("button", { name: /Approve & Lock/ }),
+    ).toBeEnabled();
+  });
+
+  it("does not validate unanswered fields when moving between sections", () => {
+    const nextSection: IntakeSectionWithQuestions = {
+      ...section,
+      id: "section-2",
+      key: "AUDIENCE",
+      title: "Audience",
+      orderIndex: 2,
+      questions: [
+        {
+          ...question,
+          id: "question-3",
+          key: "AUDIENCE_CONTEXT",
+          questionText: "Who is the audience?",
+        },
+      ],
+    };
+
+    const { container } = render(
+      <SectionQuestionnaire
+        allSections={[section, nextSection]}
+        answers={{
+          "question-1": "Strategic answer",
+          "question-2": null,
+          "question-3": null,
+        }}
+        brandName="Helio"
+        completion={completion()}
+        section={section}
+        session={session()}
+      />,
+    );
+
+    expect(
+      container.querySelector(
+        'a[href="/brand-integrated-brain/roadmap/questionnaire/AUDIENCE"]',
+      ),
+    ).not.toBeNull();
+    expect(
+      container.querySelector(
+        'a[href="/brand-integrated-brain/roadmap/questionnaire/AUDIENCE?validate=1"]',
+      ),
+    ).toBeNull();
+  });
+
+  it("shows section completion counts in questionnaire tabs", () => {
+    const nextSection: IntakeSectionWithQuestions = {
+      ...section,
+      id: "section-2",
+      key: "AUDIENCE",
+      title: "Audience",
+      orderIndex: 2,
+      questions: [
+        {
+          ...question,
+          id: "question-3",
+          key: "AUDIENCE_CONTEXT",
+          questionText: "Who is the audience?",
+        },
+      ],
+    };
+
+    render(
+      <SectionQuestionnaire
+        allSections={[section, nextSection]}
+        answers={{
+          "question-1": "Strategic answer",
+          "question-2": null,
+          "question-3": null,
+        }}
+        brandName="Helio"
+        completion={completion()}
+        section={section}
+        session={session()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: /Company\s+1\/2/ }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: /Audience\s+0\/1/ }),
+    ).toBeVisible();
+  });
+
+  it("routes review and submit from the last section into submit review mode", () => {
+    render(
+      <SectionQuestionnaire
+        allSections={[section]}
+        answers={{
+          "question-1": "Strategic answer",
+          "question-2": "https://helio.example",
+        }}
+        brandName="Helio"
+        completion={completion({
+          answeredQuestions: 2,
+          completionPercent: 100,
+        })}
+        section={section}
+        session={session()}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: /Review & submit/ })).toHaveAttribute(
+      "href",
+      "/brand-integrated-brain/roadmap/questionnaire?review=1",
+    );
   });
 });
