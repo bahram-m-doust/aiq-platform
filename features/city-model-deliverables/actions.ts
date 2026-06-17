@@ -25,7 +25,7 @@ import { validateSecureUpload } from "@/lib/security/file-upload";
 
 function revalidateDistrict(slug?: string) {
   revalidatePath(ROUTES.brainRoadmapCityModel);
-  revalidatePath("/brand-integrated-brain/roadmap");
+  revalidatePath("/integrated-brand-brain/roadmap");
   revalidatePath("/admin/city-model");
   if (slug) revalidatePath(cityModelDistrictPath(slug));
 }

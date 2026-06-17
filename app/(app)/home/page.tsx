@@ -17,7 +17,7 @@ export default async function HomePage() {
 
   // No active brand workspace yet — fall through to the Brain build flow.
   if (!workspace) {
-    redirect("/brand-integrated-brain");
+    redirect("/integrated-brand-brain");
   }
 
   return <AppLanding workspace={workspace} />;

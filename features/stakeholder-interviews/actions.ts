@@ -16,12 +16,12 @@ import {
 } from "@/features/stakeholder-interviews/services";
 import type { StakeholderActionState } from "@/features/stakeholder-interviews/types";
 
-const CLIENT_PATH = "/brand-integrated-brain/roadmap/stakeholder-interviews";
+const CLIENT_PATH = "/integrated-brand-brain/roadmap/stakeholder-interviews";
 
 function revalidateStakeholderPaths() {
   revalidatePath(CLIENT_PATH);
-  revalidatePath("/brand-integrated-brain/roadmap");
-  revalidatePath("/brand-integrated-brain");
+  revalidatePath("/integrated-brand-brain/roadmap");
+  revalidatePath("/integrated-brand-brain");
 }
 
 export async function uploadStakeholderReportAction(

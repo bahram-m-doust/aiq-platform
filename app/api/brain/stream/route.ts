@@ -38,7 +38,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export async function POST(request: Request) {
-  const { profile } = await requireUserProfile("/brand-integrated-brain");
+  const { profile } = await requireUserProfile("/integrated-brand-brain");
 
   let body: unknown;
   try {

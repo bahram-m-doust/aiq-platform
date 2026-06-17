@@ -18,7 +18,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ snapshotId: string }> },
 ) {
-  const { profile } = await requireUserProfile("/brand-integrated-brain/roadmap/questionnaire");
+  const { profile } = await requireUserProfile("/integrated-brand-brain/roadmap/questionnaire");
   const { snapshotId } = await params;
 
   let snapshot: Awaited<ReturnType<typeof getIntakeSnapshotForProfile>>;

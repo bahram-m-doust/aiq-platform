@@ -213,7 +213,7 @@ export function AppLanding({
         className="mx-auto w-full max-w-6xl space-y-10"
         style={{ animation: "ds-fade-in 600ms var(--bv-ease)" }}
       >
-        {/* Hero — Brand Integrated Brain */}
+        {/* Hero — Integrated Brand Brain */}
         <section
           className="relative overflow-hidden rounded-2xl border"
           style={{
@@ -230,13 +230,13 @@ export function AppLanding({
                 The brain behind every on-brand decision
               </h1>
               <p className="ds-body max-w-lg">
-                The Brand Integrated Brain holds {brandName}&apos;s approved
+                The Integrated Brand Brain holds {brandName}&apos;s approved
                 knowledge. Every agent plugs into it — so everything they
                 create stays unmistakably on-brand.
               </p>
               <div className="flex flex-wrap gap-3 pt-1">
                 <Button asChild size="lg">
-                  <Link href="/brand-integrated-brain">
+                  <Link href="/integrated-brand-brain">
                     <BrainCircuitIcon />
                     Open Brand Brain
                   </Link>

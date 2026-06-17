@@ -3,21 +3,21 @@
 // intentionally match each page's displayed name and on-disk folder.
 export const ROUTES = {
   home: "/home",
-  brain: "/brand-integrated-brain",
-  brainBrand: "/brand-integrated-brain/brand-brain",
-  brainRoadmap: "/brand-integrated-brain/roadmap",
+  brain: "/integrated-brand-brain",
+  brainBrand: "/integrated-brand-brain/brand-brain",
+  brainRoadmap: "/integrated-brand-brain/roadmap",
   brainRoadmapFuturesResearch:
-    "/brand-integrated-brain/roadmap/futures-research",
+    "/integrated-brand-brain/roadmap/futures-research",
   brainRoadmapStakeholderInterviews:
-    "/brand-integrated-brain/roadmap/stakeholder-interviews",
-  brainRoadmapCityModel: "/brand-integrated-brain/roadmap/city-model",
+    "/integrated-brand-brain/roadmap/stakeholder-interviews",
+  brainRoadmapCityModel: "/integrated-brand-brain/roadmap/city-model",
   agents: "/agents",
   documents: "/documents",
   settings: "/settings",
   modules: "/modules",
   // Questionnaire is Phase 1 of the Build Roadmap, so it lives under the brain
   // roadmap rather than at the top level — its URL mirrors the breadcrumb trail.
-  questionnaire: "/brand-integrated-brain/roadmap/questionnaire",
+  questionnaire: "/integrated-brand-brain/roadmap/questionnaire",
   changeRequests: "/change-requests",
   createBrand: "/create-brand",
   invitations: "/invitations",
@@ -34,7 +34,7 @@ export const questionnaireSectionPath = (sectionKey: string) =>
 // URL prefix. Keep in sync with the folders under app/(app)/.
 export const APP_ROOT_SEGMENTS = new Set([
   "home",
-  "brand-integrated-brain",
+  "integrated-brand-brain",
   "agents",
   "documents",
   "settings",

@@ -226,7 +226,7 @@ export function SectionQuestionnaire({
       <div className="mx-auto max-w-[1057px]">
         <div className="mb-6 space-y-4">
           <Button asChild size="sm" variant="outline">
-            <Link href="/brand-integrated-brain/roadmap/questionnaire">
+            <Link href="/integrated-brand-brain/roadmap/questionnaire">
               <ArrowLeftIcon className="size-3.5" />
               Questionnaire overview
             </Link>
@@ -307,7 +307,7 @@ export function SectionQuestionnaire({
                 {allSections.map((item) => {
                   const isActive = item.id === section.id;
                   const isVisualActive = item.id === visualSectionId;
-                  const href = `/brand-integrated-brain/roadmap/questionnaire/${item.key}`;
+                  const href = `/integrated-brand-brain/roadmap/questionnaire/${item.key}`;
                   const questionIds = item.questions.map(
                     (question) => question.id,
                   );
@@ -423,7 +423,7 @@ export function SectionQuestionnaire({
                 <PaginationPrevious
                   href={
                     sectionIndex > 1
-                      ? `/brand-integrated-brain/roadmap/questionnaire/${allSections[sectionIndex - 2].key}`
+                      ? `/integrated-brand-brain/roadmap/questionnaire/${allSections[sectionIndex - 2].key}`
                       : undefined
                   }
                 />
@@ -431,7 +431,7 @@ export function SectionQuestionnaire({
               {allSections.map((item, index) => (
                 <PaginationItem key={item.key}>
                   <PaginationLink
-                    href={`/brand-integrated-brain/roadmap/questionnaire/${item.key}`}
+                    href={`/integrated-brand-brain/roadmap/questionnaire/${item.key}`}
                     isActive={index + 1 === sectionIndex}
                   >
                     {index + 1}
@@ -442,7 +442,7 @@ export function SectionQuestionnaire({
                 <PaginationLast
                   href={
                     sectionIndex < allSections.length
-                      ? `/brand-integrated-brain/roadmap/questionnaire/${allSections[allSections.length - 1].key}`
+                      ? `/integrated-brand-brain/roadmap/questionnaire/${allSections[allSections.length - 1].key}`
                       : undefined
                   }
                 />
@@ -452,7 +452,7 @@ export function SectionQuestionnaire({
 
           <div className="flex items-center justify-between">
             <Button asChild className="text-[var(--bv-ink-3)] hover:text-[var(--bv-ink)]" variant="ghost">
-              <Link href="/brand-integrated-brain/roadmap/questionnaire">
+              <Link href="/integrated-brand-brain/roadmap/questionnaire">
                 <ArrowLeftIcon className="size-3.5" />
                 Questionnaire overview
               </Link>
@@ -461,7 +461,7 @@ export function SectionQuestionnaire({
             {sectionIndex < allSections.length ? (
               <Button asChild className="group" variant="outline">
                 <Link
-                  href={`/brand-integrated-brain/roadmap/questionnaire/${allSections[sectionIndex].key}`}
+                  href={`/integrated-brand-brain/roadmap/questionnaire/${allSections[sectionIndex].key}`}
                 >
                   Next: {allSections[sectionIndex].title}
                   <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
@@ -471,7 +471,7 @@ export function SectionQuestionnaire({
               </Button>
             ) : (
               <Button asChild variant="outline">
-                <Link href="/brand-integrated-brain/roadmap/questionnaire?review=1">Review &amp; submit</Link>
+                <Link href="/integrated-brand-brain/roadmap/questionnaire?review=1">Review &amp; submit</Link>
               </Button>
             )}
           </div>

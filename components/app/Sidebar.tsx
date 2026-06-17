@@ -129,7 +129,7 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
               </SidebarMenuItem>
             ))}
 
-            {/* Brand Integrated Brain */}
+            {/* Integrated Brand Brain */}
             <Collapsible
               asChild
               defaultOpen={brainOpen}
@@ -139,10 +139,10 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton
                     className="cursor-pointer"
-                    tooltip="Brand Integrated Brain"
+                    tooltip="Integrated Brand Brain"
                   >
                     <BrainCircuitIcon />
-                    <span>Brand Integrated Brain</span>
+                    <span>Integrated Brand Brain</span>
                     <ChevronDownIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>

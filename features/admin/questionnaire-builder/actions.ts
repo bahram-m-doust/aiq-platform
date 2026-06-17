@@ -53,7 +53,7 @@ function logIntakeBuilderActionError({
 function revalidateIntakeBuilderPaths() {
   revalidateTag(CACHE_TAGS.intakeConfig, "max");
   revalidatePath("/admin/questionnaire-builder");
-  revalidatePath("/brand-integrated-brain/roadmap/questionnaire");
+  revalidatePath("/integrated-brand-brain/roadmap/questionnaire");
 }
 
 export async function createIntakeSectionAction(

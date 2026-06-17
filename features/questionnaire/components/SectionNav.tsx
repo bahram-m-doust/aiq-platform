@@ -28,7 +28,7 @@ export function SectionNav({
               "rounded-lg border border-border px-4 py-3 text-sm transition-colors hover:bg-muted",
               isActive && "border-primary bg-muted",
             )}
-            href={`/brand-integrated-brain/roadmap/questionnaire/${section.key}`}
+            href={`/integrated-brand-brain/roadmap/questionnaire/${section.key}`}
             key={section.id}
           >
             <span className="block font-medium">{section.title}</span>

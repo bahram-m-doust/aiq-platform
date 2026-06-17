@@ -38,15 +38,15 @@ export function subjectPathname(
 ): string {
   switch (subjectType) {
     case "STAKEHOLDER_INTERVIEWS":
-      return "/brand-integrated-brain/roadmap/stakeholder-interviews";
+      return "/integrated-brand-brain/roadmap/stakeholder-interviews";
     case "FUTURES_RESEARCH":
-      return "/brand-integrated-brain/roadmap/futures-research";
+      return "/integrated-brand-brain/roadmap/futures-research";
     case "CITY_MODEL_DISTRICT":
-      return `/brand-integrated-brain/roadmap/city-model/${subjectId}`;
+      return `/integrated-brand-brain/roadmap/city-model/${subjectId}`;
     case "MODULE":
       return `/modules/${subjectId}`;
     case "BRAND_DOC":
-      return "/brand-integrated-brain";
+      return "/integrated-brand-brain";
   }
 }
 

@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-// Maps a crumb href (e.g. "/brand-integrated-brain/roadmap/questionnaire/company") to a
+// Maps a crumb href (e.g. "/integrated-brand-brain/roadmap/questionnaire/company") to a
 // human-friendly label. Pages register these for dynamic segments whose label
 // can only be resolved from server data (a section title, agent name, …).
 type BreadcrumbLabelMap = Record<string, string>;

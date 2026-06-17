@@ -13,7 +13,7 @@ export async function GET(
   const { reportId } = await params;
 
   const { profile } = await requireUserProfile(
-    "/brand-integrated-brain/roadmap/futures-research",
+    "/integrated-brand-brain/roadmap/futures-research",
   );
   const access = await getBrandAccessSummaryForProfile(profile.id);
   if (access.status !== "ACTIVE_ACCESS" || !access.brandId) {

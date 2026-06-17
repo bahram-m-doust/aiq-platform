@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ChangeRequestsPage() {
-  redirect("/brand-integrated-brain/roadmap/questionnaire");
+  redirect("/integrated-brand-brain/roadmap/questionnaire");
 }

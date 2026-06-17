@@ -4,6 +4,6 @@ import { ROUTES } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
-export default function LegacyBrandBrainPage() {
-  redirect(ROUTES.brainBrand);
+export default function BrandIntegratedBrainPage() {
+  redirect(ROUTES.brainRoadmap);
 }

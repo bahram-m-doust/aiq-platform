@@ -19,7 +19,7 @@ import { APP_ROOT_SEGMENTS } from "@/lib/routes";
 // slugs) fall back to a humanized version of the segment.
 const SEGMENT_LABELS: Record<string, string> = {
   agents: "Agents",
-  "brand-integrated-brain": "Brand Integrated Brain",
+  "integrated-brand-brain": "Integrated Brand Brain",
   "brand-brain": "Brand Brain",
   roadmap: "Build Roadmap",
   "city-model": "City Model",

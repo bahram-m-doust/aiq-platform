@@ -21,12 +21,12 @@ import { canViewAdminModulesRole } from "@/features/modules/schema";
 import { logServerError } from "@/lib/logging/server";
 import { validateSecureUpload } from "@/lib/security/file-upload";
 
-const CLIENT_PATH = "/brand-integrated-brain/roadmap/futures-research";
+const CLIENT_PATH = "/integrated-brand-brain/roadmap/futures-research";
 
 function revalidateFuturesResearchPaths() {
   revalidatePath(CLIENT_PATH);
-  revalidatePath("/brand-integrated-brain/roadmap");
-  revalidatePath("/brand-integrated-brain");
+  revalidatePath("/integrated-brand-brain/roadmap");
+  revalidatePath("/integrated-brand-brain");
 }
 
 export async function uploadFuturesResearchReportAction(

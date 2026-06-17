@@ -23,7 +23,7 @@ import { logServerError } from "@/lib/logging/server";
 export async function autosaveIntakeAnswerAction(
   input: AutosaveIntakeAnswerInput,
 ): Promise<AutosaveIntakeAnswerResult> {
-  const user = await requireUser("/brand-integrated-brain/roadmap/questionnaire");
+  const user = await requireUser("/integrated-brand-brain/roadmap/questionnaire");
   return autosaveIntakeAnswer({
     input,
     authUserId: user.id,
@@ -33,7 +33,7 @@ export async function autosaveIntakeAnswerAction(
 export async function autosaveIntakeAnswersAction(
   input: AutosaveIntakeAnswersInput,
 ): Promise<AutosaveIntakeAnswersResult> {
-  const user = await requireUser("/brand-integrated-brain/roadmap/questionnaire");
+  const user = await requireUser("/integrated-brand-brain/roadmap/questionnaire");
   return autosaveIntakeAnswers({
     input,
     authUserId: user.id,
@@ -53,7 +53,7 @@ export async function finalSubmitIntakeAction(
   _previousState: FinalSubmitIntakeFormState,
   formData: FormData,
 ): Promise<FinalSubmitIntakeFormState> {
-  const { profile } = await requireUserProfile("/brand-integrated-brain/roadmap/questionnaire");
+  const { profile } = await requireUserProfile("/integrated-brand-brain/roadmap/questionnaire");
   const sessionId = formValue(formData, "session_id");
 
   if (!sessionId) {
@@ -68,9 +68,9 @@ export async function finalSubmitIntakeAction(
     });
 
     revalidatePath("/home");
-    revalidatePath("/brand-integrated-brain/roadmap/questionnaire");
+    revalidatePath("/integrated-brand-brain/roadmap/questionnaire");
     result.sectionKeys.forEach((sectionKey) => {
-      revalidatePath(`/brand-integrated-brain/roadmap/questionnaire/${sectionKey}`);
+      revalidatePath(`/integrated-brand-brain/roadmap/questionnaire/${sectionKey}`);
     });
 
     return {
@@ -111,7 +111,7 @@ export async function reopenIntakeSubmissionAction(
 
     // Refresh the admin list and the owner's questionnaire views.
     revalidatePath("/admin/submissions");
-    revalidatePath("/brand-integrated-brain/roadmap/questionnaire");
+    revalidatePath("/integrated-brand-brain/roadmap/questionnaire");
 
     return {
       status: "success",
