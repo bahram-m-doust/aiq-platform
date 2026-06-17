@@ -209,7 +209,7 @@ function formatDate(value: string | null): string {
 }
 
 function authorLabel(comment: ReviewComment): string {
-  return comment.authorName ?? comment.authorEmail ?? "Reviewer";
+  return comment.authorName ?? "Reviewer";
 }
 
 function anchorKey(anchorId: string | null): string {
@@ -869,10 +869,10 @@ function HighlightLayer({
   return (
     <div
       aria-hidden
-      className={cn(
-        "absolute left-0 top-0 z-10",
-        interactive ? "pointer-events-none" : "pointer-events-none",
-      )}
+      // The container always lets clicks and text selection fall through to the
+      // document underneath; only the individual highlight rects below opt back
+      // into pointer events when interactive.
+      className="absolute left-0 top-0 z-10 pointer-events-none"
     >
       {rects.map((rect) => (
         <div

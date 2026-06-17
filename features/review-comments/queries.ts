@@ -10,9 +10,13 @@ import {
   isMissingTableError,
 } from "@/lib/supabase/errors";
 
+// The author embed is deliberately limited to the display name. Never select
+// the author's email here: these comments are sent to the client-facing review
+// surfaces, so an email would leak an internal teammate's address into the
+// browser payload (even if it were never rendered).
 type AuthorEmbed =
-  | { full_name: string | null; email: string | null }
-  | { full_name: string | null; email: string | null }[]
+  | { full_name: string | null }
+  | { full_name: string | null }[]
   | null;
 
 type CommentRow = {
@@ -35,16 +39,16 @@ type CommentRow = {
 };
 
 const COMMENT_SELECT =
-  "id, brand_id, subject_type, subject_id, parent_id, anchor_id, anchor_label, highlight_start, highlight_end, highlight_text, author_id, body, resolved, created_at, updated_at, author:users_profile(full_name, email)";
+  "id, brand_id, subject_type, subject_id, parent_id, anchor_id, anchor_label, highlight_start, highlight_end, highlight_text, author_id, body, resolved, created_at, updated_at, author:users_profile(full_name)";
 
 // Pre-0046 select, without the highlight columns. Used as a fallback so the
 // review surfaces keep rendering before the highlight migration is applied.
 const COMMENT_SELECT_BASE =
-  "id, brand_id, subject_type, subject_id, parent_id, anchor_id, anchor_label, author_id, body, resolved, created_at, updated_at, author:users_profile(full_name, email)";
+  "id, brand_id, subject_type, subject_id, parent_id, anchor_id, anchor_label, author_id, body, resolved, created_at, updated_at, author:users_profile(full_name)";
 
 function firstAuthor(
   author: AuthorEmbed,
-): { full_name: string | null; email: string | null } | null {
+): { full_name: string | null } | null {
   if (!author) return null;
   return Array.isArray(author) ? (author[0] ?? null) : author;
 }
@@ -64,7 +68,6 @@ function mapRow(row: CommentRow): ReviewComment {
     highlightText: row.highlight_text ?? null,
     authorId: row.author_id,
     authorName: author?.full_name ?? null,
-    authorEmail: author?.email ?? null,
     body: row.body,
     resolved: row.resolved,
     createdAt: row.created_at,

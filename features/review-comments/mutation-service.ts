@@ -106,7 +106,6 @@ export async function createComment({
     highlightText: highlight?.text ?? null,
     authorId,
     authorName: null,
-    authorEmail: null,
     body,
     resolved: false,
     createdAt,

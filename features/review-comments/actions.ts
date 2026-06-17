@@ -47,7 +47,6 @@ type CommentAuthor = {
   profileId: string;
   brandId: string;
   authorName: string | null;
-  authorEmail: string | null;
   // Notifications flow toward the other party: a client (brand member) comment
   // notifies the internal team; an internal-team comment notifies the client.
   notifyAudience: CommentNotifyAudience;
@@ -96,13 +95,15 @@ async function resolveCommentAuthor(
     profileId: profile.id,
     brandId: candidateBrandId,
     authorName: profile.full_name ?? null,
-    authorEmail: profile.email ?? null,
     notifyAudience: "CLIENT",
   };
 }
 
-function reviewerName(authorName: string | null, authorEmail: string | null) {
-  return authorName ?? authorEmail ?? "A reviewer";
+function reviewerName(authorName: string | null) {
+  // Never fall back to the author's email here: this label is embedded in the
+  // notification body delivered to the *other* party, so an email fallback
+  // would leak an internal teammate's address to the client (and vice versa).
+  return authorName ?? "A reviewer";
 }
 
 // Anchor ids come from the client; re-slugify server-side so only the same
@@ -194,10 +195,7 @@ export async function addReviewCommentAction(
       : sectionLabel
         ? `New comment on “${sectionLabel}” — ${subjectLabel}`
         : `New comment on ${subjectLabel}`;
-    const notifyBody = `${reviewerName(
-      reviewer.authorName,
-      reviewer.authorEmail,
-    )}: ${commentExcerpt(value)}`;
+    const notifyBody = `${reviewerName(reviewer.authorName)}: ${commentExcerpt(value)}`;
 
     const comment = await createComment({
       brandId: reviewer.brandId,
@@ -227,7 +225,6 @@ export async function addReviewCommentAction(
       comment: {
         ...comment,
         authorName: reviewer.authorName,
-        authorEmail: reviewer.authorEmail,
       },
     };
   } catch (caught) {

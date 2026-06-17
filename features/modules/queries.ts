@@ -615,7 +615,7 @@ export async function getAdminModuleBrandGroups(
   };
 }
 
-export async function getModuleById(moduleId: string) {
+export async function getModuleById(moduleId: string, brandId?: string) {
   // A non-UUID id (e.g. a mistyped URL segment) would make Postgres throw
   // 22P02 and crash the page — treat it as "not found" instead.
   if (!isUuid(moduleId)) {
@@ -623,11 +623,17 @@ export async function getModuleById(moduleId: string) {
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .from("brand_modules")
     .select(moduleColumns)
-    .eq("id", moduleId)
-    .maybeSingle();
+    .eq("id", moduleId);
+  // Defense-in-depth: when the caller knows the brand (client surfaces), scope
+  // the read so a mismatched id can never surface another brand's module, even
+  // if a future refactor drops the post-fetch ownership check.
+  if (brandId) {
+    query = query.eq("brand_id", brandId);
+  }
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     throw error;
@@ -755,7 +761,7 @@ export async function getClientModuleDetail({
     return null;
   }
 
-  const brandModule = await getModuleById(moduleId);
+  const brandModule = await getModuleById(moduleId, access.brandId);
 
   if (
     !brandModule ||

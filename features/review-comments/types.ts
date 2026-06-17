@@ -35,7 +35,6 @@ export type ReviewComment = {
   highlightText: string | null;
   authorId: string | null;
   authorName: string | null;
-  authorEmail: string | null;
   body: string;
   resolved: boolean;
   createdAt: string | null;

@@ -7,8 +7,9 @@ import { canReviewDeliverableRole } from "@/features/review-deliverables/schema"
 export type DeliverableReviewer = {
   profileId: string;
   brandId: string;
+  // Display name only — the email is intentionally not carried so it can never
+  // leak into a client-facing comment payload or notification body.
   authorName: string | null;
-  authorEmail: string | null;
 };
 
 // Resolves the signed-in client reviewer for a brand deliverable (stakeholder
@@ -30,6 +31,5 @@ export async function requireDeliverableReviewer(
     profileId: profile.id,
     brandId: access.brandId,
     authorName: profile.full_name ?? null,
-    authorEmail: profile.email ?? null,
   };
 }
