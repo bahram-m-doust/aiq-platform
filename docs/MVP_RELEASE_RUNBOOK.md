@@ -43,7 +43,7 @@ Fresh project:
 Existing project:
 
 1. Run missing migrations in numeric order through
-   `0045_commenting_constraints.sql`.
+   `0046_comment_highlights.sql`.
 2. Re-run seeds only if the environment is missing plan, agent, or intake
    configuration rows.
 3. Run `NOTIFY pgrst, 'reload schema';`.

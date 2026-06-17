@@ -458,11 +458,14 @@ describe("Brand Brain components", () => {
   it("renders the ready chat input for the current brand", () => {
     render(<BrainChat access={brainAccess()} />);
 
-    expect(screen.getByText("Brand Brain")).toBeVisible();
-    expect(screen.getByLabelText("Question")).toBeVisible();
     expect(
-      screen.getByRole("button", { name: /Ask Brand Brain/i }),
+      screen.getByRole("heading", {
+        name: /what should we dive into for helio/i,
+      }),
     ).toBeVisible();
-    expect(screen.getAllByText("Helio").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Message Brand Brain")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Send message" }),
+    ).toBeVisible();
   });
 });

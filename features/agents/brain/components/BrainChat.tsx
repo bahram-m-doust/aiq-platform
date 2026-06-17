@@ -438,6 +438,7 @@ export function BrainChat({
             onSubmit={handleSubmit}
           >
             <Textarea
+              aria-label="Message Brand Brain"
               className="max-h-40 min-h-11 resize-none border-0 bg-transparent px-3 py-2 shadow-none focus-visible:ring-0"
               id="brand-brain-prompt"
               maxLength={brandBrainPromptMaxLength}

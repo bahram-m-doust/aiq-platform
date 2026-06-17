@@ -55,20 +55,21 @@ describe("Futures Research upload security", () => {
     expect(storylineContentSecurityPolicy).toContain("form-action 'none'");
     expect(storylineResponseHeaders["X-Content-Type-Options"]).toBe("nosniff");
 
-    const page = fs.readFileSync(
+    // The interactive storyline is never embedded in an app page; it is served
+    // only through the download route, which applies the sandboxing response
+    // headers so its scripts cannot reach the application origin.
+    const route = fs.readFileSync(
       path.join(
         process.cwd(),
         "app",
-        "(app)",
-        "brand-integrated-brain",
-        "roadmap",
+        "api",
         "futures-research",
-        "page.tsx",
+        "storyline",
+        "[reportId]",
+        "route.ts",
       ),
       "utf8",
     );
-    expect(page).toContain('sandbox="allow-scripts"');
-    expect(page).not.toContain("allow-same-origin");
-    expect(page).not.toContain("Open full screen");
+    expect(route).toContain("headers: storylineResponseHeaders");
   });
 });

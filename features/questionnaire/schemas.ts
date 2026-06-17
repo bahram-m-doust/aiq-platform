@@ -221,7 +221,12 @@ export function isIntakeAnswerComplete(value: IntakeAnswerValue) {
 }
 
 function calculatePercent(answered: number, total: number) {
-  return total > 0 ? Math.round((answered / total) * 100) : 0;
+  if (total <= 0) return 0;
+  if (answered >= total) return 100;
+  // Never report 100% until every question is answered. Plain rounding would
+  // surface a false "complete" state (e.g. 199/200 → 99.5 → 100), enabling the
+  // Final Submit button only for the server to reject it.
+  return Math.min(Math.round((answered / total) * 100), 99);
 }
 
 export function calculateIntakeCompletion({

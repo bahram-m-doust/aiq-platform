@@ -258,8 +258,9 @@ describe("module workflow components", () => {
     );
 
     // Unified viewer renders the document content as commentable sections.
+    // Clients now request changes through comments on the review surface, so
+    // approval is the only dedicated decision control on this panel.
     expect(screen.getByText("Overview")).toBeVisible();
     expect(screen.getByRole("button", { name: "Approve module" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Request change" })).toBeVisible();
   });
 });

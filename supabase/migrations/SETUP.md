@@ -81,6 +81,7 @@ migrations in numeric order:
 - `0043_deliverable_markdown.sql`
 - `0044_review_comment_audience.sql`
 - `0045_commenting_constraints.sql`
+- `0046_comment_highlights.sql`
 
 ## Required Supabase Dashboard Configuration
 

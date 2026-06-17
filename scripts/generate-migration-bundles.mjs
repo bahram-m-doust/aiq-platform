@@ -22,9 +22,16 @@ const generatedHeader = `-- GENERATED FILE. DO NOT EDIT DIRECTLY.
 -- Regenerate with: npm run db:generate-bundles
 `;
 
+// Normalize CRLF → LF so the bundles are byte-identical regardless of the
+// checkout's line endings (Windows core.autocrlf otherwise yields a false
+// "stale" result and an LF/CRLF-only diff).
+const normalizeEol = (value) => value.replace(/\r\n/g, "\n");
+
 const migrationBody = migrationNames
   .map((name) => {
-    const sql = fs.readFileSync(path.join(migrationsDir, name), "utf8").trim();
+    const sql = normalizeEol(
+      fs.readFileSync(path.join(migrationsDir, name), "utf8"),
+    ).trim();
     return `-- BEGIN ${name}\n${sql}\n-- END ${name}`;
   })
   .join("\n\n");
@@ -65,18 +72,21 @@ alter default privileges in schema public
 const outputs = new Map([
   [
     path.join(migrationsDir, "setup-all.sql"),
-    `${generatedHeader}\n${migrationBody}\n${grantsFooter}`,
+    normalizeEol(`${generatedHeader}\n${migrationBody}\n${grantsFooter}`),
   ],
   [
     path.join(migrationsDir, "bootstrap-fresh.sql"),
-    `${generatedHeader}${destructivePreamble}\n${migrationBody}\n${grantsFooter}`,
+    normalizeEol(
+      `${generatedHeader}${destructivePreamble}\n${migrationBody}\n${grantsFooter}`,
+    ),
   ],
 ]);
 
 if (process.argv.includes("--check")) {
   const staleFiles = [...outputs].filter(
     ([filePath, expected]) =>
-      !fs.existsSync(filePath) || fs.readFileSync(filePath, "utf8") !== expected,
+      !fs.existsSync(filePath) ||
+      normalizeEol(fs.readFileSync(filePath, "utf8")) !== expected,
   );
   if (staleFiles.length > 0) {
     console.error(

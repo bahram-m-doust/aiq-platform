@@ -201,6 +201,45 @@ describe("intake completion", () => {
     ).toEqual(completion());
   });
 
+  it("never reports 100% until every question is answered", () => {
+    // 199 of 200 answered rounds to 99.5; plain Math.round would report a
+    // false 100% and falsely enable Final Submit (the server then rejects it).
+    const questions: IntakeQuestion[] = Array.from(
+      { length: 200 },
+      (_, index) => ({
+        ...question,
+        id: `q-${index}`,
+        key: `Q_${index}`,
+        orderIndex: index + 1,
+      }),
+    );
+    const almostAll = Object.fromEntries(
+      questions.slice(0, 199).map((item) => [item.id, "Answered"]),
+    );
+
+    const partial = calculateIntakeCompletion({
+      sections: [{ ...section, questions }],
+      answers: almostAll,
+    });
+
+    expect(partial.totalQuestions).toBe(200);
+    expect(partial.answeredQuestions).toBe(199);
+    expect(partial.completionPercent).toBe(99);
+    expect(
+      validateFinalSubmitCompletion({ session: session(), completion: partial }),
+    ).toBe("Final Submit is available only after every question is complete.");
+
+    const everyAnswer = Object.fromEntries(
+      questions.map((item) => [item.id, "Answered"]),
+    );
+    expect(
+      calculateIntakeCompletion({
+        sections: [{ ...section, questions }],
+        answers: everyAnswer,
+      }).completionPercent,
+    ).toBe(100);
+  });
+
   it("requires 100 percent completion and an unlocked session for final submit", () => {
     expect(
       validateFinalSubmitCompletion({

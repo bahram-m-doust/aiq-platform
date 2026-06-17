@@ -52,8 +52,12 @@ export function FinalSubmitReadiness({
     finalSubmitIntakeAction,
     initialFinalSubmitIntakeFormState,
   );
+  // Mirror the server-side gate (validateFinalSubmitCompletion): require every
+  // question answered, not just a rounded 100% that could come from stale data.
   const isReady =
-    completion.totalQuestions > 0 && completion.completionPercent === 100;
+    completion.totalQuestions > 0 &&
+    completion.completionPercent === 100 &&
+    completion.answeredQuestions === completion.totalQuestions;
 
   useEffect(() => {
     if (state.status === "success") {
