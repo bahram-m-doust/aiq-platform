@@ -42,11 +42,6 @@ type AutosaveAction = (
   input: AutosaveIntakeAnswerInput,
 ) => Promise<AutosaveIntakeAnswerResult>;
 
-export type IntakeQuestionCardStatus =
-  | "answered_not_done"
-  | "completed"
-  | "not_answered";
-
 function valueToString(value: IntakeAnswerValue) {
   if (typeof value === "string" || typeof value === "number") {
     return String(value);
@@ -82,16 +77,16 @@ function SaveIndicator({
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[var(--bv-accent)]">
         <LoaderIcon className="size-3 animate-spin" />
-        Saving
+        Saving...
       </span>
     );
   }
 
   if (status === "saved") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-emerald-600 animate-in fade-in duration-300">
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground animate-in fade-in duration-300">
         <CheckIcon className="size-3" />
-        Saved
+        Draft saved
       </span>
     );
   }
@@ -118,7 +113,7 @@ function DoneIndicator() {
   return (
     <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
       <CheckIcon className="size-3" />
-      Done
+      Completed
     </span>
   );
 }
@@ -133,7 +128,6 @@ export function QuestionRenderer({
   onRetryQueuedSave,
   requiredError = false,
   hidePrompt = false,
-  onCardStatusChange,
   autosaveAction = autosaveIntakeAnswerAction,
 }: {
   sessionId: string;
@@ -149,10 +143,6 @@ export function QuestionRenderer({
   onRetryQueuedSave?: (questionId: string) => void;
   requiredError?: boolean;
   hidePrompt?: boolean;
-  onCardStatusChange?: (
-    questionId: string,
-    status: IntakeQuestionCardStatus,
-  ) => void;
   autosaveAction?: AutosaveAction;
 }) {
   const [localValue, setLocalValue] = useState<IntakeAnswerValue>(value);
@@ -192,21 +182,12 @@ export function QuestionRenderer({
     isTextKind &&
     valueToString(localValue) !== valueToString(committedTextValue);
   const hasAnswer = isIntakeAnswerComplete(completionValue);
-  const cardStatus: IntakeQuestionCardStatus = hasAnswer
-    ? isEditing
-      ? "answered_not_done"
-      : "completed"
-    : "not_answered";
 
   useEffect(() => {
     if (!isFocusedRef.current) {
       setLocalValue(value);
     }
   }, [value]);
-
-  useEffect(() => {
-    onCardStatusChange?.(question.id, cardStatus);
-  }, [cardStatus, onCardStatusChange, question.id]);
 
   const displayedStatus = saveState?.status ?? status;
   const displayedMessage = saveState?.message ?? message;
@@ -224,6 +205,12 @@ export function QuestionRenderer({
   const showSaveProgress =
     isPending ||
     ["queued", "saving", "error"].includes(indicatorStatus);
+  // While a draft autosave is in flight, "Save & mark done" is held disabled
+  // so the in-progress write settles before the answer can be marked complete.
+  const isSaving =
+    (isPending && !usesQueuedAutosave) ||
+    indicatorStatus === "queued" ||
+    indicatorStatus === "saving";
   const markDoneLabel = canMarkDone
     ? isTextKind
       ? "Save & mark done"
@@ -594,8 +581,14 @@ export function QuestionRenderer({
             </span>
             <Button
               className="h-9 shrink-0 rounded-full px-4 text-sm"
-              disabled={!canMarkDone}
+              disabled={!canMarkDone || isSaving}
               onClick={handleDone}
+              onMouseDown={(event) => {
+                // Clicking blurs the field, which fires a blur autosave and
+                // would disable this button mid-press, swallowing the click.
+                // Keep focus so handleDone runs the save itself instead.
+                event.preventDefault();
+              }}
               size="default"
               type="button"
               variant="outline"

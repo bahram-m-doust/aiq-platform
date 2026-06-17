@@ -370,29 +370,38 @@ export function useIntakeAutosaveQueue({
       return;
     }
 
-    const restoredQuestionIds: string[] = [];
+    // Keep only drafts that still diverge from the committed answer. Compute
+    // this synchronously (not inside the setAnswers updater, which React runs
+    // later during render) so the queue refs and the flush below see the
+    // restored entries immediately.
+    const restoredDrafts = drafts.filter((draft) => {
+      const committedValue =
+        committedValuesRef.current.get(draft.questionId) ?? null;
+      return !valuesMatch(draft.value, committedValue);
+    });
+
+    if (restoredDrafts.length === 0) {
+      return;
+    }
+
+    restoredDrafts.forEach((draft) => {
+      draftValuesRef.current.set(draft.questionId, draft.value);
+      queuedValuesRef.current.set(draft.questionId, draft.value);
+    });
 
     setAnswers((current) => {
       const next = { ...current };
-      drafts.forEach((draft) => {
-        const committedValue =
-          committedValuesRef.current.get(draft.questionId) ?? null;
-        if (valuesMatch(draft.value, committedValue)) {
-          return;
-        }
-
+      restoredDrafts.forEach((draft) => {
         next[draft.questionId] = draft.value;
-        draftValuesRef.current.set(draft.questionId, draft.value);
-        queuedValuesRef.current.set(draft.questionId, draft.value);
-        restoredQuestionIds.push(draft.questionId);
       });
       return next;
     });
 
-    if (restoredQuestionIds.length > 0) {
-      setQuestionStates(restoredQuestionIds, { status: "queued", message: "" });
-      scheduleFlush(0);
-    }
+    setQuestionStates(
+      restoredDrafts.map((draft) => draft.questionId),
+      { status: "queued", message: "" },
+    );
+    scheduleFlush(0);
   }, [scheduleFlush, setQuestionStates, storageKey]);
 
   useEffect(() => {

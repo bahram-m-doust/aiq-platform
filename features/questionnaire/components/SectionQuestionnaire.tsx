@@ -3,7 +3,6 @@
 import {
   type MouseEvent,
   type PointerEvent,
-  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -26,10 +25,7 @@ import {
   isIntakeAnswerComplete,
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
-import {
-  QuestionRenderer,
-  type IntakeQuestionCardStatus,
-} from "@/features/questionnaire/components/QuestionRenderer";
+import { QuestionRenderer } from "@/features/questionnaire/components/QuestionRenderer";
 import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import { useIntakeAutosaveQueue } from "@/features/questionnaire/components/useIntakeAutosaveQueue";
 import type {
@@ -49,22 +45,6 @@ function formatAnswerValue(value: IntakeAnswerValue) {
   if (typeof value === "number") return String(value);
   if (typeof value === "string" && value.trim().length > 0) return value;
   return "No answer recorded";
-}
-
-function getQuestionCardStatusLabel(
-  isRequired: boolean,
-  answer: IntakeAnswerValue,
-  status?: IntakeQuestionCardStatus,
-) {
-  const resolvedStatus =
-    status ??
-    (isIntakeAnswerComplete(answer) ? "completed" : "not_answered");
-
-  if (resolvedStatus === "completed") return "Completed";
-  if (resolvedStatus === "answered_not_done") {
-    return "Answered · Not marked done";
-  }
-  return isRequired ? "Required · Not answered" : "Optional · Not answered";
 }
 
 export function SectionQuestionnaire({
@@ -109,21 +89,8 @@ export function SectionQuestionnaire({
   });
   const [animateTabIndicator, setAnimateTabIndicator] = useState(false);
   const [showErrors] = useState(autoValidate);
-  const [questionCardStatuses, setQuestionCardStatuses] = useState<
-    Record<string, IntakeQuestionCardStatus>
-  >({});
   const visualSectionId =
     pendingSection?.fromId === section.id ? pendingSection.toId : section.id;
-
-  const handleQuestionCardStatusChange = useCallback(
-    (questionId: string, status: IntakeQuestionCardStatus) => {
-      setQuestionCardStatuses((current) => {
-        if (current[questionId] === status) return current;
-        return { ...current, [questionId]: status };
-      });
-    },
-    [],
-  );
 
   useEffect(() => {
     return () => {
@@ -408,22 +375,13 @@ export function SectionQuestionnaire({
                 id={`question-card-${question.id}`}
                 key={question.id}
               >
-                <div className="flex w-full items-center justify-between gap-4">
-                  <div className="flex min-w-0 items-start gap-2">
-                    <span className="shrink-0 font-mono text-xs leading-4 text-muted-foreground">
-                      {sectionIndex}.{String(index + 1).padStart(2, "0")}
-                    </span>
-                    <h2 className="min-w-0 text-sm font-medium leading-none text-foreground">
-                      {question.questionText}
-                    </h2>
-                  </div>
-                  <span className="shrink-0 text-right text-xs font-medium leading-4 text-muted-foreground">
-                    {getQuestionCardStatusLabel(
-                      question.isRequired,
-                      displayedAnswers[question.id] ?? null,
-                      questionCardStatuses[question.id],
-                    )}
+                <div className="flex w-full min-w-0 items-start gap-2">
+                  <span className="shrink-0 font-mono text-xs leading-4 text-muted-foreground">
+                    {sectionIndex}.{String(index + 1).padStart(2, "0")}
                   </span>
+                  <h2 className="min-w-0 text-sm font-medium leading-none text-foreground">
+                    {question.questionText}
+                  </h2>
                 </div>
 
                 <div className="flex w-full flex-col gap-6">
@@ -440,7 +398,6 @@ export function SectionQuestionnaire({
                     <QuestionRenderer
                       hidePrompt
                       key={question.id}
-                      onCardStatusChange={handleQuestionCardStatusChange}
                       onQueuedChange={enqueueAnswer}
                       onRetryQueuedSave={retryQuestion}
                       question={question}

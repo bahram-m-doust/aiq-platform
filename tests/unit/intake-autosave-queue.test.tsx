@@ -141,7 +141,7 @@ describe("intake autosave queue", () => {
     // Typing alone never triggers a save, even past the debounce window.
     await flushAutosaveTimers();
     expect(mockedAutosaveIntakeAnswersAction).not.toHaveBeenCalled();
-    expect(screen.queryByText("Saving")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saving...")).not.toBeInTheDocument();
 
     // Blurring the field commits it.
     fireEvent.blur(overview);
@@ -177,8 +177,8 @@ describe("intake autosave queue", () => {
     await flushAutosaveTimers();
 
     expect(mockedAutosaveIntakeAnswersAction).not.toHaveBeenCalled();
-    expect(screen.queryByText("Saving")).not.toBeInTheDocument();
-    expect(screen.queryByText("Saved")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saving...")).not.toBeInTheDocument();
+    expect(screen.queryByText("Draft saved")).not.toBeInTheDocument();
   });
 
   it("cancels a pending save when the answer returns to the committed value", async () => {
@@ -200,7 +200,7 @@ describe("intake autosave queue", () => {
 
     expect(mockedAutosaveIntakeAnswersAction).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Company overview")).toHaveValue("Original");
-    expect(screen.queryByText("Saving")).not.toBeInTheDocument();
+    expect(screen.queryByText("Saving...")).not.toBeInTheDocument();
   });
 
   it("commits only the final typed value of a field on blur", async () => {

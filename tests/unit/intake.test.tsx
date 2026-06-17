@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/features/questionnaire/actions", () => ({
   autosaveIntakeAnswerAction: vi.fn(),
+  autosaveIntakeAnswersAction: vi.fn(),
   finalSubmitIntakeAction: vi.fn(),
   initialFinalSubmitIntakeFormState: { status: "idle" },
 }));
@@ -349,7 +350,7 @@ describe("intake UI components", () => {
     );
 
     expect(screen.getByText("An existing answer")).toBeVisible();
-    expect(screen.getByText("Done")).toBeVisible();
+    expect(screen.getByText("Completed")).toBeVisible();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Edit/ }));
@@ -391,7 +392,7 @@ describe("intake UI components", () => {
       screen.getByLabelText("What is the strategic role of the company?"),
     );
 
-    expect(screen.queryByText("Saved")).not.toBeInTheDocument();
+    expect(screen.queryByText("Draft saved")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Done" })).toBeDisabled();
   });
 
