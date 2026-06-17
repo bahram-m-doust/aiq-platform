@@ -261,14 +261,10 @@ export function SectionQuestionnaire({
                 for reference only.
               </AlertDescription>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <QuestionnaireChangeRequestDialog sectionKey={section.key}>
-                  <button
-                    className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-                    type="button"
-                  >
-                    Request a Change
-                  </button>
-                </QuestionnaireChangeRequestDialog>
+                <QuestionnaireChangeRequestDialog
+                  sectionKey={section.key}
+                  triggerClassName="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                />
                 {latestSnapshotId && (
                   <a
                     className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"

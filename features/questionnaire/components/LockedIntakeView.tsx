@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -64,9 +63,7 @@ export function LockedIntakeView({
             </p>
           </div>
           {selectedSection ? (
-            <QuestionnaireChangeRequestDialog sectionKey={selectedSection.key}>
-              <Button type="button">Request a Change</Button>
-            </QuestionnaireChangeRequestDialog>
+            <QuestionnaireChangeRequestDialog sectionKey={selectedSection.key} />
           ) : null}
           <IntakeProgress completion={data.completion} />
           <SectionNav

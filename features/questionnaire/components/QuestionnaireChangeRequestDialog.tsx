@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
+import { useActionState, useState } from "react";
 import { BadgeCheckIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -20,11 +20,13 @@ import { createChangeRequestAction } from "@/features/change-requests/actions";
 import { initialCreateChangeRequestFormState } from "@/features/change-requests/schema";
 
 export function QuestionnaireChangeRequestDialog({
-  children,
   sectionKey,
+  triggerClassName,
+  triggerLabel = "Request a Change",
 }: {
-  children?: ReactNode;
   sectionKey: string;
+  triggerClassName?: string;
+  triggerLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -37,7 +39,13 @@ export function QuestionnaireChangeRequestDialog({
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        {children ?? <Button type="button">Request a Change</Button>}
+        {triggerClassName ? (
+          <button className={triggerClassName} type="button">
+            {triggerLabel}
+          </button>
+        ) : (
+          <Button type="button">{triggerLabel}</Button>
+        )}
       </DialogTrigger>
       <DialogContent
         className="max-w-xl"
