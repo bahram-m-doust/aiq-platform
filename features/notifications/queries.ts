@@ -53,17 +53,23 @@ export async function listNotificationsForProfile({
   globalRole,
   brandId,
   limit = 30,
+  includeInternalTeamInbox = true,
 }: {
   profileId: string;
   globalRole: string | null;
   brandId: string | null;
   limit?: number;
+  includeInternalTeamInbox?: boolean;
 }): Promise<NotificationRecord[]> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("notifications")
     .select(NOTIFICATION_SELECT)
-    .or(notificationAudienceFilter(profileId, globalRole, brandId))
+    .or(
+      notificationAudienceFilter(profileId, globalRole, brandId, {
+        includeInternalTeamInbox,
+      }),
+    )
     .or(actorSelfExclusion(profileId))
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -76,16 +82,22 @@ export async function getUnreadNotificationCount({
   profileId,
   globalRole,
   brandId,
+  includeInternalTeamInbox = true,
 }: {
   profileId: string;
   globalRole: string | null;
   brandId: string | null;
+  includeInternalTeamInbox?: boolean;
 }): Promise<number> {
   const admin = createAdminClient();
   const { count, error } = await admin
     .from("notifications")
     .select("id", { count: "exact", head: true })
-    .or(notificationAudienceFilter(profileId, globalRole, brandId))
+    .or(
+      notificationAudienceFilter(profileId, globalRole, brandId, {
+        includeInternalTeamInbox,
+      }),
+    )
     .or(actorSelfExclusion(profileId))
     .is("read_at", null);
 

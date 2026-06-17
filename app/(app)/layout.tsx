@@ -51,11 +51,16 @@ export default async function AppLayout({
         profileId: profile.id,
         globalRole: profile.global_role,
         brandId: accessSummary.brandId ?? null,
+        // This is a brand's client workspace: show only this brand's inbox, not
+        // the cross-brand INTERNAL_TEAM inbox (which lives in /admin) — even if
+        // the signed-in user also holds an internal/platform-owner role.
+        includeInternalTeamInbox: false,
       }).catch(() => []),
       getUnreadNotificationCount({
         profileId: profile.id,
         globalRole: profile.global_role,
         brandId: accessSummary.brandId ?? null,
+        includeInternalTeamInbox: false,
       }).catch(() => 0),
     ]);
   const defByKey = new Map(
