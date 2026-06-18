@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { requireUserProfile } from "@/features/auth/queries";
 import { catalogAgentKeyFromRoute, catalogAgentSlugForKey } from "@/features/agents/catalog/schema";
 import { createAgentImageSignedUrls } from "@/features/agents/runs/image-storage";
@@ -113,14 +114,26 @@ export async function resolveAgentImageUrlsAction(
   imagePaths: string[],
 ): Promise<string[]> {
   if (!Array.isArray(imagePaths) || imagePaths.length === 0) return [];
-  await requireUserProfile("/agents");
+  const { profile } = await requireUserProfile("/agents");
+
+  // Agent images are stored at `${brandId}/${runId}/${index}.png`, so the first
+  // path segment is the owning brand. Sign only paths that belong to the
+  // caller's own brand — otherwise any authenticated user could mint signed
+  // URLs for another brand's private images by passing arbitrary paths (IDOR).
+  const access = await getBrandAccessSummaryForProfile(profile.id);
+  const ownedPaths = access.brandId
+    ? imagePaths.filter((path) => path.split("/")[0] === access.brandId)
+    : [];
+
+  if (ownedPaths.length === 0) return [];
+
   try {
-    return await createAgentImageSignedUrls(imagePaths.slice(0, 8));
+    return await createAgentImageSignedUrls(ownedPaths.slice(0, 8));
   } catch (error) {
     logServerError({
       label: "[agent-runs] resolve image urls failed",
       error,
-      metadata: { paths: imagePaths },
+      metadata: { profileId: profile.id, brandId: access.brandId },
     });
     return [];
   }
