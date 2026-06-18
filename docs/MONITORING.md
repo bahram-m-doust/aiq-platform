@@ -30,6 +30,21 @@ a lightweight Supabase service-role query succeeds. It returns `503` when the
 app is not ready. It does not return secrets, database rows, tokens, user data,
 or error details.
 
+## Error Tracking (Sentry)
+
+Server-side error tracking is wired via `instrumentation.ts` (`@sentry/nextjs`)
+and is **inert until configured** — it does nothing unless `SENTRY_DSN` is set,
+so it adds no runtime cost or client-bundle weight while off. To turn it on:
+
+1. Create a project at sentry.io and copy its DSN.
+2. Set `SENTRY_DSN` in the Netlify environment (optionally
+   `SENTRY_TRACES_SAMPLE_RATE`, default `0`), then redeploy.
+
+It then captures uncaught errors in server components, route handlers, and
+server actions (the 500s users hit). Client-side capture is intentionally not
+enabled yet (it would add an `instrumentation-client.ts` and ship the SDK to the
+browser bundle).
+
 ## Free Uptime Monitoring
 
 For manual cPanel-style hosting, point a free uptime monitor at:
