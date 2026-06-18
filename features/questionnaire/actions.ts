@@ -19,11 +19,12 @@ import type {
   ReopenIntakeFormState,
 } from "@/features/questionnaire/types";
 import { logServerError } from "@/lib/logging/server";
+import { ROUTES, questionnaireSectionPath } from "@/lib/routes";
 
 export async function autosaveIntakeAnswerAction(
   input: AutosaveIntakeAnswerInput,
 ): Promise<AutosaveIntakeAnswerResult> {
-  const user = await requireUser("/integrated-brand-brain/roadmap/questionnaire");
+  const user = await requireUser(ROUTES.questionnaire);
   return autosaveIntakeAnswer({
     input,
     authUserId: user.id,
@@ -33,7 +34,7 @@ export async function autosaveIntakeAnswerAction(
 export async function autosaveIntakeAnswersAction(
   input: AutosaveIntakeAnswersInput,
 ): Promise<AutosaveIntakeAnswersResult> {
-  const user = await requireUser("/integrated-brand-brain/roadmap/questionnaire");
+  const user = await requireUser(ROUTES.questionnaire);
   return autosaveIntakeAnswers({
     input,
     authUserId: user.id,
@@ -53,7 +54,7 @@ export async function finalSubmitIntakeAction(
   _previousState: FinalSubmitIntakeFormState,
   formData: FormData,
 ): Promise<FinalSubmitIntakeFormState> {
-  const { profile } = await requireUserProfile("/integrated-brand-brain/roadmap/questionnaire");
+  const { profile } = await requireUserProfile(ROUTES.questionnaire);
   const sessionId = formValue(formData, "session_id");
 
   if (!sessionId) {
@@ -68,9 +69,9 @@ export async function finalSubmitIntakeAction(
     });
 
     revalidatePath("/home");
-    revalidatePath("/integrated-brand-brain/roadmap/questionnaire");
+    revalidatePath(ROUTES.questionnaire);
     result.sectionKeys.forEach((sectionKey) => {
-      revalidatePath(`/integrated-brand-brain/roadmap/questionnaire/${sectionKey}`);
+      revalidatePath(questionnaireSectionPath(sectionKey));
     });
 
     return {
@@ -111,7 +112,7 @@ export async function reopenIntakeSubmissionAction(
 
     // Refresh the admin list and the owner's questionnaire views.
     revalidatePath("/admin/submissions");
-    revalidatePath("/integrated-brand-brain/roadmap/questionnaire");
+    revalidatePath(ROUTES.questionnaire);
 
     return {
       status: "success",

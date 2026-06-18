@@ -2,6 +2,7 @@ import {
   reviewSubjectTypes,
   type ReviewSubjectType,
 } from "@/features/review-comments/types";
+import { ROUTES, modulePath } from "@/lib/routes";
 
 const maxCommentLength = 4000;
 
@@ -38,15 +39,15 @@ export function subjectPathname(
 ): string {
   switch (subjectType) {
     case "STAKEHOLDER_INTERVIEWS":
-      return "/integrated-brand-brain/roadmap/stakeholder-interviews";
+      return ROUTES.brainRoadmapStakeholderInterviews;
     case "FUTURES_RESEARCH":
-      return "/integrated-brand-brain/roadmap/futures-research";
+      return ROUTES.brainRoadmapFuturesResearch;
     case "CITY_MODEL_DISTRICT":
-      return `/integrated-brand-brain/roadmap/city-model/${subjectId}`;
+      return `${ROUTES.brainRoadmapCityModel}/${subjectId}`;
     case "MODULE":
-      return `/modules/${subjectId}`;
+      return modulePath(subjectId);
     case "BRAND_DOC":
-      return "/integrated-brand-brain";
+      return ROUTES.brain;
   }
 }
 

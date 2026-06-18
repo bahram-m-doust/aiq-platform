@@ -19,6 +19,7 @@ import type {
   IntakePageData,
   IntakeSectionProgress,
 } from "@/features/questionnaire/types";
+import { questionnaireSectionPath } from "@/lib/routes";
 
 type SectionState = "done" | "in-progress" | "not-started";
 
@@ -160,7 +161,7 @@ export function QuestionnaireLanding({
             return (
               <Link
                 className="group flex items-center gap-3 rounded-xl border bg-[var(--bv-card)] px-5 py-4 transition-all duration-200 hover:border-[var(--bv-line-2)] hover:shadow-sm"
-                href={`/integrated-brand-brain/roadmap/questionnaire/${section.key}`}
+                href={questionnaireSectionPath(section.key)}
                 key={section.id}
                 style={{ borderColor: "var(--bv-line)" }}
               >
@@ -211,7 +212,7 @@ export function QuestionnaireLanding({
                       <li key={section.id}>
                         <Link
                           className="inline-flex items-center gap-2 underline-offset-2 transition-colors hover:underline"
-                          href={`/integrated-brand-brain/roadmap/questionnaire/${section.key}?validate=1`}
+                          href={`${questionnaireSectionPath(section.key)}?validate=1`}
                         >
                           <span className="font-medium">{section.title}</span>
                           <span className="opacity-80">

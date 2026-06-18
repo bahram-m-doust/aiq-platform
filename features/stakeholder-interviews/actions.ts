@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { logServerError } from "@/lib/logging/server";
+import { ROUTES } from "@/lib/routes";
 import { requireUserProfile } from "@/features/auth/queries";
 import { detachDeliverableFile } from "@/features/review-deliverables/detach-service";
 import { requireDeliverableReviewer as requireClientReviewer } from "@/features/review-deliverables/reviewer";
@@ -16,12 +17,12 @@ import {
 } from "@/features/stakeholder-interviews/services";
 import type { StakeholderActionState } from "@/features/stakeholder-interviews/types";
 
-const CLIENT_PATH = "/integrated-brand-brain/roadmap/stakeholder-interviews";
+const CLIENT_PATH = ROUTES.brainRoadmapStakeholderInterviews;
 
 function revalidateStakeholderPaths() {
   revalidatePath(CLIENT_PATH);
-  revalidatePath("/integrated-brand-brain/roadmap");
-  revalidatePath("/integrated-brand-brain");
+  revalidatePath(ROUTES.brainRoadmap);
+  revalidatePath(ROUTES.brain);
 }
 
 export async function uploadStakeholderReportAction(

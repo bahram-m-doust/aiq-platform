@@ -19,14 +19,15 @@ import {
 import type { FuturesResearchActionState } from "@/features/futures-research/types";
 import { canViewAdminModulesRole } from "@/features/modules/schema";
 import { logServerError } from "@/lib/logging/server";
+import { ROUTES } from "@/lib/routes";
 import { validateSecureUpload } from "@/lib/security/file-upload";
 
-const CLIENT_PATH = "/integrated-brand-brain/roadmap/futures-research";
+const CLIENT_PATH = ROUTES.brainRoadmapFuturesResearch;
 
 function revalidateFuturesResearchPaths() {
   revalidatePath(CLIENT_PATH);
-  revalidatePath("/integrated-brand-brain/roadmap");
-  revalidatePath("/integrated-brand-brain");
+  revalidatePath(ROUTES.brainRoadmap);
+  revalidatePath(ROUTES.brain);
 }
 
 export async function uploadFuturesResearchReportAction(

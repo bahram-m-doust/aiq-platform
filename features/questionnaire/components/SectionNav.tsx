@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { IntakeCompletion, IntakeSectionWithQuestions } from "@/features/questionnaire/types";
+import { questionnaireSectionPath } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
 export function SectionNav({
@@ -28,7 +29,7 @@ export function SectionNav({
               "rounded-lg border border-border px-4 py-3 text-sm transition-colors hover:bg-muted",
               isActive && "border-primary bg-muted",
             )}
-            href={`/integrated-brand-brain/roadmap/questionnaire/${section.key}`}
+            href={questionnaireSectionPath(section.key)}
             key={section.id}
           >
             <span className="block font-medium">{section.title}</span>
