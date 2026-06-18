@@ -21,3 +21,25 @@ jobs:
       - run: npm ci
       # db:check-bundles && lint && typecheck && test:unit — no secrets needed.
       - run: npm run verify
+
+  smoke:
+    runs-on: ubuntu-latest
+    # Placeholder env so pages render. The smoke specs assert unauthenticated
+    # redirects, the 404 page, and a *degraded* (503) /api/health response —
+    # none need a real backend, and real calls fail fast against these, which
+    # the specs tolerate.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # playwright.config webServer starts `npm run dev` and waits for it; in CI
+      # (CI=true is set by Actions) it won't reuse an existing server.
+      - run: npm run test:smoke
