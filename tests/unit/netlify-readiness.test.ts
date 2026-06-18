@@ -24,7 +24,10 @@ describe("Netlify readiness", () => {
     const netlifyConfig = readRepoFile("netlify.toml");
     const nextConfig = readRepoFile("next.config.ts");
 
-    expect(netlifyConfig).toContain('command = "npm run build"');
+    // Deploys are gated on the quality suite before building (verify → build).
+    expect(netlifyConfig).toContain(
+      'command = "npm run verify && npm run build"',
+    );
     expect(netlifyConfig).toContain('publish = ".next"');
     expect(netlifyConfig).toContain('package = "@netlify/plugin-nextjs"');
     expect(nextConfig).not.toMatch(/output\s*:\s*["']export["']/);
