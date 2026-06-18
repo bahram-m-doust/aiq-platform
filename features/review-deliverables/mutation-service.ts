@@ -48,6 +48,12 @@ export async function setReviewReportStatus({
       .from(table)
       .update(patch)
       .eq("brand_id", brandId)
+      // TOCTOU guard: only transition from a state that's actually awaiting a
+      // client decision (a file is present). If an admin concurrently reset the
+      // row to PENDING_UPLOAD (detached/replaced the file), this matches 0 rows
+      // and requireMutationResult throws a conflict instead of stamping
+      // APPROVED onto a fileless deliverable.
+      .in("status", ["CLIENT_REVIEW", "CHANGES_REQUESTED"])
       .select("id")
       .maybeSingle(),
   );

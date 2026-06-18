@@ -9,6 +9,7 @@ import { uploadPrivateFile } from "@/features/documents/storage";
 import { removePrivateFileOrQueue } from "@/features/documents/storage-cleanup";
 import { removeFileRecordAndStorage } from "@/features/review-deliverables/detach-service";
 import { generateAndCacheDeliverableMarkdown } from "@/features/review-content/resolve";
+import { DomainError } from "@/lib/errors";
 import { logServerError } from "@/lib/logging/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -117,11 +118,23 @@ export async function setCityModelDistrictStatus({
       : { status, approved_by: null, approved_at: null, updated_at: now };
 
   const admin = createAdminClient();
-  const { error } = await admin
+  const { data, error } = await admin
     .from("city_model_district_files")
     .update(patch)
     .eq("brand_id", brandId)
-    .eq("district_key", districtKey);
+    .eq("district_key", districtKey)
+    // TOCTOU guard (mirrors setReviewReportStatus): only decide a district that
+    // is awaiting a client decision, so a concurrent reset/replace can't be
+    // overwritten with APPROVED on a fileless row.
+    .in("status", ["CLIENT_REVIEW", "CHANGES_REQUESTED"])
+    .select("district_key")
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) {
+    throw new DomainError(
+      "city_model_district_status",
+      "This district deliverable no longer exists or cannot be changed.",
+    );
+  }
 }

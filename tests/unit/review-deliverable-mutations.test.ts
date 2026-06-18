@@ -15,6 +15,7 @@ function setupMutation(data: { id: string } | null) {
     update: vi.fn(() => builder),
     delete: vi.fn(() => builder),
     eq: vi.fn(() => builder),
+    in: vi.fn(() => builder),
     select: vi.fn(() => builder),
     maybeSingle: vi.fn(() => Promise.resolve({ data, error: null })),
   };
@@ -40,6 +41,12 @@ describe("review deliverable mutations", () => {
 
     expect(from).toHaveBeenCalledWith("stakeholder_interview_reports");
     expect(builder.eq).toHaveBeenCalledWith("brand_id", "brand-1");
+    // Status guard: only transition from an awaiting-decision state, so a
+    // concurrent reset can't be overwritten with APPROVED.
+    expect(builder.in).toHaveBeenCalledWith("status", [
+      "CLIENT_REVIEW",
+      "CHANGES_REQUESTED",
+    ]);
     expect(builder.select).toHaveBeenCalledWith("id");
   });
 
