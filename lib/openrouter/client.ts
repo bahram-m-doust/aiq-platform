@@ -16,6 +16,15 @@ const brandClients = new Map<string, OpenAI>();
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
+// The OpenAI SDK defaults to a 600s timeout with 2 retries; under load a hung
+// upstream would hold a serverless invocation (and its DB connection / usage
+// reservation) open for up to ~30 minutes. Cap each request instead. Streaming
+// chat inherits this generous ceiling; non-streaming hot paths (embeddings,
+// agent runs) finish well under it. Per-call `{ timeout }` overrides still win
+// (e.g. pdf-to-markdown uses a tighter 60s).
+const OPENROUTER_REQUEST_TIMEOUT_MS = 120_000;
+const OPENROUTER_MAX_RETRIES = 2;
+
 export function hasOpenRouterEnv(): boolean {
   return Boolean(readTrimmedRuntimeEnv("OPENROUTER_API_KEY"));
 }
@@ -37,7 +46,12 @@ export function getOpenRouterClient(): OpenAI {
     );
   }
 
-  globalClient = new OpenAI({ baseURL: OPENROUTER_BASE_URL, apiKey });
+  globalClient = new OpenAI({
+    baseURL: OPENROUTER_BASE_URL,
+    apiKey,
+    timeout: OPENROUTER_REQUEST_TIMEOUT_MS,
+    maxRetries: OPENROUTER_MAX_RETRIES,
+  });
   return globalClient;
 }
 
@@ -50,7 +64,12 @@ export async function getOpenRouterClientForBrand(
   const brandKey = await getBrandApiKey(brandId);
   if (!brandKey) return getOpenRouterClient();
 
-  const client = new OpenAI({ baseURL: OPENROUTER_BASE_URL, apiKey: brandKey });
+  const client = new OpenAI({
+    baseURL: OPENROUTER_BASE_URL,
+    apiKey: brandKey,
+    timeout: OPENROUTER_REQUEST_TIMEOUT_MS,
+    maxRetries: OPENROUTER_MAX_RETRIES,
+  });
   brandClients.set(brandId, client);
   return client;
 }

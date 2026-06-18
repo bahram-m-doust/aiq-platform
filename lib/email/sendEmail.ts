@@ -74,20 +74,33 @@ export async function sendEmailWithResend(
     return config;
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: config.from,
-      to: [input.to],
-      subject: input.subject,
-      text: input.text,
-      html: input.html,
-    }),
-  });
+  let response: Response;
+  try {
+    response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: config.from,
+        to: [input.to],
+        subject: input.subject,
+        text: input.text,
+        html: input.html,
+      }),
+      // A hung/slow Resend connection must not tie up the invite / access-key
+      // request indefinitely. Degrade to RESEND_SEND_FAILED after 10s — callers
+      // already treat that as a non-fatal delivery warning.
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    return {
+      ok: false,
+      code: "RESEND_SEND_FAILED",
+      message: "Email could not be sent (request timed out or network error).",
+    };
+  }
   const body = await readResendResponse(response);
 
   if (!response.ok) {

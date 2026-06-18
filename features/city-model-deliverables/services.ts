@@ -2,6 +2,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
+import { after } from "next/server";
+
 import { buildStoragePath } from "@/features/documents/schema";
 import { uploadPrivateFile } from "@/features/documents/storage";
 import { removePrivateFileOrQueue } from "@/features/documents/storage-cleanup";
@@ -78,15 +80,23 @@ export async function uploadCityModelDistrictFile({
     }
   }
 
-  await generateAndCacheDeliverableMarkdown({
-    fileId,
-    brandId,
-    subjectType: "CITY_MODEL_DISTRICT",
-    subjectId: districtKey,
-    storagePath,
-    mimeType: "application/pdf",
-    originalName: file.name,
-  });
+  // LLM markdown structuring (up to ~60s, internally non-fatal): defer past the
+  // response so it doesn't block the upload. Mirrors uploadReviewDeliverable.
+  const cacheMarkdown = () =>
+    generateAndCacheDeliverableMarkdown({
+      fileId,
+      brandId,
+      subjectType: "CITY_MODEL_DISTRICT",
+      subjectId: districtKey,
+      storagePath,
+      mimeType: "application/pdf",
+      originalName: file.name,
+    });
+  try {
+    after(cacheMarkdown);
+  } catch {
+    void cacheMarkdown();
+  }
 }
 
 export async function setCityModelDistrictStatus({

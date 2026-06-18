@@ -2,6 +2,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
+import { after } from "next/server";
+
 import { buildStoragePath } from "@/features/documents/schema";
 import { uploadPrivateFile } from "@/features/documents/storage";
 import {
@@ -77,16 +79,25 @@ export async function uploadReviewDeliverable({
 
   // Structure the uploaded report into markdown with headings for the viewer +
   // RAG. The storyline is interactive HTML, not a text deliverable — skip it.
+  // This runs an LLM pass (up to ~60s) and is internally non-fatal, so defer it
+  // past the response instead of blocking the upload request. after() runs it
+  // post-response; the fallback covers contexts where after() is unavailable.
   if (!storyline) {
-    await generateAndCacheDeliverableMarkdown({
-      fileId,
-      brandId,
-      subjectType: workflow,
-      subjectId: reportId,
-      storagePath,
-      mimeType,
-      originalName: file.name,
-    });
+    const cacheMarkdown = () =>
+      generateAndCacheDeliverableMarkdown({
+        fileId,
+        brandId,
+        subjectType: workflow,
+        subjectId: reportId,
+        storagePath,
+        mimeType,
+        originalName: file.name,
+      });
+    try {
+      after(cacheMarkdown);
+    } catch {
+      void cacheMarkdown();
+    }
   }
 
   return reportId;
