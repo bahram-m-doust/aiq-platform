@@ -20,6 +20,7 @@ import type {
   AgentCatalogItem,
   AgentCatalogWorkspace,
 } from "@/features/agents/catalog/types";
+import { ROUTES } from "@/lib/routes";
 
 const AGENT_ICONS: Record<string, LucideIcon> = {
   IMAGE_GENERATOR: ImageIcon,
@@ -236,7 +237,7 @@ export function AppLanding({
               </p>
               <div className="flex flex-wrap gap-3 pt-1">
                 <Button asChild size="lg">
-                  <Link href="/integrated-brand-brain">
+                  <Link href={ROUTES.brain}>
                     <BrainCircuitIcon />
                     Open Brand Brain
                   </Link>

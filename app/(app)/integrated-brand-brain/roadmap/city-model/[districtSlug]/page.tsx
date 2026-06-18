@@ -9,6 +9,7 @@ import {
 import { requireUserProfile } from "@/features/auth/queries";
 import { CityModelDistrictView } from "@/features/city-model-deliverables/components/CityModelDistrictView";
 import { getCityModelDistrictWorkspace } from "@/features/city-model-deliverables/queries";
+import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "City Model · District | Bextudio Platform",
@@ -35,7 +36,7 @@ export default async function CityModelDistrictPage({
     slug: districtSlug,
   });
   if (!workspace) {
-    redirect("/integrated-brand-brain/roadmap/city-model");
+    redirect(ROUTES.brainRoadmapCityModel);
   }
 
   return (

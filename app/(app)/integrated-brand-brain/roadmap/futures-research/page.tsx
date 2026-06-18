@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireUserProfile } from "@/features/auth/queries";
 import { FuturesResearchReportView } from "@/features/futures-research/components/FuturesResearchReportView";
 import { getFuturesResearchWorkspace } from "@/features/futures-research/queries";
+import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Futures Research | Bextudio Platform",
@@ -13,14 +14,14 @@ export const dynamic = "force-dynamic";
 
 export default async function FuturesResearchPage() {
   const { profile } = await requireUserProfile(
-    "/integrated-brand-brain/roadmap/futures-research",
+    ROUTES.brainRoadmapFuturesResearch,
   );
   const workspace = await getFuturesResearchWorkspace({
     profileId: profile.id,
   });
 
   if (!workspace.access) {
-    redirect("/integrated-brand-brain/roadmap");
+    redirect(ROUTES.brainRoadmap);
   }
 
   // The Storyline tab is intentionally hidden on the client-facing review for

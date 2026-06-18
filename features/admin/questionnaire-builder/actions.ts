@@ -27,6 +27,7 @@ import { requirePlatformOwner } from "@/features/auth/queries";
 import { CACHE_TAGS } from "@/lib/cache/tags";
 import { isDomainError } from "@/lib/errors";
 import { logServerError } from "@/lib/logging/server";
+import { ROUTES } from "@/lib/routes";
 
 function errorState(message: string): IntakeBuilderFormState {
   return { status: "error", message };
@@ -53,7 +54,7 @@ function logIntakeBuilderActionError({
 function revalidateIntakeBuilderPaths() {
   revalidateTag(CACHE_TAGS.intakeConfig, "max");
   revalidatePath("/admin/questionnaire-builder");
-  revalidatePath("/integrated-brand-brain/roadmap/questionnaire");
+  revalidatePath(ROUTES.questionnaire);
 }
 
 export async function createIntakeSectionAction(

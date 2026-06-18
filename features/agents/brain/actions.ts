@@ -25,6 +25,7 @@ import {
   checkRequestRateLimit,
   RATE_LIMITED_MESSAGE,
 } from "@/lib/rate-limit";
+import { ROUTES } from "@/lib/routes";
 
 function errorState(message: string): BrandBrainChatFormState {
   return { status: "error", message };
@@ -34,7 +35,7 @@ export async function askBrandBrainAction(
   _previousState: BrandBrainChatFormState,
   formData: FormData,
 ): Promise<BrandBrainChatFormState> {
-  const { profile } = await requireUserProfile("/integrated-brand-brain");
+  const { profile } = await requireUserProfile(ROUTES.brain);
   const validation = validateBrandBrainPromptFormData(formData);
 
   if (validation.error || !validation.prompt) {
@@ -94,7 +95,7 @@ export async function askBrandBrainAction(
 export async function generateBrandBrainImageAction(
   prompt: string,
 ): Promise<BrandBrainImageState> {
-  const { profile } = await requireUserProfile("/integrated-brand-brain");
+  const { profile } = await requireUserProfile(ROUTES.brain);
   const validation = validateBrandBrainPrompt(prompt);
 
   if (validation.error || !validation.prompt) {

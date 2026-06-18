@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireUserProfile } from "@/features/auth/queries";
 import { StakeholderReviewView } from "@/features/stakeholder-interviews/components/StakeholderReviewView";
 import { getStakeholderInterviewWorkspace } from "@/features/stakeholder-interviews/queries";
+import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Stakeholder Interviews | Bextudio Platform",
@@ -13,14 +14,14 @@ export const dynamic = "force-dynamic";
 
 export default async function StakeholderInterviewsPage() {
   const { profile } = await requireUserProfile(
-    "/integrated-brand-brain/roadmap/stakeholder-interviews",
+    ROUTES.brainRoadmapStakeholderInterviews,
   );
   const workspace = await getStakeholderInterviewWorkspace({
     profileId: profile.id,
   });
 
   if (!workspace.access) {
-    redirect("/integrated-brand-brain/roadmap");
+    redirect(ROUTES.brainRoadmap);
   }
 
   return (

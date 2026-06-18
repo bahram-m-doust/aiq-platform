@@ -12,6 +12,7 @@ import {
   canApproveIntakeRole,
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
+import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Build Roadmap · Integrated Brand Brain | Bextudio Platform",
@@ -34,7 +35,7 @@ export default async function BrandBrainRoadmapPage({
 }: {
   searchParams: Promise<{ key?: string }>;
 }) {
-  const { user, profile } = await requireUserProfile("/integrated-brand-brain/roadmap");
+  const { user, profile } = await requireUserProfile(ROUTES.brainRoadmap);
   const accessSummary = await getBrandAccessSummaryForProfile(profile.id);
   const email = user.email ?? profile.email;
   const params = await searchParams;

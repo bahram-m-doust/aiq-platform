@@ -8,6 +8,7 @@ import {
 } from "@/features/questionnaire/docx-generator";
 import { getIntakeSnapshotForProfile } from "@/features/questionnaire/queries";
 import { logServerError } from "@/lib/logging/server";
+import { ROUTES } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ snapshotId: string }> },
 ) {
-  const { profile } = await requireUserProfile("/integrated-brand-brain/roadmap/questionnaire");
+  const { profile } = await requireUserProfile(ROUTES.questionnaire);
   const { snapshotId } = await params;
 
   let snapshot: Awaited<ReturnType<typeof getIntakeSnapshotForProfile>>;

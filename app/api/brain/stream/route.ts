@@ -24,6 +24,7 @@ import {
   checkRequestRateLimit,
   RATE_LIMITED_MESSAGE,
 } from "@/lib/rate-limit";
+import { ROUTES } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export async function POST(request: Request) {
-  const { profile } = await requireUserProfile("/integrated-brand-brain");
+  const { profile } = await requireUserProfile(ROUTES.brain);
 
   let body: unknown;
   try {

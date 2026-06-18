@@ -5,6 +5,7 @@ import { SetBreadcrumbLabels } from "@/components/app/breadcrumb-labels";
 import { SectionQuestionnaire } from "@/features/questionnaire/components/SectionQuestionnaire";
 import { getIntakePageData } from "@/features/questionnaire/queries";
 import { requireUserProfile } from "@/features/auth/queries";
+import { questionnaireSectionPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Questionnaire | Bextudio Platform",
@@ -22,7 +23,7 @@ export default async function QuestionnaireSectionPage({
   const { sectionKey } = await params;
   const { validate } = await searchParams;
   const { profile } = await requireUserProfile(
-    `/integrated-brand-brain/roadmap/questionnaire/${sectionKey}`,
+    questionnaireSectionPath(sectionKey),
   );
   const data = await getIntakePageData({ profileId: profile.id });
 
@@ -42,7 +43,7 @@ export default async function QuestionnaireSectionPage({
     <>
       <SetBreadcrumbLabels
         labels={{
-          [`/integrated-brand-brain/roadmap/questionnaire/${sectionKey}`]: selectedSection.title,
+          [questionnaireSectionPath(sectionKey)]: selectedSection.title,
         }}
       />
       <SectionQuestionnaire

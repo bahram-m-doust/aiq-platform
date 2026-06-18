@@ -3,6 +3,7 @@ import { requireUserProfile } from "@/features/auth/queries";
 import { downloadPrivateFile } from "@/features/documents/storage";
 import { getFuturesResearchStorylineFile } from "@/features/futures-research/queries";
 import { storylineResponseHeaders } from "@/features/futures-research/storyline-security";
+import { ROUTES } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export async function GET(
   const { reportId } = await params;
 
   const { profile } = await requireUserProfile(
-    "/integrated-brand-brain/roadmap/futures-research",
+    ROUTES.brainRoadmapFuturesResearch,
   );
   const access = await getBrandAccessSummaryForProfile(profile.id);
   if (access.status !== "ACTIVE_ACCESS" || !access.brandId) {
