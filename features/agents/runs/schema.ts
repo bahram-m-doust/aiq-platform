@@ -49,6 +49,25 @@ export function validateAgentRunFormData(
   return { agentKey, prompt, error: null };
 }
 
+// Agent images are stored at `${brandId}/${runId}/${index}.png`, so the first
+// path segment is the owning brand. Only paths whose first segment matches the
+// caller's brand may be signed — otherwise an authenticated user could mint
+// signed URLs for another brand's private images by passing arbitrary paths
+// (cross-tenant IDOR). Returns at most `limit` owned paths.
+export function filterOwnedAgentImagePaths(
+  imagePaths: string[],
+  brandId: string | null,
+  limit = 8,
+): string[] {
+  if (!brandId) {
+    return [];
+  }
+
+  return imagePaths
+    .filter((path) => path.split("/")[0] === brandId)
+    .slice(0, limit);
+}
+
 export function parseRequiredModuleTypes(value: unknown) {
   if (!Array.isArray(value)) {
     return [];

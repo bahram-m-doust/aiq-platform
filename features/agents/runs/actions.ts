@@ -10,6 +10,7 @@ import {
   isLLMAgentRunConfigError,
 } from "@/features/agents/runs/llm";
 import {
+  filterOwnedAgentImagePaths,
   validateAgentRunFormData,
 } from "@/features/agents/runs/schema";
 import {
@@ -116,19 +117,17 @@ export async function resolveAgentImageUrlsAction(
   if (!Array.isArray(imagePaths) || imagePaths.length === 0) return [];
   const { profile } = await requireUserProfile("/agents");
 
-  // Agent images are stored at `${brandId}/${runId}/${index}.png`, so the first
-  // path segment is the owning brand. Sign only paths that belong to the
-  // caller's own brand — otherwise any authenticated user could mint signed
-  // URLs for another brand's private images by passing arbitrary paths (IDOR).
+  // Sign only image paths that belong to the caller's own brand — the path's
+  // first segment is the owning brand. Otherwise any authenticated user could
+  // mint signed URLs for another brand's private images by passing arbitrary
+  // paths (cross-tenant IDOR). See filterOwnedAgentImagePaths.
   const access = await getBrandAccessSummaryForProfile(profile.id);
-  const ownedPaths = access.brandId
-    ? imagePaths.filter((path) => path.split("/")[0] === access.brandId)
-    : [];
+  const ownedPaths = filterOwnedAgentImagePaths(imagePaths, access.brandId);
 
   if (ownedPaths.length === 0) return [];
 
   try {
-    return await createAgentImageSignedUrls(ownedPaths.slice(0, 8));
+    return await createAgentImageSignedUrls(ownedPaths);
   } catch (error) {
     logServerError({
       label: "[agent-runs] resolve image urls failed",
