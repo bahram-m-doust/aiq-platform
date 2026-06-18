@@ -108,10 +108,10 @@ test("create brand redirects unauthenticated users to login", async ({
 test("questionnaire redirects unauthenticated users to login", async ({
   page,
 }) => {
-  await page.goto("/brand-integrated-brain/roadmap/questionnaire");
+  await page.goto("/integrated-brand-brain/roadmap/questionnaire");
 
   await expect(page).toHaveURL(
-    /\/login\?next=%2Fbrand-integrated-brain%2Froadmap%2Fquestionnaire$/,
+    /\/login\?next=%2Fintegrated-brand-brain%2Froadmap%2Fquestionnaire$/,
   );
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
@@ -168,9 +168,9 @@ test("module detail redirects unauthenticated users to login", async ({
 test("brain redirects unauthenticated users to login", async ({
   page,
 }) => {
-  await page.goto("/brand-integrated-brain");
+  await page.goto("/integrated-brand-brain");
 
-  await expect(page).toHaveURL(/\/login\?next=%2Fbrand-integrated-brain$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fintegrated-brand-brain$/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 

@@ -13,7 +13,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/home",
-    "/brand-integrated-brain/:path*",
+    "/integrated-brand-brain/:path*",
     "/agents/:path*",
     "/documents/:path*",
     "/settings/:path*",
