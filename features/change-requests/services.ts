@@ -135,6 +135,21 @@ export async function reviewChangeRequest({
     changeRequestError("Change Request could not be found.");
   }
 
+  // A resolved request can't be moved back into review: this prevents reviving
+  // an APPROVED/REJECTED/APPLIED/CLOSED decision and stops a stale second review
+  // from clobbering the recorded resolution. Forward moves (e.g. APPROVED →
+  // APPLIED → CLOSED) stay allowed.
+  const resolvedStatuses = new Set(["APPROVED", "REJECTED", "APPLIED", "CLOSED"]);
+  const reopenStatuses = new Set(["REQUESTED", "UNDER_REVIEW"]);
+  if (
+    resolvedStatuses.has(previousRequest.status) &&
+    reopenStatuses.has(input.status)
+  ) {
+    changeRequestError(
+      "This Change Request has already been resolved and can't be moved back to review.",
+    );
+  }
+
   const nowIso = new Date().toISOString();
   const admin = createAdminClient();
   const { data, error } = await admin
