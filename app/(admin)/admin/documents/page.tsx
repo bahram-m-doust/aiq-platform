@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { PaginationControls } from "@/components/PaginationControls";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import { AdminDocumentsConsole } from "@/features/documents/components/AdminDocumentsConsole";
 import { hasBrandApiKey } from "@/features/brands/api-keys";
@@ -7,6 +8,7 @@ import {
   getAdminBrandOptions,
   getDocumentsForBrand,
 } from "@/features/documents/admin-queries";
+import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
   title: "Admin Documents | Bextudio Platform",
@@ -34,12 +36,16 @@ export default async function AdminDocumentsPage({
   const selectedBrandId = brands.some((brand) => brand.id === requestedBrandId)
     ? requestedBrandId
     : null;
-  const [files, brandHasKey] = selectedBrandId
+  const [documents, brandHasKey] = selectedBrandId
     ? await Promise.all([
-        getDocumentsForBrand({ brandId: selectedBrandId }),
+        getDocumentsForBrand({
+          brandId: selectedBrandId,
+          pagination: paginationInputFromSearchParams(params),
+        }),
         hasBrandApiKey(selectedBrandId),
       ])
-    : [[], false];
+    : [null, false];
+  const files = documents?.files ?? [];
 
   return (
     <main className="min-h-svh bg-background px-6 py-10 text-foreground">
@@ -65,6 +71,13 @@ export default async function AdminDocumentsPage({
           hasApiKey={brandHasKey}
           selectedBrandId={selectedBrandId}
         />
+        {selectedBrandId && documents ? (
+          <PaginationControls
+            basePath="/admin/documents"
+            pagination={documents.pagination}
+            params={{ brand_id: selectedBrandId }}
+          />
+        ) : null}
       </section>
     </main>
   );

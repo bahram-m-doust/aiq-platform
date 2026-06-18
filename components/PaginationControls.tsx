@@ -11,12 +11,22 @@ function pageHref({
   basePath,
   page,
   pageSize,
+  params: extraParams,
 }: {
   basePath: string;
   page: number;
   pageSize: number;
+  params?: Record<string, string | undefined>;
 }) {
   const params = new URLSearchParams();
+
+  // Preserve filter params (e.g. the selected brand) so paging doesn't drop
+  // them. Set these first so page/pageSize keep their conventional position.
+  for (const [key, value] of Object.entries(extraParams ?? {})) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
 
   if (page > 1) {
     params.set("page", String(page));
@@ -33,9 +43,11 @@ function pageHref({
 export function PaginationControls({
   basePath,
   pagination,
+  params,
 }: {
   basePath: string;
   pagination: PaginationState;
+  params?: Record<string, string | undefined>;
 }) {
   return (
     <nav
@@ -53,6 +65,7 @@ export function PaginationControls({
                 basePath,
                 page: pagination.page - 1,
                 pageSize: pagination.pageSize,
+                params,
               })}
             >
               <ChevronLeftIcon className="size-4" />
@@ -73,6 +86,7 @@ export function PaginationControls({
                 basePath,
                 page: pagination.page + 1,
                 pageSize: pagination.pageSize,
+                params,
               })}
             >
               Next

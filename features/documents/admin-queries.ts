@@ -2,6 +2,12 @@ import "server-only";
 
 import { toBrandDocumentRecord } from "@/features/documents/queries";
 import type { BrandDocumentRecord } from "@/features/documents/types";
+import {
+  type PaginationInput,
+  type PaginationState,
+  paginatedRows,
+  toSupabaseRange,
+} from "@/lib/pagination";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type FileRowForBrand = {
@@ -52,21 +58,29 @@ export async function getAdminBrandOptions(): Promise<AdminBrandOption[]> {
 
 export async function getDocumentsForBrand({
   brandId,
+  pagination,
 }: {
   brandId: string;
-}): Promise<BrandDocumentRecord[]> {
+  pagination?: PaginationInput;
+}): Promise<{ files: BrandDocumentRecord[]; pagination: PaginationState }> {
   const admin = createAdminClient();
+  const range = toSupabaseRange(pagination ?? {});
   const { data, error } = await admin
     .from("files")
     .select(
       "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at",
     )
     .eq("brand_id", brandId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(range.from, range.to + 1);
 
   if (error) throw error;
 
-  const rows = (data ?? []) as FileRowForBrand[];
+  // paginatedRows trims the extra look-ahead row; enrich only the page's rows.
+  const { rows, pagination: paginationState } = paginatedRows(
+    (data ?? []) as FileRowForBrand[],
+    range,
+  );
   const uploaderIds = Array.from(
     new Set(rows.map((row) => row.uploaded_by).filter(Boolean) as string[]),
   );
@@ -87,12 +101,15 @@ export async function getDocumentsForBrand({
     ]),
   );
 
-  return rows.map((row) =>
-    toBrandDocumentRecord({
-      row,
-      uploaderEmail: row.uploaded_by
-        ? emailsById.get(row.uploaded_by) ?? null
-        : null,
-    }),
-  );
+  return {
+    files: rows.map((row) =>
+      toBrandDocumentRecord({
+        row,
+        uploaderEmail: row.uploaded_by
+          ? emailsById.get(row.uploaded_by) ?? null
+          : null,
+      }),
+    ),
+    pagination: paginationState,
+  };
 }
