@@ -240,14 +240,34 @@ export async function getAdminChangeRequests(
   );
   const modulesByBrand = new Map<string, ChangeRequestModuleOption[]>();
 
-  await Promise.all(
-    brandIds.map(async (brandId) => {
-      modulesByBrand.set(
-        brandId,
-        await getBrandModulesForChangeRequests(brandId),
-      );
-    }),
-  );
+  if (brandIds.length > 0) {
+    // Batch the per-brand module lookup into a single query. Issuing it once
+    // per brand (Promise.all over brandIds) is an N+1 that scales with the
+    // number of distinct brands on each page of change requests. Rows arrive
+    // created_at-ascending, so grouping in arrival order preserves the same
+    // per-brand ordering the per-brand query produced.
+    const { data: moduleData, error: modulesError } = await admin
+      .from("brand_modules")
+      .select("id, brand_id, title, module_type, status")
+      .in("brand_id", brandIds)
+      .order("created_at", { ascending: true });
+
+    if (modulesError) {
+      throw modulesError;
+    }
+
+    for (const row of (moduleData ?? []) as (ModuleRow & {
+      brand_id: string;
+    })[]) {
+      const option = toModuleOption(row);
+      const existing = modulesByBrand.get(row.brand_id);
+      if (existing) {
+        existing.push(option);
+      } else {
+        modulesByBrand.set(row.brand_id, [option]);
+      }
+    }
+  }
 
   return {
     requests: sortChangeRequestsByCreatedAt(
