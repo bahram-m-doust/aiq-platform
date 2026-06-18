@@ -13,7 +13,7 @@ Bextudio Platform is a private Next.js application for managing brand strategy w
 
 ## Main Areas
 
-- `app/` - Next.js routes for auth, the app (home, brand-integrated-brain, agents, …), admin, and public invitation flows.
+- `app/` - Next.js routes for auth, the app (home, integrated-brand-brain, agents, …), admin, and public invitation flows.
 - `features/` - Product workflows grouped by domain: auth, access keys, brands, questionnaire, files, modules, change requests, invitations, RAG, agents, and admin. (Note: the questionnaire's database tables remain named `intake_*`.)
 - `lib/` - Shared platform utilities for Supabase, audit logging, email, security helpers, and common utilities.
 - `supabase/` - Database migrations, seed data, and Supabase setup notes.

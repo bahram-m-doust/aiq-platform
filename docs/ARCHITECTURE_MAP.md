@@ -30,8 +30,8 @@ internal/admin area.
 
 ## App shell / navigation
 - **Layout**: `app/(app)/layout.tsx` — sidebar + navbar; fetches notifications.
-- **Sidebar**: `components/app/Sidebar.tsx` — Home, Brand Integrated Brain,
-  Documents, Settings, Administration, Agents.
+- **Sidebar**: `components/app/Sidebar.tsx` — Home, Integrated Brand Brain
+  (Build Roadmap, Brand Brain), Agents, Administration, Documents, Settings.
 - **Navbar + notifications bell**: `components/app/AppNavbar.tsx` +
   `components/app/NotificationsBell.tsx`.
 
@@ -41,7 +41,8 @@ internal/admin area.
   2. **Strategies**: City Model (substep) + Modules
   3. **Aesthetics**: visual direction / color-type / asset library
   4. **Brain Build**: corpus assembly, knowledge sync, agent deployment
-- **Roadmap UI**: `app/(app)/brand-integrated-brain/**`,
+- **Roadmap UI**: `app/(app)/integrated-brand-brain/**` (legacy
+  `brand-integrated-brain/**` paths are redirect stubs),
   `features/app/components/BrandBuildView.tsx`.
 
 ## Questionnaire (client-filled intake) — NOT commentable
@@ -164,7 +165,7 @@ Shared lifecycle: `PENDING_UPLOAD → CLIENT_REVIEW → CHANGES_REQUESTED → AP
   `city_model_district_files`.
 - `knowledge_files`, `knowledge_chunks` (pgvector).
 - `review_comments`, `notifications`, `deliverable_markdown` (latest features —
-  migrations 0041–0043, **must be applied to Supabase**).
+  migrations 0041–0046, **must be applied to Supabase**).
 
 ## Verify / build
 - `npm run typecheck` · `npm run lint` · `npm run test:unit` (vitest) ·
@@ -172,5 +173,7 @@ Shared lifecycle: `PENDING_UPLOAD → CLIENT_REVIEW → CHANGES_REQUESTED → AP
 - Combined: `npm run verify`.
 
 ## Pending manual step
-- Apply migrations **0041, 0042, 0043** to Supabase (commenting, drop old
-  annotations, markdown cache). Code degrades gracefully until then.
+- Apply migrations **0041–0046** to Supabase: 0041 commenting, 0042 drop old
+  annotations, 0043 markdown cache, 0044 directional-audience notifications,
+  0045 commenting CHECK constraints + FK indexes, 0046 inline comment
+  highlights. Code degrades gracefully until then.
