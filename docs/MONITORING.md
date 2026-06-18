@@ -52,7 +52,7 @@ Recommended settings:
 3. Confirm Supabase env values are set on the server.
 4. Confirm Supabase project is reachable.
 5. Confirm all numbered migrations through
-   `0039_rag_approval_consistency.sql` have run.
+   `0048_rag_search_recall.sql` have run.
 6. Check server logs for sanitized `[health] supabase check failed` messages.
 7. Alert on `[audit] persistence failed`; the business mutation may have
    completed even though its audit row could not be stored.

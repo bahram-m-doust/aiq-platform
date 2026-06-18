@@ -1,0 +1,23 @@
+name: CI
+
+# Enforce the quality gate before code reaches prod. Netlify auto-deploys main,
+# so without this a commit that breaks lint/typecheck/tests (or drifts the
+# migration bundles) would deploy unchecked. Enable branch protection on main
+# requiring this check, or gate the Netlify build, to make it blocking.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22" # match netlify.toml / .nvmrc (pdfjs needs Node 22+)
+          cache: npm
+      - run: npm ci
+      # db:check-bundles && lint && typecheck && test:unit — no secrets needed.
+      - run: npm run verify
