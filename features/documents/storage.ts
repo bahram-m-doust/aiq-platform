@@ -8,6 +8,23 @@ export const privateFilesBucket = "bextudio-files";
 // one hour comfortably covers a review session while staying short-lived.
 export const signedDownloadUrlTtlSeconds = 60 * 60;
 
+// Bound how long a storage read can tie up a request. supabase-js's storage
+// client exposes no per-call AbortSignal, so we race the download against a
+// timer — this caps the handler's wait (the underlying socket closes on its
+// own) rather than letting a slow/hung storage backend hold the request open.
+const downloadTimeoutMs = 30_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 export async function uploadPrivateFile({
   storagePath,
   file,
@@ -44,9 +61,11 @@ export async function removePrivateFile(storagePath: string) {
 
 export async function downloadPrivateFile(storagePath: string) {
   const admin = createAdminClient();
-  const { data, error } = await admin.storage
-    .from(privateFilesBucket)
-    .download(storagePath);
+  const { data, error } = await withTimeout(
+    admin.storage.from(privateFilesBucket).download(storagePath),
+    downloadTimeoutMs,
+    "Private file download",
+  );
 
   if (error || !data) {
     throw error ?? new Error("Private file could not be downloaded.");

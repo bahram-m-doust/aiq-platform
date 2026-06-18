@@ -66,11 +66,6 @@ type IntakeRow = {
   status: string;
 };
 
-type QuestionRow = {
-  id: string;
-  section_id: string;
-};
-
 type AnswerRow = {
   question_id: string;
 };
@@ -274,7 +269,7 @@ async function getIntakeProgress(
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    admin.from("questions").select("id, section_id"),
+    admin.from("questions").select("*", { count: "exact", head: true }),
   ]);
 
   if (sessionResult.error) throw sessionResult.error;
@@ -290,12 +285,11 @@ async function getIntakeProgress(
 
   if (answersResult.error) throw answersResult.error;
 
-  const questions = (questionsResult.data ?? []) as QuestionRow[];
   const answeredIds = new Set(
     ((answersResult.data ?? []) as AnswerRow[]).map((answer) => answer.question_id),
   );
   const isLocked = session?.status === "LOCKED";
-  const totalQuestions = questions.length;
+  const totalQuestions = questionsResult.count ?? 0;
   const percent = isLocked ? 100 : session?.completion_percent ?? 0;
   const answeredCount = isLocked ? totalQuestions : answeredIds.size;
 
