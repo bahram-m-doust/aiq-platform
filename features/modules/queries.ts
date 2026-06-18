@@ -527,6 +527,10 @@ export async function getAdminModuleBoard(
 // admin can pick a brand and upload drafts for its modules in one place.
 export async function getAdminModuleBrandGroups(
   profile: UserProfile,
+  // The page shows one brand at a time, so only the selected brand's modules
+  // get artifact enrichment — enriching every brand's modules is wasted work
+  // (extra module_artifacts/files joins) that grows with the brand count.
+  selectedBrandId?: string,
 ): Promise<AdminModuleBrandGroups | null> {
   if (!canViewAdminModulesRole(profile.global_role)) {
     return null;
@@ -568,7 +572,11 @@ export async function getAdminModuleBrandGroups(
   try {
     modules = await mapModuleRows(rows);
     artifactsByModuleId = await fetchArtifactsForModules(
-      modules.map((brandModule) => brandModule.id),
+      selectedBrandId
+        ? modules
+            .filter((brandModule) => brandModule.brandId === selectedBrandId)
+            .map((brandModule) => brandModule.id)
+        : [],
     );
   } catch (enrichError) {
     logServerError({

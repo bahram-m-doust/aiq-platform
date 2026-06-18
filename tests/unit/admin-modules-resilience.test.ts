@@ -105,5 +105,8 @@ describe("getAdminModuleBrandGroups resilience", () => {
 
     expect(board?.groups[0]?.brandName).toBe("Helio");
     expect(board?.groups[0]?.modules[0]?.title).toBe("City Model");
+    // No brand selected → artifacts are not enriched (the page only displays
+    // one brand at a time, so enrichment is scoped to selectedBrandId).
+    expect(board?.groups[0]?.modules[0]?.latestArtifact).toBeNull();
   });
 });

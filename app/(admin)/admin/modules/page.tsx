@@ -20,16 +20,16 @@ export default async function AdminModulesPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { user, profile } = await requireUserProfile("/admin/modules");
-  const board = await getAdminModuleBrandGroups(profile);
+  const resolved = (await searchParams) ?? {};
+  const brandIdParam = resolved.brandId;
+  const selectedBrandId =
+    typeof brandIdParam === "string" ? brandIdParam : undefined;
+  const board = await getAdminModuleBrandGroups(profile, selectedBrandId);
 
   if (!board) {
     redirect("/home");
   }
 
-  const resolved = (await searchParams) ?? {};
-  const brandIdParam = resolved.brandId;
-  const selectedBrandId =
-    typeof brandIdParam === "string" ? brandIdParam : undefined;
   const selectedGroup = selectedBrandId
     ? board.groups.find((group) => group.brandId === selectedBrandId)
     : undefined;
