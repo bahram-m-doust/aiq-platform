@@ -554,6 +554,12 @@ function createResolvedBuilder(result: unknown): QueryBuilder {
     insert: vi.fn(() => builder),
     update: vi.fn(() => builder),
     in: vi.fn(() => builder),
+    // supabase-js query builders are thenables: awaiting a chain that ends in
+    // update().select() (no .single()) resolves to { data, error } directly.
+    then: (
+      onFulfilled?: ((value: unknown) => unknown) | null,
+      onRejected?: ((reason: unknown) => unknown) | null,
+    ) => Promise.resolve(result).then(onFulfilled, onRejected),
   } as QueryBuilder;
 
   return builder;

@@ -126,18 +126,26 @@ async function markFilesSyncing({
   files: RagApprovedSyncFile[];
 }) {
   const admin = createAdminClient();
-  const { error } = await admin
+  const { data, error } = await admin
     .from("knowledge_files")
     .update({ rag_status: "SYNCING" })
     .eq("brand_id", brandId)
     .in("rag_status", [...ragRetryableSyncStatuses])
-    .in("id", knowledgeFileIds(files));
+    .in("id", knowledgeFileIds(files))
+    .select("id");
 
   if (error) {
     throw error;
   }
 
-  return files;
+  // Return only the files that actually transitioned to SYNCING. A file
+  // concurrently moved out of a retryable status must not be re-synced — it
+  // would re-embed + replace chunks while updateKnowledgeFileSyncResult's
+  // .eq('rag_status','SYNCING') silently updates 0 rows, hiding the no-op.
+  const transitionedIds = new Set(
+    ((data ?? []) as { id: string }[]).map((row) => row.id),
+  );
+  return files.filter((file) => transitionedIds.has(file.knowledgeFileId));
 }
 
 async function updateKnowledgeFileSyncResult({
