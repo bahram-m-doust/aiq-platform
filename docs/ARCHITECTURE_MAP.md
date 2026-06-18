@@ -165,7 +165,7 @@ Shared lifecycle: `PENDING_UPLOAD → CLIENT_REVIEW → CHANGES_REQUESTED → AP
   `city_model_district_files`.
 - `knowledge_files`, `knowledge_chunks` (pgvector).
 - `review_comments`, `notifications`, `deliverable_markdown` (latest features —
-  migrations 0041–0047, **must be applied to Supabase**).
+  migrations 0041–0048, **must be applied to Supabase**).
 
 ## Verify / build
 - `npm run typecheck` · `npm run lint` · `npm run test:unit` (vitest) ·
@@ -173,8 +173,8 @@ Shared lifecycle: `PENDING_UPLOAD → CLIENT_REVIEW → CHANGES_REQUESTED → AP
 - Combined: `npm run verify`.
 
 ## Pending manual step
-- Apply migrations **0041–0047** to Supabase: 0041 commenting, 0042 drop old
+- Apply migrations **0041–0048** to Supabase: 0041 commenting, 0042 drop old
   annotations, 0043 markdown cache, 0044 directional-audience notifications,
   0045 commenting CHECK constraints + FK indexes, 0046 inline comment
-  highlights, 0047 audit_logs created_at index. Code degrades gracefully until
-  then.
+  highlights, 0047 audit_logs created_at index, 0048 RAG search ef_search
+  recall. Code degrades gracefully until then.
