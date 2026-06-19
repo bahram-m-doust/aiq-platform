@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, CheckCircleIcon, DownloadIcon, LockIcon } from "lucide-react";
+import { ArrowLeftIcon, DownloadIcon, LockIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -311,9 +311,6 @@ export function SectionQuestionnaire({
                   const answered = questionIds.filter((id) =>
                     isIntakeAnswerComplete(displayedAnswers[id] ?? null),
                   ).length;
-                  const isComplete =
-                    answered === item.questions.length &&
-                    item.questions.length > 0;
 
                   return (
                     <Link
@@ -337,9 +334,6 @@ export function SectionQuestionnaire({
                       ref={isVisualActive ? activeTabRef : undefined}
                     >
                       <span className="inline-flex w-full min-w-0 items-center justify-center gap-1 leading-5">
-                        {isComplete && (
-                          <CheckCircleIcon className="size-3.5 text-emerald-500" />
-                        )}
                         <span className="truncate">{item.title}</span>
                       </span>
                       <span
