@@ -1,5 +1,7 @@
 import "server-only";
 
+import { CITY_MODEL_DISTRICTS } from "@/features/app/city-model";
+import { getApprovedCityModelDistrictCount } from "@/features/city-model-deliverables/queries";
 import { getFuturesResearchReportRowByBrand } from "@/features/futures-research/queries";
 import type { FuturesResearchReportStatus } from "@/features/futures-research/types";
 import type { IntakePageData } from "@/features/questionnaire/types";
@@ -50,14 +52,6 @@ export type BrandBuildProgress = {
   phases: [PhaseProgress, PhaseProgress, PhaseProgress, PhaseProgress];
 };
 
-const MODULE_APPROVED_STATUSES = [
-  "CLIENT_APPROVED",
-  "RAG_REVIEW_REQUIRED",
-  "RAG_APPROVED",
-  "RAG_SYNCED",
-  "LOCKED",
-];
-
 type IntakeRow = {
   id: string;
   completion_percent: number | null;
@@ -68,34 +62,12 @@ type AnswerRow = {
   question_id: string;
 };
 
-type ModuleRow = {
-  id: string;
-  title: string;
-  module_type: string;
-  status: string;
-};
-
 type KnowledgeBaseRow = {
   status: string | null;
 };
 
 type KnowledgeFileRow = { id: string };
 type AgentEntitlementRow = { id: string };
-
-function mapModuleState(status: string): SubstepState {
-  if (MODULE_APPROVED_STATUSES.includes(status)) return "done";
-  if (status === "CLIENT_REVIEW") return "awaiting-review";
-  if (status === "CLIENT_CHANGE_REQUESTED") return "in-progress";
-  if (
-    status === "IN_PROGRESS" ||
-    status === "ASSIGNED" ||
-    status === "INTERNAL_REVIEW" ||
-    status === "SUPERVISOR_APPROVED"
-  ) {
-    return "in-progress";
-  }
-  return "locked";
-}
 
 async function getStakeholderStatusSafe(
   brandId: string,
@@ -322,54 +294,6 @@ function getIntakeProgressFromPageData(
   });
 }
 
-async function getModulesProgress(brandId: string) {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("brand_modules")
-    .select("id, title, module_type, status")
-    .eq("brand_id", brandId)
-    .order("updated_at", { ascending: false });
-
-  if (error) throw error;
-
-  const modules = (data ?? []) as ModuleRow[];
-  const total = modules.length;
-
-  if (total === 0) {
-    return {
-      percent: 0,
-      status: "locked" as PhaseStatus,
-      stepsDone: 0,
-      stepsTotal: 0,
-      substeps: [] as SubstepProgress[],
-    };
-  }
-
-  const approved = modules.filter((module) =>
-    MODULE_APPROVED_STATUSES.includes(module.status),
-  ).length;
-  const percent = Math.round((approved / total) * 100);
-
-  let status: PhaseStatus = "locked";
-  if (approved === total) status = "complete";
-  else if (
-    approved > 0 ||
-    modules.some((module) => module.status !== "NOT_STARTED")
-  ) {
-    status = "active";
-  }
-
-  const substeps: SubstepProgress[] = modules.map((module) => ({
-    id: module.id,
-    title: module.title,
-    description: module.module_type,
-    progress: MODULE_APPROVED_STATUSES.includes(module.status) ? 100 : 0,
-    state: mapModuleState(module.status),
-  }));
-
-  return { percent, status, stepsDone: approved, stepsTotal: total, substeps };
-}
-
 async function getBrainProgress(brandId: string) {
   const admin = createAdminClient();
 
@@ -509,34 +433,53 @@ export async function getBrandBuildProgress(
               ),
         )
       : getIntakeProgress(brandId, stakeholderStatus, futuresResearchStatus);
-  const [intake, modules, brain] = await Promise.all([
+  const [intake, brain] = await Promise.all([
     intakeProgressPromise,
-    getModulesProgress(brandId),
     getBrainProgress(brandId),
   ]);
   const aesthetics = getAestheticsProgress();
 
-  // City Model is its own brand-as-city deliverable (not a module). It is
-  // derived from Brand Research, so it leads Phase 2 and becomes available as
-  // soon as the questionnaire is captured — ahead of the rest of Phase 2.
+  // Phase 2 (Strategies) is the brand-as-city City Model. It unlocks once the
+  // questionnaire is captured, and its progress is the share of the city's
+  // districts that have been approved.
   const questionnaireDone = intake.substeps.some(
     (substep) => substep.id === "questionnaires" && substep.state === "done",
   );
+  const cityModelTotal = CITY_MODEL_DISTRICTS.length;
+  const cityModelApproved = questionnaireDone
+    ? await getApprovedCityModelDistrictCount(brandId)
+    : 0;
+  const cityModelPercent =
+    cityModelTotal > 0
+      ? Math.round((cityModelApproved / cityModelTotal) * 100)
+      : 0;
+  const cityModelComplete =
+    questionnaireDone && cityModelApproved >= cityModelTotal;
   const cityModelSubstep: SubstepProgress = {
     id: "city-model",
     title: "City Model",
     description: "Open the brand-as-city districts to review and approve.",
-    progress: questionnaireDone ? 100 : 0,
-    state: questionnaireDone ? "in-progress" : "locked",
+    progress: cityModelPercent,
+    state: !questionnaireDone
+      ? "locked"
+      : cityModelComplete
+        ? "done"
+        : "in-progress",
     href: ROUTES.brainRoadmapCityModel,
   };
-  modules.substeps = [cityModelSubstep, ...modules.substeps];
+  const strategies = {
+    percent: cityModelPercent,
+    status: (!questionnaireDone
+      ? "locked"
+      : cityModelComplete
+        ? "complete"
+        : "active") as PhaseStatus,
+    stepsDone: cityModelApproved,
+    stepsTotal: cityModelTotal,
+    substeps: [cityModelSubstep],
+  };
 
-  if (intake.status !== "complete") {
-    modules.status = modules.stepsDone > 0 ? "active" : "locked";
-  }
-
-  if (modules.status === "complete") {
+  if (strategies.status === "complete") {
     aesthetics.status = "active";
   }
 
@@ -565,11 +508,11 @@ export async function getBrandBuildProgress(
     description:
       "Synthesize the inputs into a working brand strategy the brain can reason from.",
     iconKind: "spark",
-    status: modules.status,
-    percent: modules.percent,
-    stepsDone: modules.stepsDone,
-    stepsTotal: modules.stepsTotal,
-    substeps: modules.substeps,
+    status: strategies.status,
+    percent: strategies.percent,
+    stepsDone: strategies.stepsDone,
+    stepsTotal: strategies.stepsTotal,
+    substeps: strategies.substeps,
   };
 
   const phase3: PhaseProgress = {

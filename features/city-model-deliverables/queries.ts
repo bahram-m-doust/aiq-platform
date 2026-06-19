@@ -37,6 +37,24 @@ export async function getCityModelDeliverableRow(
   return (data as CityModelDeliverableRow | null) ?? null;
 }
 
+// Count of the brand's city-model districts that have been approved — drives
+// the Phase 2 (Strategies) progress on the roadmap.
+export async function getApprovedCityModelDistrictCount(
+  brandId: string,
+): Promise<number> {
+  const admin = createAdminClient();
+  const { count, error } = await admin
+    .from("city_model_district_files")
+    .select("id", { count: "exact", head: true })
+    .eq("brand_id", brandId)
+    .eq("status", "APPROVED");
+  if (error) {
+    if (isMissingTableError(error)) return 0;
+    throw error;
+  }
+  return count ?? 0;
+}
+
 export async function getCityModelDistrictWorkspace({
   profileId,
   slug,
