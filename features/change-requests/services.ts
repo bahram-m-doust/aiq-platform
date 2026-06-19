@@ -152,7 +152,10 @@ export async function createChangeRequest({
   });
 
   // Notify the internal team that a change request is waiting for review.
-  // Best-effort: a notification failure must never fail the submission itself.
+  // No actorId on purpose: the review queue must not self-exclude the requester
+  // (an internal reviewer who is also the requester should still see it; the
+  // requester is recorded on the change_request row). Best-effort: a
+  // notification failure must never fail the submission itself.
   try {
     await createNotification({
       brandId: options.brandId,
@@ -165,7 +168,6 @@ export async function createChangeRequest({
       linkPath: "/admin/change-requests",
       subjectType: "CHANGE_REQUEST",
       subjectId: request.id,
-      actorId: profileId,
     });
   } catch (notifyError) {
     logServerError({
