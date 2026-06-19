@@ -26,7 +26,7 @@ export const ROUTES = {
 export const agentPath = (slug: string) => `${ROUTES.agents}/${slug}`;
 export const modulePath = (moduleId: string) => `${ROUTES.modules}/${moduleId}`;
 export const questionnaireSectionPath = (sectionKey: string) =>
-  `${ROUTES.questionnaire}/${sectionKey}`;
+  `${ROUTES.questionnaire}/${sectionKey.toLowerCase()}`;
 
 // First URL segment of every page rendered inside the `(app)` shell.
 // Route groups don't appear in the pathname, so this allowlist is how the

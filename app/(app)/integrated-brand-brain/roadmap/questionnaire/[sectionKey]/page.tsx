@@ -31,8 +31,11 @@ export default async function QuestionnaireSectionPage({
     redirect("/home");
   }
 
+  // URLs use the lowercased section key (questionnaireSectionPath), but the
+  // stable key stored on the section is upper-case — match case-insensitively
+  // so both the new lowercase links and any old upper-case bookmarks resolve.
   const selectedSection = data.sections.find(
-    (section) => section.key === sectionKey,
+    (section) => section.key.toLowerCase() === sectionKey.toLowerCase(),
   );
 
   if (!selectedSection) {

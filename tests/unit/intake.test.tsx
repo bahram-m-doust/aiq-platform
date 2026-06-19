@@ -642,12 +642,12 @@ describe("intake UI components", () => {
 
     expect(
       container.querySelector(
-        'a[href="/integrated-brand-brain/roadmap/questionnaire/COMPANY"]',
+        'a[href="/integrated-brand-brain/roadmap/questionnaire/company"]',
       ),
     ).not.toBeNull();
     expect(
       container.querySelector(
-        'a[href="/integrated-brand-brain/roadmap/questionnaire/COMPANY?validate=1"]',
+        'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
       ),
     ).toBeNull();
     expect(
@@ -673,7 +673,7 @@ describe("intake UI components", () => {
     ).toBeVisible();
     expect(
       container.querySelector(
-        'a[href="/integrated-brand-brain/roadmap/questionnaire/COMPANY?validate=1"]',
+        'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
       ),
     ).not.toBeNull();
   });
@@ -747,12 +747,12 @@ describe("intake UI components", () => {
 
     expect(
       container.querySelector(
-        'a[href="/integrated-brand-brain/roadmap/questionnaire/AUDIENCE"]',
+        'a[href="/integrated-brand-brain/roadmap/questionnaire/audience"]',
       ),
     ).not.toBeNull();
     expect(
       container.querySelector(
-        'a[href="/integrated-brand-brain/roadmap/questionnaire/AUDIENCE?validate=1"]',
+        'a[href="/integrated-brand-brain/roadmap/questionnaire/audience?validate=1"]',
       ),
     ).toBeNull();
   });
