@@ -32,8 +32,6 @@ export type PhaseProgress = {
   key: "questionnaires" | "strategies" | "aesthetics" | "brain_build";
   title: string;
   description: string;
-  team: string;
-  teamVerb: string;
   iconKind: "clipboard" | "spark" | "palette" | "chip";
   status: PhaseStatus;
   percent: number;
@@ -552,8 +550,6 @@ export async function getBrandBuildProgress(
     title: "Brand Research",
     description:
       "Gather the raw signal - questionnaires, stakeholder interviews and futures research - straight from the brand.",
-    team: "Brand Marketing Team",
-    teamVerb: "Completed",
     iconKind: "clipboard",
     status: intake.status,
     percent: intake.percent,
@@ -568,8 +564,6 @@ export async function getBrandBuildProgress(
     title: "Strategies",
     description:
       "Synthesize the inputs into a working brand strategy the brain can reason from.",
-    team: "Bextudio Strategy Team",
-    teamVerb: "Drafted",
     iconKind: "spark",
     status: modules.status,
     percent: modules.percent,
@@ -584,8 +578,6 @@ export async function getBrandBuildProgress(
     title: "Aesthetics",
     description:
       "Shape the brand's visual language - direction, system and assets - before the brain ships.",
-    team: "Bextudio Design Team",
-    teamVerb: "Crafted",
     iconKind: "palette",
     status: aesthetics.status,
     percent: aesthetics.percent,
@@ -600,8 +592,6 @@ export async function getBrandBuildProgress(
     title: "Brain Build",
     description:
       "Assemble, train and ship the brand-aware model - locked until aesthetics lands.",
-    team: "Bextudio AI Team",
-    teamVerb: "Engineered",
     iconKind: "chip",
     status: brain.status,
     percent: brain.percent,

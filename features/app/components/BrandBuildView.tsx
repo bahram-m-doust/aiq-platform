@@ -323,23 +323,12 @@ function PhaseCard({
           style={{ borderColor: "var(--bv-line-dashed)" }}
         >
           <span className="text-[12px] leading-4">
-            {isReadyToSubmit ? (
-              <>
-                <strong className="font-medium text-[var(--bv-ink)]">
-                  {phase.stepsDone} / {phase.stepsTotal}
-                </strong>{" "}
-                <span className="text-[var(--bv-ink-3)]">answered</span>
-              </>
-            ) : (
-              <>
-                <span className="text-[var(--bv-ink-3)]">
-                  {phase.teamVerb} by the{" "}
-                </span>
-                <span className="font-medium text-[var(--bv-ink)]">
-                  {phase.team}
-                </span>
-              </>
-            )}
+            <strong className="font-medium text-[var(--bv-ink)]">
+              {phase.stepsDone} / {phase.stepsTotal}
+            </strong>{" "}
+            <span className="text-[var(--bv-ink-3)]">
+              {isReadyToSubmit ? "answered" : "complete"}
+            </span>
           </span>
           <span
             className="text-[var(--bv-ink-3)] transition-transform duration-300"
@@ -535,10 +524,6 @@ function DetailPage({
           <StatePill state={state} />
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-[var(--bv-ink-2)]">
             <span className="inline-block size-[5px] rounded-full bg-current" />
-            {phase.teamVerb} by the {phase.team}
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-[var(--bv-ink-2)]">
-            <span className="inline-block size-[5px] rounded-full bg-current" />
             Step {phase.phase}.{String(idxInPhase).padStart(2, "0")}
           </span>
         </div>
@@ -598,12 +583,6 @@ function DetailPage({
                 <span className="text-[var(--bv-ink-3)]">Status</span>
                 <span className="font-mono text-[var(--bv-ink)]">
                   {STATE_COPY[state]}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-t border-dashed py-3 text-[13px]" style={{ borderColor: "var(--bv-line)" }}>
-                <span className="text-[var(--bv-ink-3)]">Owner</span>
-                <span className="font-mono text-[var(--bv-ink)]">
-                  {phase.team}
                 </span>
               </div>
             </div>
