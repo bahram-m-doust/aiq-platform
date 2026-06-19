@@ -45,9 +45,12 @@ export default async function QuestionnaireSectionPage({
   return (
     <>
       <SetBreadcrumbLabels
-        labels={{
-          [questionnaireSectionPath(sectionKey)]: selectedSection.title,
-        }}
+        labels={Object.fromEntries(
+          data.sections.map((section) => [
+            questionnaireSectionPath(section.key),
+            section.title,
+          ]),
+        )}
       />
       <SectionQuestionnaire
         allSections={data.sections}

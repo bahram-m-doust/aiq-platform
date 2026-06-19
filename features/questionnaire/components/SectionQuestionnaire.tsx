@@ -2,7 +2,7 @@
 
 import {
   type MouseEvent,
-  type PointerEvent,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -73,16 +73,54 @@ export function SectionQuestionnaire({
     });
   const displayedAnswers = locked ? initialAnswers : answers;
 
-  const sectionIndex = allSections.findIndex((item) => item.id === section.id) + 1;
+  // Section switching is client-side: every section + its answers are already
+  // loaded, and the autosave queue is keyed by the session (not the section),
+  // so moving between sections needs no server round-trip — it's instant and
+  // free of the navigation glitch. We only sync the URL (replaceState) so
+  // refresh / sharing still resolve. `section` (the server prop) is just the
+  // section the page was entered on.
+  const [activeSectionId, setActiveSectionId] = useState(section.id);
+  const activeSection =
+    allSections.find((item) => item.id === activeSectionId) ?? section;
+  const sectionIndex =
+    allSections.findIndex((item) => item.id === activeSectionId) + 1;
+
+  const switchToSection = useCallback(
+    (targetId: string, targetKey: string) => {
+      if (targetId === activeSectionId) return;
+      setActiveSectionId(targetId);
+      window.history.replaceState(
+        window.history.state,
+        "",
+        questionnaireSectionPath(targetKey),
+      );
+    },
+    [activeSectionId],
+  );
+
+  const handleSectionLinkClick = (
+    event: MouseEvent<HTMLAnchorElement>,
+    targetId: string,
+    targetKey: string,
+  ) => {
+    // Let modifier / middle clicks fall through to a real navigation (new tab).
+    if (
+      event.defaultPrevented ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    switchToSection(targetId, targetKey);
+  };
 
   const tabListRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<HTMLAnchorElement>(null);
   const hasMeasuredTabIndicatorRef = useRef(false);
   const tabIndicatorFrameRef = useRef<number | null>(null);
-  const [pendingSection, setPendingSection] = useState<{
-    fromId: string;
-    toId: string;
-  } | null>(null);
   const [tabIndicator, setTabIndicator] = useState({
     left: 0,
     ready: false,
@@ -90,8 +128,6 @@ export function SectionQuestionnaire({
   });
   const [animateTabIndicator, setAnimateTabIndicator] = useState(false);
   const [showErrors] = useState(autoValidate);
-  const visualSectionId =
-    pendingSection?.fromId === section.id ? pendingSection.toId : section.id;
 
   useEffect(() => {
     return () => {
@@ -153,62 +189,13 @@ export function SectionQuestionnaire({
       observer.disconnect();
       window.removeEventListener("resize", handleResize);
     };
-  }, [allSections.length, visualSectionId]);
-
-  const moveTabIndicatorTo = (
-    target: HTMLAnchorElement,
-    nextSectionId: string,
-  ) => {
-    setPendingSection({ fromId: section.id, toId: nextSectionId });
-    setAnimateTabIndicator(true);
-    setTabIndicator({
-      left: target.offsetLeft,
-      ready: true,
-      width: target.offsetWidth,
-    });
-  };
-
-  const handleSectionTabPointerDown = (
-    event: PointerEvent<HTMLAnchorElement>,
-    nextSectionId: string,
-  ) => {
-    if (
-      event.button !== 0 ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey ||
-      nextSectionId === section.id
-    ) {
-      return;
-    }
-
-    moveTabIndicatorTo(event.currentTarget, nextSectionId);
-  };
-
-  const handleSectionTabClick = (
-    event: MouseEvent<HTMLAnchorElement>,
-    nextSectionId: string,
-  ) => {
-    if (
-      event.defaultPrevented ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey ||
-      nextSectionId === section.id
-    ) {
-      return;
-    }
-
-    moveTabIndicatorTo(event.currentTarget, nextSectionId);
-  };
+  }, [allSections.length, activeSectionId]);
 
   // Arrived here from the overview's "fix this" link — highlight the gaps and
   // jump to the first unanswered question.
   useEffect(() => {
     if (!autoValidate) return;
-    const firstEmpty = section.questions.find(
+    const firstEmpty = activeSection.questions.find(
       (question) => !isIntakeAnswerComplete(displayedAnswers[question.id] ?? null),
     );
     if (firstEmpty) {
@@ -244,13 +231,13 @@ export function SectionQuestionnaire({
               {sectionIndex}
             </span>
             <h1 className="text-2xl font-semibold tracking-[-0.02em]">
-              {section.title}
+              {activeSection.title}
             </h1>
           </div>
 
-          {section.description && (
+          {activeSection.description && (
             <p className="mt-2 max-w-[640px] text-sm leading-relaxed text-[var(--bv-ink-3)]">
-              {section.description}
+              {activeSection.description}
             </p>
           )}
 
@@ -263,7 +250,7 @@ export function SectionQuestionnaire({
               </AlertDescription>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <QuestionnaireChangeRequestDialog
-                  sectionKey={section.key}
+                  sectionKey={activeSection.key}
                   triggerClassName="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
                 />
                 {latestSnapshotId && (
@@ -302,8 +289,7 @@ export function SectionQuestionnaire({
                   }}
                 />
                 {allSections.map((item) => {
-                  const isActive = item.id === section.id;
-                  const isVisualActive = item.id === visualSectionId;
+                  const isActive = item.id === activeSectionId;
                   const href = questionnaireSectionPath(item.key);
                   const questionIds = item.questions.map(
                     (question) => question.id,
@@ -319,19 +305,16 @@ export function SectionQuestionnaire({
                       className={cn(
                         "relative z-10 inline-flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md border border-transparent px-2 text-sm font-medium whitespace-nowrap outline-none transition-colors duration-200",
                         "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                        isVisualActive
+                        isActive
                           ? "text-foreground"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                       href={href}
                       key={item.id}
                       onClick={(event) =>
-                        handleSectionTabClick(event, item.id)
+                        handleSectionLinkClick(event, item.id, item.key)
                       }
-                      onPointerDown={(event) =>
-                        handleSectionTabPointerDown(event, item.id)
-                      }
-                      ref={isVisualActive ? activeTabRef : undefined}
+                      ref={isActive ? activeTabRef : undefined}
                     >
                       <span className="inline-flex w-full min-w-0 items-center justify-center gap-1 leading-5">
                         <span className="truncate">{item.title}</span>
@@ -339,7 +322,7 @@ export function SectionQuestionnaire({
                       <span
                         className={cn(
                           "shrink-0 font-mono text-[10px] font-medium leading-3",
-                          isVisualActive
+                          isActive
                             ? "text-[var(--bv-ink-3)]"
                             : "text-muted-foreground/75",
                         )}
@@ -360,7 +343,7 @@ export function SectionQuestionnaire({
               No questions configured for this section yet.
             </div>
           ) : (
-            section.questions.map((question, index) => (
+            activeSection.questions.map((question, index) => (
               <div
                 className="flex flex-col gap-12 rounded-lg border border-border bg-card p-6 shadow-xs transition-colors duration-200 focus-within:bg-[#F2F2F2]"
                 id={`question-card-${question.id}`}
@@ -417,6 +400,12 @@ export function SectionQuestionnaire({
                       ? questionnaireSectionPath(allSections[sectionIndex - 2].key)
                       : undefined
                   }
+                  onClick={(event) => {
+                    const target = allSections[sectionIndex - 2];
+                    if (target) {
+                      handleSectionLinkClick(event, target.id, target.key);
+                    }
+                  }}
                 />
               </PaginationItem>
               {allSections.map((item, index) => (
@@ -424,6 +413,9 @@ export function SectionQuestionnaire({
                   <PaginationLink
                     href={questionnaireSectionPath(item.key)}
                     isActive={index + 1 === sectionIndex}
+                    onClick={(event) =>
+                      handleSectionLinkClick(event, item.id, item.key)
+                    }
                   >
                     {index + 1}
                   </PaginationLink>
@@ -436,6 +428,12 @@ export function SectionQuestionnaire({
                       ? questionnaireSectionPath(allSections[allSections.length - 1].key)
                       : undefined
                   }
+                  onClick={(event) => {
+                    const target = allSections[allSections.length - 1];
+                    if (target) {
+                      handleSectionLinkClick(event, target.id, target.key);
+                    }
+                  }}
                 />
               </PaginationItem>
             </PaginationContent>
@@ -453,6 +451,13 @@ export function SectionQuestionnaire({
               <Button asChild className="group" variant="outline">
                 <Link
                   href={questionnaireSectionPath(allSections[sectionIndex].key)}
+                  onClick={(event) =>
+                    handleSectionLinkClick(
+                      event,
+                      allSections[sectionIndex].id,
+                      allSections[sectionIndex].key,
+                    )
+                  }
                 >
                   Next: {allSections[sectionIndex].title}
                   <span className="text-[var(--bv-ink-4)] transition-transform group-hover:translate-x-0.5">
