@@ -26,8 +26,10 @@ import type {
   CreateChangeRequestInput,
   ReviewChangeRequestInput,
 } from "@/features/change-requests/types";
+import { createNotification } from "@/features/notifications/mutation-service";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
+import { logServerError } from "@/lib/logging/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const CODE = "change_request";
@@ -43,6 +45,42 @@ export function isChangeRequestError(error: unknown): error is DomainError {
 async function latestIntakeIsLocked(brandId: string) {
   const session = await getLatestIntakeSessionForBrand(brandId);
   return Boolean(session && (session.status === "LOCKED" || session.lockedAt));
+}
+
+// Approving an intake change request reopens the brand's locked questionnaire so
+// the owner can make the requested edit (it re-locks on the next submit).
+async function reopenIntakeForBrand(
+  brandId: string,
+  reviewerId: string,
+  actorRole: string | null,
+): Promise<void> {
+  const session = await getLatestIntakeSessionForBrand(brandId);
+  if (!session || (session.status !== "LOCKED" && !session.lockedAt)) {
+    return;
+  }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("intake_sessions")
+    .update({
+      status: "DRAFT",
+      locked_at: null,
+      locked_by: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", session.id)
+    .eq("brand_id", brandId);
+  if (error) throw error;
+
+  await logAudit({
+    actorUserId: reviewerId,
+    actorRole,
+    brandId,
+    action: "intake_reopened",
+    entityType: "intake_session",
+    entityId: session.id,
+    before: null,
+    after: { via: "change_request" },
+  });
 }
 
 export async function createChangeRequest({
@@ -112,6 +150,30 @@ export async function createChangeRequest({
     before: null,
     after: toChangeRequestCreatedAudit({ request }),
   });
+
+  // Notify the internal team that a change request is waiting for review.
+  // Best-effort: a notification failure must never fail the submission itself.
+  try {
+    await createNotification({
+      brandId: options.brandId,
+      audience: "INTERNAL_TEAM",
+      type: auditAction,
+      title: request.sectionKey
+        ? `New change request: ${request.sectionKey}`
+        : "New change request",
+      body: request.reason,
+      linkPath: "/admin/change-requests",
+      subjectType: "CHANGE_REQUEST",
+      subjectId: request.id,
+      actorId: profileId,
+    });
+  } catch (notifyError) {
+    logServerError({
+      label: "[change-request] notify failed",
+      error: notifyError,
+      metadata: { requestId: request.id, brandId: options.brandId },
+    });
+  }
 
   return { request, auditAction };
 }
@@ -183,6 +245,15 @@ export async function reviewChangeRequest({
       previousStatus: previousRequest.status,
     }),
   });
+
+  // Approving an intake change request unlocks the questionnaire for editing.
+  if (
+    request.status === "APPROVED" &&
+    (request.targetType === "INTAKE_SECTION" ||
+      request.targetType === "INTAKE_QUESTION")
+  ) {
+    await reopenIntakeForBrand(request.brandId, reviewerId, actorRole);
+  }
 
   return request;
 }

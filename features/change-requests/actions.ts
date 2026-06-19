@@ -51,7 +51,8 @@ export async function createChangeRequestAction(
 
     return {
       status: "success",
-      message: "Change Request submitted for review.",
+      message:
+        "Change Request submitted. The team has been notified and will review it before any locked answers are changed.",
       requestId: result.request.id,
     };
   } catch (error) {

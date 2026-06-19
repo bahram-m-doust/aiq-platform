@@ -14,13 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
@@ -28,7 +21,6 @@ import {
 } from "@/features/change-requests/actions";
 import { initialReviewChangeRequestFormState } from "@/features/change-requests/schema";
 import {
-  changeRequestStatuses,
   type ChangeRequestReviewItem,
   type ChangeRequestStatus,
 } from "@/features/change-requests/types";
@@ -71,33 +63,24 @@ function StatusBadge({ status }: { status: ChangeRequestStatus }) {
   );
 }
 
-function isDestructiveStatus(status: string) {
-  return status === "REJECTED" || status === "CLOSED";
-}
-
-function isApprovalStatus(status: string) {
-  return status === "APPROVED";
-}
-
 export function ChangeRequestReviewForm({
   request,
 }: {
   request: ChangeRequestReviewItem;
 }) {
   const [open, setOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string>(request.status);
   const [resolutionNote, setResolutionNote] = useState(
     request.resolutionNote ?? "",
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleConfirm() {
+  function handleConfirm(status: ChangeRequestStatus) {
     setErrorMessage(null);
     startTransition(async () => {
       const formData = new FormData();
       formData.append("request_id", request.id);
-      formData.append("status", selectedStatus);
+      formData.append("status", status);
       formData.append("resolution_note", resolutionNote);
       const result = await reviewChangeRequestAction(
         initialReviewChangeRequestFormState,
@@ -119,14 +102,10 @@ export function ChangeRequestReviewForm({
   }
 
   function handleOpen() {
-    setSelectedStatus(request.status);
     setResolutionNote(request.resolutionNote ?? "");
     setErrorMessage(null);
     setOpen(true);
   }
-
-  const destructive = isDestructiveStatus(selectedStatus);
-  const approval = isApprovalStatus(selectedStatus);
 
   return (
     <div className="flex items-center gap-3">
@@ -177,25 +156,6 @@ export function ChangeRequestReviewForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`dialog-status-${request.id}`}>Status</Label>
-              <Select
-                onValueChange={setSelectedStatus}
-                value={selectedStatus}
-              >
-                <SelectTrigger id={`dialog-status-${request.id}`}>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {changeRequestStatuses.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {statusLabels[status]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor={`dialog-resolution-${request.id}`}>
                 Resolution note
               </Label>
@@ -224,20 +184,20 @@ export function ChangeRequestReviewForm({
               Cancel
             </Button>
             <Button
-              className={cn(
-                approval &&
-                  "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700",
-              )}
               disabled={isPending}
-              onClick={handleConfirm}
+              onClick={() => handleConfirm("REJECTED")}
               type="button"
-              variant={destructive ? "destructive" : "default"}
+              variant="destructive"
             >
-              {isPending
-                ? "Updating..."
-                : destructive
-                  ? "Confirm & update"
-                  : "Update status"}
+              {isPending ? "Updating..." : "Reject"}
+            </Button>
+            <Button
+              className="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+              disabled={isPending}
+              onClick={() => handleConfirm("APPROVED")}
+              type="button"
+            >
+              {isPending ? "Updating..." : "Approve"}
             </Button>
           </DialogFooter>
         </DialogContent>
