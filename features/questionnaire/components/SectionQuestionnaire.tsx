@@ -338,7 +338,7 @@ export function SectionQuestionnaire({
         </div>
 
         <div className="space-y-4">
-          {section.questions.length === 0 ? (
+          {activeSection.questions.length === 0 ? (
             <div className="rounded-lg border border-border bg-card p-6 text-center text-sm text-muted-foreground shadow-xs">
               No questions configured for this section yet.
             </div>
