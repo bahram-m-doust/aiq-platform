@@ -143,7 +143,7 @@ export function ProgressSidePanel({
                           {totalRemaining} uncompleted{" "}
                           {totalRemaining === 1 ? "question" : "questions"}.
                         </p>
-                        <div className="flex flex-col gap-2 text-[#844705]">
+                        <div className="flex flex-col">
                           {incompleteSections.map((section) => {
                             const remaining =
                               section.totalQuestions -
@@ -153,11 +153,11 @@ export function ProgressSidePanel({
                                 key={section.id}
                                 className="flex flex-col items-start"
                               >
-                                <span className="text-[14px] leading-5">
+                                <span className="text-[14px] font-medium leading-5 text-[#0a0a0a]">
                                   {section.title}:
                                 </span>
                                 <Link
-                                  className="text-[12px] leading-4 underline"
+                                  className="text-[12px] leading-4 text-[#844705] underline"
                                   href={`${questionnaireSectionPath(section.key)}?validate=1`}
                                 >
                                   {remaining} uncompleted
