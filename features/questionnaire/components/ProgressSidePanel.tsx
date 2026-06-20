@@ -132,40 +132,43 @@ export function ProgressSidePanel({
               </ul>
             </div>
           </div>
-        </div>
 
-        {totalRemaining > 0 && (
-          <UnansweredReveal reviewReached={showReview} sessionId={sessionId}>
-            <Alert variant="warning">
-              <TriangleAlertIcon />
-              <AlertTitle>
-                {totalRemaining} uncompleted{" "}
-                {totalRemaining === 1 ? "question" : "questions"}.
-              </AlertTitle>
-              <AlertDescription>
-                <ul className="space-y-1">
-                  {incompleteSections.map((section) => {
-                    const remaining =
-                      section.totalQuestions - section.completedQuestions;
-                    return (
-                      <li key={section.id}>
-                        <Link
-                          className="inline-flex items-center gap-2 underline-offset-2 transition-colors hover:underline"
-                          href={`${questionnaireSectionPath(section.key)}?validate=1`}
-                        >
-                          <span className="font-medium">{section.title}</span>
-                          <span className="opacity-80">
-                            — {remaining} uncompleted
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          </UnansweredReveal>
-        )}
+            {totalRemaining > 0 && (
+              <UnansweredReveal reviewReached={showReview} sessionId={sessionId}>
+                <div className="border-t border-[var(--bv-line)] pt-4">
+                  <Alert variant="warning" className="border-gray-300">
+                    <TriangleAlertIcon />
+                    <AlertTitle>
+                      {totalRemaining} uncompleted{" "}
+                      {totalRemaining === 1 ? "question" : "questions"}.
+                    </AlertTitle>
+                    <AlertDescription>
+                      <ul className="space-y-1">
+                        {incompleteSections.map((section) => {
+                          const remaining =
+                            section.totalQuestions - section.completedQuestions;
+                          return (
+                            <li key={section.id}>
+                              <Link
+                                className="inline-flex items-center gap-2 underline-offset-2 transition-colors hover:underline"
+                                href={`${questionnaireSectionPath(section.key)}?validate=1`}
+                              >
+                                <span className="font-medium">{section.title}</span>
+                                <span className="opacity-80">
+                                  — {remaining} uncompleted
+                                </span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              </UnansweredReveal>
+            )}
+          </div>
+        </div>
       </aside>
     </>
   );
