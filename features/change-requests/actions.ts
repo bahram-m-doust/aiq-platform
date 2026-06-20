@@ -18,6 +18,8 @@ import type {
   CreateChangeRequestFormState,
   ReviewChangeRequestFormState,
 } from "@/features/change-requests/types";
+import { getIntakeSectionsWithQuestions } from "@/features/questionnaire/queries";
+import { ROUTES, questionnaireSectionPath } from "@/lib/routes";
 
 function createErrorState(message: string): CreateChangeRequestFormState {
   return { status: "error", message };
@@ -91,6 +93,17 @@ export async function reviewChangeRequestAction(
 
     revalidatePath("/admin/change-requests");
     revalidatePath("/change-requests");
+    revalidatePath(ROUTES.home);
+    revalidatePath(ROUTES.questionnaire);
+
+    // An approved intake change request reopens the questionnaire, so refresh the
+    // brand's questionnaire surfaces (and each section) to reflect the unlock.
+    if (request.status === "APPROVED" && request.targetType !== "MODULE") {
+      const sections = await getIntakeSectionsWithQuestions();
+      sections.forEach((section) => {
+        revalidatePath(questionnaireSectionPath(section.key));
+      });
+    }
 
     return {
       status: "success",

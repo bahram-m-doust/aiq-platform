@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { ChangeRequestStatus } from "@/features/change-requests/types";
 import type { AdminAccessKeyType } from "@/features/admin/types";
 
 function escapeHtml(value: string) {
@@ -114,6 +115,66 @@ export function buildSpecialistInvitationEmail({
     `<p><strong>Invited by:</strong> ${escapeHtml(inviterEmail)}</p>`,
     `<p><strong>Expires:</strong> ${escapeHtml(formattedExpiry)} UTC</p>`,
     `<p><a href="${escapeHtml(acceptUrl)}">Accept the invitation</a></p>`,
+  ].join("");
+
+  return { subject, text, html };
+}
+
+function changeRequestReviewLabel(status: ChangeRequestStatus) {
+  switch (status) {
+    case "UNDER_REVIEW":
+      return "under review";
+    case "APPROVED":
+      return "approved";
+    case "REJECTED":
+      return "rejected";
+    case "APPLIED":
+      return "applied";
+    case "CLOSED":
+      return "closed";
+    default:
+      return "updated";
+  }
+}
+
+function changeRequestReviewResultLine(status: ChangeRequestStatus) {
+  if (status === "APPROVED") {
+    return "Your questionnaire has been reopened for editing.";
+  }
+
+  return "You can view the result in your dashboard.";
+}
+
+export function buildChangeRequestReviewEmail({
+  brandName,
+  reviewUrl,
+  resolutionNote,
+  status,
+}: {
+  brandName: string;
+  reviewUrl: string;
+  resolutionNote: string | null;
+  status: ChangeRequestStatus;
+}) {
+  const statusLabel = changeRequestReviewLabel(status);
+  const subject = `Change request ${statusLabel}`;
+  const text = [
+    `Your change request for ${brandName} is now ${statusLabel}.`,
+    resolutionNote ? `Reviewer note: ${resolutionNote}` : null,
+    changeRequestReviewResultLine(status),
+    "",
+    "Open your dashboard to see the result:",
+    reviewUrl,
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
+  const html = [
+    `<p>Your change request for <strong>${escapeHtml(brandName)}</strong> is now ${escapeHtml(statusLabel)}.</p>`,
+    resolutionNote
+      ? `<p><strong>Reviewer note:</strong> ${escapeHtml(resolutionNote)}</p>`
+      : "",
+    `<p>${escapeHtml(changeRequestReviewResultLine(status))}</p>`,
+    `<p><a href="${escapeHtml(reviewUrl)}">Open your dashboard</a></p>`,
   ].join("");
 
   return { subject, text, html };

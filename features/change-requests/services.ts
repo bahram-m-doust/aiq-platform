@@ -26,8 +26,11 @@ import type {
   CreateChangeRequestInput,
   ReviewChangeRequestInput,
 } from "@/features/change-requests/types";
+import { resolveTrustedAppOrigin } from "@/features/auth/origins";
 import { createNotification } from "@/features/notifications/mutation-service";
 import { logAudit } from "@/lib/audit/logAudit";
+import { buildChangeRequestReviewEmail } from "@/lib/email/templates";
+import { sendEmailWithResend } from "@/lib/email/sendEmail";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { logServerError } from "@/lib/logging/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -81,6 +84,173 @@ async function reopenIntakeForBrand(
     before: null,
     after: { via: "change_request" },
   });
+}
+
+type ChangeRequestReviewRecipientRow = {
+  email: string | null;
+};
+
+type BrandRow = {
+  name: string;
+};
+
+function changeRequestReviewLabel(status: ReviewChangeRequestInput["status"]) {
+  switch (status) {
+    case "UNDER_REVIEW":
+      return "under review";
+    case "APPROVED":
+      return "approved";
+    case "REJECTED":
+      return "rejected";
+    case "APPLIED":
+      return "applied";
+    case "CLOSED":
+      return "closed";
+    default:
+      return "updated";
+  }
+}
+
+function changeRequestReviewResultLine(
+  status: ReviewChangeRequestInput["status"],
+) {
+  if (status === "APPROVED") {
+    return "Your questionnaire has been reopened for editing.";
+  }
+
+  return "You can view the result in your dashboard.";
+}
+
+function buildChangeRequestReviewLink(origin: string) {
+  return new URL(
+    "/integrated-brand-brain/roadmap/questionnaire",
+    new URL(origin),
+  ).toString();
+}
+
+async function loadChangeRequestReviewRecipient(request: ChangeRequestRecord) {
+  if (!request.requestedBy) {
+    return null;
+  }
+
+  const admin = createAdminClient();
+  const [recipientResult, brandResult] = await Promise.all([
+    admin
+      .from("users_profile")
+      .select("email")
+      .eq("id", request.requestedBy)
+      .maybeSingle(),
+    admin.from("brands").select("name").eq("id", request.brandId).maybeSingle(),
+  ]);
+
+  if (recipientResult.error) {
+    throw recipientResult.error;
+  }
+
+  if (brandResult.error) {
+    throw brandResult.error;
+  }
+
+  const recipient =
+    recipientResult.data as ChangeRequestReviewRecipientRow | null;
+  const brand = brandResult.data as BrandRow | null;
+
+  if (!recipient?.email || !brand?.name) {
+    return null;
+  }
+
+  return {
+    brandName: brand.name,
+    requesterEmail: recipient.email,
+  };
+}
+
+// Tells the requester (the brand client) the outcome of their change request,
+// both in-app and by email. Best-effort: a failure is logged but never fails the
+// review mutation itself (the decision is already committed).
+async function notifyChangeRequestReviewed({
+  request,
+  reviewerId,
+}: {
+  request: ChangeRequestRecord;
+  reviewerId: string;
+}) {
+  const recipient = await loadChangeRequestReviewRecipient(request);
+
+  if (!recipient) {
+    logServerError({
+      label: "[change-requests] review recipient lookup failed",
+      error: new Error(
+        "Change request review recipient could not be resolved.",
+      ),
+      metadata: { requestId: request.id, brandId: request.brandId },
+    });
+    return;
+  }
+
+  const reviewUrl = buildChangeRequestReviewLink(
+    resolveTrustedAppOrigin(process.env.APP_BASE_URL),
+  );
+  const email = buildChangeRequestReviewEmail({
+    brandName: recipient.brandName,
+    reviewUrl,
+    resolutionNote: request.resolutionNote,
+    status: request.status,
+  });
+  const notificationTitle = `Change request ${changeRequestReviewLabel(request.status)}`;
+  const notificationBody = [
+    `Your change request for ${recipient.brandName} is now ${changeRequestReviewLabel(request.status)}.`,
+    request.resolutionNote ? request.resolutionNote : null,
+    changeRequestReviewResultLine(request.status),
+  ]
+    .filter((line): line is string => line !== null)
+    .join(" ");
+
+  const [notificationResult, emailResult] = await Promise.allSettled([
+    createNotification({
+      brandId: request.brandId,
+      audience: "CLIENT",
+      recipientId: request.requestedBy,
+      type: "change_request_reviewed",
+      title: notificationTitle,
+      body: notificationBody,
+      linkPath: "/integrated-brand-brain/roadmap/questionnaire",
+      subjectType: "change_request",
+      subjectId: request.id,
+      actorId: reviewerId,
+    }),
+    sendEmailWithResend({
+      to: recipient.requesterEmail,
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
+    }),
+  ]);
+
+  if (notificationResult.status === "rejected") {
+    logServerError({
+      label: "[change-requests] review notification failed",
+      error: notificationResult.reason,
+      metadata: { requestId: request.id, brandId: request.brandId },
+    });
+  }
+
+  if (emailResult.status === "rejected") {
+    logServerError({
+      label: "[change-requests] review email failed",
+      error: emailResult.reason,
+      metadata: { requestId: request.id, brandId: request.brandId },
+    });
+    return;
+  }
+
+  if (!emailResult.value.ok) {
+    logServerError({
+      label: "[change-requests] review email delivery warning",
+      error: new Error(emailResult.value.message),
+      metadata: { requestId: request.id, brandId: request.brandId },
+    });
+  }
 }
 
 export async function createChangeRequest({
@@ -258,6 +428,9 @@ export async function reviewChangeRequest({
   ) {
     await reopenIntakeForBrand(request.brandId, reviewerId, actorRole);
   }
+
+  // Tell the requester the outcome (in-app + email). Best-effort, post-decision.
+  await notifyChangeRequestReviewed({ request, reviewerId });
 
   return request;
 }

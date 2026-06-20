@@ -43,7 +43,7 @@ Fresh project:
 Existing project:
 
 1. Run missing migrations in numeric order through
-   `0048_rag_search_recall.sql`.
+   `0049_aesthetics_deliverables.sql`.
 2. Re-run seeds only if the environment is missing plan, agent, or intake
    configuration rows.
 3. Run `NOTIFY pgrst, 'reload schema';`.
