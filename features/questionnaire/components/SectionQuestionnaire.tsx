@@ -312,12 +312,12 @@ export function SectionQuestionnaire({
                     tab marked by a sliding primary 1px underline. */}
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-border"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-border"
                 />
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "pointer-events-none absolute bottom-0 left-0 z-[1] h-px bg-primary",
+                    "pointer-events-none absolute bottom-0 left-0 z-[1] h-0.5 bg-primary",
                     animateTabIndicator
                       ? "transition-[transform,width,opacity] duration-500"
                       : "transition-none",
@@ -344,7 +344,7 @@ export function SectionQuestionnaire({
                       aria-label={`${item.title} ${answered}/${item.questions.length}`}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "relative z-10 inline-flex h-10 flex-auto items-center justify-center gap-2 rounded-md px-2.5 text-sm font-medium whitespace-nowrap outline-none transition-colors duration-200",
+                        "relative z-10 inline-flex h-16 flex-auto items-center justify-center gap-2 rounded-md px-2.5 text-sm font-medium whitespace-nowrap outline-none transition-colors duration-200",
                         "focus-visible:ring-[3px] focus-visible:ring-ring/50",
                         isActive
                           ? "text-foreground"
