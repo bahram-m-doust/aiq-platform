@@ -1,6 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+// The Unanswered box remembers "review reached" per session in sessionStorage —
+// clear it between tests so that state doesn't leak across cases.
+afterEach(() => {
+  window.sessionStorage.clear();
+});
 
 vi.mock("@/features/questionnaire/actions", () => ({
   autosaveIntakeAnswerAction: vi.fn(),
@@ -472,6 +478,51 @@ describe("intake UI components", () => {
     expect(screen.getByRole("button", { name: /Edit/ })).toBeVisible();
   });
 
+  it("keeps an unconfirmed draft editable with a persistent Draft saved hint", () => {
+    render(
+      <QuestionRenderer
+        isMarkedDone={false}
+        onQueuedChange={vi.fn()}
+        question={question}
+        sessionId="session-1"
+        value="A restored draft"
+      />,
+    );
+
+    // A draft that was never "Save & mark done"-ed stays in edit mode (it must
+    // not collapse to the read-only "Completed" view) and keeps its text...
+    expect(screen.getByRole("textbox")).toHaveValue("A restored draft");
+    expect(screen.queryByText("Completed")).not.toBeInTheDocument();
+    // ...with the Draft saved hint even though there is no in-flight save.
+    expect(screen.getByText("Draft saved")).toBeVisible();
+  });
+
+  it("flags the confirm button for an unconfirmed draft reached from Unanswered", () => {
+    render(
+      <QuestionRenderer
+        isMarkedDone={false}
+        onQueuedChange={vi.fn()}
+        question={question}
+        requiredError
+        sessionId="session-1"
+        value="A restored draft"
+      />,
+    );
+
+    // The button turns red to show the answer still needs confirming...
+    expect(
+      screen.getByRole("button", { name: /Save & mark done/ }),
+    ).toHaveClass("text-destructive");
+    // ...while the textarea itself stays normal (only empties get the red box).
+    expect(screen.getByRole("textbox")).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(
+      screen.queryByText("This question needs an answer."),
+    ).not.toBeInTheDocument();
+  });
+
   it("does not autosave a free-text field on blur when nothing changed", async () => {
     const user = userEvent.setup();
     const autosave = vi.fn();
@@ -664,6 +715,27 @@ describe("intake UI components", () => {
         'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
       ),
     ).not.toBeNull();
+    expect(screen.getByText(/not marked done yet/i)).toBeVisible();
+  });
+
+  it("keeps the unanswered warning visible after review even without the flag", () => {
+    const data = intakeData({
+      session: session(),
+      answers: {
+        "question-1": "Strategic answer",
+        "question-2": null,
+      },
+      completion: completion(),
+    });
+
+    // Reach the review step once — this records "review reached" for the session.
+    const first = render(<QuestionnaireLanding data={data} showSubmitReview />);
+    expect(screen.getByText(/not marked done yet/i)).toBeVisible();
+    first.unmount();
+
+    // Returning to the plain overview (no ?review=1) still shows the box, so the
+    // user can keep fixing gaps without losing it.
+    render(<QuestionnaireLanding data={data} />);
     expect(screen.getByText(/not marked done yet/i)).toBeVisible();
   });
 

@@ -205,14 +205,29 @@ export function QuestionRenderer({
   const displayedMessage = saveState?.message ?? message;
   const missingRequiredAnswer =
     question.isRequired && !hasAnswer;
+  // A draft the user has typed but not yet "Save & mark done"-ed. Its content
+  // is committed (no uncommitted edit in flight), so we keep a persistent
+  // "Draft saved" hint even with no active save — e.g. after a reload or after
+  // switching sections and back — and, when the user reached it from the
+  // Unanswered list, flag the confirm button so the remaining action is clear.
+  const isUnconfirmedDraft =
+    isMarkedDone === false && hasAnswer && !hasUncommittedTextDraft;
+  // Surface "Draft saved" for a restored unconfirmed draft that has no live
+  // save status of its own.
+  const baseStatus =
+    displayedStatus === "idle" && isUnconfirmedDraft ? "saved" : displayedStatus;
   const indicatorStatus =
-    displayedStatus === "saved" &&
+    baseStatus === "saved" &&
     (hasUncommittedTextDraft || missingRequiredAnswer)
       ? "idle"
-      : displayedStatus;
+      : baseStatus;
   // Flagged by the parent on a finish attempt when this required answer is empty.
   const showRequiredError =
     requiredError && missingRequiredAnswer;
+  // Arrived from the Unanswered list (requiredError) on a typed-but-unconfirmed
+  // draft: the textarea stays normal, but the confirm button turns red to show
+  // the answer still needs "Save & mark done".
+  const flagUnconfirmedDraft = requiredError && isUnconfirmedDraft;
   const hasValidationError = displayedStatus === "error" || showRequiredError;
   const showSaveProgress =
     isPending ||
@@ -595,7 +610,11 @@ export function QuestionRenderer({
               />
             </span>
             <Button
-              className="h-9 shrink-0 rounded-full px-4 text-sm"
+              className={cn(
+                "h-9 shrink-0 rounded-full px-4 text-sm",
+                flagUnconfirmedDraft &&
+                  "border-destructive text-destructive hover:border-destructive hover:text-destructive",
+              )}
               disabled={!canMarkDone || isSaving}
               onClick={handleDone}
               onMouseDown={(event) => {

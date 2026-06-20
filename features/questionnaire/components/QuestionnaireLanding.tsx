@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalSubmitReadiness";
 import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
+import { UnansweredReveal } from "@/features/questionnaire/components/UnansweredReveal";
 import {
   canApproveIntakeRole,
   isIntakeAnswerComplete,
@@ -213,37 +214,43 @@ export function QuestionnaireLanding({
           </div>
         )}
 
-        {/* Unanswered — only on the review step (after "Review & submit").
-            Lists every question not yet "Save & mark done"-ed; an autosaved
-            draft still counts as unanswered. */}
-        {!locked && showSubmitReview && incompleteSections.length > 0 && (
-          <div className="mt-8">
-            <Alert variant="warning">
-              <TriangleAlertIcon />
-              <AlertTitle>
-                {totalRemaining}{" "}
-                {totalRemaining === 1 ? "question" : "questions"} not marked done
-                yet.
-              </AlertTitle>
-              <AlertDescription>
-                <ul className="space-y-1">
-                  {incompleteSections.map(({ section, remaining }) => (
-                    <li key={section.id}>
-                      <Link
-                        className="inline-flex items-center gap-2 underline-offset-2 transition-colors hover:underline"
-                        href={`${questionnaireSectionPath(section.key)}?validate=1`}
-                      >
-                        <span className="font-medium">{section.title}</span>
-                        <span className="opacity-80">
-                          — {remaining} unanswered
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          </div>
+        {/* Unanswered — shown once the user reaches the "Review & submit"
+            step, then kept visible (per session) while they bounce into
+            sections to fix gaps. Lists every question not yet
+            "Save & mark done"-ed; an autosaved draft still counts as unanswered. */}
+        {!locked && incompleteSections.length > 0 && (
+          <UnansweredReveal
+            reviewReached={showSubmitReview}
+            sessionId={session.id}
+          >
+            <div className="mt-8">
+              <Alert variant="warning">
+                <TriangleAlertIcon />
+                <AlertTitle>
+                  {totalRemaining}{" "}
+                  {totalRemaining === 1 ? "question" : "questions"} not marked
+                  done yet.
+                </AlertTitle>
+                <AlertDescription>
+                  <ul className="space-y-1">
+                    {incompleteSections.map(({ section, remaining }) => (
+                      <li key={section.id}>
+                        <Link
+                          className="inline-flex items-center gap-2 underline-offset-2 transition-colors hover:underline"
+                          href={`${questionnaireSectionPath(section.key)}?validate=1`}
+                        >
+                          <span className="font-medium">{section.title}</span>
+                          <span className="opacity-80">
+                            — {remaining} unanswered
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            </div>
+          </UnansweredReveal>
         )}
       </div>
     </div>
