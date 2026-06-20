@@ -133,7 +133,7 @@ export function ProgressSidePanel({
             {totalRemaining > 0 && (
               <UnansweredReveal reviewReached={showReview} sessionId={sessionId}>
                 <div className="border-t border-[var(--bv-line)] pt-4">
-                  <div className="flex items-center gap-3 rounded-[10px] border border-[#e5e5e5] bg-white px-4 py-3">
+                  <div className="flex items-center gap-3 rounded-[8px] bg-white px-4 py-3 shadow-[0px_1px_2px_0px_rgba(16,24,40,0.06),0px_1px_3px_0px_rgba(16,24,40,0.10)]">
                     <div className="flex min-w-0 flex-1 items-start gap-2.5">
                       <div className="flex shrink-0 items-start pt-0.5">
                         <CircleCheckIcon className="size-4 text-[#dc7609]" />
@@ -143,7 +143,7 @@ export function ProgressSidePanel({
                           {totalRemaining} uncompleted{" "}
                           {totalRemaining === 1 ? "question" : "questions"}.
                         </p>
-                        <div className="flex flex-col gap-1 text-[#844705]">
+                        <div className="flex flex-col gap-2 text-[#844705]">
                           {incompleteSections.map((section) => {
                             const remaining =
                               section.totalQuestions -
@@ -151,13 +151,13 @@ export function ProgressSidePanel({
                             return (
                               <div
                                 key={section.id}
-                                className="flex items-center gap-1"
+                                className="flex flex-col items-start"
                               >
                                 <span className="text-[14px] leading-5">
                                   {section.title}:
                                 </span>
                                 <Link
-                                  className="text-[14px] leading-5 underline"
+                                  className="text-[12px] leading-4 underline"
                                   href={`${questionnaireSectionPath(section.key)}?validate=1`}
                                 >
                                   {remaining} uncompleted
