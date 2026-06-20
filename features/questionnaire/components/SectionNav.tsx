@@ -18,7 +18,7 @@ export function SectionNav({
   );
 
   return (
-    <nav aria-label="Intake sections" className="grid gap-2 md:grid-cols-2">
+    <nav aria-label="Questionnaire sections" className="grid gap-2 md:grid-cols-2">
       {sections.map((section) => {
         const progress = progressBySectionKey.get(section.key);
         const isActive = section.key === selectedSectionKey;

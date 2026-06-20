@@ -34,8 +34,8 @@ import type {
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
 
 const targetTypeLabels: Record<ChangeRequestTargetType, string> = {
-  INTAKE_SECTION: "Locked intake section",
-  INTAKE_QUESTION: "Locked intake question",
+  INTAKE_SECTION: "Locked questionnaire section",
+  INTAKE_QUESTION: "Locked questionnaire question",
   MODULE: "Module",
 };
 
@@ -87,7 +87,7 @@ export function ChangeRequestCreateForm({
 
             {!options.intakeLocked ? (
               <Alert>
-                <AlertTitle>Intake not locked</AlertTitle>
+                <AlertTitle>Questionnaire not locked</AlertTitle>
                 <AlertDescription>
                   Intake Change Requests become available only after Final
                   Submit locks the intake.

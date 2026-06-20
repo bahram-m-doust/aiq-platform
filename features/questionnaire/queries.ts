@@ -158,33 +158,11 @@ export const getIntakeAccessForProfile = cache(async function getIntakeAccessFor
     (profileData as { global_role: string } | null)?.global_role ===
     "PLATFORM_OWNER";
 
-  if (isPlatformOwner) {
-    let brandQuery = admin.from("brands").select("id, name").limit(1);
-    if (brandId) {
-      brandQuery = brandQuery.eq("id", brandId);
-    }
-    const { data: brandData } = await brandQuery.maybeSingle();
-    const brand = brandData as { id: string; name: string } | null;
-    if (brand) {
-      const { data: entData } = await admin
-        .from("brand_entitlements")
-        .select("plans(name)")
-        .eq("brand_id", brand.id)
-        .eq("status", "ACTIVE")
-        .limit(1)
-        .maybeSingle();
-      const plan = entData
-        ? firstRelated((entData as { plans: RelatedRecord<PlanRow> }).plans)
-        : null;
-      return {
-        brandId: brand.id,
-        brandName: brand.name,
-        membershipRole: "OWNER",
-        planName: plan?.name ?? null,
-      };
-    }
-  }
-
+  // Resolve the brand from the user's OWN active OWNER/EXECUTIVE_MANAGER
+  // membership FIRST. "Their" brand always takes precedence over the platform
+  // owner fallback below — otherwise a Platform Owner who also belongs to a
+  // brand resolves onto whatever brand happens to be first in the table, leaking
+  // their questionnaire / change requests onto an unrelated brand's data.
   let membershipQuery = admin
     .from("brand_memberships")
     .select("brand_id, role, brands(id, name)")
@@ -222,53 +200,81 @@ export const getIntakeAccessForProfile = cache(async function getIntakeAccessFor
         Boolean(membership),
     );
 
-  if (memberships.length === 0) {
-    return null;
-  }
+  if (memberships.length > 0) {
+    const brandIds = memberships.map((membership) => membership.brandId);
+    const { data: entitlementData, error: entitlementError } = await admin
+      .from("brand_entitlements")
+      .select("brand_id, status, starts_at, expires_at, plans(name, credits)")
+      .in("brand_id", brandIds)
+      .eq("status", "ACTIVE");
 
-  const brandIds = memberships.map((membership) => membership.brandId);
-  const { data: entitlementData, error: entitlementError } = await admin
-    .from("brand_entitlements")
-    .select("brand_id, status, starts_at, expires_at, plans(name, credits)")
-    .in("brand_id", brandIds)
-    .eq("status", "ACTIVE");
-
-  if (entitlementError) {
-    throw entitlementError;
-  }
-
-  const entitlements = ((entitlementData ?? []) as EntitlementRow[]).map(
-    (entitlement): BrandAccessEntitlement => {
-      const plan = firstRelated(entitlement.plans);
-
-      return {
-        brandId: entitlement.brand_id,
-        status: entitlement.status,
-        startsAt: entitlement.starts_at,
-        expiresAt: entitlement.expires_at,
-        planName: plan?.name ?? null,
-        credits: plan?.credits ?? 0,
-      };
-    },
-  );
-
-  for (const membership of memberships) {
-    const entitlement = entitlements.find(
-      (item) =>
-        item.brandId === membership.brandId && isActiveBrandEntitlement(item),
-    );
-
-    if (entitlement) {
-      return {
-        ...membership,
-        planName: entitlement.planName,
-      };
+    if (entitlementError) {
+      throw entitlementError;
     }
 
-    if (isPlatformOwner) {
+    const entitlements = ((entitlementData ?? []) as EntitlementRow[]).map(
+      (entitlement): BrandAccessEntitlement => {
+        const plan = firstRelated(entitlement.plans);
+
+        return {
+          brandId: entitlement.brand_id,
+          status: entitlement.status,
+          startsAt: entitlement.starts_at,
+          expiresAt: entitlement.expires_at,
+          planName: plan?.name ?? null,
+          credits: plan?.credits ?? 0,
+        };
+      },
+    );
+
+    for (const membership of memberships) {
+      const entitlement = entitlements.find(
+        (item) =>
+          item.brandId === membership.brandId && isActiveBrandEntitlement(item),
+      );
+
+      if (entitlement) {
+        return {
+          ...membership,
+          planName: entitlement.planName,
+        };
+      }
+
+      if (isPlatformOwner) {
+        return {
+          ...membership,
+          planName: null,
+        };
+      }
+    }
+  }
+
+  // Platform-owner fallback: only reached when the owner has no usable brand
+  // membership of their own. Lets them open a brand for admin/preview — an
+  // explicit brandId when provided, otherwise the first brand.
+  if (isPlatformOwner) {
+    let brandQuery = admin.from("brands").select("id, name").limit(1);
+    if (brandId) {
+      brandQuery = brandQuery.eq("id", brandId);
+    }
+    const { data: brandData } = await brandQuery.maybeSingle();
+    const brand = brandData as { id: string; name: string } | null;
+    if (brand) {
+      const { data: entData } = await admin
+        .from("brand_entitlements")
+        .select("plans(name)")
+        .eq("brand_id", brand.id)
+        .eq("status", "ACTIVE")
+        .limit(1)
+        .maybeSingle();
+      const plan = entData
+        ? firstRelated((entData as { plans: RelatedRecord<PlanRow> }).plans)
+        : null;
       return {
-        ...membership,
-        planName: null,
+        brandId: brand.id,
+        brandName: brand.name,
+        membershipRole: "OWNER",
+        planName: plan?.name ?? null,
       };
     }
   }

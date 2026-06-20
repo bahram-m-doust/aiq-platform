@@ -46,7 +46,7 @@ export function LockedIntakeView({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Strategic Intake is locked</CardTitle>
+          <CardTitle>Strategic Questionnaire is locked</CardTitle>
           <CardDescription>
             Final submission has been recorded for {data.access.brandName}.
             Direct editing is disabled. Any required correction must be

@@ -39,17 +39,11 @@ export function AdminChangeRequestsList({
         // it hiding under the sticky admin bar.
         <Card key={request.id} id={`cr-${request.id}`} className="scroll-mt-24">
           <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1">
-                <CardTitle>{request.targetLabel}</CardTitle>
-                <CardDescription>
-                  {request.brandName} - {request.status}
-                </CardDescription>
-              </div>
-              <span className="rounded-lg border border-border px-3 py-1 font-mono text-xs text-muted-foreground">
-                {request.targetType}
-              </span>
-            </div>
+            {/* Lead with the brand so reviewers always see exactly which brand a
+                request belongs to. The specific target section/question is
+                intentionally not shown here — reviewers have full access. */}
+            <CardTitle>{request.brandName}</CardTitle>
+            <CardDescription>{request.status}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <dl className="grid gap-3 text-sm md:grid-cols-3">

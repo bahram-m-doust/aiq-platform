@@ -58,7 +58,7 @@ export async function finalSubmitIntakeAction(
   const sessionId = formValue(formData, "session_id");
 
   if (!sessionId) {
-    return finalSubmitErrorState("The intake session could not be submitted.");
+    return finalSubmitErrorState("The questionnaire could not be submitted.");
   }
 
   try {

@@ -228,7 +228,7 @@ describe("intake autosave queue", () => {
     mockedAutosaveIntakeAnswersAction
       .mockResolvedValueOnce({
         ok: false,
-        message: "The intake answer could not be saved.",
+        message: "The answer could not be saved.",
         failedQuestionIds: ["question-1"],
       })
       .mockImplementationOnce(async (input) => ({
@@ -249,7 +249,7 @@ describe("intake autosave queue", () => {
 
     await flushAutosaveTimers(0);
     const retry = screen.getByRole("button", {
-      name: "The intake answer could not be saved.",
+      name: "The answer could not be saved.",
     });
     fireEvent.click(retry);
 

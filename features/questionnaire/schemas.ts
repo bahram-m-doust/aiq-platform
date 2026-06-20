@@ -278,11 +278,11 @@ export function validateFinalSubmitCompletion({
   completion: IntakeCompletion;
 }) {
   if (isIntakeSessionLocked(session)) {
-    return "This intake session is already locked.";
+    return "This questionnaire is already locked.";
   }
 
   if (completion.totalQuestions === 0) {
-    return "The intake question bank is not ready for final submission.";
+    return "The questionnaire question bank is not ready for final submission.";
   }
 
   if (

@@ -179,7 +179,7 @@ export function validateChangeRequestTargetContext({
     input.targetType === "INTAKE_QUESTION"
   ) {
     if (!context.intakeLocked) {
-      return "Intake Change Requests are available only after Final Submit locks the intake.";
+      return "Change Requests are available only after Final Submit locks the questionnaire.";
     }
 
     if (input.targetType === "INTAKE_QUESTION") {
@@ -188,7 +188,7 @@ export function validateChangeRequestTargetContext({
       );
 
       if (!section) {
-        return "Choose a valid intake section.";
+        return "Choose a valid questionnaire section.";
       }
 
       const question = section.questions.find(
@@ -196,7 +196,7 @@ export function validateChangeRequestTargetContext({
       );
 
       if (!question) {
-        return "Choose a valid intake question.";
+        return "Choose a valid questionnaire question.";
       }
     }
 
@@ -206,7 +206,7 @@ export function validateChangeRequestTargetContext({
       );
 
       if (!section) {
-        return "Choose a valid intake section.";
+        return "Choose a valid questionnaire section.";
       }
     }
   }
@@ -251,8 +251,8 @@ export function targetLabelForRequest({
     }
 
     return section
-      ? `Intake section: ${section.title}`
-      : `Intake section: ${request.sectionKey ?? "Unknown"}`;
+      ? `Questionnaire section: ${section.title}`
+      : `Questionnaire section: ${request.sectionKey ?? "Unknown"}`;
   }
 
   const question = section?.questions.find(
@@ -260,8 +260,8 @@ export function targetLabelForRequest({
   );
 
   return question
-    ? `Intake question: ${question.questionText}`
-    : `Intake question: ${request.questionId ?? "Unknown"}`;
+    ? `Questionnaire question: ${question.questionText}`
+    : `Questionnaire question: ${request.questionId ?? "Unknown"}`;
 }
 
 export function toChangeRequestCreatedAudit({

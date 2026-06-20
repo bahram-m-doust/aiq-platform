@@ -423,7 +423,7 @@ async function autosaveIntakeAnswerLegacy({
   });
 
   if (!profile) {
-    return errorResult("You do not have permission to answer this intake.");
+    return errorResult("You do not have permission to answer this questionnaire.");
   }
 
   const [session, questionRow] = await Promise.all([
@@ -432,11 +432,11 @@ async function autosaveIntakeAnswerLegacy({
   ]);
 
   if (!session || !questionRow) {
-    return errorResult("The intake answer could not be saved.");
+    return errorResult("The answer could not be saved.");
   }
 
   if (session.status === "LOCKED" || session.lockedAt) {
-    return errorResult("This intake session is locked and cannot be edited.");
+    return errorResult("This questionnaire is locked and cannot be edited.");
   }
 
   const access = await getIntakeAccessForProfile({
@@ -445,7 +445,7 @@ async function autosaveIntakeAnswerLegacy({
   });
 
   if (!access) {
-    return errorResult("You do not have permission to answer this intake.");
+    return errorResult("You do not have permission to answer this questionnaire.");
   }
 
   const sections = await getIntakeSectionsWithQuestions();
@@ -454,7 +454,7 @@ async function autosaveIntakeAnswerLegacy({
   );
 
   if (!question) {
-    return errorResult("The intake question could not be found.");
+    return errorResult("The questionnaire question could not be found.");
   }
 
   const normalizedValue = normalizeIntakeAnswerValue({
@@ -497,7 +497,7 @@ async function autosaveIntakeAnswerSingle({
   authUserId: string;
 }): Promise<AutosaveIntakeAnswerResult> {
   if (!input.sessionId || !input.questionId) {
-    return errorResult("The intake answer could not be saved.");
+    return errorResult("The answer could not be saved.");
   }
 
   if (Date.now() < fastAutosaveRpcRetryAt) {
@@ -523,7 +523,7 @@ async function autosaveIntakeAnswerSingle({
       error,
       metadata: { sessionId: input.sessionId, questionId: input.questionId },
     });
-    return errorResult("The intake answer could not be saved.");
+    return errorResult("The answer could not be saved.");
   }
 
   fastAutosaveRpcRetryAt = 0;
@@ -531,7 +531,7 @@ async function autosaveIntakeAnswerSingle({
   const row = firstFastAutosaveRow(data);
 
   if (!row?.ok) {
-    return errorResult(row?.message ?? "The intake answer could not be saved.");
+    return errorResult(row?.message ?? "The answer could not be saved.");
   }
 
   if (
@@ -542,7 +542,7 @@ async function autosaveIntakeAnswerSingle({
     !row.actor_profile_id ||
     typeof row.completion_percent !== "number"
   ) {
-    return errorResult("The intake answer could not be saved.");
+    return errorResult("The answer could not be saved.");
   }
 
   const question: IntakeQuestion = {
@@ -653,7 +653,7 @@ export async function autosaveIntakeAnswers({
 
   if (!input.sessionId || answers.length === 0) {
     return batchErrorResult(
-      "The intake answer could not be saved.",
+      "The answer could not be saved.",
       failedQuestionIds,
     );
   }
@@ -698,7 +698,7 @@ export async function autosaveIntakeAnswers({
       },
     });
     return batchErrorResult(
-      "The intake answer could not be saved.",
+      "The answer could not be saved.",
       failedQuestionIds,
     );
   }
@@ -710,14 +710,14 @@ export async function autosaveIntakeAnswers({
 
   if (failedRow) {
     return batchErrorResult(
-      failedRow.message ?? "The intake answer could not be saved.",
+      failedRow.message ?? "The answer could not be saved.",
       failedQuestionIds,
     );
   }
 
   if (rows.length !== answers.length) {
     return batchErrorResult(
-      "The intake answer could not be saved.",
+      "The answer could not be saved.",
       failedQuestionIds,
     );
   }
@@ -737,7 +737,7 @@ export async function autosaveIntakeAnswers({
       typeof row.completion_percent !== "number"
     ) {
       return batchErrorResult(
-        "The intake answer could not be saved.",
+        "The answer could not be saved.",
         failedQuestionIds,
       );
     }
@@ -819,7 +819,7 @@ export async function autosaveIntakeAnswer({
     result.answers[0];
 
   if (!savedAnswer) {
-    return errorResult("The intake answer could not be saved.");
+    return errorResult("The answer could not be saved.");
   }
 
   return {

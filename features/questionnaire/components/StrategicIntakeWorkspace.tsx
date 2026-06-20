@@ -27,9 +27,9 @@ function IntakeEmptyState() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Strategic Intake is awaiting its question bank</CardTitle>
+        <CardTitle>Strategic Questionnaire is awaiting its question bank</CardTitle>
         <CardDescription>
-          The six intake sections are loaded from the database. Questions will
+          The six questionnaire sections are loaded from the database. Questions will
           appear here once the approved question bank is imported.
         </CardDescription>
       </CardHeader>
@@ -76,7 +76,7 @@ export function StrategicIntakeWorkspace({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Strategic Brand Intake</CardTitle>
+          <CardTitle>Strategic Brand Questionnaire</CardTitle>
           <CardDescription>
             Provide the strategic foundation for {data.access.brandName}. Every
             question is required before Final Submit becomes available.

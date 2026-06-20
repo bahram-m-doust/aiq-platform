@@ -13,7 +13,7 @@ function ProgressBar({ value }: { value: number }) {
 
 export function IntakeProgress({ completion }: { completion: IntakeCompletion }) {
   return (
-    <section className="space-y-4" aria-label="Intake progress">
+    <section className="space-y-4" aria-label="Questionnaire progress">
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3 text-sm">
           <span className="font-medium">Total completion</span>

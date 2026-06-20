@@ -158,7 +158,7 @@ describe("change request validation", () => {
         context: { ...options, intakeLocked: false },
       }),
     ).toBe(
-      "Intake Change Requests are available only after Final Submit locks the intake.",
+      "Change Requests are available only after Final Submit locks the questionnaire.",
     );
 
     expect(
@@ -213,7 +213,7 @@ describe("change request audit and labels", () => {
         sections: [section],
         modules: options.modules,
       }),
-    ).toBe("Intake question: What should be corrected?");
+    ).toBe("Questionnaire question: What should be corrected?");
   });
 });
 
@@ -222,7 +222,7 @@ describe("change request components", () => {
     render(<ChangeRequestCreateForm options={options} />);
 
     expect(screen.getByText("Create Change Request")).toBeVisible();
-    expect(screen.getAllByText("Locked intake section")[0]).toBeVisible();
+    expect(screen.getAllByText("Locked questionnaire section")[0]).toBeVisible();
     // Reason and Comment were merged into a single Comment field.
     expect(screen.queryByLabelText("Reason")).toBeNull();
     expect(screen.getByLabelText("Comment")).toBeVisible();

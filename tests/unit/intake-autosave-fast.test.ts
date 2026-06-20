@@ -210,9 +210,9 @@ describe("fast intake autosave", () => {
   });
 
   it.each([
-    "This intake session is locked and cannot be edited.",
-    "You do not have permission to answer this intake.",
-    "The intake question could not be found.",
+    "This questionnaire is locked and cannot be edited.",
+    "You do not have permission to answer this questionnaire.",
+    "The questionnaire question could not be found.",
   ])("returns RPC validation errors without scheduling audit: %s", async (message) => {
     setupRpc(() => ({
       data: [
@@ -247,7 +247,7 @@ describe("fast intake autosave", () => {
 
     await expect(autosaveBatch()).resolves.toEqual({
       ok: false,
-      message: "The intake answer could not be saved.",
+      message: "The answer could not be saved.",
       failedQuestionIds: ["question-1", "question-2"],
     });
     expect(mockedLogServerError).toHaveBeenCalledWith(
@@ -297,7 +297,7 @@ describe("fast intake autosave", () => {
 
     await expect(autosave()).resolves.toEqual({
       ok: false,
-      message: "You do not have permission to answer this intake.",
+      message: "You do not have permission to answer this questionnaire.",
     });
     expect(mockedLogServerError).not.toHaveBeenCalledWith(
       expect.objectContaining({
@@ -318,7 +318,7 @@ describe("fast intake autosave", () => {
 
     await expect(autosave()).resolves.toEqual({
       ok: false,
-      message: "You do not have permission to answer this intake.",
+      message: "You do not have permission to answer this questionnaire.",
     });
     expect(mockedLogServerError).not.toHaveBeenCalledWith(
       expect.objectContaining({

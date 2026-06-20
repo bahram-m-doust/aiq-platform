@@ -22,8 +22,8 @@ function IntakeBuilderMigrationNotice() {
         </h2>
         <p className="mt-2 text-muted-foreground">
           The application code is ready, but the database does not yet have the
-          intake builder columns. Run the migration below in Supabase SQL Editor,
-          then refresh this page.
+          questionnaire builder columns. Run the migration below in Supabase SQL
+          Editor, then refresh this page.
         </p>
       </div>
       <pre className="overflow-x-auto rounded-lg border border-border bg-background p-3 font-mono text-xs text-muted-foreground">
@@ -88,8 +88,9 @@ export default async function AdminIntakeBuilderPage() {
         </div>
 
         <div className="rounded-lg border border-border bg-card p-4 text-sm leading-6 text-muted-foreground">
-          Manage the intake question bank for future client sessions. Archive
-          hides sections or questions from new intake screens without deleting
+          Manage the questionnaire question bank for future client sessions.
+          Archive hides sections or questions from new questionnaire screens
+          without deleting
           existing answers, locked snapshots, or audit history.
         </div>
 

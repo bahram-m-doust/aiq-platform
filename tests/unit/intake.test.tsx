@@ -259,7 +259,7 @@ describe("intake completion", () => {
           completionPercent: 100,
         }),
       }),
-    ).toBe("This intake session is already locked.");
+    ).toBe("This questionnaire is already locked.");
 
     expect(
       validateFinalSubmitCompletion({
@@ -270,7 +270,7 @@ describe("intake completion", () => {
           completionPercent: 0,
         }),
       }),
-    ).toBe("The intake question bank is not ready for final submission.");
+    ).toBe("The questionnaire question bank is not ready for final submission.");
   });
 
   it("builds ordered intake snapshots and safe final-submit audit metadata", () => {
@@ -618,7 +618,7 @@ describe("intake UI components", () => {
       <LockedIntakeView data={intakeData()} selectedSectionKey="COMPANY" />,
     );
 
-    expect(screen.getByText("Strategic Intake is locked")).toBeVisible();
+    expect(screen.getByText("Strategic Questionnaire is locked")).toBeVisible();
     expect(screen.getByText("Strategic answer")).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Request a Change" }),
