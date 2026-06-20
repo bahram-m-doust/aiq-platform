@@ -295,12 +295,14 @@ export function SectionQuestionnaire({
         <div className="sticky top-0 z-30 mb-9">
           <div
             className={cn(
-              // Border width + padding stay constant so toggling the stuck
-              // state never shifts layout — only the frame/shadow fade in.
-              "rounded-xl border transition-[background-color,border-color,box-shadow] duration-200",
+              // While stuck, fade in only a white backdrop + drop shadow (no box
+              // border) so content scrolling underneath stays covered — the gray
+              // baseline already draws the bottom edge, and there are no side
+              // borders.
+              "transition-[background-color,box-shadow] duration-200",
               tabBarStuck
-                ? "border-[var(--bv-line)] bg-white shadow-[0_14px_32px_-22px_rgba(15,15,20,0.55)]"
-                : "border-transparent bg-transparent",
+                ? "bg-white shadow-[0_14px_32px_-22px_rgba(15,15,20,0.55)]"
+                : "bg-transparent",
             )}
           >
             <div className="overflow-x-auto scrollbar-hide">
