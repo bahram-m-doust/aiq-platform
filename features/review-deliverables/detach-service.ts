@@ -6,7 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 type DeliverableTable =
   | "city_model_district_files"
   | "stakeholder_interview_reports"
-  | "futures_research_reports";
+  | "futures_research_reports"
+  | "aesthetics_deliverables";
 
 // knowledge_files.file_id has no ON DELETE action, so a files-row delete with a
 // surviving RAG reference raises an FK violation mid-flow. Clear the RAG rows

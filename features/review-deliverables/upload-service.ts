@@ -2,18 +2,20 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { after } from "next/server";
-
 import { buildStoragePath } from "@/features/documents/schema";
 import { uploadPrivateFile } from "@/features/documents/storage";
 import {
   processPendingStorageCleanups,
   removePrivateFileOrQueue,
 } from "@/features/documents/storage-cleanup";
-import { generateAndCacheDeliverableMarkdown } from "@/features/review-content/resolve";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-type ReviewWorkflow = "STAKEHOLDER_INTERVIEWS" | "FUTURES_RESEARCH";
+type ReviewWorkflow =
+  | "STAKEHOLDER_INTERVIEWS"
+  | "FUTURES_RESEARCH"
+  | "VISUAL_DIRECTION"
+  | "COLOR_TYPE_SYSTEM"
+  | "ASSET_LIBRARY";
 
 export async function uploadReviewDeliverable({
   workflow,
@@ -77,28 +79,14 @@ export async function uploadReviewDeliverable({
   }
   await processPendingStorageCleanups(undefined, 3);
 
-  // Structure the uploaded report into markdown with headings for the viewer +
-  // RAG. The storyline is interactive HTML, not a text deliverable — skip it.
-  // This runs an LLM pass (up to ~60s) and is internally non-fatal, so defer it
-  // past the response instead of blocking the upload request. after() runs it
-  // post-response; the fallback covers contexts where after() is unavailable.
-  if (!storyline) {
-    const cacheMarkdown = () =>
-      generateAndCacheDeliverableMarkdown({
-        fileId,
-        brandId,
-        subjectType: workflow,
-        subjectId: reportId,
-        storagePath,
-        mimeType,
-        originalName: file.name,
-      });
-    try {
-      after(cacheMarkdown);
-    } catch {
-      void cacheMarkdown();
-    }
-  }
+  // Markdown is intentionally NOT structured on the upload request. The LLM pass
+  // (structureTextAsMarkdown, bounded to 60s) used to run here via after(), but
+  // on Netlify's serverless runtime after() callbacks are awaited before the
+  // function can return — so a slow LLM call blocked the upload response past the
+  // function timeout and surfaced as an unhandled 500. The viewer regenerates
+  // markdown lazily on first view (resolveDeliverableMarkdown caches RAW text)
+  // and the RAG sync upgrades it to LLM-structured markdown — neither blocks this
+  // upload request.
 
   return reportId;
 }

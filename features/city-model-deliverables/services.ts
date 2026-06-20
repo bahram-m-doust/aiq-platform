@@ -2,13 +2,10 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { after } from "next/server";
-
 import { buildStoragePath } from "@/features/documents/schema";
 import { uploadPrivateFile } from "@/features/documents/storage";
 import { removePrivateFileOrQueue } from "@/features/documents/storage-cleanup";
 import { removeFileRecordAndStorage } from "@/features/review-deliverables/detach-service";
-import { generateAndCacheDeliverableMarkdown } from "@/features/review-content/resolve";
 import { DomainError } from "@/lib/errors";
 import { logServerError } from "@/lib/logging/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -81,23 +78,14 @@ export async function uploadCityModelDistrictFile({
     }
   }
 
-  // LLM markdown structuring (up to ~60s, internally non-fatal): defer past the
-  // response so it doesn't block the upload. Mirrors uploadReviewDeliverable.
-  const cacheMarkdown = () =>
-    generateAndCacheDeliverableMarkdown({
-      fileId,
-      brandId,
-      subjectType: "CITY_MODEL_DISTRICT",
-      subjectId: districtKey,
-      storagePath,
-      mimeType: "application/pdf",
-      originalName: file.name,
-    });
-  try {
-    after(cacheMarkdown);
-  } catch {
-    void cacheMarkdown();
-  }
+  // Markdown is intentionally NOT structured on the upload request. The LLM pass
+  // (structureTextAsMarkdown, bounded to 60s) used to run here via after(), but
+  // on Netlify's serverless runtime after() callbacks are awaited before the
+  // function can return — so a slow LLM call blocked the upload response past the
+  // function timeout and surfaced as an unhandled 500. The viewer regenerates
+  // markdown lazily on first view (resolveDeliverableMarkdown caches RAW text)
+  // and the RAG sync upgrades it to LLM-structured markdown — neither blocks this
+  // upload request.
 }
 
 export async function setCityModelDistrictStatus({

@@ -2,7 +2,12 @@ import {
   reviewSubjectTypes,
   type ReviewSubjectType,
 } from "@/features/review-comments/types";
-import { ROUTES, modulePath } from "@/lib/routes";
+import {
+  ROUTES,
+  aestheticsDeliverablePath,
+  aestheticsKindSlugs,
+  modulePath,
+} from "@/lib/routes";
 
 const maxCommentLength = 4000;
 
@@ -44,6 +49,11 @@ export function subjectPathname(
       return ROUTES.brainRoadmapFuturesResearch;
     case "CITY_MODEL_DISTRICT":
       return `${ROUTES.brainRoadmapCityModel}/${subjectId}`;
+    case "VISUAL_DIRECTION":
+    case "COLOR_TYPE_SYSTEM":
+    case "ASSET_LIBRARY":
+      // One review page per kind; the kind (not the row id) selects the page.
+      return aestheticsDeliverablePath(aestheticsKindSlugs[subjectType]);
     case "MODULE":
       return modulePath(subjectId);
     case "BRAND_DOC":

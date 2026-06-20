@@ -156,6 +156,12 @@ export default async function AdminPage() {
                   Manual plan grant
                 </Link>
               </Button>
+              <Button asChild className="justify-start gap-2" size="lg">
+                <Link href="/admin/brands">
+                  <Building2Icon className="size-4" />
+                  Brands &amp; Members
+                </Link>
+              </Button>
               <Button
                 asChild
                 className="justify-start gap-2"

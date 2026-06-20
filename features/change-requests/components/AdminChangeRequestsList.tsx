@@ -34,7 +34,10 @@ export function AdminChangeRequestsList({
   return (
     <div className="space-y-4">
       {requests.map((request) => (
-        <Card key={request.id}>
+        // The id + scroll margin let the notification deep-link
+        // (/admin/change-requests#cr-<id>) jump straight to this card without
+        // it hiding under the sticky admin bar.
+        <Card key={request.id} id={`cr-${request.id}`} className="scroll-mt-24">
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
@@ -64,19 +67,18 @@ export function AdminChangeRequestsList({
               </div>
             </dl>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg border border-border p-3">
-                <h2 className="text-sm font-medium">Reason</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {request.reason ?? "No reason recorded"}
+            <div className="rounded-lg border border-border p-3">
+              <h2 className="text-sm font-medium">Comment</h2>
+              <p className="mt-2 text-sm leading-6 whitespace-pre-wrap text-muted-foreground">
+                {request.comment}
+              </p>
+              {/* Legacy rows captured a separate Reason. Surface it only when it
+                  adds something the merged Comment doesn't already say. */}
+              {request.reason && request.reason !== request.comment ? (
+                <p className="mt-3 border-t border-border pt-2 text-xs text-muted-foreground">
+                  <span className="font-medium">Reason:</span> {request.reason}
                 </p>
-              </div>
-              <div className="rounded-lg border border-border p-3">
-                <h2 className="text-sm font-medium">Comment</h2>
-                <p className="mt-2 text-sm leading-6 whitespace-pre-wrap text-muted-foreground">
-                  {request.comment}
-                </p>
-              </div>
+              ) : null}
             </div>
 
             <ChangeRequestReviewForm request={request} />

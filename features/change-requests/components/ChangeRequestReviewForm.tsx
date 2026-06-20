@@ -137,15 +137,6 @@ export function ChangeRequestReviewForm({
           </DialogHeader>
 
           <div className="space-y-4">
-            {request.reason ? (
-              <div className="rounded-lg border border-border bg-muted/40 p-3">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Reason
-                </p>
-                <p className="mt-1 text-sm leading-6">{request.reason}</p>
-              </div>
-            ) : null}
-
             <div className="rounded-lg border border-border bg-muted/40 p-3">
               <p className="text-xs font-medium text-muted-foreground">
                 Comment
@@ -153,6 +144,13 @@ export function ChangeRequestReviewForm({
               <p className="mt-1 whitespace-pre-wrap text-sm leading-6">
                 {request.comment}
               </p>
+              {/* Reason was merged into Comment; only show it for legacy rows
+                  where it still carries distinct information. */}
+              {request.reason && request.reason !== request.comment ? (
+                <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
+                  <span className="font-medium">Reason:</span> {request.reason}
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-2">

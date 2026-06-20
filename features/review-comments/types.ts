@@ -5,6 +5,9 @@ export const reviewSubjectTypes = [
   "STAKEHOLDER_INTERVIEWS",
   "FUTURES_RESEARCH",
   "CITY_MODEL_DISTRICT",
+  "VISUAL_DIRECTION",
+  "COLOR_TYPE_SYSTEM",
+  "ASSET_LIBRARY",
   "MODULE",
   "BRAND_DOC",
 ] as const;
@@ -16,6 +19,9 @@ export const reviewSubjectLabels: Record<ReviewSubjectType, string> = {
   STAKEHOLDER_INTERVIEWS: "Stakeholder Interviews",
   FUTURES_RESEARCH: "Futures Research",
   CITY_MODEL_DISTRICT: "City Model",
+  VISUAL_DIRECTION: "Visual Direction",
+  COLOR_TYPE_SYSTEM: "Color & Type System",
+  ASSET_LIBRARY: "Asset Library",
   MODULE: "Module",
   BRAND_DOC: "Brand Document",
 };

@@ -61,6 +61,19 @@ export async function verifyReviewSubject({
         district_key: district.key,
       });
     }
+    case "VISUAL_DIRECTION":
+    case "COLOR_TYPE_SYSTEM":
+    case "ASSET_LIBRARY":
+      // The subject id is the deliverable row id; ownership means the row
+      // belongs to this brand and carries the matching kind.
+      return (
+        isUuid(subjectId) &&
+        rowExists("aesthetics_deliverables", {
+          id: subjectId,
+          brand_id: brandId,
+          kind: subjectType,
+        })
+      );
     case "MODULE":
       return (
         isUuid(subjectId) &&
@@ -106,6 +119,10 @@ export async function getReviewSubjectBrand({
       return brandOfRow("stakeholder_interview_reports", subjectId);
     case "FUTURES_RESEARCH":
       return brandOfRow("futures_research_reports", subjectId);
+    case "VISUAL_DIRECTION":
+    case "COLOR_TYPE_SYSTEM":
+    case "ASSET_LIBRARY":
+      return brandOfRow("aesthetics_deliverables", subjectId);
     case "MODULE":
       return brandOfRow("brand_modules", subjectId);
     case "CITY_MODEL_DISTRICT":

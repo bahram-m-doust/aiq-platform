@@ -87,7 +87,7 @@ function request(overrides: Partial<ChangeRequestRecord> = {}): ChangeRequestRec
 }
 
 describe("change request validation", () => {
-  it("accepts intake question input and requires reason/comment", () => {
+  it("accepts intake question input and requires a comment", () => {
     const result = validateCreateChangeRequestFormData(
       formData({
         target_type: "INTAKE_QUESTION",
@@ -107,15 +107,18 @@ describe("change request validation", () => {
       comment: "Please correct the locked answer.",
     });
 
+    // Reason and Comment were merged into a single Comment field, so a legacy
+    // Reason value is still parsed when present but is no longer required —
+    // only the Comment is mandatory.
     expect(
       validateCreateChangeRequestFormData(
         formData({
           target_type: "MODULE",
           module_id: "module-1",
-          comment: "Missing reason",
+          reason: "Missing comment",
         }),
       ).error,
-    ).toBe("Enter the reason for this request.");
+    ).toBe("Enter the requested correction details.");
   });
 
   it("validates review status and role permissions", () => {
@@ -220,7 +223,8 @@ describe("change request components", () => {
 
     expect(screen.getByText("Create Change Request")).toBeVisible();
     expect(screen.getAllByText("Locked intake section")[0]).toBeVisible();
-    expect(screen.getByLabelText("Reason")).toBeVisible();
+    // Reason and Comment were merged into a single Comment field.
+    expect(screen.queryByLabelText("Reason")).toBeNull();
     expect(screen.getByLabelText("Comment")).toBeVisible();
   });
 

@@ -170,26 +170,15 @@ export function ChangeRequestCreateForm({
               <input name="module_id" type="hidden" value="" />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="reason">Reason</Label>
-                <Textarea
-                  id="reason"
-                  name="reason"
-                  placeholder="Summarize why this correction is required"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="comment">Comment</Label>
-                <Textarea
-                  id="comment"
-                  name="comment"
-                  placeholder="Describe the requested correction for review"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="comment">Comment</Label>
+              <Textarea
+                id="comment"
+                name="comment"
+                placeholder="Describe the requested correction and why it's needed"
+                required
+                rows={4}
+              />
             </div>
 
             <div className="flex justify-end">

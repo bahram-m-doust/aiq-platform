@@ -70,22 +70,13 @@ export function validateCreateChangeRequestFormData(
   const sectionKey = formString(formData, "section_key");
   const questionTarget = formString(formData, "question_target");
   const moduleId = formString(formData, "module_id");
+  // Reason and Comment were merged into a single Comment field. Reason is still
+  // accepted (older clients / legacy rows) but is no longer required.
   const reason = formString(formData, "reason");
   const comment = formString(formData, "comment");
 
   if (!isChangeRequestTargetType(targetType)) {
     return { data: null, error: "Choose a valid request target." };
-  }
-
-  if (!reason) {
-    return { data: null, error: "Enter the reason for this request." };
-  }
-
-  if (reason.length > maxReasonLength) {
-    return {
-      data: null,
-      error: `Reason must be ${maxReasonLength} characters or fewer.`,
-    };
   }
 
   if (!comment) {
@@ -96,6 +87,13 @@ export function validateCreateChangeRequestFormData(
     return {
       data: null,
       error: `Comment must be ${maxCommentLength} characters or fewer.`,
+    };
+  }
+
+  if (reason.length > maxReasonLength) {
+    return {
+      data: null,
+      error: `Reason must be ${maxReasonLength} characters or fewer.`,
     };
   }
 

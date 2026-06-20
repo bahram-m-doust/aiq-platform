@@ -58,3 +58,35 @@ export async function setReviewReportStatus({
       .maybeSingle(),
   );
 }
+
+// Aesthetics deliverables share one table keyed by `kind`, so the status update
+// is scoped by (brand_id, kind) rather than brand_id alone. Same TOCTOU guard.
+export async function setAestheticsDeliverableStatus({
+  brandId,
+  kind,
+  profileId,
+  status,
+}: {
+  brandId: string;
+  kind: string;
+  profileId: string;
+  status: "APPROVED" | "CHANGES_REQUESTED";
+}): Promise<void> {
+  const now = new Date().toISOString();
+  const patch =
+    status === "APPROVED"
+      ? { status, approved_by: profileId, approved_at: now, updated_at: now }
+      : { status, approved_by: null, approved_at: null, updated_at: now };
+  const admin = createAdminClient();
+
+  await requireMutationResult(
+    admin
+      .from("aesthetics_deliverables")
+      .update(patch)
+      .eq("brand_id", brandId)
+      .eq("kind", kind)
+      .in("status", ["CLIENT_REVIEW", "CHANGES_REQUESTED"])
+      .select("id")
+      .maybeSingle(),
+  );
+}

@@ -11,6 +11,7 @@ export const ROUTES = {
   brainRoadmapStakeholderInterviews:
     "/integrated-brand-brain/roadmap/stakeholder-interviews",
   brainRoadmapCityModel: "/integrated-brand-brain/roadmap/city-model",
+  brainRoadmapAesthetics: "/integrated-brand-brain/roadmap/aesthetics",
   agents: "/agents",
   documents: "/documents",
   settings: "/settings",
@@ -27,6 +28,20 @@ export const agentPath = (slug: string) => `${ROUTES.agents}/${slug}`;
 export const modulePath = (moduleId: string) => `${ROUTES.modules}/${moduleId}`;
 export const questionnaireSectionPath = (sectionKey: string) =>
   `${ROUTES.questionnaire}/${sectionKey.toLowerCase()}`;
+
+// Aesthetics (Phase 3) deliverables — one client review page per kind. The
+// slug ↔ kind mapping lives here as the single source of truth shared by the
+// feature module and the review-comments deep-link builder.
+export const aestheticsKindSlugs = {
+  VISUAL_DIRECTION: "visual-direction",
+  COLOR_TYPE_SYSTEM: "color-type-system",
+  ASSET_LIBRARY: "asset-library",
+} as const;
+
+export type AestheticsKind = keyof typeof aestheticsKindSlugs;
+
+export const aestheticsDeliverablePath = (slug: string) =>
+  `${ROUTES.brainRoadmapAesthetics}/${slug}`;
 
 // First URL segment of every page rendered inside the `(app)` shell.
 // Route groups don't appear in the pathname, so this allowlist is how the

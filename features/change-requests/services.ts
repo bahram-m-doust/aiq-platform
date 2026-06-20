@@ -161,11 +161,13 @@ export async function createChangeRequest({
       brandId: options.brandId,
       audience: "INTERNAL_TEAM",
       type: auditAction,
-      title: request.sectionKey
-        ? `New change request: ${request.sectionKey}`
-        : "New change request",
-      body: request.reason,
-      linkPath: "/admin/change-requests",
+      // Lead with the brand name so reviewers can tell at a glance which brand
+      // the request belongs to straight from the notification bar.
+      title: `New change request · ${options.brandName}`,
+      body: request.comment,
+      // Deep-link to the specific request inside the review queue (the list
+      // tags each card with this anchor id).
+      linkPath: `/admin/change-requests#cr-${request.id}`,
       subjectType: "CHANGE_REQUEST",
       subjectId: request.id,
     });
