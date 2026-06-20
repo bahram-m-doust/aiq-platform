@@ -169,8 +169,8 @@ export function SectionQuestionnaire({
 
   // Sticky tab bar: a zero-height sentinel sits where the bar starts. Once it
   // scrolls past the viewport top the bar is "stuck", and we wrap it in a
-  // compact floating header so the section tabs (and their answered/total
-  // progress) stay reachable while scrolling a long section.
+  // compact floating header so the section tabs stay reachable while
+  // scrolling a long section.
   const stickySentinelRef = useRef<HTMLDivElement>(null);
   const [tabBarStuck, setTabBarStuck] = useState(false);
 
@@ -372,18 +372,9 @@ export function SectionQuestionnaire({
                 {allSections.map((item) => {
                   const isActive = item.id === activeSectionId;
                   const href = questionnaireSectionPath(item.key);
-                  const questionIds = item.questions.map(
-                    (question) => question.id,
-                  );
-                  const answered = questionIds.filter((id) =>
-                    markedDoneIds
-                      ? isIntakeAnswerComplete(displayedAnswers[id] ?? null) && markedDoneIds.has(id)
-                      : isIntakeAnswerComplete(displayedAnswers[id] ?? null),
-                  ).length;
-
                   return (
                     <Link
-                      aria-label={`${item.title} ${answered}/${item.questions.length}`}
+                      aria-label={item.title}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
                         "relative z-10 inline-flex h-16 flex-auto items-center justify-center gap-2 rounded-md px-2.5 text-sm font-medium whitespace-nowrap outline-none transition-colors duration-200",
@@ -400,16 +391,6 @@ export function SectionQuestionnaire({
                       ref={isActive ? activeTabRef : undefined}
                     >
                       <span>{item.title}</span>
-                      <span
-                        className={cn(
-                          "shrink-0 font-mono text-[10px] font-medium tabular-nums",
-                          isActive
-                            ? "text-[var(--bv-ink-3)]"
-                            : "text-muted-foreground/70",
-                        )}
-                      >
-                        {answered}/{item.questions.length}
-                      </span>
                     </Link>
                   );
                 })}

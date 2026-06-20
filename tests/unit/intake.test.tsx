@@ -867,7 +867,7 @@ describe("intake UI components", () => {
     ).toBeNull();
   });
 
-  it("shows section completion counts in questionnaire tabs", () => {
+  it("renders questionnaire tabs as section titles without progress counts", () => {
     const nextSection: IntakeSectionWithQuestions = {
       ...section,
       id: "section-2",
@@ -899,12 +899,11 @@ describe("intake UI components", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("link", { name: /Company\s+1\/2/ }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: /Audience\s+0\/1/ }),
-    ).toBeVisible();
+    // Tabs show only the section title — the answered/total count was removed.
+    const companyTab = screen.getByRole("link", { name: "Company" });
+    expect(companyTab).toBeVisible();
+    expect(companyTab.textContent).not.toMatch(/\d/);
+    expect(screen.getByRole("link", { name: "Audience" })).toBeVisible();
   });
 
   it("routes review and submit from the last section into submit review mode", () => {
