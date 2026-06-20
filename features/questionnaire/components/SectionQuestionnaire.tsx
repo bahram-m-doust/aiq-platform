@@ -303,15 +303,16 @@ export function SectionQuestionnaire({
                 : "border-transparent bg-transparent",
             )}
           >
-            <div className="overflow-x-auto rounded-lg bg-muted p-1.5 scrollbar-hide">
+            <div className="overflow-x-auto scrollbar-hide">
               <div
-                className="relative flex min-w-max w-full items-center gap-0.5"
+                className="relative flex min-w-max w-full items-center"
                 ref={tabListRef}
               >
+                {/* Sliding active-tab underline (primary) per the Figma design. */}
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "pointer-events-none absolute inset-y-0 left-0 z-0 rounded-md border border-transparent bg-background shadow-sm",
+                    "pointer-events-none absolute bottom-0 left-0 z-[1] h-[2px] rounded-full bg-primary",
                     animateTabIndicator
                       ? "transition-[transform,width,opacity] duration-500"
                       : "transition-none",
@@ -338,8 +339,8 @@ export function SectionQuestionnaire({
                       aria-label={`${item.title} ${answered}/${item.questions.length}`}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "relative z-10 inline-flex h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md border border-transparent px-2 text-sm font-medium whitespace-nowrap outline-none transition-colors duration-200",
-                        "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                        "relative z-10 inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-4 text-xs font-medium whitespace-nowrap outline-none transition-colors duration-200",
+                        "focus-visible:ring-[3px] focus-visible:ring-ring/50",
                         isActive
                           ? "text-foreground"
                           : "text-muted-foreground hover:text-foreground",
@@ -351,15 +352,13 @@ export function SectionQuestionnaire({
                       }
                       ref={isActive ? activeTabRef : undefined}
                     >
-                      <span className="inline-flex w-full min-w-0 items-center justify-center gap-1 leading-5">
-                        <span className="truncate">{item.title}</span>
-                      </span>
+                      <span className="truncate">{item.title}</span>
                       <span
                         className={cn(
-                          "shrink-0 font-mono text-[10px] font-medium leading-3",
+                          "shrink-0 font-mono text-[10px] font-medium tabular-nums",
                           isActive
                             ? "text-[var(--bv-ink-3)]"
-                            : "text-muted-foreground/75",
+                            : "text-muted-foreground/70",
                         )}
                       >
                         {answered}/{item.questions.length}
