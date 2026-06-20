@@ -27,6 +27,7 @@ import {
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
 import { QuestionRenderer } from "@/features/questionnaire/components/QuestionRenderer";
+import { ProgressSidePanel } from "@/features/questionnaire/components/ProgressSidePanel";
 import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import { useIntakeAutosaveQueue } from "@/features/questionnaire/components/useIntakeAutosaveQueue";
 import type {
@@ -266,7 +267,7 @@ export function SectionQuestionnaire({
       className="min-h-svh px-4 pb-6 pt-12 sm:px-6 sm:pb-8"
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
-      <div className="mx-auto max-w-[1057px]">
+      <div className="mx-auto max-w-[1057px] xl:mr-[280px]">
         <div className="mb-6 space-y-4">
           <Button asChild size="sm" variant="outline">
             <Link href={ROUTES.questionnaire}>
@@ -559,6 +560,55 @@ export function SectionQuestionnaire({
           </div>
         </div>
       </div>
+
+      {!locked && (() => {
+        const allQuestions = allSections.flatMap((s) => s.questions);
+        const panelTotalQuestions = allQuestions.length;
+        const panelTotalAnswered = allQuestions.filter((q) =>
+          isIntakeAnswerComplete(displayedAnswers[q.id] ?? null),
+        ).length;
+        const panelTotalCompleted = allQuestions.filter((q) => {
+          const hasValue = isIntakeAnswerComplete(displayedAnswers[q.id] ?? null);
+          return markedDoneIds
+            ? hasValue && markedDoneIds.has(q.id)
+            : hasValue;
+        }).length;
+        const panelPercent = panelTotalQuestions > 0
+          ? panelTotalCompleted >= panelTotalQuestions
+            ? 100
+            : Math.min(Math.round((panelTotalCompleted / panelTotalQuestions) * 100), 99)
+          : 0;
+        const panelSections = allSections.map((s) => {
+          const qs = s.questions;
+          return {
+            id: s.id,
+            key: s.key,
+            title: s.title,
+            totalQuestions: qs.length,
+            answeredQuestions: qs.filter((q) =>
+              isIntakeAnswerComplete(displayedAnswers[q.id] ?? null),
+            ).length,
+            completedQuestions: qs.filter((q) => {
+              const hasValue = isIntakeAnswerComplete(displayedAnswers[q.id] ?? null);
+              return markedDoneIds
+                ? hasValue && markedDoneIds.has(q.id)
+                : hasValue;
+            }).length,
+          };
+        });
+
+        return (
+          <ProgressSidePanel
+            completionPercent={panelPercent}
+            sections={panelSections}
+            sessionId={session.id}
+            showReview={false}
+            totalAnswered={panelTotalAnswered}
+            totalCompleted={panelTotalCompleted}
+            totalQuestions={panelTotalQuestions}
+          />
+        );
+      })()}
     </div>
   );
 }
