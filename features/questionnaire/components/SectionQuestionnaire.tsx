@@ -129,6 +129,24 @@ export function SectionQuestionnaire({
   const [animateTabIndicator, setAnimateTabIndicator] = useState(false);
   const [showErrors] = useState(autoValidate);
 
+  // Sticky tab bar: a zero-height sentinel sits where the bar starts. Once it
+  // scrolls past the viewport top the bar is "stuck", and we wrap it in a
+  // compact floating header so the section tabs (and their answered/total
+  // progress) stay reachable while scrolling a long section.
+  const stickySentinelRef = useRef<HTMLDivElement>(null);
+  const [tabBarStuck, setTabBarStuck] = useState(false);
+
+  useEffect(() => {
+    const sentinel = stickySentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setTabBarStuck(!entry.isIntersecting),
+      { threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     return () => {
       if (tabIndicatorFrameRef.current) {
@@ -221,7 +239,7 @@ export function SectionQuestionnaire({
           </Button>
         </div>
 
-        <div className="mb-9">
+        <div className="mb-5">
           <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
             Brand Research - Phase 01
           </span>
@@ -266,8 +284,25 @@ export function SectionQuestionnaire({
               </div>
             </Alert>
           )}
+        </div>
 
-          <div className="mt-5">
+        {/* Sentinel marks where the tab bar begins; when it scrolls past the
+            viewport top the sticky bar below switches to its compact state. */}
+        <div ref={stickySentinelRef} aria-hidden="true" className="h-0" />
+
+        {/* Sticky section tabs — stay pinned while scrolling a long section so
+            the user always knows where they are and can jump sections fast. */}
+        <div className="sticky top-0 z-30 mb-9">
+          <div
+            className={cn(
+              // Border width + padding stay constant so toggling the stuck
+              // state never shifts layout — only the frame/shadow fade in.
+              "rounded-xl border transition-[background-color,border-color,box-shadow] duration-200",
+              tabBarStuck
+                ? "border-[var(--bv-line)] bg-white shadow-[0_14px_32px_-22px_rgba(15,15,20,0.55)]"
+                : "border-transparent bg-transparent",
+            )}
+          >
             <div className="overflow-x-auto rounded-lg bg-muted p-1.5 scrollbar-hide">
               <div
                 className="relative flex min-w-max w-full items-center gap-0.5"

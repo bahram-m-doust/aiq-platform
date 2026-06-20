@@ -96,7 +96,10 @@ export default async function AppLayout({
             unreadCount={unreadCount}
             userName={profile.full_name ?? user.email ?? profile.email}
           />
-          <div className="flex-1 overflow-x-hidden p-4">{children}</div>
+          {/* overflow-x-clip (not hidden) prevents horizontal overflow without
+              establishing a scroll container, so descendant `position: sticky`
+              headers resolve against the document scroll. */}
+          <div className="flex-1 overflow-x-clip p-4">{children}</div>
         </SidebarInset>
       </BreadcrumbLabelsProvider>
     </SidebarProvider>
