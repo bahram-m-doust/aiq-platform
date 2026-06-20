@@ -1,6 +1,6 @@
 -- GENERATED FILE. DO NOT EDIT DIRECTLY.
 -- Source: numbered SQL files in supabase/migrations.
--- Latest migration: 0050_intake_answer_marked_done.sql
+-- Latest migration: 0051_brand_slogan_textarea.sql
 -- Regenerate with: npm run db:generate-bundles
 
 -- DESTRUCTIVE: this variant removes all public application data.
@@ -5213,6 +5213,19 @@ alter table public.intake_answers
 
 notify pgrst, 'reload schema';
 -- END 0050_intake_answer_marked_done.sql
+
+-- BEGIN 0051_brand_slogan_textarea.sql
+-- Brand Slogan was the only questionnaire question rendered as a single-line
+-- text input; every other question uses a multi-line textarea. Align it with
+-- the rest so the field renders the same component. Only flips the legacy
+-- 'text' value, leaving any other input type untouched.
+update public.questions
+  set input_type = 'textarea'
+  where key = 'BRAND_SLOGAN'
+    and input_type = 'text';
+
+notify pgrst, 'reload schema';
+-- END 0051_brand_slogan_textarea.sql
 
 -- Keep server-side Supabase access explicit after fresh schema creation.
 grant all on all tables in schema public to service_role;

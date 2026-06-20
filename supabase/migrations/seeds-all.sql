@@ -81,7 +81,7 @@ join (values
     ('COMPANY', 'BRAND_PURPOSE', 'Brand Purpose', 'Define the underlying reason your brand exists beyond making profit, such as the social or emotional impact it aims to have.', 'textarea', 9),
     ('COMPANY', 'BRAND_VISION', 'Brand Vision', 'Express the vision statement for brand, describing the ideal future state the company aims to achieve.', 'textarea', 10),
     ('COMPANY', 'BRAND_MISSION', 'Brand Mission', 'State the specific mission statement for brand—its purpose and objectives within the broader business context.', 'textarea', 11),
-    ('COMPANY', 'BRAND_SLOGAN', 'Brand Slogan', 'Write a concise and memorable slogan that captures the brand’s promise, emotional impact, or key differentiator in a few powerful words.', 'text', 12),
+    ('COMPANY', 'BRAND_SLOGAN', 'Brand Slogan', 'Write a concise and memorable slogan that captures the brand’s promise, emotional impact, or key differentiator in a few powerful words.', 'textarea', 12),
     ('COMPANY', 'BRAND_STRATEGIC_RECOURSES', 'Brand Strategic Recourses', 'Identify key resources (e.g., human, financial, technological) that your brand relies on to execute its strategy.', 'textarea', 13),
     ('COMPANY', 'KEY_SUCCESS_FACTORS', 'Key Success Factors', 'Identify the critical factors that determine success for your brand or business (e.g., product quality, customer satisfaction, innovation).', 'textarea', 14),
     ('COMPANY', 'CURRENT_REVENUE_MODEL', 'Current Revenue Model', 'Describe the current revenue streams of your brand—how it generates income through sales, subscriptions, services, or partnerships.', 'textarea', 15),
