@@ -308,11 +308,16 @@ export function SectionQuestionnaire({
                 className="relative flex min-w-max w-full items-center"
                 ref={tabListRef}
               >
-                {/* Sliding active-tab underline (primary) per the Figma design. */}
+                {/* Figma: full-width sidebar-border baseline, with the active
+                    tab marked by a sliding primary 1px underline. */}
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-border"
+                />
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "pointer-events-none absolute bottom-0 left-0 z-[1] h-[2px] rounded-full bg-primary",
+                    "pointer-events-none absolute bottom-0 left-0 z-[1] h-px bg-primary",
                     animateTabIndicator
                       ? "transition-[transform,width,opacity] duration-500"
                       : "transition-none",
@@ -339,7 +344,7 @@ export function SectionQuestionnaire({
                       aria-label={`${item.title} ${answered}/${item.questions.length}`}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "relative z-10 inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-4 text-xs font-medium whitespace-nowrap outline-none transition-colors duration-200",
+                        "relative z-10 inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md px-6 text-xs font-medium whitespace-nowrap outline-none transition-colors duration-200",
                         "focus-visible:ring-[3px] focus-visible:ring-ring/50",
                         isActive
                           ? "text-foreground"
@@ -352,7 +357,7 @@ export function SectionQuestionnaire({
                       }
                       ref={isActive ? activeTabRef : undefined}
                     >
-                      <span className="truncate">{item.title}</span>
+                      <span>{item.title}</span>
                       <span
                         className={cn(
                           "shrink-0 font-mono text-[10px] font-medium tabular-nums",
