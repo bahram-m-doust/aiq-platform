@@ -344,7 +344,7 @@ export function SectionQuestionnaire({
                       aria-label={`${item.title} ${answered}/${item.questions.length}`}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "relative z-10 inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md px-6 text-xs font-medium whitespace-nowrap outline-none transition-colors duration-200",
+                        "relative z-10 inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md px-2.5 text-xs font-medium whitespace-nowrap outline-none transition-colors duration-200",
                         "focus-visible:ring-[3px] focus-visible:ring-ring/50",
                         isActive
                           ? "text-foreground"
