@@ -62,7 +62,7 @@ export function ProgressSidePanel({
       <aside
         className={
           open
-            ? "fixed right-0 top-[68px] z-30 hidden h-[calc(100vh-68px)] w-[280px] flex-col gap-5 overflow-y-auto border-l border-[var(--bv-line)] bg-white px-4 py-4 xl:flex"
+            ? "fixed right-4 top-[84px] z-30 hidden max-h-[calc(100vh-100px)] w-[280px] flex-col gap-5 overflow-y-auto rounded-[10px] border border-border bg-card px-4 py-4 shadow-xs xl:flex"
             : "hidden"
         }
       >
