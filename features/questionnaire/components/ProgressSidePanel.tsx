@@ -63,12 +63,12 @@ export function ProgressSidePanel({
       <aside
         className={
           open
-            ? "sticky top-4 hidden h-fit w-[280px] shrink-0 flex-col gap-5 xl:flex"
+            ? "fixed right-0 top-[68px] z-30 hidden h-[calc(100vh-68px)] w-[280px] flex-col gap-5 overflow-y-auto border-l border-[var(--bv-line)] bg-white px-4 py-4 xl:flex"
             : "hidden"
         }
       >
-        <div className="rounded-xl border border-[var(--bv-line)] bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-[var(--bv-line)] px-4 py-3">
+        <div>
+          <div className="flex items-center justify-between pb-3">
             <span className="text-xs font-semibold uppercase tracking-widest text-[var(--bv-ink-3)]">
               Progress
             </span>
@@ -82,7 +82,7 @@ export function ProgressSidePanel({
             </button>
           </div>
 
-          <div className="flex flex-col gap-4 px-4 py-4">
+          <div className="flex flex-col gap-4">
             <div>
               <ProgressBar color="green" value={completionPercent} />
               <span className="mt-1.5 block font-mono text-[10px] text-[var(--bv-ink-4)]">
