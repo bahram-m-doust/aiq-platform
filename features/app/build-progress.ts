@@ -7,7 +7,14 @@ import type { FuturesResearchReportStatus } from "@/features/futures-research/ty
 import type { IntakePageData } from "@/features/questionnaire/types";
 import { getStakeholderReportRowByBrand } from "@/features/stakeholder-interviews/queries";
 import type { StakeholderReportStatus } from "@/features/stakeholder-interviews/types";
-import { ROUTES } from "@/lib/routes";
+import { getAestheticsRowsByBrand } from "@/features/aesthetics/queries";
+import type { AestheticsDeliverableStatus } from "@/features/aesthetics/types";
+import {
+  ROUTES,
+  aestheticsDeliverablePath,
+  aestheticsKindSlugs,
+  type AestheticsKind,
+} from "@/lib/routes";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type PhaseStatus = "locked" | "active" | "complete";
@@ -372,7 +379,105 @@ async function getBrainProgress(brandId: string) {
   return { percent, status, stepsDone: done, stepsTotal: total, substeps };
 }
 
-function getAestheticsProgress() {
+function aestheticsSubstepState(
+  status: AestheticsDeliverableStatus | null,
+): { state: SubstepState; progress: number } {
+  switch (status) {
+    case "APPROVED":
+      return { state: "done", progress: 100 };
+    case "CLIENT_REVIEW":
+      return { state: "awaiting-review", progress: 50 };
+    case "CHANGES_REQUESTED":
+      return { state: "in-progress", progress: 50 };
+    default:
+      // PENDING_UPLOAD or no row yet — team is preparing it.
+      return { state: "in-progress", progress: 0 };
+  }
+}
+
+async function getAestheticsProgressFromDB(brandId: string): Promise<{
+  percent: number;
+  status: PhaseStatus;
+  stepsDone: number;
+  stepsTotal: number;
+  substeps: SubstepProgress[];
+}> {
+  const rows = await getAestheticsRowsByBrand(brandId).catch(() => []);
+  const statusByKind = new Map(
+    rows.map((row) => [
+      row.kind as AestheticsKind,
+      row.status as AestheticsDeliverableStatus,
+    ]),
+  );
+
+  const kindDefs: Array<{
+    kind: AestheticsKind;
+    id: string;
+    title: string;
+    description: string;
+  }> = [
+    {
+      kind: "VISUAL_DIRECTION",
+      id: "visual-direction",
+      title: "Visual Direction",
+      description: "Define the brand's visual aesthetic direction.",
+    },
+    {
+      kind: "COLOR_TYPE_SYSTEM",
+      id: "color-type-system",
+      title: "Color & Type System",
+      description: "Establish the brand color palette and typography.",
+    },
+    {
+      kind: "ASSET_LIBRARY",
+      id: "asset-library",
+      title: "Asset Library",
+      description: "Curate the brand's core visual assets.",
+    },
+  ];
+
+  const substeps: SubstepProgress[] = kindDefs.map(
+    ({ kind, id, title, description }) => {
+      const { state, progress } = aestheticsSubstepState(
+        statusByKind.get(kind) ?? null,
+      );
+      return {
+        id,
+        title,
+        description,
+        progress,
+        state,
+        href: aestheticsDeliverablePath(aestheticsKindSlugs[kind]),
+      };
+    },
+  );
+
+  const stepsDone = substeps.filter((s) => s.state === "done").length;
+  const stepsTotal = substeps.length;
+  const allDone = stepsDone === stepsTotal;
+  const anyProgress = substeps.some(
+    (s) => s.state !== "locked" && s.state !== "done",
+  );
+
+  const status: PhaseStatus = allDone
+    ? "complete"
+    : anyProgress || stepsDone > 0
+      ? "active"
+      : "active"; // always active once strategies are complete
+
+  const percent =
+    stepsTotal > 0 ? Math.round((stepsDone / stepsTotal) * 100) : 0;
+
+  return { percent, status, stepsDone, stepsTotal, substeps };
+}
+
+function getAestheticsLockedStub(): {
+  percent: number;
+  status: PhaseStatus;
+  stepsDone: number;
+  stepsTotal: number;
+  substeps: SubstepProgress[];
+} {
   const substeps: SubstepProgress[] = [
     {
       id: "visual-direction",
@@ -437,7 +542,6 @@ export async function getBrandBuildProgress(
     intakeProgressPromise,
     getBrainProgress(brandId),
   ]);
-  const aesthetics = getAestheticsProgress();
 
   // Phase 2 (Strategies) is the brand-as-city City Model. It unlocks once the
   // questionnaire is captured, and its progress is the share of the city's
@@ -479,9 +583,12 @@ export async function getBrandBuildProgress(
     substeps: [cityModelSubstep],
   };
 
-  if (strategies.status === "complete") {
-    aesthetics.status = "active";
-  }
+  // Phase 3 (Aesthetics) unlocks when all City Model districts are approved.
+  // All three sub-steps (Visual Direction, Color & Type, Asset Library) unlock
+  // simultaneously and are reviewed independently.
+  const aesthetics = cityModelComplete
+    ? await getAestheticsProgressFromDB(brandId)
+    : getAestheticsLockedStub();
 
   if (aesthetics.status !== "complete") {
     brain.status = brain.stepsDone > 0 ? "active" : "locked";

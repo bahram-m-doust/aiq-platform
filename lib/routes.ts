@@ -11,7 +11,11 @@ export const ROUTES = {
   brainRoadmapStakeholderInterviews:
     "/integrated-brand-brain/roadmap/stakeholder-interviews",
   brainRoadmapCityModel: "/integrated-brand-brain/roadmap/city-model",
-  brainRoadmapAesthetics: "/integrated-brand-brain/roadmap/aesthetics",
+  brainRoadmapVisualDirection:
+    "/integrated-brand-brain/roadmap/visual-direction",
+  brainRoadmapColorTypeSystem:
+    "/integrated-brand-brain/roadmap/color-type-system",
+  brainRoadmapAssetLibrary: "/integrated-brand-brain/roadmap/asset-library",
   agents: "/agents",
   documents: "/documents",
   settings: "/settings",
@@ -40,8 +44,24 @@ export const aestheticsKindSlugs = {
 
 export type AestheticsKind = keyof typeof aestheticsKindSlugs;
 
-export const aestheticsDeliverablePath = (slug: string) =>
-  `${ROUTES.brainRoadmapAesthetics}/${slug}`;
+// Maps each AestheticsKind to its flat roadmap route (peer of stakeholder-interviews).
+export const aestheticsKindRoutes: Record<
+  keyof typeof aestheticsKindSlugs,
+  string
+> = {
+  VISUAL_DIRECTION: ROUTES.brainRoadmapVisualDirection,
+  COLOR_TYPE_SYSTEM: ROUTES.brainRoadmapColorTypeSystem,
+  ASSET_LIBRARY: ROUTES.brainRoadmapAssetLibrary,
+};
+
+// Kept for review-comments deep-link builder — resolves slug → flat route.
+export const aestheticsDeliverablePath = (slug: string): string => {
+  const entry = Object.entries(aestheticsKindSlugs).find(
+    ([, s]) => s === slug,
+  );
+  if (!entry) return ROUTES.brainRoadmap;
+  return aestheticsKindRoutes[entry[0] as keyof typeof aestheticsKindSlugs];
+};
 
 // First URL segment of every page rendered inside the `(app)` shell.
 // Route groups don't appear in the pathname, so this allowlist is how the
