@@ -283,7 +283,7 @@ export function useIntakeAutosaveQueue({
           batch.map((entry) => entry.questionId),
           {
             status: "error",
-            message: "The intake answer could not be saved.",
+            message: "The answer could not be saved.",
           },
         );
       } finally {

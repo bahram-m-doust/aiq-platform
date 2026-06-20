@@ -38,6 +38,28 @@ import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { logServerError } from "@/lib/logging/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isMissingColumnError } from "@/lib/supabase/errors";
+
+// Flags an answer as explicitly "Save & mark done"-ed by the user. Autosave
+// never touches this column, so the overview can tell a confirmed answer apart
+// from an autosaved draft. No-op until the migration adds the column.
+export async function setIntakeAnswerMarkedDone({
+  sessionId,
+  questionId,
+}: {
+  sessionId: string;
+  questionId: string;
+}): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("intake_answers")
+    .update({ marked_done_at: new Date().toISOString() })
+    .eq("session_id", sessionId)
+    .eq("question_id", questionId);
+  if (error && !isMissingColumnError(error)) {
+    throw error;
+  }
+}
 
 type IntakeSessionRow = {
   id: string;

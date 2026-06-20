@@ -129,6 +129,7 @@ export function QuestionRenderer({
   requiredError = false,
   hidePrompt = false,
   autosaveAction = autosaveIntakeAnswerAction,
+  onMarkDone,
 }: {
   sessionId: string;
   question: IntakeQuestion;
@@ -144,6 +145,9 @@ export function QuestionRenderer({
   requiredError?: boolean;
   hidePrompt?: boolean;
   autosaveAction?: AutosaveAction;
+  // Called when the user clicks "Save & mark done" — persists the explicit
+  // confirmation (separate from the autosaved value).
+  onMarkDone?: (questionId: string, value: IntakeAnswerValue) => void;
 }) {
   const [localValue, setLocalValue] = useState<IntakeAnswerValue>(value);
   const [status, setStatus] = useState<AutosaveQuestionStatus>("idle");
@@ -344,6 +348,9 @@ export function QuestionRenderer({
     // (the committed value updates a render later). An empty Done must keep
     // the field in edit mode.
     if (isIntakeAnswerComplete(completionValue)) {
+      // Persist the explicit confirmation (separate from the autosaved value),
+      // so the overview's Unanswered box clears only once it's marked done.
+      onMarkDone?.(question.id, completionValue);
       setIsEditing(false);
       focusNextTypeableField();
     }

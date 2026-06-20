@@ -1,6 +1,6 @@
 -- GENERATED FILE. DO NOT EDIT DIRECTLY.
 -- Source: numbered SQL files in supabase/migrations.
--- Latest migration: 0049_aesthetics_deliverables.sql
+-- Latest migration: 0050_intake_answer_marked_done.sql
 -- Regenerate with: npm run db:generate-bundles
 
 -- DESTRUCTIVE: this variant removes all public application data.
@@ -5201,6 +5201,18 @@ grant execute on function public.attach_review_deliverable(
 
 notify pgrst, 'reload schema';
 -- END 0049_aesthetics_deliverables.sql
+
+-- BEGIN 0050_intake_answer_marked_done.sql
+-- A questionnaire answer is "marked done" only when the user explicitly clicks
+-- "Save & mark done". Autosave (typing + blur) still saves the value as a draft,
+-- but never marks it done. The questionnaire overview's Unanswered warning box
+-- lists questions that aren't marked done; section progress counts/badges stay
+-- value-based exactly as before.
+alter table public.intake_answers
+  add column if not exists marked_done_at timestamptz;
+
+notify pgrst, 'reload schema';
+-- END 0050_intake_answer_marked_done.sql
 
 -- Keep server-side Supabase access explicit after fresh schema creation.
 grant all on all tables in schema public to service_role;

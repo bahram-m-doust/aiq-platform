@@ -23,6 +23,10 @@ import type {
 import { cacheSharedConfig } from "@/lib/cache/shared";
 import { CACHE_TAGS } from "@/lib/cache/tags";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  isMissingColumnError,
+  isMissingTableError,
+} from "@/lib/supabase/errors";
 
 type RelatedRecord<T> = T | T[] | null;
 
@@ -414,6 +418,28 @@ export async function getIntakeAnswersForSession({
   );
 }
 
+// The questions a user explicitly "marked done" (vs answers that were only
+// autosaved as drafts). Returns null when the marked_done_at column hasn't been
+// migrated yet, so the overview can fall back to value-based completion instead
+// of treating every answer as not-done.
+export async function getMarkedDoneQuestionIds(
+  sessionId: string,
+): Promise<string[] | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("intake_answers")
+    .select("question_id")
+    .eq("session_id", sessionId)
+    .not("marked_done_at", "is", null);
+  if (error) {
+    if (isMissingColumnError(error) || isMissingTableError(error)) return null;
+    throw error;
+  }
+  return ((data ?? []) as Array<{ question_id: string }>).map(
+    (row) => row.question_id,
+  );
+}
+
 export async function getIntakePageData({
   profileId,
 }: {
@@ -437,10 +463,12 @@ export async function getIntakePageData({
     sessionId: session.id,
     questions,
   });
-  const latestSnapshotId =
+  const [latestSnapshotId, markedDoneQuestionIds] = await Promise.all([
     session.status === "LOCKED"
-      ? await getLatestIntakeSnapshotId(session.id)
-      : null;
+      ? getLatestIntakeSnapshotId(session.id)
+      : Promise.resolve(null),
+    getMarkedDoneQuestionIds(session.id),
+  ]);
 
   return {
     access,
@@ -449,6 +477,7 @@ export async function getIntakePageData({
     answers,
     completion: calculateIntakeCompletion({ sections, answers }),
     latestSnapshotId,
+    markedDoneQuestionIds,
   };
 }
 

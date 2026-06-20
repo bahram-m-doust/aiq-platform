@@ -21,6 +21,7 @@ import {
   PaginationLink,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { markIntakeAnswerDoneAction } from "@/features/questionnaire/actions";
 import {
   isIntakeAnswerComplete,
   isIntakeSessionLocked,
@@ -72,6 +73,20 @@ export function SectionQuestionnaire({
       initialAnswers,
     });
   const displayedAnswers = locked ? initialAnswers : answers;
+
+  // "Save & mark done": the value is already autosaved (queue, on blur); this
+  // also records the explicit confirmation so the overview's Unanswered box
+  // distinguishes a confirmed answer from an unconfirmed draft. Best-effort.
+  const handleMarkDone = useCallback(
+    (questionId: string, value: IntakeAnswerValue) => {
+      void markIntakeAnswerDoneAction({
+        sessionId: session.id,
+        questionId,
+        value,
+      });
+    },
+    [session.id],
+  );
 
   // Section switching is client-side: every section + its answers are already
   // loaded, and the autosave queue is keyed by the session (not the section),
@@ -413,6 +428,7 @@ export function SectionQuestionnaire({
                     <QuestionRenderer
                       hidePrompt
                       key={question.id}
+                      onMarkDone={handleMarkDone}
                       onQueuedChange={enqueueAnswer}
                       onRetryQueuedSave={retryQuestion}
                       question={question}

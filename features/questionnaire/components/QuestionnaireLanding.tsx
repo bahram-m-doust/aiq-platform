@@ -13,6 +13,7 @@ import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalS
 import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import {
   canApproveIntakeRole,
+  isIntakeAnswerComplete,
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
 import type {
@@ -61,18 +62,29 @@ export function QuestionnaireLanding({
   data: IntakePageData;
   showSubmitReview?: boolean;
 }) {
-  const { sections, completion, session, access } = data;
+  const { sections, completion, session, access, answers } = data;
   const locked = isIntakeSessionLocked(session);
   const canApprove = canApproveIntakeRole(access.membershipRole);
   const progressByKey = new Map(
     completion.sections.map((s) => [s.sectionKey, s]),
   );
+  // "Unanswered" for the warning box = a question the user hasn't explicitly
+  // "Save & mark done"-ed yet (an autosaved draft still counts as unanswered).
+  // Before the marked_done_at migration lands, markedDoneQuestionIds is null and
+  // this falls back to the value-based definition. The section cards above keep
+  // their own value-based counts, unchanged.
+  const markedDoneSet = data.markedDoneQuestionIds
+    ? new Set(data.markedDoneQuestionIds)
+    : null;
   const incompleteSections = sections
     .map((section) => {
-      const sectionProgress = progressByKey.get(section.key);
-      const total = sectionProgress?.totalQuestions ?? section.questions.length;
-      const answered = sectionProgress?.answeredQuestions ?? 0;
-      return { section, remaining: total - answered };
+      const remaining = section.questions.filter((question) => {
+        const hasValue = isIntakeAnswerComplete(answers[question.id] ?? null);
+        return markedDoneSet
+          ? !(hasValue && markedDoneSet.has(question.id))
+          : !hasValue;
+      }).length;
+      return { section, remaining };
     })
     .filter((entry) => entry.remaining > 0);
   const totalRemaining = incompleteSections.reduce(
@@ -190,7 +202,7 @@ export function QuestionnaireLanding({
           })}
         </div>
 
-        {/* Submit */}
+        {/* Submit (only on the review step). */}
         {!locked && showSubmitReview && (
           <div className="mt-8">
             <FinalSubmitReadiness
@@ -198,33 +210,38 @@ export function QuestionnaireLanding({
               completion={completion}
               sessionId={session.id}
             />
-            {completion.completionPercent < 100 && incompleteSections.length > 0 && (
-              <Alert variant="warning">
-                <TriangleAlertIcon />
-                <AlertTitle>
-                  {totalRemaining}{" "}
-                  {totalRemaining === 1 ? "question" : "questions"} still need an
-                  answer before you can submit.
-                </AlertTitle>
-                <AlertDescription>
-                  <ul className="space-y-1">
-                    {incompleteSections.map(({ section, remaining }) => (
-                      <li key={section.id}>
-                        <Link
-                          className="inline-flex items-center gap-2 underline-offset-2 transition-colors hover:underline"
-                          href={`${questionnaireSectionPath(section.key)}?validate=1`}
-                        >
-                          <span className="font-medium">{section.title}</span>
-                          <span className="opacity-80">
-                            — {remaining} unanswered
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
+          </div>
+        )}
+
+        {/* Unanswered — always visible. Lists every question not yet
+            "Save & mark done"-ed; an autosaved draft still counts as unanswered. */}
+        {!locked && incompleteSections.length > 0 && (
+          <div className="mt-8">
+            <Alert variant="warning">
+              <TriangleAlertIcon />
+              <AlertTitle>
+                {totalRemaining}{" "}
+                {totalRemaining === 1 ? "question" : "questions"} not marked done
+                yet.
+              </AlertTitle>
+              <AlertDescription>
+                <ul className="space-y-1">
+                  {incompleteSections.map(({ section, remaining }) => (
+                    <li key={section.id}>
+                      <Link
+                        className="inline-flex items-center gap-2 underline-offset-2 transition-colors hover:underline"
+                        href={`${questionnaireSectionPath(section.key)}?validate=1`}
+                      >
+                        <span className="font-medium">{section.title}</span>
+                        <span className="opacity-80">
+                          — {remaining} unanswered
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
           </div>
         )}
       </div>

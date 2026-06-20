@@ -9,6 +9,7 @@ import {
   finalSubmitIntake,
   isFinalSubmitIntakeError,
   reopenIntakeSubmission,
+  setIntakeAnswerMarkedDone,
 } from "@/features/questionnaire/services";
 import type {
   AutosaveIntakeAnswerInput,
@@ -39,6 +40,33 @@ export async function autosaveIntakeAnswersAction(
     input,
     authUserId: user.id,
   });
+}
+
+// "Save & mark done": saves the answer value (same path as autosave) AND flags it
+// as explicitly confirmed by the user, so the overview's Unanswered warning box
+// can distinguish a confirmed answer from an autosaved-but-unconfirmed draft.
+export async function markIntakeAnswerDoneAction(
+  input: AutosaveIntakeAnswerInput,
+): Promise<AutosaveIntakeAnswerResult> {
+  const result = await autosaveIntakeAnswerAction(input);
+  if (!result.ok) {
+    return result;
+  }
+  // Best-effort: the answer is already saved; failing to set the flag just
+  // leaves it listed as not-yet-done (no data loss).
+  try {
+    await setIntakeAnswerMarkedDone({
+      sessionId: input.sessionId,
+      questionId: input.questionId,
+    });
+  } catch (error) {
+    logServerError({
+      label: "[intake] mark done failed",
+      error,
+      metadata: { sessionId: input.sessionId, questionId: input.questionId },
+    });
+  }
+  return result;
 }
 
 function formValue(formData: FormData, key: string) {

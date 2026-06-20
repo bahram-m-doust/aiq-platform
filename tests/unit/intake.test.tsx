@@ -137,6 +137,7 @@ function intakeData(overrides: Partial<IntakePageData> = {}): IntakePageData {
       ],
     }),
     latestSnapshotId: null,
+    markedDoneQuestionIds: null,
     ...overrides,
   };
 }
@@ -629,7 +630,7 @@ describe("intake UI components", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps normal questionnaire section links out of validation mode", () => {
+  it("shows the unanswered warning on the overview even before review", () => {
     const data = intakeData({
       session: session(),
       answers: {
@@ -640,42 +641,57 @@ describe("intake UI components", () => {
     });
     const { container } = render(<QuestionnaireLanding data={data} />);
 
+    // Section list cards link plainly (no validation flag).
     expect(
       container.querySelector(
         'a[href="/integrated-brand-brain/roadmap/questionnaire/company"]',
       ),
     ).not.toBeNull();
-    expect(
-      container.querySelector(
-        'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
-      ),
-    ).toBeNull();
-    expect(
-      screen.queryByText(/still need an answer before you can submit/i),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows unanswered warning links only after review submit", () => {
-    const data = intakeData({
-      session: session(),
-      answers: {
-        "question-1": "Strategic answer",
-        "question-2": null,
-      },
-      completion: completion(),
-    });
-    const { container } = render(
-      <QuestionnaireLanding data={data} showSubmitReview />,
-    );
-
-    expect(
-      screen.getByText(/still need an answer before you can submit/i),
-    ).toBeVisible();
+    // The Unanswered warning box is always visible (no review step needed) and
+    // links into validation mode.
     expect(
       container.querySelector(
         'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
       ),
     ).not.toBeNull();
+    expect(screen.getByText(/not marked done yet/i)).toBeVisible();
+  });
+
+  it("treats answered-but-not-marked-done questions as unanswered", () => {
+    const data = intakeData({
+      session: session(),
+      answers: {
+        "question-1": "Strategic answer",
+        "question-2": "https://helio.example",
+      },
+      completion: completion({
+        answeredQuestions: 2,
+        completionPercent: 100,
+      }),
+      // Both questions have a value, but neither has been "Save & mark done"-ed.
+      markedDoneQuestionIds: [],
+    });
+    render(<QuestionnaireLanding data={data} showSubmitReview />);
+
+    expect(screen.getByText(/not marked done yet/i)).toBeVisible();
+  });
+
+  it("clears the unanswered warning once every question is marked done", () => {
+    const data = intakeData({
+      session: session(),
+      answers: {
+        "question-1": "Strategic answer",
+        "question-2": "https://helio.example",
+      },
+      completion: completion({
+        answeredQuestions: 2,
+        completionPercent: 100,
+      }),
+      markedDoneQuestionIds: ["question-1", "question-2"],
+    });
+    render(<QuestionnaireLanding data={data} />);
+
+    expect(screen.queryByText(/not marked done yet/i)).not.toBeInTheDocument();
   });
 
   it("shows approve and lock only after review submit when complete", () => {

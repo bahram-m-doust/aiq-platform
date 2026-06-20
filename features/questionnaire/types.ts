@@ -92,6 +92,9 @@ export type IntakePageData = {
   completion: IntakeCompletion;
   // Latest locked snapshot for this session, if any — drives the Word download.
   latestSnapshotId: string | null;
+  // Question ids the user explicitly "Save & mark done"-ed. null when the
+  // marked_done_at column isn't migrated yet (overview falls back to value-based).
+  markedDoneQuestionIds: string[] | null;
 };
 
 export type IntakeSubmissionSummary = {
