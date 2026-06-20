@@ -56,6 +56,7 @@ export function SectionQuestionnaire({
   allSections,
   latestSnapshotId = null,
   autoValidate = false,
+  markedDoneQuestionIds = null,
 }: {
   section: IntakeSectionWithQuestions;
   session: IntakeSession;
@@ -65,6 +66,9 @@ export function SectionQuestionnaire({
   allSections: IntakeSectionWithQuestions[];
   latestSnapshotId?: string | null;
   autoValidate?: boolean;
+  // Question ids the user has explicitly "Save & mark done"-ed. null when the
+  // marked_done column isn't available — then we fall back to value-based.
+  markedDoneQuestionIds?: string[] | null;
 }) {
   const locked = isIntakeSessionLocked(session);
   const { answers, enqueueAnswer, retryQuestion, saveStates } =
@@ -74,11 +78,26 @@ export function SectionQuestionnaire({
     });
   const displayedAnswers = locked ? initialAnswers : answers;
 
+  // Tracks which questions are explicitly marked done. Seeded from the server
+  // and kept in sync as the user marks answers, so switching sections (which
+  // remounts each QuestionRenderer) keeps a draft in edit mode instead of
+  // flipping it to the collapsed "Completed" view. null = the marked_done
+  // column isn't available; fall back to value-based completion.
+  const [markedDoneIds, setMarkedDoneIds] = useState<Set<string> | null>(() =>
+    markedDoneQuestionIds ? new Set(markedDoneQuestionIds) : null,
+  );
+
   // "Save & mark done": the value is already autosaved (queue, on blur); this
   // also records the explicit confirmation so the overview's Unanswered box
   // distinguishes a confirmed answer from an unconfirmed draft. Best-effort.
   const handleMarkDone = useCallback(
     (questionId: string, value: IntakeAnswerValue) => {
+      setMarkedDoneIds((prev) => {
+        if (!prev || prev.has(questionId)) return prev;
+        const next = new Set(prev);
+        next.add(questionId);
+        return next;
+      });
       void markIntakeAnswerDoneAction({
         sessionId: session.id,
         questionId,
@@ -109,6 +128,9 @@ export function SectionQuestionnaire({
         "",
         questionnaireSectionPath(targetKey),
       );
+      // Section switching is client-side, so the scroll position carries over —
+      // land the new section at the top of the page instead of mid-scroll.
+      window.scrollTo({ top: 0, behavior: "smooth" });
     },
     [activeSectionId],
   );
@@ -427,6 +449,11 @@ export function SectionQuestionnaire({
                   ) : (
                     <QuestionRenderer
                       hidePrompt
+                      isMarkedDone={
+                        markedDoneIds
+                          ? markedDoneIds.has(question.id)
+                          : undefined
+                      }
                       key={question.id}
                       onMarkDone={handleMarkDone}
                       onQueuedChange={enqueueAnswer}

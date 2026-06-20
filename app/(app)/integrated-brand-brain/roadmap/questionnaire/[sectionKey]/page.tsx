@@ -59,6 +59,7 @@ export default async function QuestionnaireSectionPage({
         brandName={data.access.brandName}
         completion={data.completion}
         latestSnapshotId={data.latestSnapshotId}
+        markedDoneQuestionIds={data.markedDoneQuestionIds}
         section={selectedSection}
         session={data.session}
       />

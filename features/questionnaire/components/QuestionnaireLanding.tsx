@@ -213,9 +213,10 @@ export function QuestionnaireLanding({
           </div>
         )}
 
-        {/* Unanswered — always visible. Lists every question not yet
-            "Save & mark done"-ed; an autosaved draft still counts as unanswered. */}
-        {!locked && incompleteSections.length > 0 && (
+        {/* Unanswered — only on the review step (after "Review & submit").
+            Lists every question not yet "Save & mark done"-ed; an autosaved
+            draft still counts as unanswered. */}
+        {!locked && showSubmitReview && incompleteSections.length > 0 && (
           <div className="mt-8">
             <Alert variant="warning">
               <TriangleAlertIcon />

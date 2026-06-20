@@ -130,6 +130,7 @@ export function QuestionRenderer({
   hidePrompt = false,
   autosaveAction = autosaveIntakeAnswerAction,
   onMarkDone,
+  isMarkedDone,
 }: {
   sessionId: string;
   question: IntakeQuestion;
@@ -148,6 +149,11 @@ export function QuestionRenderer({
   // Called when the user clicks "Save & mark done" — persists the explicit
   // confirmation (separate from the autosaved value).
   onMarkDone?: (questionId: string, value: IntakeAnswerValue) => void;
+  // Whether the user has explicitly "Save & mark done"-ed this question. Drives
+  // the collapsed read-only view: an autosaved draft (has a value but not yet
+  // confirmed) must stay in edit mode, not flip to "Completed". When undefined
+  // (e.g. the marked_done column isn't available), fall back to value-based.
+  isMarkedDone?: boolean;
 }) {
   const [localValue, setLocalValue] = useState<IntakeAnswerValue>(value);
   const [status, setStatus] = useState<AutosaveQuestionStatus>("idle");
@@ -157,8 +163,10 @@ export function QuestionRenderer({
     IntakeAnswerValue | undefined
   >(undefined);
   const [savedValue, setSavedValue] = useState<IntakeAnswerValue>(value);
-  const [isEditing, setIsEditing] = useState(
-    () => !isIntakeAnswerComplete(value),
+  const [isEditing, setIsEditing] = useState(() =>
+    isMarkedDone === undefined
+      ? !isIntakeAnswerComplete(value)
+      : !isMarkedDone,
   );
   // Text inputs hold their in-progress value locally while focused so typing
   // never triggers a save; we resync from the committed value only when the

@@ -630,7 +630,7 @@ describe("intake UI components", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the unanswered warning on the overview even before review", () => {
+  it("hides the unanswered warning until the user reaches the review step", () => {
     const data = intakeData({
       session: session(),
       answers: {
@@ -639,16 +639,26 @@ describe("intake UI components", () => {
       },
       completion: completion(),
     });
-    const { container } = render(<QuestionnaireLanding data={data} />);
+    const { container, rerender } = render(
+      <QuestionnaireLanding data={data} />,
+    );
 
-    // Section list cards link plainly (no validation flag).
+    // Section list cards still link plainly (no validation flag).
     expect(
       container.querySelector(
         'a[href="/integrated-brand-brain/roadmap/questionnaire/company"]',
       ),
     ).not.toBeNull();
-    // The Unanswered warning box is always visible (no review step needed) and
-    // links into validation mode.
+    // Before "Review & submit" the Unanswered warning box is not rendered.
+    expect(
+      container.querySelector(
+        'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
+      ),
+    ).toBeNull();
+    expect(screen.queryByText(/not marked done yet/i)).not.toBeInTheDocument();
+
+    // On the review step it appears and links into validation mode.
+    rerender(<QuestionnaireLanding data={data} showSubmitReview />);
     expect(
       container.querySelector(
         'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
