@@ -1,18 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useActionState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { login } from "@/features/auth/actions";
 import { initialAuthFormState } from "@/features/auth/schemas";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
@@ -32,37 +27,45 @@ export function LoginForm({
       : `/register?next=${encodeURIComponent(nextPath)}`;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h1>Sign in</h1>
-        </CardTitle>
-        <CardDescription>
-          Enter your Bextudio account details to continue.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {message ? (
-            <Alert>
-              <AlertDescription>{message}</AlertDescription>
-            </Alert>
-          ) : null}
-          {state.status === "error" ? (
-            <Alert variant="destructive">
-              <AlertDescription>{state.message}</AlertDescription>
-            </Alert>
-          ) : null}
-          <GoogleSignInButton nextPath={nextPath} />
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">or</span>
-            </div>
+    <>
+      <div className="rounded-lg border border-border bg-card px-8 py-10 shadow-xs">
+        <div className="flex flex-col gap-10">
+          <div className="flex items-center justify-center">
+            <Image
+              alt="Bextudio"
+              height={16}
+              src="/square-sign.png"
+              unoptimized
+              width={16}
+              className="mr-1.5 size-5"
+            />
+            <span className="text-sm font-semibold tracking-wider">
+              BEXTUDIO
+            </span>
           </div>
-          <form action={formAction} className="space-y-4">
+
+          <div className="flex flex-col gap-4">
+            {message ? (
+              <Alert>
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
+            ) : null}
+            {state.status === "error" ? (
+              <Alert variant="destructive">
+                <AlertDescription>{state.message}</AlertDescription>
+              </Alert>
+            ) : null}
+            <GoogleSignInButton nextPath={nextPath} />
+          </div>
+
+          <div className="relative">
+            <Separator />
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+              Or
+            </span>
+          </div>
+
+          <form action={formAction} className="flex flex-col gap-4">
             <input name="next" type="hidden" value={nextPath} />
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -76,7 +79,15 @@ export function LoginForm({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  className="text-sm text-foreground underline"
+                  href="/forgot-password"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
               <Input
                 autoComplete="current-password"
                 id="password"
@@ -85,16 +96,29 @@ export function LoginForm({
                 type="password"
               />
             </div>
-            <SubmitButton idleLabel="Sign in" pendingLabel="Signing in" />
+            <div className="mt-6 flex flex-col gap-6">
+              <SubmitButton idleLabel="Login" pendingLabel="Logging in…" />
+              <p className="text-center text-sm text-card-foreground">
+                Don&apos;t have an account?{" "}
+                <Link className="text-foreground underline" href={registerHref}>
+                  Sign up
+                </Link>
+              </p>
+            </div>
           </form>
         </div>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          New to Bextudio?{" "}
-          <Link className="text-foreground underline" href={registerHref}>
-            Create an account
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+      </div>
+
+      <p className="mt-6 text-center text-xs leading-4 text-muted-foreground">
+        By clicking continue, you agree to our{" "}
+        <Link className="underline" href="/terms">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link className="underline" href="/privacy">
+          Privacy Policy
+        </Link>
+      </p>
+    </>
   );
 }

@@ -44,7 +44,7 @@ function InnerButton() {
       variant="outline"
     >
       <GoogleIcon />
-      {pending ? "Redirecting…" : "Continue with Google"}
+      {pending ? "Redirecting…" : "Login with Google"}
     </Button>
   );
 }
