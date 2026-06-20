@@ -157,7 +157,7 @@ export function ProgressSidePanel({
                                   {section.title}:
                                 </span>
                                 <Link
-                                  className="text-[12px] leading-4 underline"
+                                  className="text-[14px] leading-5 underline"
                                   href={`${questionnaireSectionPath(section.key)}?validate=1`}
                                 >
                                   {remaining} uncompleted
