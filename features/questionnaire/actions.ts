@@ -6,6 +6,7 @@ import { requireUser, requireUserProfile, requirePlatformOwner } from "@/feature
 import {
   autosaveIntakeAnswer,
   autosaveIntakeAnswers,
+  clearIntakeAnswerMarkedDone,
   finalSubmitIntake,
   isFinalSubmitIntakeError,
   reopenIntakeSubmission,
@@ -67,6 +68,28 @@ export async function markIntakeAnswerDoneAction(
     });
   }
   return result;
+}
+
+// "Edit": reverts an answer to an unconfirmed draft so it stays a draft after
+// the user navigates away and back. Best-effort and idempotent — the answer
+// value is untouched, only the explicit confirmation flag is cleared.
+export async function clearIntakeAnswerDoneAction(input: {
+  sessionId: string;
+  questionId: string;
+}): Promise<void> {
+  await requireUser(ROUTES.questionnaire);
+  try {
+    await clearIntakeAnswerMarkedDone({
+      sessionId: input.sessionId,
+      questionId: input.questionId,
+    });
+  } catch (error) {
+    logServerError({
+      label: "[intake] clear mark done failed",
+      error,
+      metadata: { sessionId: input.sessionId, questionId: input.questionId },
+    });
+  }
 }
 
 function formValue(formData: FormData, key: string) {

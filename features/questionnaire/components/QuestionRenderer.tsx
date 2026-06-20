@@ -130,6 +130,7 @@ export function QuestionRenderer({
   hidePrompt = false,
   autosaveAction = autosaveIntakeAnswerAction,
   onMarkDone,
+  onEdit,
   isMarkedDone,
 }: {
   sessionId: string;
@@ -149,6 +150,9 @@ export function QuestionRenderer({
   // Called when the user clicks "Save & mark done" — persists the explicit
   // confirmation (separate from the autosaved value).
   onMarkDone?: (questionId: string, value: IntakeAnswerValue) => void;
+  // Called when the user clicks "Edit" — lets the parent remove this question
+  // from markedDoneIds so that navigating away and back keeps it in edit mode.
+  onEdit?: (questionId: string) => void;
   // Whether the user has explicitly "Save & mark done"-ed this question. Drives
   // the collapsed read-only view: an autosaved draft (has a value but not yet
   // confirmed) must stay in edit mode, not flip to "Completed". When undefined
@@ -671,7 +675,10 @@ export function QuestionRenderer({
             </span>
             <Button
               className="h-9 shrink-0 rounded-full px-4 text-sm"
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                onEdit?.(question.id);
+                setIsEditing(true);
+              }}
               size="default"
               type="button"
               variant="outline"

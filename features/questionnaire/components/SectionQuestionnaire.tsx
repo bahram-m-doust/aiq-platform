@@ -21,7 +21,10 @@ import {
   PaginationLink,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { markIntakeAnswerDoneAction } from "@/features/questionnaire/actions";
+import {
+  clearIntakeAnswerDoneAction,
+  markIntakeAnswerDoneAction,
+} from "@/features/questionnaire/actions";
 import {
   isIntakeAnswerComplete,
   isIntakeSessionLocked,
@@ -86,6 +89,28 @@ export function SectionQuestionnaire({
   // column isn't available; fall back to value-based completion.
   const [markedDoneIds, setMarkedDoneIds] = useState<Set<string> | null>(() =>
     markedDoneQuestionIds ? new Set(markedDoneQuestionIds) : null,
+  );
+
+  // "Edit": un-confirm the answer so it stays a draft. Clears it both locally
+  // (markedDoneIds, so switching sections keeps the edit view) and on the server
+  // (marked_done_at, so a fresh fetch — e.g. visiting the overview and back —
+  // doesn't resurrect it as "Completed"). The Edit button is only reachable for
+  // an already-confirmed answer, so the server clear is always the right intent;
+  // it's idempotent and best-effort.
+  const handleEdit = useCallback(
+    (questionId: string) => {
+      setMarkedDoneIds((prev) => {
+        if (!prev || !prev.has(questionId)) return prev;
+        const next = new Set(prev);
+        next.delete(questionId);
+        return next;
+      });
+      void clearIntakeAnswerDoneAction({
+        sessionId: session.id,
+        questionId,
+      });
+    },
+    [session.id],
   );
 
   // "Save & mark done": the value is already autosaved (queue, on blur); this
@@ -439,6 +464,7 @@ export function SectionQuestionnaire({
                           : undefined
                       }
                       key={question.id}
+                      onEdit={handleEdit}
                       onMarkDone={handleMarkDone}
                       onQueuedChange={enqueueAnswer}
                       onRetryQueuedSave={retryQuestion}

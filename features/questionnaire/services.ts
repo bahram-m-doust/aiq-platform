@@ -62,6 +62,28 @@ export async function setIntakeAnswerMarkedDone({
   }
 }
 
+// Reverts an answer to an unconfirmed draft when the user clicks "Edit". Without
+// this, the server keeps marked_done_at set, so navigating away and back (a
+// fresh server fetch) would resurrect the answer as "Completed" even though the
+// user re-opened it for editing. No-op until the migration adds the column.
+export async function clearIntakeAnswerMarkedDone({
+  sessionId,
+  questionId,
+}: {
+  sessionId: string;
+  questionId: string;
+}): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("intake_answers")
+    .update({ marked_done_at: null })
+    .eq("session_id", sessionId)
+    .eq("question_id", questionId);
+  if (error && !isMissingColumnError(error)) {
+    throw error;
+  }
+}
+
 type IntakeSessionRow = {
   id: string;
   brand_id: string;
