@@ -575,12 +575,14 @@ describe("intake UI components", () => {
     });
   });
 
-  it("hides Submit below 100 percent and shows at 100", () => {
-    const { rerender, container } = render(
+  it("disables Approve & Lock below 100 percent and enables at 100", () => {
+    const { rerender } = render(
       <FinalSubmitReadiness completion={completion()} sessionId="session-1" />,
     );
 
-    expect(container.querySelector("button")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /Approve & Lock/ }),
+    ).toBeDisabled();
 
     rerender(
       <FinalSubmitReadiness
@@ -785,7 +787,7 @@ describe("intake UI components", () => {
     expect(screen.queryByText(/uncompleted/i)).not.toBeInTheDocument();
   });
 
-  it("shows approve and lock only after review submit when complete", () => {
+  it("always shows Approve & Lock, enabled once complete", () => {
     const data = intakeData({
       session: session(),
       answers: {
@@ -809,9 +811,10 @@ describe("intake UI components", () => {
     });
     const { rerender } = render(<QuestionnaireLanding data={data} />);
 
+    // Always present and enabled when complete, even before the review step.
     expect(
-      screen.queryByRole("button", { name: /Approve & Lock/ }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: /Approve & Lock/ }),
+    ).toBeEnabled();
 
     rerender(<QuestionnaireLanding data={data} showSubmitReview />);
 

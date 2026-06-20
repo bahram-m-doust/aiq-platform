@@ -205,8 +205,8 @@ export function QuestionnaireLanding({
             })}
           </div>
 
-          {/* Submit (only on the review step). */}
-          {!locked && showSubmitReview && (
+          {/* Approve & Lock — always present, disabled until complete. */}
+          {!locked && (
             <div className="mt-8">
               <FinalSubmitReadiness
                 canApprove={canApprove}

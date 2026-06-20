@@ -65,7 +65,16 @@ export function FinalSubmitReadiness({
     }
   }, [router, state.status]);
 
-  if (!isReady) return null;
+  // Always render the Approve & Lock control. Until every question is
+  // complete, keep it disabled (and non-clickable) so the pending action is
+  // visible from the start.
+  if (!isReady) {
+    return (
+      <Button disabled size="lg" type="button">
+        Approve &amp; Lock
+      </Button>
+    );
+  }
 
   // Everything is answered, but only the brand Owner can approve & lock.
   if (!canApprove) {
