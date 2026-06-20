@@ -3,13 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  ChevronRightIcon,
+  CircleCheckIcon,
   PanelRightCloseIcon,
   PanelRightOpenIcon,
-  TriangleAlertIcon,
 } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { UnansweredReveal } from "@/features/questionnaire/components/UnansweredReveal";
 import { questionnaireSectionPath } from "@/lib/routes";
@@ -136,34 +135,39 @@ export function ProgressSidePanel({
             {totalRemaining > 0 && (
               <UnansweredReveal reviewReached={showReview} sessionId={sessionId}>
                 <div className="border-t border-[var(--bv-line)] pt-4">
-                  <Alert variant="warning" className="border-gray-300">
-                    <TriangleAlertIcon />
-                    <AlertTitle>
-                      {totalRemaining} uncompleted{" "}
-                      {totalRemaining === 1 ? "question" : "questions"}.
-                    </AlertTitle>
-                    <AlertDescription>
-                      <ul className="space-y-1">
+                  <div className="flex gap-3 rounded-lg border border-[#e5e5e5] bg-white px-4 py-3">
+                    <div className="shrink-0 pt-0.5">
+                      <CircleCheckIcon className="size-4 text-[#dc7609]" />
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col gap-2">
+                      <p className="text-sm font-semibold leading-5 text-[#dc7609]">
+                        {totalRemaining} uncompleted{" "}
+                        {totalRemaining === 1 ? "question" : "questions"}.
+                      </p>
+                      <div className="flex flex-col gap-1 text-[#844705]">
                         {incompleteSections.map((section) => {
                           const remaining =
                             section.totalQuestions - section.completedQuestions;
                           return (
-                            <li key={section.id}>
+                            <div
+                              key={section.id}
+                              className="flex items-center gap-1"
+                            >
+                              <span className="text-sm leading-5">
+                                {section.title}:
+                              </span>
                               <Link
-                                className="inline-flex items-center gap-2 underline-offset-2 transition-colors hover:underline"
+                                className="text-xs leading-4 underline"
                                 href={`${questionnaireSectionPath(section.key)}?validate=1`}
                               >
-                                <span className="font-medium">{section.title}</span>
-                                <span className="opacity-80">
-                                  — {remaining} uncompleted
-                                </span>
+                                {remaining} uncompleted
                               </Link>
-                            </li>
+                            </div>
                           );
                         })}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </UnansweredReveal>
             )}
