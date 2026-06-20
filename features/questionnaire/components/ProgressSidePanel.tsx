@@ -130,8 +130,6 @@ export function ProgressSidePanel({
                 ))}
               </ul>
             </div>
-          </div>
-
             {totalRemaining > 0 && (
               <UnansweredReveal reviewReached={showReview} sessionId={sessionId}>
                 <div className="border-t border-[var(--bv-line)] pt-4">
