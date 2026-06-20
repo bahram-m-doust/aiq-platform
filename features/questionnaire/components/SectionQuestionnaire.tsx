@@ -267,7 +267,7 @@ export function SectionQuestionnaire({
       className="min-h-svh px-4 pb-6 pt-12 sm:px-6 sm:pb-8"
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
-      <div className="mx-auto max-w-[1057px] xl:mr-[280px]">
+      <div className="mx-auto max-w-[1057px]">
         <div className="mb-6 space-y-4">
           <Button asChild size="sm" variant="outline">
             <Link href={ROUTES.questionnaire}>

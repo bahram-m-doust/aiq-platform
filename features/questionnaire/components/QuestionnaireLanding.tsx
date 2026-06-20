@@ -100,7 +100,7 @@ export function QuestionnaireLanding({
       className="min-h-svh px-4 pb-6 pt-12 sm:px-6 sm:pb-8"
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
-      <div className="mx-auto max-w-[1057px] xl:mr-[280px]">
+      <div className="mx-auto max-w-[1057px]">
         <div>
           {/* Summary */}
           <div className="mb-6 flex items-center gap-4">
