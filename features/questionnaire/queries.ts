@@ -475,7 +475,7 @@ export async function getIntakePageData({
     session,
     sections,
     answers,
-    completion: calculateIntakeCompletion({ sections, answers }),
+    completion: calculateIntakeCompletion({ sections, answers, markedDoneQuestionIds }),
     latestSnapshotId,
     markedDoneQuestionIds,
   };

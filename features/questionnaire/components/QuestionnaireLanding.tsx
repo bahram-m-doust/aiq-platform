@@ -14,7 +14,6 @@ import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/compo
 import { UnansweredReveal } from "@/features/questionnaire/components/UnansweredReveal";
 import {
   canApproveIntakeRole,
-  isIntakeAnswerComplete,
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
 import type {
@@ -63,28 +62,16 @@ export function QuestionnaireLanding({
   data: IntakePageData;
   showSubmitReview?: boolean;
 }) {
-  const { sections, completion, session, access, answers } = data;
+  const { sections, completion, session, access } = data;
   const locked = isIntakeSessionLocked(session);
   const canApprove = canApproveIntakeRole(access.membershipRole);
   const progressByKey = new Map(
     completion.sections.map((s) => [s.sectionKey, s]),
   );
-  // "Unanswered" for the warning box = a question the user hasn't explicitly
-  // "Save & mark done"-ed yet (an autosaved draft still counts as unanswered).
-  // Before the marked_done_at migration lands, markedDoneQuestionIds is null and
-  // this falls back to the value-based definition. The section cards above keep
-  // their own value-based counts, unchanged.
-  const markedDoneSet = data.markedDoneQuestionIds
-    ? new Set(data.markedDoneQuestionIds)
-    : null;
-  const incompleteSections = sections
-    .map((section) => {
-      const remaining = section.questions.filter((question) => {
-        const hasValue = isIntakeAnswerComplete(answers[question.id] ?? null);
-        return markedDoneSet
-          ? !(hasValue && markedDoneSet.has(question.id))
-          : !hasValue;
-      }).length;
+  const incompleteSections = completion.sections
+    .map((progress) => {
+      const section = sections.find((s) => s.id === progress.sectionId)!;
+      const remaining = progress.totalQuestions - progress.answeredQuestions;
       return { section, remaining };
     })
     .filter((entry) => entry.remaining > 0);
@@ -106,7 +93,7 @@ export function QuestionnaireLanding({
             <ProgressBar color={overallColor} value={completion.completionPercent} />
           </div>
           <span className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
-            {completion.answeredQuestions}/{completion.totalQuestions} answered ·{" "}
+            {completion.answeredQuestions}/{completion.totalQuestions} completed ·{" "}
             {completion.completionPercent}%
           </span>
         </div>
@@ -214,10 +201,9 @@ export function QuestionnaireLanding({
           </div>
         )}
 
-        {/* Unanswered — shown once the user reaches the "Review & submit"
+        {/* Uncompleted — shown once the user reaches the "Review & submit"
             step, then kept visible (per session) while they bounce into
-            sections to fix gaps. Lists every question not yet
-            "Save & mark done"-ed; an autosaved draft still counts as unanswered. */}
+            sections to fix gaps. */}
         {!locked && incompleteSections.length > 0 && (
           <UnansweredReveal
             reviewReached={showSubmitReview}
@@ -227,9 +213,8 @@ export function QuestionnaireLanding({
               <Alert variant="warning">
                 <TriangleAlertIcon />
                 <AlertTitle>
-                  {totalRemaining}{" "}
-                  {totalRemaining === 1 ? "question" : "questions"} not marked
-                  done yet.
+                  {totalRemaining} uncompleted{" "}
+                  {totalRemaining === 1 ? "question" : "questions"}.
                 </AlertTitle>
                 <AlertDescription>
                   <ul className="space-y-1">
@@ -241,7 +226,7 @@ export function QuestionnaireLanding({
                         >
                           <span className="font-medium">{section.title}</span>
                           <span className="opacity-80">
-                            — {remaining} unanswered
+                            — {remaining} uncompleted
                           </span>
                         </Link>
                       </li>

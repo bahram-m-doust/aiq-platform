@@ -232,18 +232,26 @@ function calculatePercent(answered: number, total: number) {
 export function calculateIntakeCompletion({
   sections,
   answers,
+  markedDoneQuestionIds = null,
 }: {
   sections: IntakeSectionWithQuestions[];
   answers: IntakeAnswerMap;
+  markedDoneQuestionIds?: string[] | null;
 }): IntakeCompletion {
   let totalQuestions = 0;
   let answeredQuestions = 0;
+  const markedDoneSet = markedDoneQuestionIds
+    ? new Set(markedDoneQuestionIds)
+    : null;
 
   const sectionProgress = sections.map((section): IntakeSectionProgress => {
     const total = section.questions.length;
-    const answered = section.questions.filter((question) =>
-      isIntakeAnswerComplete(answers[question.id] ?? null),
-    ).length;
+    const answered = section.questions.filter((question) => {
+      const hasValue = isIntakeAnswerComplete(answers[question.id] ?? null);
+      return markedDoneSet
+        ? hasValue && markedDoneSet.has(question.id)
+        : hasValue;
+    }).length;
 
     totalQuestions += total;
     answeredQuestions += answered;

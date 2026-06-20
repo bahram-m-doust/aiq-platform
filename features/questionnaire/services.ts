@@ -21,6 +21,7 @@ import {
   getIntakeAnswersForSession,
   getIntakeSectionsWithQuestions,
   getLatestIntakeSessionForBrand,
+  getMarkedDoneQuestionIds,
 } from "@/features/questionnaire/queries";
 import type {
   AutosaveIntakeAnswerInput,
@@ -196,8 +197,11 @@ async function getQuestion(questionId: string) {
 async function calculateAndPersistCompletion(sessionId: string) {
   const sections = await getIntakeSectionsWithQuestions();
   const questions = flattenIntakeQuestions(sections);
-  const answers = await getIntakeAnswersForSession({ sessionId, questions });
-  const completion = calculateIntakeCompletion({ sections, answers });
+  const [answers, markedDoneQuestionIds] = await Promise.all([
+    getIntakeAnswersForSession({ sessionId, questions }),
+    getMarkedDoneQuestionIds(sessionId),
+  ]);
+  const completion = calculateIntakeCompletion({ sections, answers, markedDoneQuestionIds });
   const admin = createAdminClient();
   const { error } = await admin
     .from("intake_sessions")
@@ -888,11 +892,11 @@ export async function finalSubmitIntake({
 
   const sections = await getIntakeSectionsWithQuestions();
   const questions = flattenIntakeQuestions(sections);
-  const answers = await getIntakeAnswersForSession({
-    sessionId: session.id,
-    questions,
-  });
-  const completion = calculateIntakeCompletion({ sections, answers });
+  const [answers, markedDoneQuestionIds] = await Promise.all([
+    getIntakeAnswersForSession({ sessionId: session.id, questions }),
+    getMarkedDoneQuestionIds(session.id),
+  ]);
+  const completion = calculateIntakeCompletion({ sections, answers, markedDoneQuestionIds });
   const validationError = validateFinalSubmitCompletion({
     session,
     completion,

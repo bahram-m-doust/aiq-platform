@@ -375,7 +375,9 @@ export function SectionQuestionnaire({
                     (question) => question.id,
                   );
                   const answered = questionIds.filter((id) =>
-                    isIntakeAnswerComplete(displayedAnswers[id] ?? null),
+                    markedDoneIds
+                      ? isIntakeAnswerComplete(displayedAnswers[id] ?? null) && markedDoneIds.has(id)
+                      : isIntakeAnswerComplete(displayedAnswers[id] ?? null),
                   ).length;
 
                   return (
