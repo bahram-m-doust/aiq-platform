@@ -681,7 +681,7 @@ describe("intake UI components", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("hides the unanswered warning until the user reaches the review step", () => {
+  it("hides the uncompleted warning until the user reaches the review step", () => {
     const data = intakeData({
       session: session(),
       answers: {
@@ -706,7 +706,7 @@ describe("intake UI components", () => {
         'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
       ),
     ).toBeNull();
-    expect(screen.queryByText(/not marked done yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/uncompleted/i)).not.toBeInTheDocument();
 
     // On the review step it appears and links into validation mode.
     rerender(<QuestionnaireLanding data={data} showSubmitReview />);
@@ -715,10 +715,10 @@ describe("intake UI components", () => {
         'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
       ),
     ).not.toBeNull();
-    expect(screen.getByText(/not marked done yet/i)).toBeVisible();
+    expect(screen.getByText(/uncompleted/i)).toBeVisible();
   });
 
-  it("keeps the unanswered warning visible after review even without the flag", () => {
+  it("keeps the uncompleted warning visible after review even without the flag", () => {
     const data = intakeData({
       session: session(),
       answers: {
@@ -730,16 +730,16 @@ describe("intake UI components", () => {
 
     // Reach the review step once — this records "review reached" for the session.
     const first = render(<QuestionnaireLanding data={data} showSubmitReview />);
-    expect(screen.getByText(/not marked done yet/i)).toBeVisible();
+    expect(screen.getByText(/uncompleted/i)).toBeVisible();
     first.unmount();
 
     // Returning to the plain overview (no ?review=1) still shows the box, so the
     // user can keep fixing gaps without losing it.
     render(<QuestionnaireLanding data={data} />);
-    expect(screen.getByText(/not marked done yet/i)).toBeVisible();
+    expect(screen.getByText(/uncompleted/i)).toBeVisible();
   });
 
-  it("treats answered-but-not-marked-done questions as unanswered", () => {
+  it("treats answered-but-not-marked-done questions as uncompleted", () => {
     const data = intakeData({
       session: session(),
       answers: {
@@ -747,18 +747,27 @@ describe("intake UI components", () => {
         "question-2": "https://helio.example",
       },
       completion: completion({
-        answeredQuestions: 2,
-        completionPercent: 100,
+        answeredQuestions: 0,
+        completionPercent: 0,
+        sections: [
+          {
+            sectionId: "section-1",
+            sectionKey: "COMPANY",
+            title: "Company",
+            totalQuestions: 2,
+            answeredQuestions: 0,
+            completionPercent: 0,
+          },
+        ],
       }),
-      // Both questions have a value, but neither has been "Save & mark done"-ed.
       markedDoneQuestionIds: [],
     });
     render(<QuestionnaireLanding data={data} showSubmitReview />);
 
-    expect(screen.getByText(/not marked done yet/i)).toBeVisible();
+    expect(screen.getByText(/uncompleted/i)).toBeVisible();
   });
 
-  it("clears the unanswered warning once every question is marked done", () => {
+  it("clears the uncompleted warning once every question is marked done", () => {
     const data = intakeData({
       session: session(),
       answers: {
@@ -773,7 +782,7 @@ describe("intake UI components", () => {
     });
     render(<QuestionnaireLanding data={data} />);
 
-    expect(screen.queryByText(/not marked done yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/uncompleted/i)).not.toBeInTheDocument();
   });
 
   it("shows approve and lock only after review submit when complete", () => {

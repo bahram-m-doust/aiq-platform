@@ -3,17 +3,17 @@ import {
   ArrowRightIcon,
   DownloadIcon,
   LockIcon,
-  TriangleAlertIcon,
 } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalSubmitReadiness";
+import { ProgressSidePanel } from "@/features/questionnaire/components/ProgressSidePanel";
 import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
-import { UnansweredReveal } from "@/features/questionnaire/components/UnansweredReveal";
 import {
   canApproveIntakeRole,
+  isIntakeAnswerComplete,
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
 import type {
@@ -62,180 +62,172 @@ export function QuestionnaireLanding({
   data: IntakePageData;
   showSubmitReview?: boolean;
 }) {
-  const { sections, completion, session, access } = data;
+  const { sections, completion, session, access, answers } = data;
   const locked = isIntakeSessionLocked(session);
   const canApprove = canApproveIntakeRole(access.membershipRole);
   const progressByKey = new Map(
     completion.sections.map((s) => [s.sectionKey, s]),
   );
-  const incompleteSections = completion.sections
-    .map((progress) => {
-      const section = sections.find((s) => s.id === progress.sectionId)!;
-      const remaining = progress.totalQuestions - progress.answeredQuestions;
-      return { section, remaining };
-    })
-    .filter((entry) => entry.remaining > 0);
-  const totalRemaining = incompleteSections.reduce(
-    (sum, entry) => sum + entry.remaining,
+  const overallColor = "green" as const;
+
+  // Value-based "answered" count (any question with a value, even drafts)
+  const totalAnswered = sections.reduce(
+    (sum, section) =>
+      sum +
+      section.questions.filter((q) =>
+        isIntakeAnswerComplete(answers[q.id] ?? null),
+      ).length,
     0,
   );
-  const overallColor = "green" as const;
+
+  // Per-section summary for the side panel
+  const sectionSummaries = sections.map((section) => {
+    const progress = progressByKey.get(section.key);
+    return {
+      id: section.id,
+      key: section.key,
+      title: section.title,
+      totalQuestions: progress?.totalQuestions ?? section.questions.length,
+      answeredQuestions: section.questions.filter((q) =>
+        isIntakeAnswerComplete(answers[q.id] ?? null),
+      ).length,
+      completedQuestions: progress?.answeredQuestions ?? 0,
+    };
+  });
 
   return (
     <div
       className="min-h-svh px-4 pb-6 pt-12 sm:px-6 sm:pb-8"
       style={{ background: "#ffffff", color: "var(--bv-ink)" }}
     >
-      <div className="mx-auto max-w-[1057px]">
-        {/* Summary (navigation handled by the global breadcrumb) */}
-        <div className="mb-6 flex items-center gap-4">
-          <div className="min-w-0 flex-1">
-            <ProgressBar color={overallColor} value={completion.completionPercent} />
+      <div className="mx-auto flex max-w-[1380px] gap-8">
+        <div className="min-w-0 flex-1 max-w-[1057px]">
+          {/* Summary */}
+          <div className="mb-6 flex items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <ProgressBar color={overallColor} value={completion.completionPercent} />
+            </div>
+            <span className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
+              {completion.answeredQuestions}/{completion.totalQuestions} completed ·{" "}
+              {completion.completionPercent}%
+            </span>
           </div>
-          <span className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
-            {completion.answeredQuestions}/{completion.totalQuestions} completed ·{" "}
-            {completion.completionPercent}%
-          </span>
-        </div>
 
-        {/* Page header */}
-        <div className="mb-9">
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
-            Brand Research · Phase 01
-          </span>
-          <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.02em]">
-            Questionnaires
-          </h1>
-          <p className="mt-2 max-w-[640px] text-sm leading-relaxed text-[var(--bv-ink-3)]">
-            Six short sections capture the raw signal behind your brand —
-            voice, audience, market and ambition. Pick any section to start;
-            your answers save automatically as you go.
-          </p>
+          {/* Page header */}
+          <div className="mb-9">
+            <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
+              Brand Research · Phase 01
+            </span>
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.02em]">
+              Questionnaires
+            </h1>
+            <p className="mt-2 max-w-[640px] text-sm leading-relaxed text-[var(--bv-ink-3)]">
+              Six short sections capture the raw signal behind your brand —
+              voice, audience, market and ambition. Pick any section to start;
+              your answers save automatically as you go.
+            </p>
 
-          {locked && (
-            <Alert className="mt-4" variant="success">
-              <LockIcon />
-              <AlertDescription>
-                This questionnaire has been submitted and locked. Sections are
-                read-only — open one to review your answers.
-              </AlertDescription>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {sections[0] ? (
-                  <QuestionnaireChangeRequestDialog
-                    sectionKey={sections[0].key}
-                    triggerClassName="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[var(--bv-line)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-                  />
-                ) : null}
-                {data.latestSnapshotId && (
-                  <a
-                    className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[var(--bv-line)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-                    download
-                    href={`/api/questionnaire/${data.latestSnapshotId}/docx`}
-                  >
-                    <DownloadIcon className="size-3.5" />
-                    Download answers
-                  </a>
-                )}
-              </div>
-            </Alert>
+            {locked && (
+              <Alert className="mt-4" variant="success">
+                <LockIcon />
+                <AlertDescription>
+                  This questionnaire has been submitted and locked. Sections are
+                  read-only — open one to review your answers.
+                </AlertDescription>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {sections[0] ? (
+                    <QuestionnaireChangeRequestDialog
+                      sectionKey={sections[0].key}
+                      triggerClassName="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[var(--bv-line)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                    />
+                  ) : null}
+                  {data.latestSnapshotId && (
+                    <a
+                      className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-[var(--bv-line)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
+                      download
+                      href={`/api/questionnaire/${data.latestSnapshotId}/docx`}
+                    >
+                      <DownloadIcon className="size-3.5" />
+                      Download answers
+                    </a>
+                  )}
+                </div>
+              </Alert>
+            )}
+          </div>
+
+          {/* Section list */}
+          <div className="mb-2 flex items-baseline justify-between px-1">
+            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
+              Sections
+            </span>
+            <span className="font-mono text-[10px] text-[var(--bv-ink-4)]">
+              {sections.length} total
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            {sections.map((section, index) => {
+              const progress = progressByKey.get(section.key);
+              const total = progress?.totalQuestions ?? section.questions.length;
+              const answered = progress?.answeredQuestions ?? 0;
+              const state = sectionState(progress);
+
+              return (
+                <Link
+                  className="group flex items-center gap-3 rounded-xl border bg-[var(--bv-card)] px-5 py-4 transition-all duration-200 hover:border-[var(--bv-line-2)] hover:shadow-sm"
+                  href={questionnaireSectionPath(section.key)}
+                  key={section.id}
+                  style={{ borderColor: "var(--bv-line)" }}
+                >
+                  <span className="shrink-0 text-[15px] font-semibold tracking-[-0.005em] text-[var(--bv-ink-4)]">
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="truncate text-[15px] font-semibold tracking-[-0.005em]">
+                      {section.title}
+                    </h2>
+                    {section.description && (
+                      <p className="truncate text-[12.5px] text-[var(--bv-ink-3)]">
+                        {section.description}
+                      </p>
+                    )}
+                  </div>
+                  <span className="shrink-0 font-mono text-[10.5px] text-[var(--bv-ink-4)]">
+                    {answered}/{total}
+                  </span>
+                  <Badge variant="outline" style={STATE_STYLE[state]}>
+                    {STATE_LABEL[state]}
+                  </Badge>
+                  <ArrowRightIcon className="size-4 shrink-0 text-[var(--bv-ink-4)] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--bv-ink-2)]" />
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Submit (only on the review step). */}
+          {!locked && showSubmitReview && (
+            <div className="mt-8">
+              <FinalSubmitReadiness
+                canApprove={canApprove}
+                completion={completion}
+                sessionId={session.id}
+              />
+            </div>
           )}
         </div>
 
-        {/* Section list */}
-        <div className="mb-2 flex items-baseline justify-between px-1">
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
-            Sections
-          </span>
-          <span className="font-mono text-[10px] text-[var(--bv-ink-4)]">
-            {sections.length} total
-          </span>
-        </div>
-
-        <div className="space-y-4">
-          {sections.map((section, index) => {
-            const progress = progressByKey.get(section.key);
-            const total = progress?.totalQuestions ?? section.questions.length;
-            const answered = progress?.answeredQuestions ?? 0;
-            const state = sectionState(progress);
-
-            return (
-              <Link
-                className="group flex items-center gap-3 rounded-xl border bg-[var(--bv-card)] px-5 py-4 transition-all duration-200 hover:border-[var(--bv-line-2)] hover:shadow-sm"
-                href={questionnaireSectionPath(section.key)}
-                key={section.id}
-                style={{ borderColor: "var(--bv-line)" }}
-              >
-                <span className="shrink-0 text-[15px] font-semibold tracking-[-0.005em] text-[var(--bv-ink-4)]">
-                  {index + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-[15px] font-semibold tracking-[-0.005em]">
-                    {section.title}
-                  </h2>
-                  {section.description && (
-                    <p className="truncate text-[12.5px] text-[var(--bv-ink-3)]">
-                      {section.description}
-                    </p>
-                  )}
-                </div>
-                <span className="shrink-0 font-mono text-[10.5px] text-[var(--bv-ink-4)]">
-                  {answered}/{total}
-                </span>
-                <Badge variant="outline" style={STATE_STYLE[state]}>
-                  {STATE_LABEL[state]}
-                </Badge>
-                <ArrowRightIcon className="size-4 shrink-0 text-[var(--bv-ink-4)] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--bv-ink-2)]" />
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Submit (only on the review step). */}
-        {!locked && showSubmitReview && (
-          <div className="mt-8">
-            <FinalSubmitReadiness
-              canApprove={canApprove}
-              completion={completion}
-              sessionId={session.id}
-            />
-          </div>
-        )}
-
-        {/* Uncompleted — shown once the user reaches the "Review & submit"
-            step, then kept visible (per session) while they bounce into
-            sections to fix gaps. */}
-        {!locked && incompleteSections.length > 0 && (
-          <UnansweredReveal
-            reviewReached={showSubmitReview}
+        {/* Collapsible side panel */}
+        {!locked && (
+          <ProgressSidePanel
+            completionPercent={completion.completionPercent}
+            sections={sectionSummaries}
             sessionId={session.id}
-          >
-            <div className="mt-8">
-              <Alert variant="warning">
-                <TriangleAlertIcon />
-                <AlertTitle>
-                  {totalRemaining} uncompleted{" "}
-                  {totalRemaining === 1 ? "question" : "questions"}.
-                </AlertTitle>
-                <AlertDescription>
-                  <ul className="space-y-1">
-                    {incompleteSections.map(({ section, remaining }) => (
-                      <li key={section.id}>
-                        <Link
-                          className="inline-flex items-center gap-2 underline-offset-2 transition-colors hover:underline"
-                          href={`${questionnaireSectionPath(section.key)}?validate=1`}
-                        >
-                          <span className="font-medium">{section.title}</span>
-                          <span className="opacity-80">
-                            — {remaining} uncompleted
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            </div>
-          </UnansweredReveal>
+            showReview={showSubmitReview}
+            totalAnswered={totalAnswered}
+            totalCompleted={completion.answeredQuestions}
+            totalQuestions={completion.totalQuestions}
+          />
         )}
       </div>
     </div>
