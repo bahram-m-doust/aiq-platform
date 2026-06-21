@@ -538,7 +538,7 @@ export function SectionQuestionnaire({
             </PaginationContent>
           </Pagination>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <Button asChild className="text-[var(--bv-ink-3)] hover:text-[var(--bv-ink)]" variant="ghost">
               <Link href={ROUTES.questionnaire}>
                 <ArrowLeftIcon className="size-3.5" />

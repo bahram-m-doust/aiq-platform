@@ -13,6 +13,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { ReviewReadyReveal } from "@/features/questionnaire/components/ReviewReadyReveal";
 import { UnansweredReveal } from "@/features/questionnaire/components/UnansweredReveal";
 import { ROUTES, questionnaireSectionPath } from "@/lib/routes";
+import { cn } from "@/lib/utils";
 
 type SectionSummary = {
   id: string;
@@ -49,9 +50,12 @@ export function ProgressSidePanel({
 
   return (
     <>
+      {/* Collapsed-rail toggle — only relevant on xl, where the panel docks as
+          a fixed rail. Below xl the panel lives inline, so there's nothing to
+          expand. */}
       {!open && (
         <button
-          className="fixed right-4 top-20 z-40 flex size-9 items-center justify-center rounded-lg border border-[var(--bv-line)] bg-white shadow-sm transition-colors hover:bg-gray-50"
+          className="fixed right-4 top-20 z-40 hidden size-9 items-center justify-center rounded-lg border border-[var(--bv-line)] bg-white shadow-sm transition-colors hover:bg-gray-50 xl:flex"
           onClick={() => setOpen(true)}
           type="button"
           aria-label="Open progress panel"
@@ -61,11 +65,14 @@ export function ProgressSidePanel({
       )}
 
       <aside
-        className={
-          open
-            ? "fixed right-4 top-[84px] z-30 hidden max-h-[calc(100vh-100px)] w-[280px] flex-col gap-5 overflow-y-auto rounded-[10px] border border-border bg-card px-4 py-4 shadow-xs xl:flex"
-            : "hidden"
-        }
+        className={cn(
+          // Mobile / tablet: an inline card in the page flow so progress, the
+          // warning and the Review & submit button are never lost off-canvas.
+          "mx-auto mt-8 flex w-full max-w-[480px] flex-col gap-5 rounded-[10px] border border-border bg-card px-4 py-4 shadow-xs",
+          // xl: dock as a fixed, collapsible right rail.
+          "xl:fixed xl:right-4 xl:top-[84px] xl:z-30 xl:mx-0 xl:mt-0 xl:max-h-[calc(100vh-100px)] xl:w-[280px] xl:max-w-none xl:overflow-y-auto",
+          open ? "xl:flex" : "xl:hidden",
+        )}
       >
         <div>
           <div className="flex items-center justify-between pb-3">
@@ -73,7 +80,7 @@ export function ProgressSidePanel({
               Progress
             </span>
             <button
-              className="flex size-6 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+              className="hidden size-6 items-center justify-center rounded-md transition-colors hover:bg-gray-100 xl:flex"
               onClick={() => setOpen(false)}
               type="button"
               aria-label="Close progress panel"
