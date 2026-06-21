@@ -1041,6 +1041,14 @@ export function BrandBuildView({
     };
   }, [spineProgressIndex, openPhases, progress.phases]);
 
+  // Once the final phase (Brain Build) is complete, the spine should stop at its
+  // node — no trailing dashed segment dangling below the last card.
+  const finalPhaseComplete = useMemo(() => {
+    const last = progress.phases[progress.phases.length - 1];
+    return last ? phaseInfo[last.key]?.phaseState === "complete" : false;
+  }, [progress.phases, phaseInfo]);
+  const spineEndsAtLastNode = finalPhaseComplete && spineFillPx !== null;
+
   const router = useRouter();
   const activePhase = progress.activePhase;
   const toggle = useCallback(
@@ -1167,8 +1175,11 @@ export function BrandBuildView({
           {/* Spine Track */}
           <div className="relative pl-14 max-sm:pl-9" ref={spineRef}>
             <div
-              className="absolute left-[19px] bottom-[18px] top-[27px] w-0.5 rounded-sm max-sm:left-[11px]"
+              className={`absolute left-[19px] top-[27px] w-0.5 rounded-sm max-sm:left-[11px] ${
+                spineEndsAtLastNode ? "" : "bottom-[18px]"
+              }`}
               style={{
+                height: spineEndsAtLastNode ? `${spineFillPx}px` : undefined,
                 backgroundImage: `linear-gradient(to bottom, var(--bv-line-dashed) 0 6px, transparent 6px 12px)`,
                 backgroundSize: "2px 12px",
                 backgroundRepeat: "repeat-y",

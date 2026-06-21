@@ -10,7 +10,10 @@ type CreditCounterProps = {
 };
 
 function formatDollars(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
+  // Floor to whole cents so any real spend — even the sub-cent cost of a single
+  // text turn — visibly moves the figure below the cap (499.8¢ → $4.99, not the
+  // misleading $5.00 that rounding would show).
+  return `$${(Math.floor(cents) / 100).toFixed(2)}`;
 }
 
 export function CreditCounter({ credits, aiBudget }: CreditCounterProps) {

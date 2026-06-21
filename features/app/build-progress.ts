@@ -620,7 +620,24 @@ export async function getBrandBuildProgress(
     ? await getAestheticsProgressFromDB(brandId)
     : getAestheticsLockedStub();
 
-  if (aesthetics.status !== "complete") {
+  const brainBuilt = Boolean(brainSchedule?.builtAt);
+
+  if (brainBuilt) {
+    // Bextudio has shipped the brain (built_at stamped by "Build Now"). That is
+    // the single source of truth for "Phase 04 is done" — so the card jumps
+    // straight to 100% / all sub-steps complete in one shot, regardless of the
+    // finer-grained RAG checks. This keeps the roadmap from getting stuck at
+    // "3 / 4" when, say, the agent-entitlement row didn't materialize but the
+    // brain is demonstrably live.
+    brain.status = "complete";
+    brain.percent = 100;
+    brain.stepsDone = brain.stepsTotal;
+    brain.substeps = brain.substeps.map((substep) => ({
+      ...substep,
+      state: "done",
+      progress: 100,
+    }));
+  } else if (aesthetics.status !== "complete") {
     brain.status = brain.stepsDone > 0 ? "active" : "locked";
   } else if (brain.status !== "complete") {
     // Aesthetics are approved, so Phase 04 is handed to Bextudio. Until the
@@ -628,7 +645,7 @@ export async function getBrandBuildProgress(
     // scheduled — its headline percent mirrors the cosmetic schedule bar so the
     // phase card and the in-panel progress agree.
     brain.status = "active";
-    if (brainSchedule && !brainSchedule.builtAt) {
+    if (brainSchedule) {
       brain.percent = scheduleProgressPercent(brainSchedule.targetDate, brainSchedule.createdAt);
     }
   }
