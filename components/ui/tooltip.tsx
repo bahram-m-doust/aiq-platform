@@ -45,10 +45,10 @@ function TooltipContent({
 }) {
   const surface =
     variant === "success"
-      ? "bg-emerald-600 text-white"
+      ? "bg-[#d3fde5] font-medium text-[#008a2e]"
       : "bg-primary text-primary-foreground"
   const arrow =
-    variant === "success" ? "bg-emerald-600 fill-emerald-600" : "bg-primary fill-primary"
+    variant === "success" ? "bg-[#d3fde5] fill-[#d3fde5]" : "bg-primary fill-primary"
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
