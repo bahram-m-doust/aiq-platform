@@ -88,7 +88,7 @@ export function ReviewReadyReveal({
         <div className="animate-in fade-in-0 slide-in-from-bottom-1 zoom-in-95 duration-500">
           <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen}>
             <TooltipTrigger asChild>
-              <Button asChild className="w-full" size="lg" variant="secondary">
+              <Button asChild className="w-full" size="lg" variant="outline">
                 <Link href={reviewHref}>
                   <CircleCheckIcon className="size-4" />
                   Review &amp; submit
@@ -101,8 +101,8 @@ export function ReviewReadyReveal({
               sideOffset={8}
               variant="success"
             >
-              You&apos;ve answered all {totalQuestions} questions — click here
-              to review &amp; submit your Questionnaires.
+              You&apos;ve answered all {totalQuestions} questions. Click here to
+              review &amp; submit your Questionnaires.
             </TooltipContent>
           </Tooltip>
         </div>
