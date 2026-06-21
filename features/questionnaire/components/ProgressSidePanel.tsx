@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  CircleCheckIcon,
+  ArrowRightIcon,
+  TriangleAlertIcon,
   PanelRightCloseIcon,
   PanelRightOpenIcon,
 } from "lucide-react";
 
-
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { ReviewReadyReveal } from "@/features/questionnaire/components/ReviewReadyReveal";
 import { UnansweredReveal } from "@/features/questionnaire/components/UnansweredReveal";
@@ -66,7 +67,7 @@ export function ProgressSidePanel({
         className={cn(
           // Mobile / tablet: an inline card in the page flow so progress, the
           // warning and the Review & submit button are never lost off-canvas.
-          "mx-auto mt-8 flex w-full max-w-[480px] flex-col gap-5 rounded-[10px] border border-border bg-card px-4 py-4 shadow-xs",
+          "mx-auto mt-8 flex w-full max-w-[480px] flex-col gap-4 rounded-[12px] border border-border bg-card px-4 py-4 shadow-xs",
           // xl: dock as a fixed, collapsible right rail.
           "xl:fixed xl:right-4 xl:top-[84px] xl:z-30 xl:mx-0 xl:mt-0 xl:max-h-[calc(100vh-100px)] xl:w-[280px] xl:max-w-none xl:overflow-y-auto",
           open ? "xl:flex" : "xl:hidden",
@@ -87,43 +88,60 @@ export function ProgressSidePanel({
             </button>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <div>
-              <ProgressBar color="green" value={completionPercent} />
+          <div className="flex flex-col gap-3 pt-1.5">
+            <div className="rounded-[10px] bg-[#f7f7f8] px-3.5 py-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs text-[var(--bv-ink-3)]">
+                  Completed questions
+                </span>
+                <span className="font-mono text-xs font-semibold text-emerald-600">
+                  {totalCompleted}/{totalQuestions}
+                </span>
+              </div>
+              <div className="mt-3">
+                <ProgressBar color="green" value={completionPercent} />
+              </div>
               <span className="mt-1.5 block font-mono text-[10px] text-[var(--bv-ink-4)]">
                 {completionPercent}%
               </span>
             </div>
 
-            <div className="flex items-baseline justify-between">
-              <span className="text-xs text-[var(--bv-ink-3)]">
-                Completed questions
-              </span>
-              <span className="font-mono text-xs font-semibold text-emerald-600">
-                {totalCompleted}/{totalQuestions}
-              </span>
-            </div>
-
             <div className="border-t border-[var(--bv-line)] pt-3">
-              <span className="mb-2 block text-[10px] font-semibold uppercase tracking-widest text-[var(--bv-ink-4)]">
-                Sections
+              <span className="mb-3 block text-[10px] font-semibold uppercase tracking-widest text-[var(--bv-ink-4)]">
+                Section progress
               </span>
-              <ul className="flex flex-col gap-1.5">
-                {sections.map((section) => (
-                  <li key={section.id}>
-                    <Link
-                      className="group flex items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-gray-50"
-                      href={questionnaireSectionPath(section.key)}
-                    >
-                      <span className="truncate text-[var(--bv-ink-2)] group-hover:text-[var(--bv-ink)]">
-                        {section.title}
-                      </span>
-                      <span className="ml-2 shrink-0 font-mono text-[10px] text-[var(--bv-ink-4)]">
-                        {section.completedQuestions}/{section.totalQuestions}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
+              <ul className="flex flex-col gap-2">
+                {sections.map((section) => {
+                  const remaining =
+                    section.totalQuestions - section.completedQuestions;
+                  const completed = remaining === 0;
+
+                  return (
+                    <li key={section.id}>
+                      <Link
+                        className="group block rounded-lg px-2.5 py-2.5 text-xs transition-colors hover:bg-gray-50"
+                        href={questionnaireSectionPath(section.key)}
+                      >
+                        <span className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                          <span className="min-w-0 break-words font-medium leading-4 text-[var(--bv-ink-2)] group-hover:text-[var(--bv-ink)]">
+                            {section.title}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2">
+                            <span className="font-mono text-[10px] text-[var(--bv-ink-4)]">
+                              {section.completedQuestions} of{" "}
+                              {section.totalQuestions}
+                            </span>
+                            {completed ? (
+                              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                                Done
+                              </span>
+                            ) : null}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
             <UnansweredReveal reviewReached={showReview} sessionId={sessionId}>
@@ -134,42 +152,48 @@ export function ProgressSidePanel({
                 totalQuestions={totalQuestions}
                 warning={
                   <div className="border-t border-[var(--bv-line)] pt-4">
-                    <div className="flex items-center gap-3 rounded-[8px] bg-white px-4 py-3 shadow-[0px_1px_2px_0px_rgba(16,24,40,0.06),0px_1px_3px_0px_rgba(16,24,40,0.10)]">
-                      <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                        <div className="flex shrink-0 items-start pt-0.5">
-                          <CircleCheckIcon className="size-4 text-[#dc7609]" />
-                        </div>
-                        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
-                          <p className="overflow-hidden text-ellipsis text-[14px] font-semibold leading-5 text-[#dc7609]">
-                            {totalRemaining} uncompleted{" "}
-                            {totalRemaining === 1 ? "question" : "questions"}.
-                          </p>
-                          <div className="flex flex-col">
-                            {incompleteSections.map((section) => {
-                              const remaining =
-                                section.totalQuestions -
-                                section.completedQuestions;
-                              return (
-                                <div
-                                  key={section.id}
-                                  className="flex flex-col items-start"
-                                >
-                                  <span className="text-[14px] font-medium leading-5 text-[#0a0a0a]">
-                                    {section.title}:
-                                  </span>
-                                  <Link
-                                    className="text-[12px] leading-4 text-[#844705] underline"
-                                    href={`${questionnaireSectionPath(section.key)}?validate=1`}
-                                  >
-                                    {remaining} uncompleted
-                                  </Link>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
+                    <Alert
+                      className="relative overflow-hidden border-amber-300/80 bg-white text-[var(--bv-ink)] shadow-xs"
+                    >
+                      <AlertTitle className="flex items-center gap-2 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-amber-700">
+                        <TriangleAlertIcon className="size-5 shrink-0 text-amber-600" />
+                        <span>Questions remaining</span>
+                      </AlertTitle>
+                      <AlertDescription className="max-w-full pr-1 text-[13px] leading-5 text-[var(--bv-ink-3)]">
+                        Answer{" "}
+                        <span className="font-semibold text-[var(--bv-ink-2)]">
+                          {totalRemaining} more{" "}
+                          {totalRemaining === 1 ? "question" : "questions"}
+                        </span>{" "}
+                        to unlock submission.
+                      </AlertDescription>
+                      <div className="mt-3 flex flex-col gap-2">
+                        {incompleteSections.map((section) => {
+                          const remaining =
+                            section.totalQuestions -
+                            section.completedQuestions;
+                          return (
+                            <Link
+                              key={section.id}
+                              href={`${questionnaireSectionPath(section.key)}?validate=1`}
+                              className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border border-[var(--bv-line)] bg-[#fbfbfc] px-3 py-2 text-[var(--bv-ink-2)] transition-all hover:border-[var(--bv-line-2)] hover:bg-white hover:shadow-sm"
+                            >
+                              <span className="min-w-0">
+                                <span className="block break-words text-[12px] font-medium leading-4 text-[var(--bv-ink-2)]">
+                                  {section.title}
+                                </span>
+                              </span>
+                              <span className="flex shrink-0 items-center gap-1.5">
+                                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold leading-4 text-[#9a5a04] ring-1 ring-[var(--bv-line)]">
+                                  {remaining} left
+                                </span>
+                                <ArrowRightIcon className="size-3.5 flex-none text-[var(--bv-ink-4)] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--bv-ink-2)]" />
+                              </span>
+                            </Link>
+                          );
+                        })}
                       </div>
-                    </div>
+                    </Alert>
                   </div>
                 }
               />

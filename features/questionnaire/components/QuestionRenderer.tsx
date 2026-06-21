@@ -62,6 +62,30 @@ function detectDir(value: IntakeAnswerValue): "rtl" | "ltr" {
   return rtlPattern.test(text) ? "rtl" : "ltr";
 }
 
+function moveCaretToEnd(element: HTMLElement) {
+  if (
+    !(element instanceof HTMLInputElement) &&
+    !(element instanceof HTMLTextAreaElement)
+  ) {
+    return;
+  }
+
+  const end = element.value.length;
+
+  try {
+    element.setSelectionRange(end, end);
+  } catch {
+    // Some input types, like number, do not support text selection APIs.
+  }
+}
+
+function queueCaretToEnd(element: HTMLElement) {
+  moveCaretToEnd(element);
+  window.requestAnimationFrame(() => moveCaretToEnd(element));
+  window.setTimeout(() => moveCaretToEnd(element), 0);
+  window.setTimeout(() => moveCaretToEnd(element), 80);
+}
+
 function SaveIndicator({
   isPending,
   status,
@@ -176,6 +200,7 @@ export function QuestionRenderer({
   // never triggers a save; we resync from the committed value only when the
   // field is not being edited (a restored draft or a completed save).
   const isFocusedRef = useRef(false);
+  const focusTimeoutRef = useRef<number | null>(null);
   const kind = resolveQuestionInputKind(question.inputType);
   const options = useMemo(
     () => parseQuestionOptions(question.validationSchema),
@@ -204,6 +229,27 @@ export function QuestionRenderer({
       setLocalValue(value);
     }
   }, [value]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+
+    focusTimeoutRef.current = window.setTimeout(() => {
+      const card = document.getElementById(`question-card-${question.id}`);
+      const focusable = card?.querySelector<HTMLElement>("[data-intake-field]");
+
+      if (focusable) {
+        focusable.focus();
+        queueCaretToEnd(focusable);
+      }
+    }, 0);
+
+    return () => {
+      if (focusTimeoutRef.current) {
+        window.clearTimeout(focusTimeoutRef.current);
+        focusTimeoutRef.current = null;
+      }
+    };
+  }, [isEditing, question.id]);
 
   const displayedStatus = saveState?.status ?? status;
   const displayedMessage = saveState?.message ?? message;
@@ -236,8 +282,8 @@ export function QuestionRenderer({
   const showSaveProgress =
     isPending ||
     ["queued", "saving", "error"].includes(indicatorStatus);
-  // While a draft autosave is in flight, "Save & mark done" is held disabled
-  // so the in-progress write settles before the answer can be marked complete.
+  // While a draft autosave is in flight, keep "Save & mark done" focusable so
+  // Tab does not lose its place, but block activation until the write settles.
   const isSaving =
     (isPending && !usesQueuedAutosave) ||
     indicatorStatus === "queued" ||
@@ -337,7 +383,9 @@ export function QuestionRenderer({
   // like pressing "Done" (save + advance). In a textarea, plain Enter stays a
   // newline. Tab still works as usual.
   function handleFieldKeyDown(
-    event: React.KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>,
+    event:
+      | React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement>
+      | React.KeyboardEvent<HTMLElement>,
   ) {
     if (event.key !== "Enter") return;
 
@@ -356,8 +404,12 @@ export function QuestionRenderer({
       return;
     }
 
-    // Plain Enter on a single-line input commits and advances; textarea keeps it.
-    if (kind !== "textarea" && !event.shiftKey) {
+    // Plain Enter on text inputs commits and advances; textarea keeps newline.
+    if (
+      kind !== "textarea" &&
+      kind !== "select" &&
+      !event.shiftKey
+    ) {
       event.preventDefault();
       handleDone();
     }
@@ -365,6 +417,7 @@ export function QuestionRenderer({
 
   function handleDone() {
     if (!canMarkDone) return;
+    if (isSaving) return;
 
     if (isTextKind) {
       handleTextBlur();
@@ -423,7 +476,12 @@ export function QuestionRenderer({
           }}
           value={typeof currentValue === "string" ? currentValue : undefined}
         >
-          <SelectTrigger aria-describedby={statusId} id={controlId}>
+          <SelectTrigger
+            aria-describedby={statusId}
+            data-intake-field
+            id={controlId}
+            onKeyDown={handleFieldKeyDown}
+          >
             <SelectValue placeholder="Select an answer" />
           </SelectTrigger>
           <SelectContent>
@@ -451,8 +509,10 @@ export function QuestionRenderer({
             >
               <input
                 checked={currentValue === option.value}
+                data-intake-field
                 className="size-4"
                 name={controlId}
+                onKeyDown={handleFieldKeyDown}
                 onChange={() => {
                   if (!onQueuedChange) {
                     setLocalValue(option.value);
@@ -477,7 +537,9 @@ export function QuestionRenderer({
           <Checkbox
             aria-describedby={statusId}
             checked={checked}
+            data-intake-field
             id={controlId}
+            onKeyDown={handleFieldKeyDown}
             onCheckedChange={(nextChecked) => {
               const nextValue = nextChecked === true;
               if (!onQueuedChange) {
@@ -507,7 +569,9 @@ export function QuestionRenderer({
                 key={option.value}
               >
                 <Checkbox
+                  data-intake-field
                   checked={checked}
+                  onKeyDown={handleFieldKeyDown}
                   onCheckedChange={(nextChecked) => {
                     const nextValues =
                       nextChecked === true
@@ -538,8 +602,9 @@ export function QuestionRenderer({
           id={controlId}
           onBlur={handleTextBlur}
           onChange={(event) => setTextValue(event.target.value)}
-          onFocus={() => {
+          onFocus={(event) => {
             isFocusedRef.current = true;
+            queueCaretToEnd(event.currentTarget);
           }}
           onKeyDown={handleFieldKeyDown}
           placeholder="Enter a considered response"
@@ -557,8 +622,9 @@ export function QuestionRenderer({
         id={controlId}
         onBlur={handleTextBlur}
         onChange={(event) => setTextValue(event.target.value)}
-        onFocus={() => {
+        onFocus={(event) => {
           isFocusedRef.current = true;
+          queueCaretToEnd(event.currentTarget);
         }}
         onKeyDown={handleFieldKeyDown}
         placeholder="Enter your response"
@@ -618,8 +684,10 @@ export function QuestionRenderer({
                 "h-9 shrink-0 rounded-full px-4 text-sm",
                 flagUnconfirmedDraft &&
                   "border-destructive text-destructive hover:border-destructive hover:text-destructive",
+                isSaving && "cursor-not-allowed opacity-50",
               )}
-              disabled={!canMarkDone || isSaving}
+              aria-disabled={isSaving ? true : undefined}
+              disabled={!canMarkDone}
               onClick={handleDone}
               onMouseDown={(event) => {
                 // Clicking blurs the field, which fires a blur autosave and

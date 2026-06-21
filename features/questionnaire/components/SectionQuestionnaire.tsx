@@ -182,6 +182,11 @@ export function SectionQuestionnaire({
       return;
     }
     event.preventDefault();
+
+    if (targetId === activeSectionId) {
+      return;
+    }
+
     switchToSection(targetId, targetKey);
   };
 

@@ -16,18 +16,27 @@ import {
   isIntakeAnswerComplete,
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
-import type {
-  IntakePageData,
-  IntakeSectionProgress,
-} from "@/features/questionnaire/types";
+import type { IntakePageData } from "@/features/questionnaire/types";
 import { questionnaireSectionPath } from "@/lib/routes";
 
 type SectionState = "done" | "in-progress" | "not-started";
 
-function sectionState(progress: IntakeSectionProgress | undefined): SectionState {
-  if (!progress || progress.totalQuestions === 0) return "not-started";
-  if (progress.completionPercent === 100) return "done";
-  if (progress.answeredQuestions > 0) return "in-progress";
+function sectionState({
+  completedQuestions,
+  completionPercent,
+  draftAnsweredQuestions,
+  totalQuestions,
+}: {
+  completedQuestions: number;
+  completionPercent: number;
+  draftAnsweredQuestions: number;
+  totalQuestions: number;
+}): SectionState {
+  if (totalQuestions === 0) return "not-started";
+  if (completionPercent === 100) return "done";
+  if (completedQuestions > 0 || draftAnsweredQuestions > 0) {
+    return "in-progress";
+  }
   return "not-started";
 }
 
@@ -161,7 +170,15 @@ export function QuestionnaireLanding({
               const progress = progressByKey.get(section.key);
               const total = progress?.totalQuestions ?? section.questions.length;
               const answered = progress?.answeredQuestions ?? 0;
-              const state = sectionState(progress);
+              const draftAnswered = section.questions.filter((q) =>
+                isIntakeAnswerComplete(answers[q.id] ?? null),
+              ).length;
+              const state = sectionState({
+                completedQuestions: answered,
+                completionPercent: progress?.completionPercent ?? 0,
+                draftAnsweredQuestions: draftAnswered,
+                totalQuestions: total,
+              });
 
               return (
                 <Link

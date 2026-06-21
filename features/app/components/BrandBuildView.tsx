@@ -23,6 +23,12 @@ const STATE_COPY: Record<SubstepState, string> = {
   locked: "Locked",
 };
 
+function getStateCopy(state: SubstepState, progress?: number) {
+  return state === "in-progress" && progress === 0
+    ? "Ready to start"
+    : STATE_COPY[state];
+}
+
 
 
 /* ── SVG Glyphs ── */
@@ -141,7 +147,14 @@ function PhaseGlyph({ kind }: { kind: string }) {
   return null;
 }
 
-function StatePill({ state }: { state: SubstepState }) {
+function StatePill({
+  progress,
+  state,
+}: {
+  progress?: number;
+  state: SubstepState;
+}) {
+  const isReadyToStart = state === "in-progress" && progress === 0;
   const stateStyles: Record<SubstepState, React.CSSProperties> = {
     done: { color: "#157a52", borderColor: "rgba(43,199,138,0.28)", background: "rgba(43,199,138,0.12)" },
     "in-progress": { color: "#1a5bb5", borderColor: "rgba(42,124,255,0.28)", background: "rgba(42,124,255,0.12)" },
@@ -157,12 +170,12 @@ function StatePill({ state }: { state: SubstepState }) {
       <span
         className="inline-block size-[5px] rounded-full bg-current"
         style={
-          state === "in-progress"
+          state === "in-progress" && !isReadyToStart
             ? { animation: "bv-pulse 1.4s var(--bv-ease) infinite" }
             : undefined
         }
       />
-      {STATE_COPY[state]}
+      {getStateCopy(state, progress)}
     </span>
   );
 }
@@ -403,7 +416,7 @@ function PhaseCard({
                         : "Coming soon"}
                     </span>
                   ) : <span />}
-                  <StatePill state={effectiveState} />
+                  <StatePill progress={s.progress} state={effectiveState} />
                 </div>
               </>
             );
@@ -521,7 +534,7 @@ function DetailPage({
         </p>
 
         <div className="mb-8 flex flex-wrap gap-2">
-          <StatePill state={state} />
+          <StatePill progress={progress} state={state} />
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-[var(--bv-ink-2)]">
             <span className="inline-block size-[5px] rounded-full bg-current" />
             Step {phase.phase}.{String(idxInPhase).padStart(2, "0")}
@@ -582,7 +595,7 @@ function DetailPage({
               <div className="flex items-center justify-between border-t border-dashed py-3 text-[13px]" style={{ borderColor: "var(--bv-line)" }}>
                 <span className="text-[var(--bv-ink-3)]">Status</span>
                 <span className="font-mono text-[var(--bv-ink)]">
-                  {STATE_COPY[state]}
+                  {getStateCopy(state, progress)}
                 </span>
               </div>
             </div>
@@ -823,24 +836,8 @@ export function BrandBuildView({
         {/* Hub */}
           <div className="mb-16 pl-14 max-sm:pl-9">
             <div className="flex w-full max-w-[600px] items-center justify-center">
-            <div className="relative inline-flex items-center gap-3.5 rounded-[8px] border border-border bg-card py-2 pl-[14px] pr-[22px] shadow-lg">
-              {!activePhase && (
-                <svg
-                  aria-hidden="true"
-                  className="shrink-0"
-                  fill="none"
-                  height="15"
-                  stroke="#2bc78a"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2.5"
-                  viewBox="0 0 24 24"
-                  width="15"
-                >
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              )}
-              <span className="text-[15px] font-medium tracking-[-0.01em] whitespace-nowrap text-[var(--bv-ink)]">
+            <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-center">
+              <span className="text-[14px] font-medium text-[var(--bv-ink)]">
                 {activePhase ? (
                   <>
                     Building{" "}
@@ -855,15 +852,9 @@ export function BrandBuildView({
                   </>
                 )}
               </span>
-              {activePhase && (
-                <span
-                  className="border-l pl-[15px] font-mono text-[10.5px] uppercase tracking-[0.07em] whitespace-nowrap text-[var(--bv-ink-3)]"
-                  style={{ borderColor: "var(--bv-line)" }}
-                >
-                  {activePhase.percent}% · {activePhase.stepsDone}/
-                  {activePhase.stepsTotal}
-                </span>
-              )}
+              <span className="font-mono text-[10.5px] uppercase tracking-[0.07em] text-[var(--bv-ink-3)]">
+                {activePhase ? activePhase.percent : 100}% complete
+              </span>
             </div>
             </div>
           </div>
