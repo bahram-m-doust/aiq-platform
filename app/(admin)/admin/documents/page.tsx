@@ -56,7 +56,7 @@ export default async function AdminDocumentsPage({
               Platform owner
             </p>
             <h1 className="mt-3 text-3xl font-semibold tracking-normal">
-              Brand Files
+              RAG Approval Queue
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Signed in as {profile.email}. All actions here are audited.

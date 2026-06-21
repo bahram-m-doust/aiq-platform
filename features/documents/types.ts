@@ -49,6 +49,7 @@ export type BrandDocumentRecord = {
   uploadedBy: string | null;
   uploadedByEmail: string | null;
   createdAt: string | null;
+  approvedAt: string | null;
 };
 
 export type BrandDocumentsWorkspace = {

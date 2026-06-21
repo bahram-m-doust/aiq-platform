@@ -7,6 +7,7 @@ import {
   BrainIcon,
   DownloadIcon,
   KeyIcon,
+  PaletteIcon,
   TrashIcon,
 } from "lucide-react";
 
@@ -32,6 +33,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
+import { uploadAestheticsDeliverableAction } from "@/features/aesthetics/actions";
+import { initialAestheticsActionState } from "@/features/aesthetics/schema";
 import {
   adminArchiveDocumentAction,
   adminDeleteDocumentAction,
@@ -179,6 +182,67 @@ function UploadForm({ brandId }: { brandId: string }) {
           </Select>
         </div>
         <SubmitButton idleLabel="Upload" pendingLabel="Uploading" />
+      </div>
+      <div className="flex items-center gap-2 text-sm">
+        <input
+          className="size-4 cursor-pointer"
+          id="admin_send_to_rag"
+          name="send_to_rag"
+          type="checkbox"
+          value="true"
+        />
+        <label className="cursor-pointer text-muted-foreground" htmlFor="admin_send_to_rag">
+          Promote to RAG after upload (removes previous questionnaire versions)
+        </label>
+      </div>
+    </form>
+  );
+}
+
+function AestheticsUploadCard({ brandId }: { brandId: string }) {
+  const [state, formAction] = useActionState(
+    uploadAestheticsDeliverableAction,
+    initialAestheticsActionState,
+  );
+
+  return (
+    <form action={formAction} className="space-y-3">
+      <input name="brand_id" type="hidden" value={brandId} />
+      {state.status === "error" ? (
+        <Alert variant="destructive">
+          <AlertDescription>{state.message}</AlertDescription>
+        </Alert>
+      ) : null}
+      {state.status === "success" ? (
+        <Alert>
+          <AlertDescription>{state.message}</AlertDescription>
+        </Alert>
+      ) : null}
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+        <div className="space-y-2">
+          <Label htmlFor="aesthetics_kind">Deliverable type</Label>
+          <Select name="kind" required>
+            <SelectTrigger id="aesthetics_kind">
+              <SelectValue placeholder="Select…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="VISUAL_DIRECTION">Visual Direction</SelectItem>
+              <SelectItem value="COLOR_TYPE_SYSTEM">Color & Type System</SelectItem>
+              <SelectItem value="ASSET_LIBRARY">Asset Library</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="aesthetics_file">PDF file</Label>
+          <Input
+            accept=".pdf,application/pdf"
+            id="aesthetics_file"
+            name="file"
+            required
+            type="file"
+          />
+        </div>
+        <SubmitButton idleLabel="Upload" pendingLabel="Uploading…" />
       </div>
     </form>
   );
@@ -526,6 +590,22 @@ export function AdminDocumentsConsole({
             </CardHeader>
             <CardContent>
               <UploadForm brandId={selectedBrandId} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PaletteIcon className="size-4" />
+                Upload aesthetics deliverable
+              </CardTitle>
+              <CardDescription>
+                Upload a PDF for Visual Direction, Color & Type System, or Asset Library.
+                Uploading sends it to the client for review and approval.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AestheticsUploadCard brandId={selectedBrandId} />
             </CardContent>
           </Card>
 

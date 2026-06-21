@@ -54,11 +54,14 @@ export async function adminUploadDocumentAction(
     return { status: "error", message: RATE_LIMITED_MESSAGE };
   }
 
+  const sendToRag = formData.get("send_to_rag") === "true";
+
   try {
     const record = await adminUploadDocumentForBrand({
       brandId,
       formData,
       actor: profile,
+      sendToRag,
     });
     revalidatePath("/admin/documents");
     return {

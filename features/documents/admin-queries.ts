@@ -21,6 +21,7 @@ type FileRowForBrand = {
   status: string;
   uploaded_by: string | null;
   created_at: string | null;
+  approved_at: string | null;
 };
 
 export type AdminBrandOption = {
@@ -68,9 +69,10 @@ export async function getDocumentsForBrand({
   const { data, error } = await admin
     .from("files")
     .select(
-      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at",
+      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at, approved_at",
     )
     .eq("brand_id", brandId)
+    .not("status", "eq", "CLIENT_REVIEW")
     .order("created_at", { ascending: false })
     .range(range.from, range.to + 1);
 

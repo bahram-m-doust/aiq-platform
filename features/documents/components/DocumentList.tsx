@@ -1,4 +1,4 @@
-import { DownloadIcon, FileIcon, ShieldCheckIcon, ShieldXIcon } from "lucide-react";
+import { CheckCircleIcon, DownloadIcon, FileIcon, ShieldCheckIcon, ShieldXIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
@@ -15,7 +15,6 @@ import type {
   BrandDocumentRecord,
   DocumentAccessContext,
 } from "@/features/documents/types";
-import { DocumentAccessBadge } from "@/features/documents/components/DocumentAccessBadge";
 
 function formatSize(sizeBytes: number | null) {
   if (!sizeBytes || sizeBytes <= 0) {
@@ -101,21 +100,22 @@ export function DocumentList({
               key={file.id}
               style={{ borderColor: "var(--bv-line)", background: "var(--bv-card-soft)" }}
             >
-              <div className="min-w-0 space-y-3">
+              <div className="min-w-0 space-y-2">
                 <div>
                   <h3 className="truncate text-sm font-medium">
                     {file.originalName}
                   </h3>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {formatSize(file.sizeBytes)} | Uploaded{" "}
-                    {formatDate(file.createdAt)}
-                    {file.uploadedByEmail ? ` by ${file.uploadedByEmail}` : ""}
+                    {formatDate(file.createdAt)} by Bextudio
                   </p>
                 </div>
-                <DocumentAccessBadge
-                  status={file.status}
-                  visibility={file.visibility}
-                />
+                {file.approvedAt ? (
+                  <p className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                    <CheckCircleIcon className="size-3.5" />
+                    Approved {formatDate(file.approvedAt)}
+                  </p>
+                ) : null}
               </div>
 
               <div className="flex flex-wrap items-start gap-2 md:justify-end">
