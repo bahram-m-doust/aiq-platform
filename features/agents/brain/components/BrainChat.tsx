@@ -9,6 +9,7 @@ import {
   MessageSquareIcon,
   MicIcon,
   PaperclipIcon,
+  PlusIcon,
   RefreshCwIcon,
   SendIcon,
   SparklesIcon,
@@ -375,10 +376,51 @@ export function BrainChat({
     }
   }
 
+  // Start a fresh conversation surface. Persisted runs stay in the database (and
+  // rehydrate on a full reload); this clears the current thread so the user can
+  // begin a clean exchange.
+  function handleNewChat() {
+    if (isBusy) return;
+    setMessages([]);
+    setInput("");
+    setMode("text");
+    setError(null);
+    lastRequestRef.current = null;
+  }
+
   const isEmpty = messages.length === 0 && !isBusy && !error;
 
   return (
     <main className="flex min-h-[calc(100svh-3.5rem)] flex-col bg-[#fbf8f4] text-foreground">
+      <header className="sticky top-0 z-10 border-b border-black/5 bg-[#fbf8f4]/85 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-8">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-7 items-center justify-center rounded-lg border border-black/5 bg-white shadow-sm">
+              <BrainIcon className="size-4 text-primary" />
+            </span>
+            <div className="leading-tight">
+              <p className="text-sm font-semibold text-foreground">
+                Brand Brain
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {access.brandName}
+              </p>
+            </div>
+          </div>
+          <Button
+            className="gap-1.5 rounded-full"
+            disabled={isBusy || messages.length === 0}
+            onClick={handleNewChat}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <PlusIcon className="size-4" />
+            New chat
+          </Button>
+        </div>
+      </header>
+
       <div
         ref={threadRef}
         className="flex-1 overflow-y-auto px-4 pb-8 pt-12 sm:px-8"

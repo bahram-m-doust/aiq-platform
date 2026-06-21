@@ -302,6 +302,18 @@ export async function buildBrainNow({
     );
   }
 
+  // The Brand Brain chatbot and Phase 04's "Agent Deployment" substep both
+  // require the BRAND_INTEGRATOR_BRAIN catalog row. If it's missing, stamping
+  // the build "complete" would leave the roadmap saying "live" while the brand
+  // page stays locked ("Agent unavailable"). Fail loudly instead so the cause
+  // is obvious and actionable.
+  const agent = await getBrandBrainAgent();
+  if (!agent) {
+    brainBuildError(
+      "Brain could not be built: the Brand Brain agent is not seeded. Apply migration 0055 (agents catalog) to the database, then rebuild.",
+    );
+  }
+
   // 2. Activate the Brand Brain agent for the roadmap's Agent Deployment step.
   await activateBrandBrainAgent(brandId);
 
