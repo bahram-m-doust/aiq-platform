@@ -15,7 +15,7 @@ export const initialDocumentUploadFormState = {
 export const documentVisibilityLabels: Record<DocumentVisibility, string> = {
   OWNER_ONLY: "Owner only",
   BRAND_TEAM: "Brand team",
-  HELIO_INTERNAL: "Helio internal",
+  HELIO_INTERNAL: "Bextudio internal",
   CLIENT_REVIEW: "Client review",
   AGENT_VISIBLE: "Agent visible",
 };

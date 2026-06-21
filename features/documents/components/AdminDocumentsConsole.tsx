@@ -7,8 +7,8 @@ import {
   BrainIcon,
   DownloadIcon,
   KeyIcon,
-  PaletteIcon,
   TrashIcon,
+  Undo2Icon,
 } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -33,11 +33,10 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
-import { uploadAestheticsDeliverableAction } from "@/features/aesthetics/actions";
-import { initialAestheticsActionState } from "@/features/aesthetics/schema";
 import {
   adminArchiveDocumentAction,
   adminDeleteDocumentAction,
+  adminDemoteDocumentFromRagAction,
   adminDownloadDocumentAction,
   adminPromoteDocumentToRagAction,
   adminUnarchiveDocumentAction,
@@ -199,55 +198,6 @@ function UploadForm({ brandId }: { brandId: string }) {
   );
 }
 
-function AestheticsUploadCard({ brandId }: { brandId: string }) {
-  const [state, formAction] = useActionState(
-    uploadAestheticsDeliverableAction,
-    initialAestheticsActionState,
-  );
-
-  return (
-    <form action={formAction} className="space-y-3">
-      <input name="brand_id" type="hidden" value={brandId} />
-      {state.status === "error" ? (
-        <Alert variant="destructive">
-          <AlertDescription>{state.message}</AlertDescription>
-        </Alert>
-      ) : null}
-      {state.status === "success" ? (
-        <Alert>
-          <AlertDescription>{state.message}</AlertDescription>
-        </Alert>
-      ) : null}
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
-        <div className="space-y-2">
-          <Label htmlFor="aesthetics_kind">Deliverable type</Label>
-          <Select name="kind" required>
-            <SelectTrigger id="aesthetics_kind">
-              <SelectValue placeholder="Select…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="VISUAL_DIRECTION">Visual Direction</SelectItem>
-              <SelectItem value="COLOR_TYPE_SYSTEM">Color & Type System</SelectItem>
-              <SelectItem value="ASSET_LIBRARY">Asset Library</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="aesthetics_file">PDF file</Label>
-          <Input
-            accept=".pdf,application/pdf"
-            id="aesthetics_file"
-            name="file"
-            required
-            type="file"
-          />
-        </div>
-        <SubmitButton idleLabel="Upload" pendingLabel="Uploading…" />
-      </div>
-    </form>
-  );
-}
-
 function ArchiveActionButton({ fileId }: { fileId: string }) {
   const [, formAction] = useActionState(
     adminArchiveDocumentAction,
@@ -395,10 +345,51 @@ function PromoteToRagButton({ file }: { file: BrandDocumentRecord }) {
   );
 }
 
+function DemoteFromRagButton({ file }: { file: BrandDocumentRecord }) {
+  const { open, handleOpenChange, errorMessage, isPending, confirm } =
+    useConfirmAction({
+      action: adminDemoteDocumentFromRagAction,
+      initialState: initialAdminDocumentReviewState,
+      buildFormData: () => {
+        const fd = new FormData();
+        fd.append("file_id", file.id);
+        return fd;
+      },
+    });
+
+  return (
+    <ConfirmDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      trigger={
+        <Button
+          aria-label="Remove from RAG"
+          size="icon-sm"
+          title="Remove from RAG"
+          type="button"
+          variant="ghost"
+        >
+          <Undo2Icon className="size-4 text-amber-600" />
+        </Button>
+      }
+      title="Remove this document from RAG?"
+      description={`This will remove "${file.originalName}" from the Knowledge Brain. You can promote it again later.`}
+      errorMessage={errorMessage}
+      isPending={isPending}
+      onConfirm={confirm}
+      confirmLabel="Remove from RAG"
+      pendingLabel="Removing..."
+    />
+  );
+}
+
 function FileRowActions({ file }: { file: BrandDocumentRecord }) {
   return (
     <div className="flex items-center justify-end gap-1">
       <DownloadButton fileId={file.id} />
+      {file.status === "RAG_APPROVED" ? (
+        <DemoteFromRagButton file={file} />
+      ) : null}
       {ragPromotableStatuses.has(file.status) ? (
         <PromoteToRagButton file={file} />
       ) : null}
@@ -453,11 +444,9 @@ function FilesTable({ files }: { files: BrandDocumentRecord[] }) {
             >
               <td className="truncate px-3 py-2 font-medium" title={file.originalName}>
                 {file.originalName}
-                {file.uploadedByEmail ? (
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {file.uploadedByEmail}
-                  </span>
-                ) : null}
+                <span className="block truncate text-xs text-muted-foreground">
+                  by Bextudio
+                </span>
               </td>
               <td className="px-3 py-2 text-xs">
                 {documentVisibilityLabels[file.visibility]}
@@ -590,22 +579,6 @@ export function AdminDocumentsConsole({
             </CardHeader>
             <CardContent>
               <UploadForm brandId={selectedBrandId} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PaletteIcon className="size-4" />
-                Upload aesthetics deliverable
-              </CardTitle>
-              <CardDescription>
-                Upload a PDF for Visual Direction, Color & Type System, or Asset Library.
-                Uploading sends it to the client for review and approval.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AestheticsUploadCard brandId={selectedBrandId} />
             </CardContent>
           </Card>
 

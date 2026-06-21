@@ -372,4 +372,43 @@ export async function adminPromoteDocumentToRag({
   return after;
 }
 
+export async function adminDemoteDocumentFromRag({
+  fileId,
+  actor,
+}: {
+  fileId: string;
+  actor: UserProfile;
+}): Promise<BrandDocumentRecord> {
+  const before = await getFileById(fileId);
+  if (!before) adminFileError("Document could not be found.");
+
+  if (before.status !== "RAG_APPROVED") {
+    return before;
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("demote_document_from_rag", {
+    p_file_id: fileId,
+    p_actor_id: actor.id,
+  });
+  if (error) throw error;
+
+  const row = (data as FileRow[] | null)?.[0];
+  if (!row) adminFileError("Document demotion returned no result.");
+  const after = toBrandDocumentRecord({ row });
+
+  await logAudit({
+    actorUserId: actor.id,
+    actorRole: actor.global_role,
+    brandId: after.brandId,
+    action: "admin_file_rag_demoted",
+    entityType: "file",
+    entityId: after.id,
+    before: { file: toDocumentAuditMetadata(before) },
+    after: { file: toDocumentAuditMetadata(after) },
+  });
+
+  return after;
+}
+
 export const adminFileSignedDownloadUrlTtlSeconds = signedDownloadUrlTtlSeconds;

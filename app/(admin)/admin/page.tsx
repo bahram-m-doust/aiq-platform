@@ -9,6 +9,7 @@ import {
   ListChecksIcon,
   LogOutIcon,
   MailOpenIcon,
+  PaletteIcon,
   PencilRulerIcon,
   ScrollTextIcon,
   ShieldCheckIcon,
@@ -242,6 +243,17 @@ export default async function AdminPage() {
                 <Link href="/admin/city-model">
                   <Building2Icon className="size-4" />
                   City Model
+                </Link>
+              </Button>
+              <Button
+                asChild
+                className="justify-start gap-2"
+                size="lg"
+                variant="outline"
+              >
+                <Link href="/admin/aesthetics">
+                  <PaletteIcon className="size-4" />
+                  Aesthetics
                 </Link>
               </Button>
               <Button
