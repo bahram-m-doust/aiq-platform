@@ -5,6 +5,7 @@ import { BrainChat } from "@/features/agents/brain/components/BrainChat";
 import { BrainLockedState } from "@/features/agents/brain/components/BrainLockedState";
 import {
   getBrandBrainConversation,
+  getBrandBrainRunSummaries,
   getBrandBrainWorkspace,
 } from "@/features/agents/brain/queries";
 import { requireUserProfile } from "@/features/auth/queries";
@@ -36,13 +37,24 @@ export default async function BrandBrainPage() {
     );
   }
 
-  const initialMessages = await getBrandBrainConversation({
-    brandId: workspace.access.brandId,
-    agentId: workspace.agent.id,
-    userId: profile.id,
-  });
+  const [initialMessages, runSummaries] = await Promise.all([
+    getBrandBrainConversation({
+      brandId: workspace.access.brandId,
+      agentId: workspace.agent.id,
+      userId: profile.id,
+    }),
+    getBrandBrainRunSummaries({
+      brandId: workspace.access.brandId,
+      agentId: workspace.agent.id,
+      userId: profile.id,
+    }),
+  ]);
 
   return (
-    <BrainChat access={workspace.access} initialMessages={initialMessages} />
+    <BrainChat
+      access={workspace.access}
+      initialMessages={initialMessages}
+      runSummaries={runSummaries}
+    />
   );
 }

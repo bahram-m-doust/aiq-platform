@@ -51,6 +51,7 @@ type SidebarProps = {
   planName: string | null;
   credits: number;
   agents: SidebarAgent[];
+  aiBudget: { monthlyBudgetCents: number | null; spentCents: number; remainingCents: number | null } | null;
 };
 
 const primaryNav = [
@@ -71,7 +72,7 @@ const secondaryNav = [
   { href: ROUTES.settings, label: "Settings", icon: Settings2Icon },
 ];
 
-export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
+export function Sidebar({ role, planName, credits, agents, aiBudget }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -288,7 +289,7 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
               <ChevronRightIcon className="size-4" />
             </Button>
           </div>
-          <CreditCounter credits={credits} />
+          <CreditCounter aiBudget={aiBudget} credits={credits} />
         </div>
       </SidebarFooter>
     </SidebarRoot>

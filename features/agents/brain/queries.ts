@@ -10,6 +10,7 @@ import type {
   BrandBrainAgent,
   BrandBrainConversationMessage,
   BrandBrainDisplaySource,
+  BrandBrainRunSummary,
   BrandBrainWorkspace,
 } from "@/features/agents/brain/types";
 import { createAgentImageSignedUrls } from "@/features/agents/runs/image-storage";
@@ -291,4 +292,42 @@ export async function getBrandBrainConversation({
   }
 
   return messages;
+}
+
+type RunSummaryRow = {
+  id: string;
+  input: unknown;
+  created_at: string | null;
+};
+
+export async function getBrandBrainRunSummaries({
+  brandId,
+  agentId,
+  userId,
+  limit = 30,
+}: {
+  brandId: string;
+  agentId: string;
+  userId: string;
+  limit?: number;
+}): Promise<BrandBrainRunSummary[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("agent_runs")
+    .select("id, input, created_at")
+    .eq("brand_id", brandId)
+    .eq("agent_id", agentId)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data ?? []) as RunSummaryRow[]).map((row) => ({
+    id: row.id,
+    prompt: isRecord(row.input) ? readString(row.input.prompt).slice(0, 120) : "",
+    createdAt: row.created_at ?? new Date().toISOString(),
+  }));
 }

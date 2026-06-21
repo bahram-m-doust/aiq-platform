@@ -94,6 +94,12 @@ export type BrandBrainImageState =
   | { status: "success"; runId: string; images: string[]; imagePrompt: string; sources: BrandBrainDisplaySource[] }
   | { status: "error"; message: string };
 
+export type BrandBrainRunSummary = {
+  id: string;
+  prompt: string;
+  createdAt: string;
+};
+
 // NDJSON protocol streamed from the Brand Brain route to the chat client: token
 // deltas, then a terminal event carrying the persisted run id and its sources,
 // or an error.
