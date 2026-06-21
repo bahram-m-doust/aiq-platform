@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { BrandMemberActions } from "@/features/admin/brands/components/BrandMemberActions";
 import { DeleteBrandButton } from "@/features/admin/brands/components/DeleteBrandButton";
+import { RenameBrandButton } from "@/features/admin/brands/components/RenameBrandButton";
 import {
   type AdminBrandSummary,
   brandRoleLabel,
@@ -60,11 +61,14 @@ export function BrandCard({ brand }: { brand: AdminBrandSummary }) {
               <span>Created {formatDate(brand.createdAt)}</span>
             </div>
           </div>
-          <DeleteBrandButton
-            brandId={brand.id}
-            brandName={brand.name}
-            memberCount={brand.memberCount}
-          />
+          <div className="flex shrink-0 items-center gap-2">
+            <RenameBrandButton brandId={brand.id} brandName={brand.name} />
+            <DeleteBrandButton
+              brandId={brand.id}
+              brandName={brand.name}
+              memberCount={brand.memberCount}
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent>

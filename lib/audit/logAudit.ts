@@ -17,6 +17,7 @@ export const auditActions = [
   "brand_created",
   "brand_claimed",
   "brand_deleted",
+  "brand_renamed",
   "brand_member_removed",
   "brand_member_role_changed",
   "plan_granted",
@@ -61,6 +62,7 @@ export const auditActions = [
   "admin_override_used",
   "intake_knowledge_generated",
   "admin_file_rag_promoted",
+  "admin_file_rag_demoted",
   "brand_instruction_updated",
 ] as const;
 
