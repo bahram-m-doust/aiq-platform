@@ -25,6 +25,18 @@ async function requireMutationResult(
   if (!data) missingMutationTarget();
 }
 
+async function requireMutationRow<T extends { id: string }>(
+  result: PromiseLike<{
+    data: T | null;
+    error: unknown;
+  }>,
+): Promise<T> {
+  const { data, error } = await result;
+  if (error) throw error;
+  if (!data) missingMutationTarget();
+  return data;
+}
+
 export async function setReviewReportStatus({
   table,
   brandId,
@@ -71,7 +83,7 @@ export async function setAestheticsDeliverableStatus({
   kind: string;
   profileId: string;
   status: "APPROVED" | "CHANGES_REQUESTED";
-}): Promise<void> {
+}): Promise<{ fileId: string | null }> {
   const now = new Date().toISOString();
   const patch =
     status === "APPROVED"
@@ -79,14 +91,16 @@ export async function setAestheticsDeliverableStatus({
       : { status, approved_by: null, approved_at: null, updated_at: now };
   const admin = createAdminClient();
 
-  await requireMutationResult(
+  const row = await requireMutationRow<{ id: string; file_id: string | null }>(
     admin
       .from("aesthetics_deliverables")
       .update(patch)
       .eq("brand_id", brandId)
       .eq("kind", kind)
       .in("status", ["CLIENT_REVIEW", "CHANGES_REQUESTED"])
-      .select("id")
+      .select("id, file_id")
       .maybeSingle(),
   );
+
+  return { fileId: row.file_id };
 }
