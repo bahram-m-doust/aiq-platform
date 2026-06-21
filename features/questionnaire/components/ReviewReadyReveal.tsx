@@ -13,8 +13,9 @@ import {
 
 // How long the "uncompleted" warning collapses out before the "Review &
 // submit" button slides in, and how long the success tooltip lingers before
-// fading on its own.
-const WARNING_EXIT_MS = 300;
+// fading on its own. The swap is kept deliberately unhurried so the hand-off
+// reads as a smooth transition rather than a flip.
+const WARNING_EXIT_MS = 600;
 const TOOLTIP_VISIBLE_MS = 5200;
 
 type Phase = "warning" | "exiting" | "ready";
@@ -84,7 +85,7 @@ export function ReviewReadyReveal({
   if (phase === "ready") {
     return (
       <div className="border-t border-[var(--bv-line)] pt-4">
-        <div className="animate-in fade-in-0 slide-in-from-bottom-1 zoom-in-95 duration-300">
+        <div className="animate-in fade-in-0 slide-in-from-bottom-1 zoom-in-95 duration-500">
           <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen}>
             <TooltipTrigger asChild>
               <Button asChild className="w-full" size="lg" variant="secondary">
@@ -113,10 +114,11 @@ export function ReviewReadyReveal({
   // (smoother than max-height) while it fades, then the effect unmounts it.
   return (
     <div
-      className="grid transition-[grid-template-rows,opacity] duration-300"
+      className="grid transition-[grid-template-rows,opacity]"
       style={{
         gridTemplateRows: phase === "exiting" ? "0fr" : "1fr",
         opacity: phase === "exiting" ? 0 : 1,
+        transitionDuration: `${WARNING_EXIT_MS}ms`,
         transitionTimingFunction: "var(--bv-ease)",
       }}
     >
