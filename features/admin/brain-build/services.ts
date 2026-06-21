@@ -281,8 +281,16 @@ export async function buildBrainNow({
     syncedCount = result.syncedCount;
   } catch (error) {
     if (isRagSyncServiceError(error)) {
+      // Only nudge toward RAG approval when the failure is actually about
+      // missing approved files — not for unrelated causes like missing
+      // OpenRouter access, where that hint would mislead.
+      const needsApproval = /no rag_approved|ready to sync|eligible for sync/i.test(
+        error.message,
+      );
       brainBuildError(
-        `Brain could not be built: ${error.message} Approve at least one document into RAG first.`,
+        needsApproval
+          ? `Brain could not be built: ${error.message} Approve at least one document into RAG first.`
+          : `Brain could not be built: ${error.message}`,
       );
     }
     throw error;
