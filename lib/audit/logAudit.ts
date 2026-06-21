@@ -64,6 +64,8 @@ export const auditActions = [
   "admin_file_rag_promoted",
   "admin_file_rag_demoted",
   "brand_instruction_updated",
+  "brain_build_scheduled",
+  "brain_build_completed",
 ] as const;
 
 export type AuditAction = (typeof auditActions)[number];

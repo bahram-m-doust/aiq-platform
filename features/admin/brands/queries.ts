@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getBrainBuildSchedulesForBrands } from "@/features/admin/brain-build/queries";
 import type {
   AdminBrandMember,
   AdminBrandSummary,
@@ -72,6 +73,8 @@ export async function getAdminBrandsWithMembers(
     throw membershipError;
   }
 
+  const brainBuildByBrand = await getBrainBuildSchedulesForBrands(brandIds);
+
   const memberships = (membershipData ?? []) as MembershipRow[];
   const userIds = Array.from(new Set(memberships.map((row) => row.user_id)));
 
@@ -124,6 +127,7 @@ export async function getAdminBrandsWithMembers(
         members,
         memberCount: members.length,
         ownerCount: members.filter((member) => member.role === "OWNER").length,
+        brainBuild: brainBuildByBrand.get(brand.id) ?? null,
       };
     }),
     pagination: paginated.pagination,

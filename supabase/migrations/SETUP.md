@@ -86,6 +86,10 @@ migrations in numeric order:
 - `0048_rag_search_recall.sql`
 - `0049_aesthetics_deliverables.sql`
 - `0050_intake_answer_marked_done.sql`
+- `0051_brand_slogan_textarea.sql`
+- `0052_files_approved_at.sql`
+- `0053_demote_document_from_rag.sql`
+- `0054_brain_build_schedule.sql`
 
 ## Required Supabase Dashboard Configuration
 

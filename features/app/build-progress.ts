@@ -9,6 +9,7 @@ import { getStakeholderReportRowByBrand } from "@/features/stakeholder-interview
 import type { StakeholderReportStatus } from "@/features/stakeholder-interviews/types";
 import { getAestheticsRowsByBrand } from "@/features/aesthetics/queries";
 import type { AestheticsDeliverableStatus } from "@/features/aesthetics/types";
+import { getBrainBuildScheduleForBrand } from "@/features/admin/brain-build/queries";
 import {
   ROUTES,
   aestheticsDeliverablePath,
@@ -49,6 +50,18 @@ export type PhaseProgress = {
   substeps: SubstepProgress[];
 };
 
+// The brand-facing slice of the Brain Build schedule. Drives Phase 04's
+// "waiting for Bextudio" message, the animated progress bar, and (once builtAt
+// is set) the unlocked Brand Brain chatbot.
+export type BrainBuildScheduleView = {
+  // ISO date (YYYY-MM-DD) the brand is told its brain will be ready.
+  targetDate: string;
+  // ISO timestamp the schedule was first created — the progress bar's start.
+  scheduledAt: string | null;
+  // null until Bextudio runs "Build Now".
+  builtAt: string | null;
+};
+
 export type BrandBuildProgress = {
   brandId: string;
   brandName: string;
@@ -57,6 +70,7 @@ export type BrandBuildProgress = {
   stepsTotal: number;
   activePhase: PhaseProgress | null;
   phases: [PhaseProgress, PhaseProgress, PhaseProgress, PhaseProgress];
+  brainBuild: BrainBuildScheduleView | null;
 };
 
 type IntakeRow = {
@@ -301,6 +315,21 @@ function getIntakeProgressFromPageData(
   });
 }
 
+// Cosmetic schedule progress used for the Phase 04 headline percent — mirrors
+// the client-side bar in BrandBuildView. Linear from scheduled date to target,
+// capped just shy of full until the brain actually ships.
+function scheduleProgressPercent(
+  targetDate: string,
+  scheduledAt: string | null,
+): number {
+  const start = scheduledAt ? new Date(scheduledAt).getTime() : Date.now();
+  const end = new Date(`${targetDate}T23:59:59`).getTime();
+  const now = Date.now();
+  if (!Number.isFinite(end) || end <= start) return 95;
+  const ratio = (now - start) / (end - start);
+  return Math.max(4, Math.min(95, Math.round(ratio * 100)));
+}
+
 async function getBrainProgress(brandId: string) {
   const admin = createAdminClient();
 
@@ -538,9 +567,10 @@ export async function getBrandBuildProgress(
               ),
         )
       : getIntakeProgress(brandId, stakeholderStatus, futuresResearchStatus);
-  const [intake, brain] = await Promise.all([
+  const [intake, brain, brainSchedule] = await Promise.all([
     intakeProgressPromise,
     getBrainProgress(brandId),
+    getBrainBuildScheduleForBrand(brandId),
   ]);
 
   // Phase 2 (Strategies) is the brand-as-city City Model. It unlocks once the
@@ -592,6 +622,15 @@ export async function getBrandBuildProgress(
 
   if (aesthetics.status !== "complete") {
     brain.status = brain.stepsDone > 0 ? "active" : "locked";
+  } else if (brain.status !== "complete") {
+    // Aesthetics are approved, so Phase 04 is handed to Bextudio. Until the
+    // brain ships it reads as "active" (in build), and — once a target date is
+    // scheduled — its headline percent mirrors the cosmetic schedule bar so the
+    // phase card and the in-panel progress agree.
+    brain.status = "active";
+    if (brainSchedule && !brainSchedule.builtAt) {
+      brain.percent = scheduleProgressPercent(brainSchedule.targetDate, brainSchedule.createdAt);
+    }
   }
 
   const phase1: PhaseProgress = {
@@ -678,5 +717,12 @@ export async function getBrandBuildProgress(
     stepsTotal: totalSteps,
     activePhase,
     phases,
+    brainBuild: brainSchedule
+      ? {
+          targetDate: brainSchedule.targetDate,
+          scheduledAt: brainSchedule.createdAt,
+          builtAt: brainSchedule.builtAt,
+        }
+      : null,
   };
 }

@@ -1,6 +1,6 @@
 -- GENERATED FILE. DO NOT EDIT DIRECTLY.
 -- Source: numbered SQL files in supabase/migrations.
--- Latest migration: 0051_brand_slogan_textarea.sql
+-- Latest migration: 0054_brain_build_schedule.sql
 -- Regenerate with: npm run db:generate-bundles
 
 -- DESTRUCTIVE: this variant removes all public application data.
@@ -5226,6 +5226,120 @@ update public.questions
 
 notify pgrst, 'reload schema';
 -- END 0051_brand_slogan_textarea.sql
+
+-- BEGIN 0052_files_approved_at.sql
+-- Add approved_at timestamp to files table to track when a document was approved
+ALTER TABLE public.files ADD COLUMN IF NOT EXISTS approved_at timestamptz;
+-- END 0052_files_approved_at.sql
+
+-- BEGIN 0053_demote_document_from_rag.sql
+-- Allow a platform owner to demote a document out of RAG.
+-- Deleting the knowledge_files row cascades to knowledge_chunks (pgvector),
+-- removing the document from the Knowledge Brain. The file row reverts to
+-- UPLOADED so it can be re-promoted later.
+create or replace function public.demote_document_from_rag(
+  p_file_id uuid,
+  p_actor_id uuid
+)
+returns table (
+  id uuid,
+  brand_id uuid,
+  storage_path text,
+  original_name text,
+  mime_type text,
+  size_bytes bigint,
+  visibility text,
+  status text,
+  uploaded_by uuid,
+  created_at timestamptz,
+  approved_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_file public.files%rowtype;
+begin
+  select *
+    into v_file
+    from public.files
+   where public.files.id = p_file_id
+   for update;
+
+  if not found then
+    raise exception 'Document could not be found.';
+  end if;
+
+  -- Remove the document from RAG (chunks cascade-delete with knowledge_files).
+  delete from public.knowledge_files
+   where public.knowledge_files.file_id = p_file_id;
+
+  update public.files
+     set status = 'UPLOADED'
+   where public.files.id = p_file_id
+  returning * into v_file;
+
+  return query
+    select
+      v_file.id,
+      v_file.brand_id,
+      v_file.storage_path,
+      v_file.original_name,
+      v_file.mime_type,
+      v_file.size_bytes,
+      v_file.visibility,
+      v_file.status,
+      v_file.uploaded_by,
+      v_file.created_at,
+      v_file.approved_at;
+end;
+$$;
+
+revoke all on function public.demote_document_from_rag(uuid, uuid)
+  from public, anon, authenticated;
+grant execute on function public.demote_document_from_rag(uuid, uuid)
+  to service_role;
+
+notify pgrst, 'reload schema';
+-- END 0053_demote_document_from_rag.sql
+
+-- BEGIN 0054_brain_build_schedule.sql
+-- Brain Build scheduling.
+--
+-- Once a brand's Aesthetics are approved, Phase 04 (Brain Build) is handed to
+-- the Bextudio team. An admin sets a target_date, which drives the animated
+-- progress bar shown to the brand. When the team runs "Build Now" the brain is
+-- assembled (RAG sync + agent activation) and built_at is stamped — that's the
+-- signal the brand-facing roadmap uses to unlock the Brand Brain chatbot.
+--
+-- One row per brand (upsert on brand_id). Service-role only; all reads happen
+-- through the admin client in server components, consistent with the rest of
+-- the platform's deny-by-default RLS posture.
+create table if not exists public.brain_build_schedule (
+  id           uuid primary key default gen_random_uuid(),
+  brand_id     uuid not null unique references public.brands(id) on delete cascade,
+  -- the date the brand is told its brain will be ready (drives the progress bar)
+  target_date  date not null,
+  scheduled_by uuid references public.users_profile(id),
+  -- null until the team runs "Build Now"; once stamped the chatbot unlocks
+  built_at     timestamptz,
+  built_by     uuid references public.users_profile(id),
+  notes        text,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+create index if not exists brain_build_schedule_brand_idx
+  on public.brain_build_schedule (brand_id);
+
+alter table public.brain_build_schedule enable row level security;
+-- No policies: deny-by-default. Access is mediated by the service-role admin
+-- client with app-level authorization, like every other platform table.
+
+notify pgrst, 'reload schema';
+-- END 0054_brain_build_schedule.sql
 
 -- Keep server-side Supabase access explicit after fresh schema creation.
 grant all on all tables in schema public to service_role;
