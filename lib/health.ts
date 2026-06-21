@@ -15,17 +15,28 @@ export type HealthStatus = {
     env: HealthCheckState;
     supabase: HealthCheckState;
   };
+  // Per-variable presence (booleans only, never values) so operators can see
+  // exactly which required server env var is missing when `env` is "error".
+  envDetail: Record<string, boolean>;
 };
 
+function requiredServerEnvDetail(): Record<string, boolean> {
+  return {
+    NEXT_PUBLIC_SUPABASE: hasPublicSupabaseEnv(),
+    SUPABASE_SERVICE_ROLE_KEY: Boolean(
+      readTrimmedRuntimeEnv("SUPABASE_SERVICE_ROLE_KEY"),
+    ),
+    KEY_ENCRYPTION_KEY: Boolean(
+      readTrimmedRuntimeEnv("KEY_ENCRYPTION_KEY") ||
+        readTrimmedRuntimeEnv("KEY_ENCRYPTION_KEYS"),
+    ),
+    APP_BASE_URL: Boolean(process.env.APP_BASE_URL?.trim()),
+    ADMIN_BASE_URL: Boolean(process.env.ADMIN_BASE_URL?.trim()),
+  };
+}
+
 function hasRequiredServerEnv() {
-  return Boolean(
-    hasPublicSupabaseEnv() &&
-      readTrimmedRuntimeEnv("SUPABASE_SERVICE_ROLE_KEY") &&
-      (readTrimmedRuntimeEnv("KEY_ENCRYPTION_KEY") ||
-        readTrimmedRuntimeEnv("KEY_ENCRYPTION_KEYS")) &&
-      process.env.APP_BASE_URL?.trim() &&
-      process.env.ADMIN_BASE_URL?.trim(),
-  );
+  return Object.values(requiredServerEnvDetail()).every(Boolean);
 }
 
 async function checkSupabase() {
@@ -64,5 +75,6 @@ export async function getHealthStatus(now = new Date()): Promise<HealthStatus> {
       env,
       supabase,
     },
+    envDetail: requiredServerEnvDetail(),
   };
 }
