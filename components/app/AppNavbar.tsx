@@ -35,7 +35,7 @@ export function AppNavbar({
   logoutAction,
 }: AppNavbarProps) {
   return (
-    <header className="flex h-[68px] shrink-0 items-center gap-2 border-b border-border px-6">
+    <header className="sticky top-0 z-40 flex h-[68px] shrink-0 items-center gap-2 border-b border-border bg-background px-6">
       <div className="flex flex-1 items-center justify-between gap-4">
         {/* Left: sidebar toggle + breadcrumb */}
         <div className="flex items-center gap-2">

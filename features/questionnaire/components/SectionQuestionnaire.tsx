@@ -209,7 +209,9 @@ export function SectionQuestionnaire({
     if (!sentinel || typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver(
       ([entry]) => setTabBarStuck(!entry.isIntersecting),
-      { threshold: 0 },
+      // Offset by the sticky app header (h-68px) so "stuck" styling flips on
+      // exactly when the tab bar pins beneath it, not 68px later.
+      { threshold: 0, rootMargin: "-68px 0px 0px 0px" },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -367,7 +369,7 @@ export function SectionQuestionnaire({
 
         {/* Sticky section tabs — stay pinned while scrolling a long section so
             the user always knows where they are and can jump sections fast. */}
-        <div className="sticky top-0 z-30 mb-9">
+        <div className="sticky top-[68px] z-30 mb-9">
           <div
             className={cn(
               // While stuck, fade in only a white backdrop + drop shadow (no box

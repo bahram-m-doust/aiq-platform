@@ -23,7 +23,7 @@ export function FuturesResearchWorkspaceView({
 
   return (
     <div>
-      <div className="sticky top-0 z-20 flex items-center gap-1 border-b border-border bg-background/90 px-3 py-2 backdrop-blur">
+      <div className="sticky top-[68px] z-20 flex items-center gap-1 border-b border-border bg-background/90 px-3 py-2 backdrop-blur">
         <TabButton
           active={tab === "report"}
           icon={<FileTextIcon className="size-3.5" />}
