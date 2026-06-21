@@ -373,9 +373,6 @@ function BrainBuildPanel({
                   boxShadow: active
                     ? "0 0 0 4px var(--bv-brand-tint-16)"
                     : undefined,
-                  animation: active
-                    ? "bv-pulse 1.8s var(--bv-ease) infinite"
-                    : undefined,
                   transitionDelay: `${i * 100}ms`,
                 }}
               >

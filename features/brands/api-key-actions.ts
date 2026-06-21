@@ -16,6 +16,19 @@ function readString(formData: FormData, key: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+// The encryption keyring throws a recognizable message when KEY_ENCRYPTION_KEY /
+// KEY_ENCRYPTION_KEYS is unset or malformed. Surface that as a config hint
+// rather than a generic "failed to save" so the operator knows where to look.
+function isEncryptionConfigError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : "";
+  return (
+    message.includes("KEY_ENCRYPTION_KEY") ||
+    message.includes("KEY_ENCRYPTION_KEYS") ||
+    message.includes("encryption key") ||
+    message.includes("Active encryption key")
+  );
+}
+
 export async function adminSetBrandApiKeyAction(
   _prev: ApiKeyFormState,
   formData: FormData,
@@ -51,7 +64,12 @@ export async function adminSetBrandApiKeyAction(
       error,
       metadata: { profileId: profile.id, brandId },
     });
-    return { status: "error", message: "Failed to save API key." };
+    return {
+      status: "error",
+      message: isEncryptionConfigError(error)
+        ? "Server can't encrypt keys — KEY_ENCRYPTION_KEY is missing or invalid. Set it to a base64-encoded 32-byte value and restart."
+        : "Failed to save API key.",
+    };
   }
 }
 
