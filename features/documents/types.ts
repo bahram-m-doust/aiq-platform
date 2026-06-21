@@ -48,6 +48,7 @@ export type BrandDocumentRecord = {
   status: DocumentStatus;
   uploadedBy: string | null;
   uploadedByEmail: string | null;
+  uploaderLabel: string | null;
   createdAt: string | null;
   approvedAt: string | null;
 };

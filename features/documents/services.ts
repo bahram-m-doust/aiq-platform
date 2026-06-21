@@ -186,6 +186,7 @@ export async function uploadBrandDocumentFromFormData({
     status,
     uploadedBy: data.uploaded_by,
     uploadedByEmail: null,
+    uploaderLabel: null,
     createdAt: data.created_at,
     approvedAt: null,
   } satisfies BrandDocumentRecord;

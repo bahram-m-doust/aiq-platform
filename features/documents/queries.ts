@@ -64,9 +64,11 @@ function toSizeBytes(value: number | string | null) {
 export function toBrandDocumentRecord({
   row,
   uploaderEmail,
+  uploaderLabel,
 }: {
   row: FileRow;
   uploaderEmail?: string | null;
+  uploaderLabel?: string | null;
 }): BrandDocumentRecord {
   return {
     id: row.id,
@@ -79,6 +81,7 @@ export function toBrandDocumentRecord({
     status: safeStatus(row.status),
     uploadedBy: row.uploaded_by,
     uploadedByEmail: uploaderEmail ?? null,
+    uploaderLabel: uploaderLabel ?? null,
     createdAt: row.created_at,
     approvedAt: row.approved_at ?? null,
   };
