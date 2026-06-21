@@ -277,16 +277,23 @@ export function SectionQuestionnaire({
     };
   }, [allSections.length, activeSectionId]);
 
-  // Arrived here from the overview's "fix this" link — highlight the gaps and
-  // jump to the first unanswered question.
+  // Arrived here from the overview's "fix this" link — jump to the first
+  // question that still needs finishing. "Uncompleted" mirrors the side panel:
+  // a question is done only once it has a value AND is marked done, so an
+  // answered-but-unconfirmed "Draft saved" card counts too (not just empty
+  // ones) — otherwise the deep link would land at the top of the page.
   useEffect(() => {
     if (!autoValidate) return;
-    const firstEmpty = activeSection.questions.find(
-      (question) => !isIntakeAnswerComplete(displayedAnswers[question.id] ?? null),
-    );
-    if (firstEmpty) {
+    const firstIncomplete = activeSection.questions.find((question) => {
+      const hasValue = isIntakeAnswerComplete(displayedAnswers[question.id] ?? null);
+      const completed = markedDoneIds
+        ? hasValue && markedDoneIds.has(question.id)
+        : hasValue;
+      return !completed;
+    });
+    if (firstIncomplete) {
       document
-        .getElementById(`question-card-${firstEmpty.id}`)
+        .getElementById(`question-card-${firstIncomplete.id}`)
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

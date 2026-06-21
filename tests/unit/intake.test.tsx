@@ -1007,6 +1007,37 @@ describe("intake UI components", () => {
     ).toBeNull();
   });
 
+  it("scrolls answered-but-unconfirmed (Draft saved) questions into view on validate", () => {
+    const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView");
+    const getById = vi.spyOn(document, "getElementById");
+
+    render(
+      <SectionQuestionnaire
+        allSections={[section]}
+        answers={{
+          // Both answered (have a value) but neither marked done — i.e. the
+          // "Draft saved" state the side panel still counts as uncompleted.
+          "question-1": "A drafted answer",
+          "question-2": "Another draft",
+        }}
+        autoValidate
+        brandName="Helio"
+        completion={completion()}
+        markedDoneQuestionIds={[]}
+        section={section}
+        session={session()}
+      />,
+    );
+
+    // The deep link must land on the first uncompleted card (the draft), not
+    // fall back to the top of the page because it happens to hold a value.
+    expect(getById).toHaveBeenCalledWith("question-card-question-1");
+    expect(scrollSpy).toHaveBeenCalled();
+
+    scrollSpy.mockRestore();
+    getById.mockRestore();
+  });
+
   it("renders questionnaire tabs as section titles without progress counts", () => {
     const nextSection: IntakeSectionWithQuestions = {
       ...section,
