@@ -717,7 +717,7 @@ describe("intake UI components", () => {
         'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
       ),
     ).not.toBeNull();
-    expect(screen.getByText(/uncompleted/i)).toBeVisible();
+    expect(screen.getByText(/uncompleted question/i)).toBeVisible();
   });
 
   it("keeps the uncompleted warning visible after review even without the flag", () => {
@@ -732,13 +732,13 @@ describe("intake UI components", () => {
 
     // Reach the review step once — this records "review reached" for the session.
     const first = render(<QuestionnaireLanding data={data} showSubmitReview />);
-    expect(screen.getByText(/uncompleted/i)).toBeVisible();
+    expect(screen.getByText(/uncompleted question/i)).toBeVisible();
     first.unmount();
 
     // Returning to the plain overview (no ?review=1) still shows the box, so the
     // user can keep fixing gaps without losing it.
     render(<QuestionnaireLanding data={data} />);
-    expect(screen.getByText(/uncompleted/i)).toBeVisible();
+    expect(screen.getByText(/uncompleted question/i)).toBeVisible();
   });
 
   it("treats answered-but-not-marked-done questions as uncompleted", () => {
@@ -766,7 +766,7 @@ describe("intake UI components", () => {
     });
     render(<QuestionnaireLanding data={data} showSubmitReview />);
 
-    expect(screen.getByText(/uncompleted/i)).toBeVisible();
+    expect(screen.getByText(/uncompleted question/i)).toBeVisible();
   });
 
   it("clears the uncompleted warning once every question is marked done", () => {
@@ -785,6 +785,146 @@ describe("intake UI components", () => {
     render(<QuestionnaireLanding data={data} />);
 
     expect(screen.queryByText(/uncompleted/i)).not.toBeInTheDocument();
+  });
+
+  it("swaps the warning for a Review & submit button with a success tooltip once complete", async () => {
+    const data = intakeData({
+      session: session(),
+      answers: {
+        "question-1": "Strategic answer",
+        "question-2": "https://helio.example",
+      },
+      completion: completion({
+        answeredQuestions: 2,
+        completionPercent: 100,
+        sections: [
+          {
+            sectionId: "section-1",
+            sectionKey: "COMPANY",
+            title: "Company",
+            totalQuestions: 2,
+            answeredQuestions: 2,
+            completionPercent: 100,
+          },
+        ],
+      }),
+    });
+
+    render(<QuestionnaireLanding data={data} showSubmitReview />);
+
+    // No gaps remain, so the uncompleted warning never shows.
+    expect(screen.queryByText(/uncompleted/i)).not.toBeInTheDocument();
+
+    // The panel reveals the final Review & submit affordance, routing into
+    // review mode like the last section's button.
+    const reviewLink = await screen.findByRole("link", {
+      name: /Review & submit/,
+    });
+    expect(reviewLink).toHaveAttribute(
+      "href",
+      "/integrated-brand-brain/roadmap/questionnaire?review=1",
+    );
+
+    // …alongside a success tooltip that names the answered total.
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveTextContent(/answered all 2 questions/i);
+  });
+
+  it("swaps the warning for the button as the final answers land after review", async () => {
+    const incomplete = intakeData({
+      session: session(),
+      answers: {
+        "question-1": "Strategic answer",
+        "question-2": null,
+      },
+      completion: completion({
+        answeredQuestions: 1,
+        completionPercent: 50,
+        sections: [
+          {
+            sectionId: "section-1",
+            sectionKey: "COMPANY",
+            title: "Company",
+            totalQuestions: 2,
+            answeredQuestions: 1,
+            completionPercent: 50,
+          },
+        ],
+      }),
+    });
+
+    const { rerender } = render(
+      <QuestionnaireLanding data={incomplete} showSubmitReview />,
+    );
+
+    // Reaching review with a gap left shows the warning, not the button yet.
+    expect(screen.getByText(/uncompleted question/i)).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: /Review & submit/ }),
+    ).not.toBeInTheDocument();
+
+    // The last answer lands — the warning gives way to the button + tooltip.
+    const complete = intakeData({
+      session: session(),
+      answers: {
+        "question-1": "Strategic answer",
+        "question-2": "https://helio.example",
+      },
+      completion: completion({
+        answeredQuestions: 2,
+        completionPercent: 100,
+        sections: [
+          {
+            sectionId: "section-1",
+            sectionKey: "COMPANY",
+            title: "Company",
+            totalQuestions: 2,
+            answeredQuestions: 2,
+            completionPercent: 100,
+          },
+        ],
+      }),
+    });
+    rerender(<QuestionnaireLanding data={complete} showSubmitReview />);
+
+    expect(
+      await screen.findByRole("link", { name: /Review & submit/ }),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      /answered all 2 questions/i,
+    );
+  });
+
+  it("does not reveal the Review & submit button before the review step", () => {
+    const data = intakeData({
+      session: session(),
+      answers: {
+        "question-1": "Strategic answer",
+        "question-2": "https://helio.example",
+      },
+      completion: completion({
+        answeredQuestions: 2,
+        completionPercent: 100,
+        sections: [
+          {
+            sectionId: "section-1",
+            sectionKey: "COMPANY",
+            title: "Company",
+            totalQuestions: 2,
+            answeredQuestions: 2,
+            completionPercent: 100,
+          },
+        ],
+      }),
+    });
+
+    // No ?review=1 and no prior review step — the panel button stays hidden so
+    // it only ever appears as the payoff of the review flow.
+    render(<QuestionnaireLanding data={data} />);
+
+    expect(
+      screen.queryByRole("link", { name: /Review & submit/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("always shows Approve & Lock, enabled once complete", () => {

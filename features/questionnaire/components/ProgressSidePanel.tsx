@@ -10,8 +10,9 @@ import {
 
 
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { ReviewReadyReveal } from "@/features/questionnaire/components/ReviewReadyReveal";
 import { UnansweredReveal } from "@/features/questionnaire/components/UnansweredReveal";
-import { questionnaireSectionPath } from "@/lib/routes";
+import { ROUTES, questionnaireSectionPath } from "@/lib/routes";
 
 type SectionSummary = {
   id: string;
@@ -130,48 +131,54 @@ export function ProgressSidePanel({
                 ))}
               </ul>
             </div>
-            {totalRemaining > 0 && (
-              <UnansweredReveal reviewReached={showReview} sessionId={sessionId}>
-                <div className="border-t border-[var(--bv-line)] pt-4">
-                  <div className="flex items-center gap-3 rounded-[8px] bg-white px-4 py-3 shadow-[0px_1px_2px_0px_rgba(16,24,40,0.06),0px_1px_3px_0px_rgba(16,24,40,0.10)]">
-                    <div className="flex min-w-0 flex-1 items-start gap-2.5">
-                      <div className="flex shrink-0 items-start pt-0.5">
-                        <CircleCheckIcon className="size-4 text-[#dc7609]" />
-                      </div>
-                      <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
-                        <p className="overflow-hidden text-ellipsis text-[14px] font-semibold leading-5 text-[#dc7609]">
-                          {totalRemaining} uncompleted{" "}
-                          {totalRemaining === 1 ? "question" : "questions"}.
-                        </p>
-                        <div className="flex flex-col">
-                          {incompleteSections.map((section) => {
-                            const remaining =
-                              section.totalQuestions -
-                              section.completedQuestions;
-                            return (
-                              <div
-                                key={section.id}
-                                className="flex flex-col items-start"
-                              >
-                                <span className="text-[14px] font-medium leading-5 text-[#0a0a0a]">
-                                  {section.title}:
-                                </span>
-                                <Link
-                                  className="text-[12px] leading-4 text-[#844705] underline"
-                                  href={`${questionnaireSectionPath(section.key)}?validate=1`}
+            <UnansweredReveal reviewReached={showReview} sessionId={sessionId}>
+              <ReviewReadyReveal
+                complete={totalRemaining === 0}
+                panelOpen={open}
+                reviewHref={`${ROUTES.questionnaire}?review=1`}
+                totalQuestions={totalQuestions}
+                warning={
+                  <div className="border-t border-[var(--bv-line)] pt-4">
+                    <div className="flex items-center gap-3 rounded-[8px] bg-white px-4 py-3 shadow-[0px_1px_2px_0px_rgba(16,24,40,0.06),0px_1px_3px_0px_rgba(16,24,40,0.10)]">
+                      <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                        <div className="flex shrink-0 items-start pt-0.5">
+                          <CircleCheckIcon className="size-4 text-[#dc7609]" />
+                        </div>
+                        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
+                          <p className="overflow-hidden text-ellipsis text-[14px] font-semibold leading-5 text-[#dc7609]">
+                            {totalRemaining} uncompleted{" "}
+                            {totalRemaining === 1 ? "question" : "questions"}.
+                          </p>
+                          <div className="flex flex-col">
+                            {incompleteSections.map((section) => {
+                              const remaining =
+                                section.totalQuestions -
+                                section.completedQuestions;
+                              return (
+                                <div
+                                  key={section.id}
+                                  className="flex flex-col items-start"
                                 >
-                                  {remaining} uncompleted
-                                </Link>
-                              </div>
-                            );
-                          })}
+                                  <span className="text-[14px] font-medium leading-5 text-[#0a0a0a]">
+                                    {section.title}:
+                                  </span>
+                                  <Link
+                                    className="text-[12px] leading-4 text-[#844705] underline"
+                                    href={`${questionnaireSectionPath(section.key)}?validate=1`}
+                                  >
+                                    {remaining} uncompleted
+                                  </Link>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </UnansweredReveal>
-            )}
+                }
+              />
+            </UnansweredReveal>
           </div>
         </div>
       </aside>

@@ -2,11 +2,12 @@
 
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 
-// Keeps the overview's "Unanswered" box visible once the user has reached the
-// "Review & submit" step. Reaching review is recorded per session in
-// sessionStorage, so navigating into a section to fix answers and coming back
-// to the overview (which drops the ?review=1 flag) still shows the box until
-// every question is marked done (at which point the parent renders nothing).
+// Gates the progress panel's review affordance — the "Unanswered" box while
+// gaps remain, and the final "Review & submit" button once they're closed —
+// once the user has reached the "Review & submit" step. Reaching review is
+// recorded per session in sessionStorage, so navigating into a section to fix
+// answers and coming back (which drops the ?review=1 flag) keeps the affordance
+// visible instead of vanishing.
 const noopSubscribe = () => () => {};
 
 export function UnansweredReveal({
