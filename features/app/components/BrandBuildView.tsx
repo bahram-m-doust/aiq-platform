@@ -313,8 +313,13 @@ function BrainBuildPanel({
 
   const remaining = daysRemaining(schedule.targetDate);
   const milestoneCount = phase.substeps.length;
-  // Which milestones the cosmetic bar has "reached".
+  // Map the cosmetic time-progress onto discrete steps. Steps before the active
+  // index read as done; the active index is the one currently "in build". The
+  // last step never auto-completes — it only flips to done once Bextudio ships
+  // the brain (the `built` branch above), so the stepper never implies it's
+  // finished ahead of time.
   const reached = Math.round((fill / 100) * milestoneCount);
+  const activeStep = Math.min(reached, milestoneCount - 1);
 
   return (
     <div
@@ -330,58 +335,81 @@ function BrainBuildPanel({
         </span>
       </div>
 
-      {/* Milestone-marked progress track */}
-      <div className="relative mb-4 mt-6">
-        <div
-          className="h-2 overflow-hidden rounded-full"
-          style={{ background: "rgba(15,15,20,0.06)" }}
-        >
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: `${fill}%`,
-              background: `linear-gradient(90deg, var(--bv-brand), var(--bv-brand-mid))`,
-              boxShadow: "0 0 12px var(--bv-brand-tint-32)",
-              transition: "width 1100ms var(--bv-ease)",
-            }}
-          />
-        </div>
-        {/* milestone dots */}
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-between">
-          {phase.substeps.map((s, i) => {
-            const done = i < reached;
-            return (
+      {/* Stepper indicator — numbered nodes joined by connectors */}
+      <ol className="mb-3 mt-5 flex items-start">
+        {phase.substeps.map((s, i) => {
+          const done = i < activeStep;
+          const active = i === activeStep;
+          return (
+            <li
+              className="relative flex flex-1 flex-col items-center text-center"
+              key={s.id}
+            >
+              {i > 0 ? (
+                <span
+                  className="absolute right-1/2 top-[10px] z-0 h-0.5 w-full transition-all duration-500"
+                  style={{
+                    background:
+                      i <= activeStep
+                        ? "var(--bv-brand-mid)"
+                        : "var(--bv-line-2)",
+                    transitionDelay: `${i * 100}ms`,
+                  }}
+                />
+              ) : null}
               <span
-                className="size-3 rounded-full border-2 transition-all duration-500"
-                key={s.id}
+                className="relative z-[1] grid size-[21px] place-items-center rounded-full border-2 text-[10px] font-semibold transition-all duration-500"
                 style={{
                   background: done ? "var(--bv-brand-mid)" : "#fff",
-                  borderColor: done
-                    ? "var(--bv-brand-deep)"
-                    : "var(--bv-line-2)",
-                  transitionDelay: `${i * 120}ms`,
+                  borderColor:
+                    done || active
+                      ? "var(--bv-brand-deep)"
+                      : "var(--bv-line-2)",
+                  color: done
+                    ? "#fff"
+                    : active
+                      ? "var(--bv-brand-deep)"
+                      : "var(--bv-ink-4)",
+                  boxShadow: active
+                    ? "0 0 0 4px var(--bv-brand-tint-16)"
+                    : undefined,
+                  animation: active
+                    ? "bv-pulse 1.8s var(--bv-ease) infinite"
+                    : undefined,
+                  transitionDelay: `${i * 100}ms`,
                 }}
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      {/* milestone labels */}
-      <div className="mb-3 flex justify-between gap-1">
-        {phase.substeps.map((s, i) => (
-          <span
-            className="flex-1 text-center text-[9.5px] leading-tight"
-            key={s.id}
-            style={{
-              color:
-                i < reached ? "var(--bv-ink-2)" : "var(--bv-ink-4)",
-            }}
-          >
-            {s.title}
-          </span>
-        ))}
-      </div>
+              >
+                {done ? (
+                  <svg
+                    aria-hidden="true"
+                    fill="none"
+                    height="11"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="3"
+                    viewBox="0 0 24 24"
+                    width="11"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  i + 1
+                )}
+              </span>
+              <span
+                className="mt-2 px-0.5 text-[9.5px] leading-tight"
+                style={{
+                  color:
+                    done || active ? "var(--bv-ink-2)" : "var(--bv-ink-4)",
+                }}
+              >
+                {s.title}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
 
       <p className="border-t border-dashed pt-3 text-[11px] leading-relaxed text-[var(--bv-ink-3)]" style={{ borderColor: "var(--bv-line)" }}>
         Estimated ready by{" "}
@@ -432,6 +460,13 @@ function PhaseCard({
   const isBrainBuildLocked = phase.key === "brain_build" && isLocked;
   const showBrainBuildPanel = phase.key === "brain_build" && !isLocked;
   const brainBuilt = Boolean(brainBuild?.builtAt);
+  const brainScheduled = Boolean(brainBuild);
+  // Until Bextudio schedules the build, the brain phase has no real progress to
+  // report — so hide the "0 / 4 complete" footer count and the empty headline
+  // progress bar. Once a target date is set, the cosmetic schedule progress and
+  // the in-panel stepper take over.
+  const hideBrainProgress = showBrainBuildPanel && !brainBuilt && !brainScheduled;
+  const hideStepCount = phase.key === "brain_build" && !brainBuilt;
   const isReadyToSubmit = phase.phase === 1 && submitSlot !== undefined;
   const tone = phase.phase;
   const cardAnimation = justUnlocked
@@ -531,42 +566,56 @@ function PhaseCard({
         </div>
 
         {/* card content — progress */}
-        <div className="flex items-center justify-between gap-4 px-6 pb-5 pt-2">
-          <span
-            className="h-2 flex-1 overflow-hidden rounded-full"
-            style={{ background: "rgba(15,15,20,0.06)" }}
-          >
+        {hideBrainProgress ? (
+          <div className="px-6 pb-5 pt-2">
+            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--bv-ink-3)]">
+              Awaiting schedule
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-4 px-6 pb-5 pt-2">
             <span
-              className="block h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${phase.percent}%`,
-                background: isLocked
-                  ? "var(--bv-ink-4)"
-                  : isReadyToSubmit
-                    ? "var(--bv-brand-mid)"
-                    : PHASE_GRADIENTS[tone],
-                transitionTimingFunction: "var(--bv-ease)",
-              }}
-            />
-          </span>
-          <span className="text-[12px] font-medium text-[var(--bv-ink-3)]">
-            {phase.percent}%
-          </span>
-        </div>
+              className="h-2 flex-1 overflow-hidden rounded-full"
+              style={{ background: "rgba(15,15,20,0.06)" }}
+            >
+              <span
+                className="block h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${phase.percent}%`,
+                  background: isLocked
+                    ? "var(--bv-ink-4)"
+                    : isReadyToSubmit
+                      ? "var(--bv-brand-mid)"
+                      : PHASE_GRADIENTS[tone],
+                  transitionTimingFunction: "var(--bv-ease)",
+                }}
+              />
+            </span>
+            <span className="text-[12px] font-medium text-[var(--bv-ink-3)]">
+              {phase.percent}%
+            </span>
+          </div>
+        )}
 
         {/* card footer */}
         <div
           className="flex items-center justify-between gap-3 border-t border-dashed px-6 py-4"
           style={{ borderColor: "var(--bv-line-dashed)" }}
         >
-          <span className="text-[12px] leading-4">
-            <strong className="font-medium text-[var(--bv-ink)]">
-              {phase.stepsDone} / {phase.stepsTotal}
-            </strong>{" "}
-            <span className="text-[var(--bv-ink-3)]">
-              {isReadyToSubmit ? "answered" : "complete"}
+          {hideStepCount ? (
+            <span className="text-[12px] leading-4 text-[var(--bv-ink-3)]">
+              {brainScheduled ? "In build" : "Waiting for Bextudio"}
             </span>
-          </span>
+          ) : (
+            <span className="text-[12px] leading-4">
+              <strong className="font-medium text-[var(--bv-ink)]">
+                {phase.stepsDone} / {phase.stepsTotal}
+              </strong>{" "}
+              <span className="text-[var(--bv-ink-3)]">
+                {isReadyToSubmit ? "answered" : "complete"}
+              </span>
+            </span>
+          )}
           <span
             className="text-[var(--bv-ink-3)] transition-transform duration-300"
             style={{
