@@ -9,7 +9,12 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, DownloadIcon, LockIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  CircleCheckIcon,
+  DownloadIcon,
+  LockIcon,
+} from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -561,7 +566,10 @@ export function SectionQuestionnaire({
               </Button>
             ) : (
               <Button asChild variant="outline">
-                <Link href={`${ROUTES.questionnaire}?review=1`}>Review &amp; submit</Link>
+                <Link href={`${ROUTES.questionnaire}?review=1`}>
+                  <CircleCheckIcon className="size-4" />
+                  Review &amp; submit
+                </Link>
               </Button>
             )}
           </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { CircleCheckIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -87,7 +88,10 @@ export function ReviewReadyReveal({
           <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen}>
             <TooltipTrigger asChild>
               <Button asChild className="w-full" size="lg" variant="secondary">
-                <Link href={reviewHref}>Review &amp; submit</Link>
+                <Link href={reviewHref}>
+                  <CircleCheckIcon className="size-4" />
+                  Review &amp; submit
+                </Link>
               </Button>
             </TooltipTrigger>
             <TooltipContent
