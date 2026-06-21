@@ -70,16 +70,6 @@ export function QuestionnaireLanding({
   );
   const overallColor = "green" as const;
 
-  // Value-based "answered" count (any question with a value, even drafts)
-  const totalAnswered = sections.reduce(
-    (sum, section) =>
-      sum +
-      section.questions.filter((q) =>
-        isIntakeAnswerComplete(answers[q.id] ?? null),
-      ).length,
-    0,
-  );
-
   // Per-section summary for the side panel
   const sectionSummaries = sections.map((section) => {
     const progress = progressByKey.get(section.key);
@@ -224,7 +214,6 @@ export function QuestionnaireLanding({
             sections={sectionSummaries}
             sessionId={session.id}
             showReview={showSubmitReview}
-            totalAnswered={totalAnswered}
             totalCompleted={completion.answeredQuestions}
             totalQuestions={completion.totalQuestions}
           />

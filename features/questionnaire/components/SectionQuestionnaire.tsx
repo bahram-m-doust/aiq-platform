@@ -588,9 +588,6 @@ export function SectionQuestionnaire({
       {!locked && (() => {
         const allQuestions = allSections.flatMap((s) => s.questions);
         const panelTotalQuestions = allQuestions.length;
-        const panelTotalAnswered = allQuestions.filter((q) =>
-          isIntakeAnswerComplete(displayedAnswers[q.id] ?? null),
-        ).length;
         const panelTotalCompleted = allQuestions.filter((q) => {
           const hasValue = isIntakeAnswerComplete(displayedAnswers[q.id] ?? null);
           return markedDoneIds
@@ -627,7 +624,6 @@ export function SectionQuestionnaire({
             sections={panelSections}
             sessionId={session.id}
             showReview={false}
-            totalAnswered={panelTotalAnswered}
             totalCompleted={panelTotalCompleted}
             totalQuestions={panelTotalQuestions}
           />

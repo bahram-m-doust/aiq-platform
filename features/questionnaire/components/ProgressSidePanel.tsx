@@ -26,7 +26,6 @@ type SectionSummary = {
 
 export function ProgressSidePanel({
   totalQuestions,
-  totalAnswered,
   totalCompleted,
   completionPercent,
   sections,
@@ -34,7 +33,6 @@ export function ProgressSidePanel({
   showReview,
 }: {
   totalQuestions: number;
-  totalAnswered: number;
   totalCompleted: number;
   completionPercent: number;
   sections: SectionSummary[];
@@ -97,23 +95,13 @@ export function ProgressSidePanel({
               </span>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between">
-                <span className="text-xs text-[var(--bv-ink-3)]">
-                  Answered questions
-                </span>
-                <span className="font-mono text-xs font-semibold">
-                  {totalAnswered}/{totalQuestions}
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-xs text-[var(--bv-ink-3)]">
-                  Completed questions
-                </span>
-                <span className="font-mono text-xs font-semibold text-emerald-600">
-                  {totalCompleted}
-                </span>
-              </div>
+            <div className="flex items-baseline justify-between">
+              <span className="text-xs text-[var(--bv-ink-3)]">
+                Completed questions
+              </span>
+              <span className="font-mono text-xs font-semibold text-emerald-600">
+                {totalCompleted}/{totalQuestions}
+              </span>
             </div>
 
             <div className="border-t border-[var(--bv-line)] pt-3">
