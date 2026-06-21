@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { BrainBuildAdminPanel } from "@/features/admin/brain-build/components/BrainBuildAdminPanel";
 import { BrandMemberActions } from "@/features/admin/brands/components/BrandMemberActions";
 import { DeleteBrandButton } from "@/features/admin/brands/components/DeleteBrandButton";
 import { RenameBrandButton } from "@/features/admin/brands/components/RenameBrandButton";
@@ -73,11 +72,6 @@ export function BrandCard({ brand }: { brand: AdminBrandSummary }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <BrainBuildAdminPanel
-          brandId={brand.id}
-          brandName={brand.name}
-          schedule={brand.brainBuild}
-        />
         {brand.members.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground">
             No active members. Create a JOIN_BRAND access key or grant ownership

@@ -49,6 +49,25 @@ export async function getBrainBuildScheduleForBrand(
   return data ? toSchedule(data as ScheduleRow) : null;
 }
 
+// All brands with their brain build status for the admin scheduling page.
+export async function getAdminBrandsForBrainBuild(): Promise<
+  Array<{ brandId: string; brandName: string; schedule: BrainBuildSchedule | null }>
+> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("brands")
+    .select("id, name")
+    .order("name", { ascending: true });
+  if (error) throw error;
+  const brands = (data ?? []) as Array<{ id: string; name: string }>;
+  const scheduleMap = await getBrainBuildSchedulesForBrands(brands.map((b) => b.id));
+  return brands.map((b) => ({
+    brandId: b.id,
+    brandName: b.name,
+    schedule: scheduleMap.get(b.id) ?? null,
+  }));
+}
+
 // Batch lookup for the admin brands list — one query for every visible brand.
 export async function getBrainBuildSchedulesForBrands(
   brandIds: string[],

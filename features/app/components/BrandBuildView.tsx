@@ -425,7 +425,11 @@ function PhaseCard({
 }) {
   const isLocked = phaseState === "locked";
   // Phase 04 swaps its substep list for the Brain Build panel (waiting /
-  // progress / live) once the phase is reachable.
+  // progress / live) once the phase is reachable. When still locked, we show
+  // nothing at all — no sub-step cards — because the brain build process hasn't
+  // started and listing its internal steps before aesthetics is approved would
+  // be confusing and premature.
+  const isBrainBuildLocked = phase.key === "brain_build" && isLocked;
   const showBrainBuildPanel = phase.key === "brain_build" && !isLocked;
   const brainBuilt = Boolean(brainBuild?.builtAt);
   const isReadyToSubmit = phase.phase === 1 && submitSlot !== undefined;
@@ -598,16 +602,18 @@ function PhaseCard({
         }}
       >
         <div className="grid gap-2 p-3 pt-3" ref={panelContentRef}>
-          <div className="mx-1 mb-1 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
-            <span>{showBrainBuildPanel ? "Status" : "Sub-steps"}</span>
-            <span className="text-[var(--bv-ink-4)]">
-              {showBrainBuildPanel
-                ? brainBuilt
-                  ? "Ready"
-                  : "In build"
-                : `${phase.substeps.length} total`}
-            </span>
-          </div>
+          {!isBrainBuildLocked && (
+            <div className="mx-1 mb-1 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
+              <span>{showBrainBuildPanel ? "Status" : "Sub-steps"}</span>
+              <span className="text-[var(--bv-ink-4)]">
+                {showBrainBuildPanel
+                  ? brainBuilt
+                    ? "Ready"
+                    : "In build"
+                  : `${phase.substeps.length} total`}
+              </span>
+            </div>
+          )}
           {showBrainBuildPanel ? (
             <BrainBuildPanel
               built={brainBuilt}
@@ -615,7 +621,7 @@ function PhaseCard({
               schedule={brainBuild ?? null}
             />
           ) : null}
-          {showBrainBuildPanel ? null : phase.substeps.map((s, i) => {
+          {showBrainBuildPanel || isBrainBuildLocked ? null : phase.substeps.map((s, i) => {
             // href substeps (the City Model view) carry their own availability,
             // decided in build-progress (it can unlock ahead of the phase). All
             // other substeps are gated by the phase lock.

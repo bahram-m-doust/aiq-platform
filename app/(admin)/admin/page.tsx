@@ -14,6 +14,7 @@ import {
   ScrollTextIcon,
   ShieldCheckIcon,
   BrainIcon,
+  CpuIcon,
   MessageSquareTextIcon,
   TagIcon,
   TelescopeIcon,
@@ -271,6 +272,23 @@ export default async function AdminPage() {
           </CardContent>
         </Card>
 
+        {/* Brain Build */}
+        <Card>
+          <CardHeader className="pb-3">
+            <SectionLabel>Brain Build</SectionLabel>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              <Button asChild className="justify-start gap-2" size="lg">
+                <Link href="/admin/brain-build">
+                  <CpuIcon className="size-4" />
+                  Brain Build
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Documents & Knowledge */}
         <Card>
           <CardHeader className="pb-3">
@@ -286,18 +304,7 @@ export default async function AdminPage() {
               >
                 <Link href="/admin/documents">
                   <FileTextIcon className="size-4" />
-                  Manage Documents
-                </Link>
-              </Button>
-              <Button
-                asChild
-                className="justify-start gap-2"
-                size="lg"
-                variant="outline"
-              >
-                <Link href="/admin/rag">
-                  <BrainIcon className="size-4" />
-                  RAG Approval Queue
+                  RAG
                 </Link>
               </Button>
               <Button
