@@ -61,6 +61,31 @@ export async function generateImage({
   };
   const choices = normalized.choices ?? [];
 
+  // ── TEMP DIAGNOSTIC ──────────────────────────────────────────────────────
+  // Logs the real shape OpenRouter returns so we can pinpoint why stored PNGs
+  // are corrupt. Remove once the preview is confirmed working.
+  try {
+    const msg = choices[0]?.message as Record<string, unknown> | undefined;
+    console.log("[image-diag] model:", model);
+    console.log("[image-diag] choices:", choices.length);
+    console.log("[image-diag] message keys:", msg ? Object.keys(msg) : null);
+    console.log(
+      "[image-diag] images field type:",
+      Array.isArray(msg?.images) ? `array(${(msg!.images as unknown[]).length})` : typeof msg?.images,
+    );
+    console.log(
+      "[image-diag] content field type:",
+      Array.isArray(msg?.content) ? `array(${(msg!.content as unknown[]).length})` : typeof msg?.content,
+    );
+    console.log(
+      "[image-diag] raw message (truncated):",
+      JSON.stringify(msg).slice(0, 600),
+    );
+  } catch {
+    /* diagnostic only */
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const rawUrls: string[] = [];
   for (const choice of choices) {
     for (const img of (choice?.message?.images ?? [])) {
@@ -78,8 +103,37 @@ export async function generateImage({
     }
   }
 
+  // ── TEMP DIAGNOSTIC ──────────────────────────────────────────────────────
+  rawUrls.forEach((u, i) => {
+    const kind = u.startsWith("data:")
+      ? "data-uri"
+      : u.startsWith("http")
+        ? "http-url"
+        : "raw/unknown";
+    console.log(`[image-diag] rawUrl[${i}] kind=${kind} len=${u.length} head="${u.slice(0, 80)}"`);
+  });
+  // ─────────────────────────────────────────────────────────────────────────
+
   const b64Images = (await Promise.all(rawUrls.map(resolveToBase64)))
     .filter((b): b is string => Boolean(b));
+
+  // ── TEMP DIAGNOSTIC ──────────────────────────────────────────────────────
+  // Decode the first bytes and report the detected image signature so we know
+  // whether what we store is actually a valid PNG/JPEG/WEBP.
+  b64Images.forEach((b, i) => {
+    const buf = Buffer.from(b, "base64");
+    const hex = buf.subarray(0, 8).toString("hex");
+    let sig = "UNKNOWN";
+    if (hex.startsWith("89504e47")) sig = "PNG";
+    else if (hex.startsWith("ffd8ff")) sig = "JPEG";
+    else if (buf.subarray(0, 4).toString("ascii") === "RIFF") sig = "WEBP";
+    else if (hex.startsWith("47494638")) sig = "GIF";
+    console.log(
+      `[image-diag] b64[${i}] bytes=${buf.length} magic=${hex} → ${sig}`,
+    );
+  });
+  // ─────────────────────────────────────────────────────────────────────────
+
   const imageCount = b64Images.length;
   const costCents = providerCostCents(
     normalized.usage,
