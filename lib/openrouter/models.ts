@@ -8,8 +8,7 @@ export type TextModelId =
 export type ImageModelId =
   | "google/gemini-2.5-flash-image"
   | "openai/gpt-image-1"
-  | "openai/gpt-5.4-image-2"
-  | "bytedance/seedream-4.0";
+  | "openai/gpt-5.4-image-2";
 
 export type ModelOption<TId extends string> = {
   id: TId;
@@ -49,15 +48,10 @@ export const TEXT_MODELS: readonly ModelOption<TextModelId>[] = [
 
 export const IMAGE_MODELS: readonly ModelOption<ImageModelId>[] = [
   {
-    id: "bytedance/seedream-4.0",
-    name: "Seedream 4.0",
-    blurb: "ByteDance's flagship — strong aesthetics, cost-effective default.",
-    isDefault: true,
-  },
-  {
     id: "google/gemini-2.5-flash-image",
-    name: "Nano Banana 2",
-    blurb: "Google's fast image model — versatile.",
+    name: "Gemini 2.5 Flash Image",
+    blurb: "Google's fast image model — cost-effective, versatile default.",
+    isDefault: true,
   },
   {
     id: "openai/gpt-image-1",
@@ -73,7 +67,7 @@ export const IMAGE_MODELS: readonly ModelOption<ImageModelId>[] = [
 ] as const;
 
 export const DEFAULT_TEXT_MODEL: TextModelId = "openai/gpt-4o-mini";
-export const DEFAULT_IMAGE_MODEL: ImageModelId = "bytedance/seedream-4.0";
+export const DEFAULT_IMAGE_MODEL: ImageModelId = "google/gemini-2.5-flash-image";
 
 // Prices in cents per 1M tokens (text) or cents per image (image).
 // These approximate published OpenRouter prices as of 2026-01.
@@ -96,7 +90,6 @@ const IMAGE_PRICES: Record<ImageModelId, ImagePrice> = {
   // than per-image, so this is a coarse per-image estimate for the usage
   // ledger. Refine once a real run logs actual token counts.
   "openai/gpt-5.4-image-2":        { perImage: 20 },  // ~$0.20 estimate
-  "bytedance/seedream-4.0":        { perImage: 6 },   // ~$0.06
 };
 
 export function computeTextCostCents({
