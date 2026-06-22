@@ -2,7 +2,7 @@ import "server-only";
 
 import { retrieveBrandBrainContext } from "@/features/agents/brain/llm";
 import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
-import { getBrandAgentInstruction } from "@/features/agents/instructions/queries";
+import { getLayeredBrandInstruction } from "@/features/agents/instructions/queries";
 import { brandBrainProvider } from "@/features/agents/brain/schema";
 import type { BrandBrainImageRunResult } from "@/features/agents/brain/types";
 import type { UserProfile } from "@/features/auth/types";
@@ -81,15 +81,18 @@ export async function runBrandBrainImage({
 
   const instructionAgentId = await resolveImageInstructionAgentId(agent.id);
   const [instruction, defaults] = await Promise.all([
-    getBrandAgentInstruction({ brandId, agentId: instructionAgentId }),
+    // Full brand identity (brand-wide) plus any image-specific override, layered.
+    getLayeredBrandInstruction({ brandId, agentId: instructionAgentId }),
     getBrandModelDefaults(brandId),
   ]);
 
-  // Bias retrieval toward visual-system chunks (colors, photography, composition)
-  // so the image rewrite step gets the most relevant brand style rules.
-  const visualQuery = `visual system color palette photography composition style ${prompt}`;
+  // Span the full brand identity in retrieval — strategy/positioning, verbal/tone,
+  // and the visual system — so the prompt reflects the whole brand, not just looks.
+  // A larger topK gives room for multiple facets to surface.
+  const identityQuery =
+    `brand identity strategy positioning voice tone visual system color palette photography composition ${prompt}`;
   const { context, retrievedSources, displaySources } =
-    await retrieveBrandBrainContext({ prompt: visualQuery, brandId });
+    await retrieveBrandBrainContext({ prompt: identityQuery, brandId, topK: 8 });
 
   const startedAt = Date.now();
   const textStage = await withRunUsageReservation({

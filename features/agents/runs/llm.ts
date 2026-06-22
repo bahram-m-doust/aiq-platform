@@ -112,14 +112,17 @@ export async function createAgentRunResponse({
 
 // Layer [1] — task definition, locked in code.
 const IMAGE_REWRITE_TASK =
-  "You are a brand-side art director. Convert the user's request into ONE precise, on-brand image-generation prompt for a text-to-image model. " +
-  "Output ONLY the final prompt text — no preamble, no commentary, no markdown, no quotes. Keep it under 120 words.";
+  "You are a brand-side art director with full command of the brand's identity. " +
+  "Convert the user's request into ONE precise, on-brand image-generation prompt for a text-to-image model. " +
+  "The prompt must express the brand's complete identity — strategic positioning, verbal/tone cues, and visual system — translated into a single coherent visual scene. " +
+  "Output ONLY the final prompt text — no preamble, no commentary, no markdown, no quotes. Keep it under 130 words.";
 
-// Layer [3] — visual extraction guide + safety, appended after the brand instruction.
+// Layer [3] — identity translation guide + safety, appended after the brand instruction.
 const IMAGE_REWRITE_VISUAL_GUARD =
-  "Extract and apply every visual rule from the brand instruction above: exact color codes or palette, " +
-  "composition style, photography guidelines (including any required prefix or suffix), subjects, mood, and overall aesthetic. " +
-  "If the brand instruction specifies a photography or image style rule, embed it directly in the output prompt. " +
+  "Honor the brand's FULL identity from the instruction and context above, not just the visual layer: " +
+  "let strategy and positioning shape the subject and mood, let the verbal/tone identity shape the feel, " +
+  "and apply every concrete visual rule — exact color codes or palette, composition style, and photography guidelines " +
+  "(including any required prefix or suffix). Embed those concrete rules directly in the output prompt. " +
   `${untrustedKnowledgeInstruction}`;
 
 // Multimodal message type for the vision-capable art-director step.

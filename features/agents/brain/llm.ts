@@ -72,14 +72,16 @@ export function getBrandBrainModel(): string {
 export async function retrieveBrandBrainContext({
   prompt,
   brandId,
+  topK = 5,
 }: {
   prompt: string;
   brandId: string;
+  topK?: number;
 }) {
   const chunks = await searchBrandKnowledge({
     brandId,
     query: prompt,
-    topK: 5,
+    topK,
   });
 
   const retrievedSources = toRetrievedSources(chunks);

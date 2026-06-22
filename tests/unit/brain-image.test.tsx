@@ -7,7 +7,7 @@ vi.mock("@/features/agents/brain/llm", () => ({
   retrieveBrandBrainContext: vi.fn(),
 }));
 vi.mock("@/features/agents/instructions/queries", () => ({
-  getBrandAgentInstruction: vi.fn(),
+  getLayeredBrandInstruction: vi.fn(),
 }));
 vi.mock("@/features/agents/runs/llm", () => ({
   rewritePromptForImage: vi.fn(),
@@ -56,7 +56,7 @@ vi.mock("@/features/admin/brand-icons/storage", () => ({
 import { runBrandBrainImage } from "@/features/agents/brain/image";
 import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
 import { retrieveBrandBrainContext } from "@/features/agents/brain/llm";
-import { getBrandAgentInstruction } from "@/features/agents/instructions/queries";
+import { getLayeredBrandInstruction } from "@/features/agents/instructions/queries";
 import { rewritePromptForImage } from "@/features/agents/runs/llm";
 import { getBrandModelDefaults } from "@/features/agents/runs/services";
 import {
@@ -70,7 +70,7 @@ import type { UserProfile } from "@/features/auth/types";
 
 const mockedWorkspace = vi.mocked(getBrandBrainWorkspace);
 const mockedRetrieve = vi.mocked(retrieveBrandBrainContext);
-const mockedInstruction = vi.mocked(getBrandAgentInstruction);
+const mockedInstruction = vi.mocked(getLayeredBrandInstruction);
 const mockedRewrite = vi.mocked(rewritePromptForImage);
 const mockedDefaults = vi.mocked(getBrandModelDefaults);
 const mockedGenerate = vi.mocked(generateImage);
