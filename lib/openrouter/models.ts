@@ -9,7 +9,9 @@ export type ImageModelId =
   | "google/gemini-2.5-flash-image"
   | "google/gemini-3.1-flash-image"
   | "google/gemini-3-pro-image"
-  | "openai/gpt-5.4-image-2";
+  | "openai/gpt-5.4-image-2"
+  | "black-forest-labs/flux-schnell"
+  | "black-forest-labs/flux-1.1-pro";
 
 export type ModelOption<TId extends string> = {
   id: TId;
@@ -74,6 +76,16 @@ export const IMAGE_MODELS: readonly ModelOption<ImageModelId>[] = [
     blurb:
       "OpenAI's latest — GPT-5.4 reasoning + GPT Image 2 rendering. Strongest text rendering and edits.",
   },
+  {
+    id: "black-forest-labs/flux-schnell",
+    name: "FLUX Schnell",
+    blurb: "Ultra-fast, ultra-cheap. Great for quick iterations.",
+  },
+  {
+    id: "black-forest-labs/flux-1.1-pro",
+    name: "FLUX 1.1 Pro",
+    blurb: "Black Forest Labs' flagship — high detail, photorealistic quality.",
+  },
 ] as const;
 
 export const DEFAULT_TEXT_MODEL: TextModelId = "openai/gpt-4o-mini";
@@ -94,13 +106,15 @@ const TEXT_PRICES: Record<TextModelId, TextPrice> = {
 };
 
 const IMAGE_PRICES: Record<ImageModelId, ImagePrice> = {
-  "google/gemini-2.5-flash-image": { perImage: 3 },   // ~$0.03
-  "google/gemini-3.1-flash-image": { perImage: 5 },   // ~$0.05 estimate
-  "google/gemini-3-pro-image":     { perImage: 12 },  // ~$0.12 estimate
+  "google/gemini-2.5-flash-image":    { perImage: 3 },   // ~$0.03
+  "google/gemini-3.1-flash-image":    { perImage: 5 },   // ~$0.05 estimate
+  "google/gemini-3-pro-image":        { perImage: 12 },  // ~$0.12 estimate
   // gpt-5.4-image-2 is token-priced on OpenRouter ($8/M in, $15/M out) rather
   // than per-image, so this is a coarse per-image estimate for the usage
   // ledger. Refine once a real run logs actual token counts.
-  "openai/gpt-5.4-image-2":        { perImage: 20 },  // ~$0.20 estimate
+  "openai/gpt-5.4-image-2":          { perImage: 20 },  // ~$0.20 estimate
+  "black-forest-labs/flux-schnell":   { perImage: 1 },   // ~$0.003–$0.01
+  "black-forest-labs/flux-1.1-pro":  { perImage: 4 },   // ~$0.04 estimate
 };
 
 export function computeTextCostCents({

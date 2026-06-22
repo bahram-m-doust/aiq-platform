@@ -48,26 +48,37 @@ export async function generateImage({
   const normalized = response as unknown as {
     choices?: Array<{
       message?: {
-        images?: Array<
-          { image_url?: { url?: string | null } | null } | null
-        >;
+        // OpenRouter-native images extension field (primary)
+        images?: Array<{ image_url?: { url?: string | null } | null } | null>;
+        // Some models return images as content-part items (fallback)
+        content?: string | Array<{
+          type?: string;
+          image_url?: { url?: string | null } | null;
+        } | null>;
       };
     }>;
     usage?: unknown;
   };
   const choices = normalized.choices ?? [];
 
-  const dataUrls: string[] = [];
+  const rawUrls: string[] = [];
   for (const choice of choices) {
-    const images = choice?.message?.images ?? [];
-    for (const img of images) {
+    for (const img of (choice?.message?.images ?? [])) {
       const url = img?.image_url?.url;
-      if (typeof url === "string") dataUrls.push(url);
+      if (typeof url === "string") rawUrls.push(url);
+    }
+    const content = choice?.message?.content;
+    if (Array.isArray(content)) {
+      for (const part of content) {
+        if (part?.type === "image_url") {
+          const url = part?.image_url?.url;
+          if (typeof url === "string") rawUrls.push(url);
+        }
+      }
     }
   }
 
-  const b64Images = dataUrls
-    .map(stripDataUrlPrefix)
+  const b64Images = (await Promise.all(rawUrls.map(resolveToBase64)))
     .filter((b): b is string => Boolean(b));
   const imageCount = b64Images.length;
   const costCents = providerCostCents(
@@ -81,11 +92,24 @@ export async function generateImage({
   };
 }
 
-function stripDataUrlPrefix(value: string): string | null {
-  // Accept "data:image/png;base64,XXXX" → "XXXX", and raw base64 unchanged.
-  if (!value) return null;
+// Resolves any image URL to a raw base64 string for PNG persistence:
+//   - data URI  → strip the "data:...;base64," prefix
+//   - HTTPS URL → fetch the bytes and base64-encode them
+//   - raw base64 → pass through unchanged
+async function resolveToBase64(url: string): Promise<string | null> {
+  if (!url) return null;
   const marker = "base64,";
-  const idx = value.indexOf(marker);
-  if (idx >= 0) return value.slice(idx + marker.length);
-  return value;
+  const idx = url.indexOf(marker);
+  if (idx >= 0) return url.slice(idx + marker.length);
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const buf = await res.arrayBuffer();
+      return Buffer.from(buf).toString("base64");
+    } catch {
+      return null;
+    }
+  }
+  return url;
 }

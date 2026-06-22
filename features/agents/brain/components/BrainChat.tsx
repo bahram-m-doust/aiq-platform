@@ -6,6 +6,7 @@ import {
   CheckIcon,
   ClipboardIcon,
   ClockIcon,
+  DownloadIcon,
   ImageIcon,
   LoaderIcon,
   MessageSquareIcon,
@@ -169,6 +170,75 @@ function CopyIconButton({ text, compact = false }: { text: string; compact?: boo
   );
 }
 
+async function downloadImage(src: string, index: number) {
+  try {
+    const res = await fetch(src);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = `brand-image-${index + 1}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    /* download failed */
+  }
+}
+
+function ImageActionBar({
+  src,
+  index,
+  prompt,
+}: {
+  src: string;
+  index: number;
+  prompt: string | null | undefined;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopyPrompt() {
+    if (!prompt) return;
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard denied */
+    }
+  }
+
+  return (
+    <div className="mt-2 flex gap-2">
+      <button
+        className="flex items-center gap-1 rounded-full border border-black/10 bg-white/90 px-2.5 py-1 text-[11px] text-muted-foreground shadow-sm transition hover:bg-white hover:text-foreground"
+        onClick={() => void downloadImage(src, index)}
+        title="Download image"
+        type="button"
+      >
+        <DownloadIcon className="size-3" />
+        Download
+      </button>
+      {prompt ? (
+        <button
+          className="flex items-center gap-1 rounded-full border border-black/10 bg-white/90 px-2.5 py-1 text-[11px] text-muted-foreground shadow-sm transition hover:bg-white hover:text-foreground"
+          onClick={() => void handleCopyPrompt()}
+          title="Copy image prompt"
+          type="button"
+        >
+          {copied ? (
+            <CheckIcon className="size-3 text-green-500" />
+          ) : (
+            <ClipboardIcon className="size-3" />
+          )}
+          {copied ? "Copied!" : "Copy Prompt"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
   return (
     <div className="my-3 overflow-hidden rounded-lg border border-border bg-muted/60" dir="ltr">
@@ -241,7 +311,7 @@ function MessageBubble({
           </p>
         ) : showTyping ? (
           <TypingDots />
-        ) : parts.length > 0 ? (
+        ) : !hasImages && parts.length > 0 ? (
           <>
             {parts.map((part, i) =>
               part.type === "code" ? (
@@ -259,21 +329,27 @@ function MessageBubble({
         ) : null}
 
         {hasImages ? (
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="mt-1 flex flex-col gap-4">
             {message.images!.map((src, index) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                alt={message.imagePrompt ?? "Generated brand image"}
-                className="w-full rounded-xl border border-border bg-background"
-                key={`${message.id}-img-${index}`}
-                src={src}
-              />
+              <div key={`${message.id}-img-${index}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  alt="Generated brand image"
+                  className="w-full rounded-xl border border-border bg-muted"
+                  src={src}
+                />
+                <ImageActionBar
+                  index={index}
+                  prompt={message.imagePrompt}
+                  src={src}
+                />
+              </div>
             ))}
           </div>
         ) : null}
       </div>
 
-      {!message.pending && !showTyping && message.content ? (
+      {!message.pending && !showTyping && message.content && !hasImages ? (
         // User messages are on the right → [copy][time] right-aligned.
         // AI messages are on the left  → [time][copy] left-aligned.
         // Layout is role-based, not content-direction-based.
