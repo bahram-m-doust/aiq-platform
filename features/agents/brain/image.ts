@@ -19,6 +19,7 @@ import {
   withRunUsageReservation,
 } from "@/features/openrouter/usage";
 import { generateImage } from "@/lib/openrouter/image";
+import { coerceImageModel, isImageModelId } from "@/lib/openrouter/models";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -57,9 +58,13 @@ async function resolveImageInstructionAgentId(
 export async function runBrandBrainImage({
   profile,
   prompt,
+  imageModel,
 }: {
   profile: UserProfile;
   prompt: string;
+  // Optional user-selected image model. Falls back to the brand default when
+  // omitted or when the supplied id is not a recognised image model.
+  imageModel?: string;
 }): Promise<BrandBrainImageRunResult> {
   const workspace = await getBrandBrainWorkspace(profile.id);
   const { access, agent, readiness } = workspace;
@@ -120,13 +125,20 @@ export async function runBrandBrainImage({
   });
   const { optimizedPrompt } = textStage;
 
+  // Honour the user's model choice from the chat composer; fall back to the
+  // brand default for an unknown or omitted id.
+  const selectedImageModel =
+    imageModel && isImageModelId(imageModel)
+      ? coerceImageModel(imageModel)
+      : defaults.image;
+
   const imageStage = await withRunUsageReservation({
     brandId,
     kind: "IMAGE",
     operation: async (reservation) => {
       const result = await generateImage({
         brandId,
-        model: defaults.image,
+        model: selectedImageModel,
         prompt: optimizedPrompt,
         n: 1,
       });
@@ -161,7 +173,7 @@ export async function runBrandBrainImage({
       input: { prompt, mode: "image" },
       output: { answer, response_id: responseId },
       provider: brandBrainProvider,
-      model: defaults.image,
+      model: selectedImageModel,
       retrieved_sources: retrievedSources,
       cost: null,
       latency_ms: latencyMs,
@@ -219,7 +231,7 @@ export async function runBrandBrainImage({
       agent_id: agent.id,
       run_id: runId,
       mode: "image",
-      model: defaults.image,
+      model: selectedImageModel,
     },
   });
 

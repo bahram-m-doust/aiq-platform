@@ -125,7 +125,7 @@ describe("runBrandBrainImage", () => {
     mockedInstruction.mockResolvedValue("Use a teal palette.");
     mockedDefaults.mockResolvedValue({
       text: "openai/gpt-4o-mini",
-      image: "openai/gpt-image-1",
+      image: "google/gemini-2.5-flash-image",
     } as never);
     mockedRewrite.mockResolvedValue({
       optimizedPrompt: "Teal hero banner, minimal",
@@ -138,7 +138,7 @@ describe("runBrandBrainImage", () => {
     } as never);
     mockedGenerate.mockResolvedValue({
       b64Images: ["AAAA"],
-      usage: { imageCount: 1, costCents: 4, model: "openai/gpt-image-1" },
+      usage: { imageCount: 1, costCents: 4, model: "google/gemini-2.5-flash-image" },
     } as never);
 
     const agentRunsBuilder = {

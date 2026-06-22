@@ -28,6 +28,11 @@ import {
   loadBrainSessionAction,
 } from "@/features/agents/brain/actions";
 import { brandBrainPromptMaxLength } from "@/features/agents/brain/schema";
+import {
+  DEFAULT_IMAGE_MODEL,
+  IMAGE_MODELS,
+  type ImageModelId,
+} from "@/lib/openrouter/models";
 import type {
   BrandBrainAccess,
   BrandBrainChatRole,
@@ -366,6 +371,9 @@ export function BrainChat({
   );
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<ChatMode>("text");
+  const [imageModel, setImageModel] = useState<ImageModelId>(
+    DEFAULT_IMAGE_MODEL,
+  );
   const [isStreaming, setIsStreaming] = useState(false);
   const [isImagePending, setIsImagePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -588,7 +596,7 @@ export function BrainChat({
     ]);
 
     try {
-      const result = await generateBrandBrainImageAction(prompt);
+      const result = await generateBrandBrainImageAction(prompt, imageModel);
       if (result.status === "error") throw new Error(result.message);
       updateMessage(assistantId, (message) => ({
         ...message,
@@ -871,6 +879,25 @@ export function BrainChat({
                       </span>
                     ) : null}
                   </Button>
+                  {isImageMode ? (
+                    <label className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[11px] text-muted-foreground">
+                      <span className="sr-only">Image model</span>
+                      <select
+                        aria-label="Image model"
+                        className="cursor-pointer border-0 bg-transparent pr-1 text-[11px] text-foreground focus:outline-none"
+                        onChange={(event) =>
+                          setImageModel(event.target.value as ImageModelId)
+                        }
+                        value={imageModel}
+                      >
+                        {IMAGE_MODELS.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
                 </div>
                 <Button
                   aria-label="Send message"

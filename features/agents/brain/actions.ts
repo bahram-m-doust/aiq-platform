@@ -139,6 +139,7 @@ export async function askBrandBrainAction(
 // returns the generated images in one shot — image generation does not stream.
 export async function generateBrandBrainImageAction(
   prompt: string,
+  imageModel?: string,
 ): Promise<BrandBrainImageState> {
   const { profile } = await requireUserProfile(ROUTES.brain);
   const validation = validateBrandBrainPrompt(prompt);
@@ -166,6 +167,7 @@ export async function generateBrandBrainImageAction(
     const result = await runBrandBrainImage({
       profile,
       prompt: validation.prompt,
+      imageModel,
     });
 
     return {
