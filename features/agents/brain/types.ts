@@ -79,6 +79,7 @@ export type BrandBrainConversationMessage = {
   sources: BrandBrainDisplaySource[] | null;
   images?: string[] | null;
   imagePrompt?: string | null;
+  createdAt?: string | null;
 };
 
 export type BrandBrainImageRunResult = {

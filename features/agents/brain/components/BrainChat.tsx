@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import {
   AlertCircleIcon,
   CheckIcon,
-  ChevronRightIcon,
   ClipboardIcon,
   ClockIcon,
   ImageIcon,
   LoaderIcon,
   MessageSquareIcon,
+  PanelRightCloseIcon,
+  PanelRightOpenIcon,
   PaperclipIcon,
   PlusIcon,
   RefreshCwIcon,
@@ -47,6 +48,7 @@ type ChatMessage = {
   images?: string[] | null;
   imagePrompt?: string | null;
   pending?: boolean;
+  createdAt?: string | null;
 };
 
 type HistoryTurn = { role: BrandBrainChatRole; content: string };
@@ -147,7 +149,9 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
   return (
     <div className="my-3 overflow-hidden rounded-lg border border-border bg-muted/60">
       <div className="flex items-center justify-between border-b border-border/60 bg-muted px-3 py-1.5">
-        <span className="font-mono text-[11px] text-muted-foreground">{lang}</span>
+        <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+          {lang === "code" ? "Prompt" : lang}
+        </span>
         <CopyIconButton compact text={code} />
       </div>
       <pre className="overflow-x-auto p-3 text-[13px] leading-relaxed">
@@ -196,7 +200,9 @@ function MessageBubble({
       <div
         className={cn(
           "max-w-[min(42rem,100%)] text-[15px] leading-relaxed text-foreground",
-          isUser ? "rounded-2xl bg-muted/60 px-4 py-3" : "",
+          isUser
+            ? "rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-sm"
+            : "",
         )}
         dir={rtl ? "rtl" : "ltr"}
       >
@@ -213,13 +219,10 @@ function MessageBubble({
               part.type === "code" ? (
                 <CodeBlock key={i} code={part.text} lang={part.lang} />
               ) : (
-                <p
-                  key={i}
-                  className={cn(
-                    "whitespace-pre-wrap text-justify",
-                    rtl && "text-right",
-                  )}
-                >
+                // text-align: justify works for both LTR and RTL when the
+                // element's `dir` is set; we must NOT add text-right, which
+                // would override the justification for Persian.
+                <p key={i} className="whitespace-pre-wrap text-justify">
                   {part.text}
                 </p>
               ),
@@ -242,8 +245,18 @@ function MessageBubble({
         ) : null}
       </div>
 
-      {message.content && !message.pending && !showTyping ? (
-        <CopyIconButton text={message.content} />
+      {!message.pending && !showTyping && message.content ? (
+        <div
+          className={cn(
+            "flex items-center gap-2",
+            isUser ? "flex-row-reverse" : "flex-row",
+          )}
+        >
+          <CopyIconButton text={message.content} />
+          <span className="text-[10px] text-muted-foreground/50">
+            {formatTime(message.createdAt)}
+          </span>
+        </div>
       ) : null}
     </article>
   );
@@ -284,6 +297,14 @@ function modelDisplayName(model: string): string {
   return model.split("/").pop() ?? model;
 }
 
+function formatTime(iso?: string | null): string {
+  const date = iso ? new Date(iso) : new Date();
+  return date.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function BrainChat({
   access,
   initialMessages = [],
@@ -303,6 +324,7 @@ export function BrainChat({
       sources: message.sources,
       images: message.images ?? null,
       imagePrompt: message.imagePrompt ?? null,
+      createdAt: message.createdAt ?? null,
     })),
   );
   const [input, setInput] = useState("");
@@ -423,10 +445,11 @@ export function BrainChat({
     const assistantId = nextId();
     setError(null);
     setIsStreaming(true);
+    const now = new Date().toISOString();
     setMessages((prev) => [
       ...prev,
-      { id: nextId(), role: "user", content: prompt, sources: null },
-      { id: assistantId, role: "assistant", content: "", sources: null },
+      { id: nextId(), role: "user", content: prompt, sources: null, createdAt: now },
+      { id: assistantId, role: "assistant", content: "", sources: null, createdAt: now },
     ]);
 
     if (isFirstInSession) {
@@ -462,9 +485,10 @@ export function BrainChat({
     const assistantId = nextId();
     setError(null);
     setIsImagePending(true);
+    const now = new Date().toISOString();
     setMessages((prev) => [
       ...prev,
-      { id: nextId(), role: "user", content: prompt, sources: null },
+      { id: nextId(), role: "user", content: prompt, sources: null, createdAt: now },
       {
         id: assistantId,
         role: "assistant",
@@ -472,6 +496,7 @@ export function BrainChat({
         sources: null,
         images: null,
         pending: true,
+        createdAt: now,
       },
     ]);
 
@@ -607,6 +632,7 @@ export function BrainChat({
             sources: m.sources,
             images: m.images ?? null,
             imagePrompt: m.imagePrompt ?? null,
+            createdAt: m.createdAt ?? null,
           })),
         );
         sessionIdRef.current = session.isSession
@@ -625,10 +651,12 @@ export function BrainChat({
   const groupedSessions = groupSessionsByDate(sessions);
 
   return (
-    // -m-4 cancels the app layout's p-4 wrapper so BrainChat fills edge-to-edge
-    <div className="-m-4 flex min-h-[calc(100svh-68px)] bg-[#fbf8f4] text-foreground">
+    // -m-4 cancels the app layout's p-4 wrapper so BrainChat fills edge-to-edge.
+    // Fixed height + overflow-hidden makes the thread and the sidebar each own
+    // their own scroll, independent of the document/page scroll.
+    <div className="-m-4 flex h-[calc(100svh-68px)] overflow-hidden bg-[#fbf8f4] text-foreground">
       {/* ── Main chat column ── */}
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Thread */}
         <div
           ref={threadRef}
@@ -757,38 +785,21 @@ export function BrainChat({
                     ) : null}
                   </Button>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    aria-label={sidebarOpen ? "Hide history" : "Show history"}
-                    className="text-muted-foreground"
-                    onClick={() => setSidebarOpen((v) => !v)}
-                    size="icon-sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <ChevronRightIcon
-                      className={cn(
-                        "size-4 transition-transform duration-200",
-                        sidebarOpen ? "rotate-0" : "rotate-180",
-                      )}
-                    />
-                  </Button>
-                  <Button
-                    aria-label="Send message"
-                    className="rounded-full"
-                    disabled={
-                      isBusy || (input.trim().length === 0 && !attachedFile)
-                    }
-                    size="icon-sm"
-                    type="submit"
-                  >
-                    {isStreaming || isImagePending ? (
-                      <LoaderIcon className="size-4 animate-spin" />
-                    ) : (
-                      <SendIcon className="size-4" />
-                    )}
-                  </Button>
-                </div>
+                <Button
+                  aria-label="Send message"
+                  className="rounded-full"
+                  disabled={
+                    isBusy || (input.trim().length === 0 && !attachedFile)
+                  }
+                  size="icon-sm"
+                  type="submit"
+                >
+                  {isStreaming || isImagePending ? (
+                    <LoaderIcon className="size-4 animate-spin" />
+                  ) : (
+                    <SendIcon className="size-4" />
+                  )}
+                </Button>
               </div>
             </form>
 
@@ -824,12 +835,29 @@ export function BrainChat({
         </div>
       </main>
 
-      {/* ── Right history sidebar ── */}
-      {sidebarOpen ? (
-        <aside className="hidden w-64 shrink-0 flex-col border-l border-black/5 bg-white md:flex xl:w-72">
-          <div className="border-b border-black/5 p-3">
+      {/* ── Right history sidebar ──
+          Collapsed state is a slim rail with just the expand button, so
+          toggling only changes the sidebar's own width (the chat reflows
+          minimally). The page itself never scrolls — each pane scrolls on
+          its own. */}
+      {!sidebarOpen ? (
+        <aside className="hidden w-12 shrink-0 flex-col items-center border-l border-black/5 bg-white py-3 md:flex">
+          <Button
+            aria-label="Show history"
+            className="text-muted-foreground"
+            onClick={() => setSidebarOpen(true)}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <PanelRightOpenIcon className="size-4" />
+          </Button>
+        </aside>
+      ) : (
+        <aside className="hidden w-64 shrink-0 flex-col overflow-hidden border-l border-black/5 bg-white md:flex xl:w-72">
+          <div className="flex items-center gap-2 border-b border-black/5 p-3">
             <Button
-              className="w-full justify-start gap-1.5"
+              className="flex-1 justify-start gap-1.5"
               disabled={isBusy}
               onClick={handleNewChat}
               size="sm"
@@ -839,9 +867,19 @@ export function BrainChat({
               <PlusIcon className="size-4" />
               New chat
             </Button>
+            <Button
+              aria-label="Hide history"
+              className="text-muted-foreground"
+              onClick={() => setSidebarOpen(false)}
+              size="icon-sm"
+              type="button"
+              variant="ghost"
+            >
+              <PanelRightCloseIcon className="size-4" />
+            </Button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {groupedSessions.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10 text-center">
                 <ClockIcon className="size-5 text-muted-foreground/40" />
@@ -896,7 +934,7 @@ export function BrainChat({
             )}
           </div>
         </aside>
-      ) : null}
+      )}
     </div>
   );
 }

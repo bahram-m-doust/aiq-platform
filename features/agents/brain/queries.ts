@@ -261,6 +261,7 @@ export async function getBrandBrainConversation({
         role: "user",
         content: prompt,
         sources: null,
+        createdAt: row.created_at,
       });
     }
 
@@ -280,6 +281,7 @@ export async function getBrandBrainConversation({
         sources: toDisplaySources(row.retrieved_sources),
         images,
         imagePrompt: output ? readString(output.image_prompt) || null : null,
+        createdAt: row.created_at,
       });
     } else if (answer) {
       messages.push({
@@ -287,6 +289,7 @@ export async function getBrandBrainConversation({
         role: "assistant",
         content: answer,
         sources: toDisplaySources(row.retrieved_sources),
+        createdAt: row.created_at,
       });
     }
   }
@@ -400,7 +403,13 @@ export async function getBrainSessionConversation({
         : [];
 
     if (prompt) {
-      messages.push({ id: `${row.id}-q`, role: "user", content: prompt, sources: null });
+      messages.push({
+        id: `${row.id}-q`,
+        role: "user",
+        content: prompt,
+        sources: null,
+        createdAt: row.created_at,
+      });
     }
 
     if (imagePaths.length > 0) {
@@ -413,6 +422,7 @@ export async function getBrainSessionConversation({
         sources: toDisplaySources(row.retrieved_sources),
         images,
         imagePrompt: output ? readString(output.image_prompt) || null : null,
+        createdAt: row.created_at,
       });
     } else if (answer) {
       messages.push({
@@ -420,6 +430,7 @@ export async function getBrainSessionConversation({
         role: "assistant",
         content: answer,
         sources: toDisplaySources(row.retrieved_sources),
+        createdAt: row.created_at,
       });
     }
   }
