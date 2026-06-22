@@ -59,6 +59,11 @@ type ContentPart =
 
 const STREAM_ENDPOINT = "/api/brain/stream";
 
+// Key for stashing the in-flight chat in sessionStorage. We restore it only on
+// a browser refresh/hard reset (navigation type "reload"); leaving the page and
+// coming back is a soft navigation and should land on a clean New Chat.
+const SESSION_STORAGE_KEY = "brand-brain-active-chat";
+
 const promptChips = [
   "Summarize this brand",
   "Find audience insights",
@@ -391,6 +396,56 @@ export function BrainChat({
       prev.map((message) => (message.id === id ? updater(message) : message)),
     );
   }
+
+  // Restore the active chat only when the page was reloaded (refresh / hard
+  // reset). On a soft navigation back into Brand Brain, drop any stash so we
+  // open a fresh New Chat. hydratedRef gates the save effect so it never writes
+  // the initial empty state over a stash before we've had a chance to restore.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    try {
+      const nav = performance.getEntriesByType(
+        "navigation",
+      )[0] as PerformanceNavigationTiming | undefined;
+      const isReload = nav?.type === "reload";
+      const stash = sessionStorage.getItem(SESSION_STORAGE_KEY);
+
+      if (isReload && stash) {
+        const parsed = JSON.parse(stash) as {
+          sessionId?: string;
+          messages?: ChatMessage[];
+        };
+        if (parsed.messages && parsed.messages.length > 0) {
+          setMessages(parsed.messages);
+          if (parsed.sessionId) sessionIdRef.current = parsed.sessionId;
+        }
+      } else {
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+    } catch {
+      /* sessionStorage unavailable or corrupt stash */
+    }
+    hydratedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist the current chat so a refresh can restore it. Skip while a turn is
+  // streaming (partial assistant content) to avoid stashing half-written state.
+  useEffect(() => {
+    if (!hydratedRef.current || isStreaming || isImagePending) return;
+    try {
+      if (messages.length === 0) {
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      } else {
+        sessionStorage.setItem(
+          SESSION_STORAGE_KEY,
+          JSON.stringify({ sessionId: sessionIdRef.current, messages }),
+        );
+      }
+    } catch {
+      /* sessionStorage write failed (quota / disabled) */
+    }
+  }, [messages, isStreaming, isImagePending]);
 
   useEffect(() => {
     const node = threadRef.current;
