@@ -10,6 +10,7 @@ import {
   buildUntrustedKnowledgeContext,
   untrustedKnowledgeInstruction,
 } from "@/features/rag/prompt-context";
+import { joinPromptLayers } from "@/features/agents/instructions/schema";
 import { searchBrandKnowledge } from "@/features/rag/vector-search";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import {
@@ -23,7 +24,7 @@ import {
 
 const CODE = "openrouter_agent_run_config";
 const MAX_COMPLETION_TOKENS = 1200;
-const MAX_IMAGE_PROMPT_TOKENS = 200;
+const MAX_IMAGE_PROMPT_TOKENS = 250;
 
 export function isLLMAgentRunConfigError(error: unknown): error is DomainError {
   return isDomainErrorWithCode(error, CODE);
@@ -109,6 +110,18 @@ export async function createAgentRunResponse({
   };
 }
 
+// Layer [1] — task definition, locked in code.
+const IMAGE_REWRITE_TASK =
+  "You are a brand-side art director. Convert the user's request into ONE precise, on-brand image-generation prompt for a text-to-image model. " +
+  "Output ONLY the final prompt text — no preamble, no commentary, no markdown, no quotes. Keep it under 120 words.";
+
+// Layer [3] — visual extraction guide + safety, appended after the brand instruction.
+const IMAGE_REWRITE_VISUAL_GUARD =
+  "Extract and apply every visual rule from the brand instruction above: exact color codes or palette, " +
+  "composition style, photography guidelines (including any required prefix or suffix), subjects, mood, and overall aesthetic. " +
+  "If the brand instruction specifies a photography or image style rule, embed it directly in the output prompt. " +
+  `${untrustedKnowledgeInstruction}`;
+
 export async function rewritePromptForImage({
   brandId,
   brandPrompt,
@@ -122,19 +135,18 @@ export async function rewritePromptForImage({
   brandContext: string;
   instruction?: string;
 }) {
+  // Mirror the chat 3-layer assembly: neutral task → brand instruction → visual guard.
+  const systemContent = joinPromptLayers([
+    IMAGE_REWRITE_TASK,
+    instruction,
+    IMAGE_REWRITE_VISUAL_GUARD,
+  ]);
+
   const client = await getOpenRouterClientForBrand(brandId);
   const completion = await client.chat.completions.create({
     model,
     messages: [
-      {
-        role: "system",
-        content:
-          "You convert a user's request into ONE tight, visual image-generation prompt for a text-to-image model. " +
-          "Use the supplied brand knowledge to keep style, palette, and tone on-brand. " +
-          "Output ONLY the prompt text — no preamble, no markdown, no quotes. Keep it under 100 words." +
-          ` ${untrustedKnowledgeInstruction}` +
-          (instruction ? `\n\nBrand instruction:\n${instruction}` : ""),
-      },
+      { role: "system", content: systemContent },
       ...(brandContext
         ? [{ role: "user" as const, content: brandContext }]
         : []),

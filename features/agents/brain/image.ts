@@ -74,8 +74,11 @@ export async function runBrandBrainImage({
     agentId: instructionAgentId,
   });
 
+  // Bias retrieval toward visual-system chunks (colors, photography, composition)
+  // so the image rewrite step gets the most relevant brand style rules.
+  const visualQuery = `visual system color palette photography composition style ${prompt}`;
   const { context, retrievedSources, displaySources } =
-    await retrieveBrandBrainContext({ prompt, brandId });
+    await retrieveBrandBrainContext({ prompt: visualQuery, brandId });
   const defaults = await getBrandModelDefaults(brandId);
 
   const startedAt = Date.now();
