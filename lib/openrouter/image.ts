@@ -12,25 +12,19 @@ export type GenerateImageResult = {
   usage: { imageCount: number; costCents: number; model: ImageModelId };
 };
 
-// Multimodal chat models (GPT-5.4 Image 2, GPT-5 Image, etc.) on OpenRouter
-// only expose image output through /chat/completions with modalities, not
-// through the legacy /images/generations endpoint that gpt-image-1 and the
-// dedicated image models use.
-const CHAT_COMPLETIONS_IMAGE_MODELS = new Set<ImageModelId>([
-  "openai/gpt-5.4-image-2",
-]);
+// OpenRouter generates images exclusively through /chat/completions with
+// `modalities: ["image", "text"]` — it does NOT expose the OpenAI-style
+// /images/generations endpoint (that path 404s on OpenRouter). Every image
+// model (Seedream, Gemini Flash Image, GPT Image, GPT-5.x Image) therefore
+// goes through the chat-completions transport.
 
 /**
  * Generate one or more PNG images via OpenRouter.
  *
- * Two transports depending on model family:
- *   1. /images/generations (OpenAI-compatible) — used by gpt-image-1,
- *      gemini-2.5-flash-image, seedream-4.0. Returns `data[].b64_json`.
- *   2. /chat/completions with modalities: ["image", "text"] — used by the
- *      multimodal GPT-5.x Image series. Returns `choices[0].message.images[]`
- *      where each entry is `{ image_url: { url: "data:image/png;base64,..." } }`.
- *
- * Both paths normalize to raw base64 strings so callers can persist as PNG.
+ * Transport: /chat/completions with modalities: ["image", "text"]. The image
+ * arrives on `choices[0].message.images[]`, each entry shaped as
+ * `{ image_url: { url: "data:image/png;base64,..." } }`. We normalize the data
+ * URLs to raw base64 strings so callers can persist them as PNG.
  */
 export async function generateImage({
   brandId,
@@ -45,9 +39,7 @@ export async function generateImage({
 }): Promise<GenerateImageResult> {
   const client = await getOpenRouterClientForBrand(brandId);
 
-  const transport = CHAT_COMPLETIONS_IMAGE_MODELS.has(model)
-    ? await generateViaChatCompletions(client, model, prompt, n)
-    : await generateViaImagesEndpoint(client, model, prompt, n);
+  const transport = await generateViaChatCompletions(client, model, prompt, n);
 
   const b64Images = transport.b64Images;
   const imageCount = b64Images.length;
@@ -59,35 +51,6 @@ export async function generateImage({
   return {
     b64Images,
     usage: { imageCount, costCents, model },
-  };
-}
-
-async function generateViaImagesEndpoint(
-  client: Awaited<ReturnType<typeof getOpenRouterClientForBrand>>,
-  model: ImageModelId,
-  prompt: string,
-  n: number,
-): Promise<{ b64Images: string[]; usage: unknown }> {
-  // The OpenAI SDK's images.generate is OpenAI-typed; OpenRouter accepts
-  // arbitrary model ids, so we cast through `unknown` to satisfy TS.
-  const response = await client.images.generate({
-    model,
-    prompt,
-    n,
-    response_format: "b64_json",
-  } as unknown as Parameters<typeof client.images.generate>[0]);
-
-  const normalized = response as unknown as {
-    data?: Array<{ b64_json?: string | null }>;
-    usage?: unknown;
-  };
-  const data = normalized.data ?? [];
-
-  return {
-    b64Images: data
-      .map((d) => d?.b64_json ?? null)
-      .filter((b): b is string => Boolean(b)),
-    usage: normalized.usage,
   };
 }
 
