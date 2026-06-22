@@ -23,7 +23,13 @@ function normalizeHttpOrigin(value: string | null | undefined) {
 }
 
 function configuredAppOrigin() {
-  return normalizeHttpOrigin(process.env.APP_BASE_URL) ?? localAppOrigin;
+  return (
+    normalizeHttpOrigin(process.env.APP_BASE_URL) ??
+    normalizeHttpOrigin(process.env.URL) ??
+    normalizeHttpOrigin(process.env.DEPLOY_PRIME_URL) ??
+    normalizeHttpOrigin(process.env.DEPLOY_URL) ??
+    localAppOrigin
+  );
 }
 
 function trustedConfiguredOrigins() {
@@ -32,6 +38,9 @@ function trustedConfiguredOrigins() {
       [
         configuredAppOrigin(),
         normalizeHttpOrigin(process.env.ADMIN_BASE_URL),
+        normalizeHttpOrigin(process.env.URL),
+        normalizeHttpOrigin(process.env.DEPLOY_PRIME_URL),
+        normalizeHttpOrigin(process.env.DEPLOY_URL),
       ].filter((origin): origin is string => Boolean(origin)),
     ),
   );

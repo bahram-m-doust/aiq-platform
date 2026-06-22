@@ -4,12 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowRightIcon,
-  TriangleAlertIcon,
+  CircleCheckIcon,
   PanelRightCloseIcon,
   PanelRightOpenIcon,
 } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { ReviewReadyReveal } from "@/features/questionnaire/components/ReviewReadyReveal";
 import { UnansweredReveal } from "@/features/questionnaire/components/UnansweredReveal";
@@ -32,6 +32,7 @@ export function ProgressSidePanel({
   sections,
   sessionId,
   showReview,
+  showReadyReviewAction = true,
 }: {
   totalQuestions: number;
   totalCompleted: number;
@@ -39,6 +40,7 @@ export function ProgressSidePanel({
   sections: SectionSummary[];
   sessionId: string;
   showReview: boolean;
+  showReadyReviewAction?: boolean;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -89,21 +91,16 @@ export function ProgressSidePanel({
           </div>
 
           <div className="flex flex-col gap-3 pt-1.5">
-            <div className="rounded-[10px] bg-[#f7f7f8] px-3.5 py-4">
-              <div className="flex items-baseline justify-between">
-                <span className="text-xs text-[var(--bv-ink-3)]">
+            <div className="flex flex-col gap-6 rounded-lg bg-[#f7f7f8] px-3 py-6">
+              <div className="flex items-center justify-between text-[12px] leading-none tracking-[0.48px]">
+                <span className="font-semibold text-[#64748b]">
                   Completed questions
                 </span>
-                <span className="font-mono text-xs font-semibold text-emerald-600">
+                <span className="font-mono font-medium text-[#009760]">
                   {totalCompleted}/{totalQuestions}
                 </span>
               </div>
-              <div className="mt-3">
-                <ProgressBar color="green" value={completionPercent} />
-              </div>
-              <span className="mt-1.5 block font-mono text-[10px] text-[var(--bv-ink-4)]">
-                {completionPercent}%
-              </span>
+              <ProgressBar color="green" value={completionPercent} />
             </div>
 
             <div className="border-t border-[var(--bv-line)] pt-3">
@@ -111,37 +108,21 @@ export function ProgressSidePanel({
                 Section progress
               </span>
               <ul className="flex flex-col gap-2">
-                {sections.map((section) => {
-                  const remaining =
-                    section.totalQuestions - section.completedQuestions;
-                  const completed = remaining === 0;
-
-                  return (
-                    <li key={section.id}>
-                      <Link
-                        className="group block rounded-lg px-2.5 py-2.5 text-xs transition-colors hover:bg-gray-50"
-                        href={questionnaireSectionPath(section.key)}
-                      >
-                        <span className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                          <span className="min-w-0 break-words font-medium leading-4 text-[var(--bv-ink-2)] group-hover:text-[var(--bv-ink)]">
-                            {section.title}
-                          </span>
-                          <span className="flex shrink-0 items-center gap-2">
-                            <span className="font-mono text-[10px] text-[var(--bv-ink-4)]">
-                              {section.completedQuestions} of{" "}
-                              {section.totalQuestions}
-                            </span>
-                            {completed ? (
-                              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                                Done
-                              </span>
-                            ) : null}
-                          </span>
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
+                {sections.map((section) => (
+                  <li key={section.id}>
+                    <Link
+                      className="group flex items-center justify-between gap-3 rounded-lg px-2.5 py-2.5 text-xs transition-colors hover:bg-gray-50"
+                      href={questionnaireSectionPath(section.key)}
+                    >
+                      <span className="min-w-0 flex-1 break-words font-medium leading-4 text-[var(--bv-ink-2)] group-hover:text-[var(--bv-ink)]">
+                        {section.title}
+                      </span>
+                      <span className="shrink-0 font-mono text-[10px] text-[var(--bv-ink-4)]">
+                        {section.completedQuestions} of {section.totalQuestions}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
             <UnansweredReveal reviewReached={showReview} sessionId={sessionId}>
@@ -149,23 +130,23 @@ export function ProgressSidePanel({
                 complete={totalRemaining === 0}
                 panelOpen={open}
                 reviewHref={`${ROUTES.questionnaire}?review=1`}
+                showReadyAction={showReadyReviewAction}
                 totalQuestions={totalQuestions}
                 warning={
                   <div className="border-t border-[var(--bv-line)] pt-4">
                     <Alert
-                      className="relative overflow-hidden border-amber-300/80 bg-white text-[var(--bv-ink)] shadow-xs"
+                      className="relative overflow-hidden border-amber-300/80 bg-[#fffbeb] text-[var(--bv-ink)] shadow-xs"
                     >
-                      <AlertTitle className="flex items-center gap-2 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-amber-700">
-                        <TriangleAlertIcon className="size-5 shrink-0 text-amber-600" />
-                        <span>Questions remaining</span>
-                      </AlertTitle>
-                      <AlertDescription className="max-w-full pr-1 text-[13px] leading-5 text-[var(--bv-ink-3)]">
-                        Answer{" "}
-                        <span className="font-semibold text-[var(--bv-ink-2)]">
-                          {totalRemaining} more{" "}
-                          {totalRemaining === 1 ? "question" : "questions"}
-                        </span>{" "}
-                        to unlock submission.
+                      <AlertDescription className="flex max-w-full items-start gap-2 pr-1 text-[13px] leading-5 text-[#78350f]">
+                        <CircleCheckIcon className="mt-0.5 size-4 shrink-0 text-[#b45309]" />
+                        <span>
+                          Answer{" "}
+                          <span className="font-semibold text-[#9a5a04]">
+                            {totalRemaining} more{" "}
+                            {totalRemaining === 1 ? "question" : "questions"}
+                          </span>{" "}
+                          to unlock submission.
+                        </span>
                       </AlertDescription>
                       <div className="mt-3 flex flex-col gap-2">
                         {incompleteSections.map((section) => {
@@ -176,18 +157,18 @@ export function ProgressSidePanel({
                             <Link
                               key={section.id}
                               href={`${questionnaireSectionPath(section.key)}?validate=1`}
-                              className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border border-[var(--bv-line)] bg-[#fbfbfc] px-3 py-2 text-[var(--bv-ink-2)] transition-all hover:border-[var(--bv-line-2)] hover:bg-white hover:shadow-sm"
+                              className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border border-amber-200/80 bg-[#fff7ed] px-3 py-2 text-[#78350f] transition-all hover:border-amber-300 hover:bg-[#fffbeb] hover:shadow-sm"
                             >
                               <span className="min-w-0">
-                                <span className="block break-words text-[12px] font-medium leading-4 text-[var(--bv-ink-2)]">
+                                <span className="block break-words text-[12px] font-medium leading-4 text-[#78350f]">
                                   {section.title}
                                 </span>
                               </span>
                               <span className="flex shrink-0 items-center gap-1.5">
-                                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold leading-4 text-[#9a5a04] ring-1 ring-[var(--bv-line)]">
+                                <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold leading-4 text-[#9a5a04] ring-1 ring-amber-200/80">
                                   {remaining} left
                                 </span>
-                                <ArrowRightIcon className="size-3.5 flex-none text-[var(--bv-ink-4)] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[var(--bv-ink-2)]" />
+                                <ArrowRightIcon className="size-3.5 flex-none text-[#b45309] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-[#92400e]" />
                               </span>
                             </Link>
                           );

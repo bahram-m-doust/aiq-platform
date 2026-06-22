@@ -60,4 +60,23 @@ describe("sendEmailWithResend", () => {
     const init = fetchSpy.mock.calls[0][1];
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
+
+  it("accepts RESEND_FROM_EMAIL as a sender fallback", async () => {
+    vi.stubEnv("RESEND_API_KEY", "re_test_key");
+    vi.stubEnv("EMAIL_FROM", "");
+    vi.stubEnv("RESEND_FROM_EMAIL", "Bextudio <hello@example.com>");
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ id: "email-1" }), { status: 200 }),
+      );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await sendEmailWithResend(input);
+
+    const init = fetchSpy.mock.calls[0][1];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      from: "Bextudio <hello@example.com>",
+    });
+  });
 });

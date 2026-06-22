@@ -28,12 +28,14 @@ export function ReviewReadyReveal({
   complete,
   totalQuestions,
   reviewHref,
+  showReadyAction = true,
   warning,
   panelOpen = true,
 }: {
   complete: boolean;
   totalQuestions: number;
   reviewHref: string;
+  showReadyAction?: boolean;
   warning: ReactNode;
   // The tooltip portals to <body>, so only auto-surface it while the panel is
   // actually open — otherwise it would float, unanchored, over a hidden panel.
@@ -83,6 +85,10 @@ export function ReviewReadyReveal({
   }, [phase, panelOpen]);
 
   if (phase === "ready") {
+    if (!showReadyAction) {
+      return null;
+    }
+
     return (
       <div className="border-t border-[var(--bv-line)] pt-4">
         <div className="animate-in fade-in-0 slide-in-from-bottom-1 zoom-in-95 duration-500">

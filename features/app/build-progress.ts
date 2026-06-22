@@ -65,10 +65,6 @@ type IntakeRow = {
   status: string;
 };
 
-type AnswerRow = {
-  question_id: string;
-};
-
 type KnowledgeBaseRow = {
   status: string | null;
 };
@@ -156,32 +152,31 @@ function futuresResearchSubstep(
 }
 
 function getBrandResearchProgress({
-  answeredCount,
+  intakeLocked,
   percent,
   sessionExists,
-  totalQuestions,
   stakeholderStatus,
   futuresResearchStatus,
 }: {
-  answeredCount: number;
+  intakeLocked: boolean;
   percent: number;
   sessionExists: boolean;
-  totalQuestions: number;
   stakeholderStatus: StakeholderReportStatus | null;
   futuresResearchStatus: FuturesResearchReportStatus | null;
 }) {
   const intakeStarted = sessionExists || percent > 0;
-  const questionnairesDone = percent === 100;
+  const questionnairesComplete = percent === 100;
+  const questionnairesDone = intakeLocked;
 
   let questionnairesState: SubstepState = "locked";
   if (questionnairesDone) questionnairesState = "done";
+  else if (questionnairesComplete) questionnairesState = "in-progress";
   else if (intakeStarted) questionnairesState = "in-progress";
 
   const stakeholder = stakeholderSubstep(questionnairesDone, stakeholderStatus);
-  // Stakeholder Interviews and Futures Research are independent: both unlock
-  // when the questionnaires are complete and each is approved separately.
+  const stakeholderDone = questionnairesDone && stakeholderStatus === "APPROVED";
   const futures = futuresResearchSubstep(
-    questionnairesDone,
+    stakeholderDone,
     futuresResearchStatus,
   );
 
@@ -196,7 +191,7 @@ function getBrandResearchProgress({
     },
     {
       id: "stakeholder-interviews",
-      title: "Stakeholder Interviews",
+      title: "Stakeholder Interviews Report",
       description:
         "Interview founders and key stakeholders to surface intent, nuance and ambition.",
       progress: stakeholder.progress,
@@ -213,6 +208,9 @@ function getBrandResearchProgress({
   ];
 
   const allSubstepsDone = substeps.every((substep) => substep.state === "done");
+  const completedSubsteps = substeps.filter(
+    (substep) => substep.state === "done",
+  ).length;
   const phasePercent = Math.round(
     substeps.reduce((sum, substep) => sum + substep.progress, 0) /
       substeps.length,
@@ -225,8 +223,8 @@ function getBrandResearchProgress({
   return {
     percent: phasePercent,
     status,
-    stepsDone: answeredCount,
-    stepsTotal: totalQuestions,
+    stepsDone: completedSubsteps,
+    stepsTotal: substeps.length,
     substeps,
   };
 }
@@ -253,28 +251,13 @@ async function getIntakeProgress(
   if (questionsResult.error) throw questionsResult.error;
 
   const session = sessionResult.data as IntakeRow | null;
-  const answersResult = session
-    ? await admin
-        .from("intake_answers")
-        .select("question_id")
-        .eq("session_id", session.id)
-    : { data: [], error: null };
-
-  if (answersResult.error) throw answersResult.error;
-
-  const answeredIds = new Set(
-    ((answersResult.data ?? []) as AnswerRow[]).map((answer) => answer.question_id),
-  );
   const isLocked = session?.status === "LOCKED";
-  const totalQuestions = questionsResult.count ?? 0;
   const percent = isLocked ? 100 : session?.completion_percent ?? 0;
-  const answeredCount = isLocked ? totalQuestions : answeredIds.size;
 
   return getBrandResearchProgress({
-    answeredCount,
+    intakeLocked: isLocked,
     percent,
     sessionExists: Boolean(session),
-    totalQuestions,
     stakeholderStatus,
     futuresResearchStatus,
   });
@@ -287,15 +270,11 @@ function getIntakeProgressFromPageData(
 ) {
   const isLocked = data.session.status === "LOCKED";
   const percent = isLocked ? 100 : data.completion.completionPercent;
-  const stepsDone = isLocked
-    ? data.completion.totalQuestions
-    : data.completion.answeredQuestions;
 
   return getBrandResearchProgress({
-    answeredCount: stepsDone,
+    intakeLocked: isLocked,
     percent,
     sessionExists: Boolean(data.session),
-    totalQuestions: data.completion.totalQuestions,
     stakeholderStatus,
     futuresResearchStatus,
   });

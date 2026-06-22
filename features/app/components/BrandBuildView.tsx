@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/routes";
@@ -17,7 +17,7 @@ import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalS
 import type { IntakeCompletion } from "@/features/questionnaire/types";
 
 const STATE_COPY: Record<SubstepState, string> = {
-  done: "Done",
+  done: "Completed",
   "in-progress": "In progress",
   "awaiting-review": "Awaiting review",
   locked: "Locked",
@@ -90,7 +90,7 @@ function LockIcon({ size = 14 }: { size?: number }) {
 }
 
 const sProps = {
-  stroke: "white",
+  stroke: "currentColor",
   strokeWidth: 1.7,
   fill: "none",
   strokeLinecap: "round" as const,
@@ -138,13 +138,41 @@ function PhaseGlyph({ kind }: { kind: string }) {
           d="M12 3a9 9 0 0 0 0 18c1.1 0 2-.9 2-2 0-.52-.2-1-.54-1.36-.33-.36-.53-.83-.53-1.34 0-1.1.9-2 2-2h1.6A4.97 4.97 0 0 0 21 9.5C21 5.9 16.97 3 12 3z"
           {...sProps}
         />
-        <circle cx="7.5" cy="10.5" fill="white" r="1" stroke="none" />
-        <circle cx="10.5" cy="7.5" fill="white" r="1" stroke="none" />
-        <circle cx="14.5" cy="7.5" fill="white" r="1" stroke="none" />
-        <circle cx="16.5" cy="10.5" fill="white" r="1" stroke="none" />
+        <circle cx="7.5" cy="10.5" fill="currentColor" r="1" stroke="none" />
+        <circle cx="10.5" cy="7.5" fill="currentColor" r="1" stroke="none" />
+        <circle cx="14.5" cy="7.5" fill="currentColor" r="1" stroke="none" />
+        <circle cx="16.5" cy="10.5" fill="currentColor" r="1" stroke="none" />
       </svg>
     );
   return null;
+}
+
+function RoadmapFeaturedIcon({
+  background,
+  kind,
+}: {
+  background: string;
+  kind: string;
+}) {
+  return (
+    <span aria-hidden="true" className="relative block size-8 shrink-0">
+      <span className="absolute left-[0.4px] top-[-7.6px] flex size-[39.192px] items-center justify-center">
+        <span
+          className="size-8 flex-none rotate-[15deg] rounded-md"
+          style={{ background }}
+        />
+      </span>
+      <span
+        className="absolute inset-0 grid size-8 place-items-center overflow-hidden rounded-md border border-white/60 text-white shadow-[0_3px_10px_-3px_rgba(15,15,20,0.25),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-md"
+        style={{ background }}
+      >
+        <span className="absolute inset-0 bg-white/20" />
+        <span className="relative drop-shadow-[0_1px_1px_rgba(15,15,20,0.22)]">
+          <PhaseGlyph kind={kind} />
+        </span>
+      </span>
+    </span>
+  );
 }
 
 function StatePill({
@@ -182,13 +210,50 @@ function StatePill({
 
 /* ── Phase Card ── */
 
-// Per-phase accent colour, shared by the phase glyph chip and the progress bar.
+// Per-phase accent colour, used by the phase icon frame.
 const PHASE_GRADIENTS: Record<number, string> = {
   1: "var(--bv-c1-b)",
   2: "var(--bv-c2-b)",
   3: "var(--bv-c3-b)",
   4: "var(--bv-c4-b)",
 };
+
+const ACTIVE_PROGRESS_GRADIENT =
+  "linear-gradient(90deg,#06B6D4 0%,#2DD4BF 52%,#7CFF6B 100%)";
+
+function getLockedStepCopy({
+  phase,
+  substep,
+  phaseLocked,
+}: {
+  phase: PhaseProgress;
+  substep: SubstepProgress;
+  phaseLocked: boolean;
+}) {
+  if (phaseLocked) {
+    if (phase.phase === 2) return "Unlocks after Brand Research.";
+    if (phase.phase === 3) return "Unlocks after Strategies.";
+    if (phase.phase === 4) return "Unlocks after Aesthetics.";
+    return "Unlocks after the previous phase.";
+  }
+
+  if (phase.key === "questionnaires") {
+    if (substep.id === "stakeholder-interviews") {
+      return "Unlocks after questionnaires.";
+    }
+    if (substep.id === "futures-research") {
+      return "Unlocks after stakeholder interviews.";
+    }
+  }
+
+  if (phase.key === "brain_build") {
+    if (substep.id === "sync") return "Unlocks after knowledge base.";
+    if (substep.id === "brain") return "Unlocks after knowledge sync.";
+    if (substep.id === "agents") return "Unlocks after brain activation.";
+  }
+
+  return "Unlocks after the previous step.";
+}
 
 function PhaseCard({
   phase,
@@ -209,7 +274,8 @@ function PhaseCard({
 }) {
   const isLocked = phaseState === "locked";
   const isReadyToSubmit = phase.phase === 1 && submitSlot !== undefined;
-  const tone = phase.phase;
+  const iconFrameBackground =
+    phaseState === "active" ? "var(--bv-brand-mid)" : "var(--bv-ink-4)";
   const cardAnimation = justUnlocked
     ? "ds-unlock 800ms var(--bv-ease)"
     : undefined;
@@ -264,32 +330,41 @@ function PhaseCard({
         {/* card header */}
         <div className="flex flex-col gap-2 px-6 pb-4 pt-6">
           <div className="flex items-center justify-between gap-3">
-            <span
-              className="grid size-8 place-items-center rounded-md text-white"
-              style={{
-                background: PHASE_GRADIENTS[tone],
-                boxShadow:
-                  "0 3px 10px -3px rgba(15,15,20,0.25), inset 0 1px 0 rgba(255,255,255,0.35)",
-              }}
-            >
-              <PhaseGlyph kind={phase.iconKind} />
-            </span>
+            <RoadmapFeaturedIcon
+              background={iconFrameBackground}
+              kind={phase.iconKind}
+            />
             <span className="flex items-center gap-1.5 text-[12px] font-medium tracking-[-0.006em] text-[var(--bv-ink-3)]">
               <span
-                className="inline-block size-[5px] rounded-full"
-                style={{
-                  background:
-                    phaseState === "complete"
-                      ? "#2bc78a"
-                      : phaseState === "active"
-                        ? "var(--bv-accent)"
-                        : "var(--bv-ink-4)",
-                  boxShadow:
-                    phaseState === "active"
-                      ? "0 0 0 3px var(--bv-accent-tint)"
-                      : undefined,
-                }}
-              />
+                className="relative inline-grid size-3 place-items-center"
+                aria-hidden="true"
+              >
+                {phaseState === "active" ? (
+                  <span
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      animation:
+                        "bv-phase-dot-ping 1.8s var(--bv-ease) infinite",
+                      background: "var(--bv-accent-tint)",
+                    }}
+                  />
+                ) : null}
+                <span
+                  className="relative inline-block size-[5px] rounded-full"
+                  style={{
+                    background:
+                      phaseState === "complete"
+                        ? "#2bc78a"
+                        : phaseState === "active"
+                          ? "var(--bv-accent)"
+                          : "var(--bv-ink-4)",
+                    boxShadow:
+                      phaseState === "active"
+                        ? "0 0 0 3px var(--bv-accent-tint)"
+                        : undefined,
+                  }}
+                />
+              </span>
               PHASE {String(phase.phase).padStart(2, "0")}
             </span>
           </div>
@@ -318,9 +393,7 @@ function PhaseCard({
                 width: `${phase.percent}%`,
                 background: isLocked
                   ? "var(--bv-ink-4)"
-                  : isReadyToSubmit
-                    ? "var(--bv-brand-mid)"
-                    : PHASE_GRADIENTS[tone],
+                  : ACTIVE_PROGRESS_GRADIENT,
                 transitionTimingFunction: "var(--bv-ease)",
               }}
             />
@@ -337,20 +410,21 @@ function PhaseCard({
         >
           <span className="text-[12px] leading-4">
             <strong className="font-medium text-[var(--bv-ink)]">
-              {phase.stepsDone} / {phase.stepsTotal}
+              {phase.stepsDone} of {phase.stepsTotal}
             </strong>{" "}
-            <span className="text-[var(--bv-ink-3)]">
-              {isReadyToSubmit ? "answered" : "complete"}
-            </span>
+            <span className="text-[var(--bv-ink-3)]">steps complete</span>
           </span>
-          <span
-            className="text-[var(--bv-ink-3)] transition-transform duration-300"
-            style={{
-              transform: open ? "rotate(180deg)" : "rotate(0deg)",
-              transitionTimingFunction: "var(--bv-ease)",
-            }}
-          >
-            <Chevron size={16} />
+          <span className="inline-flex items-center gap-2.5 text-[12px] font-medium text-[var(--bv-ink-3)] transition-colors duration-200 group-hover/card:text-[var(--bv-ink)]">
+            <span>{open ? "Hide steps" : "View steps"}</span>
+            <span
+              className="transition-transform duration-300"
+              style={{
+                transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                transitionTimingFunction: "var(--bv-ease)",
+              }}
+            >
+              <Chevron size={15} />
+            </span>
           </span>
         </div>
       </button>
@@ -379,7 +453,7 @@ function PhaseCard({
       >
         <div className="grid gap-2 p-3 pt-3" ref={panelContentRef}>
           <div className="mx-1 mb-1 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
-            <span>Sub-steps</span>
+            <span>Phase steps</span>
             <span className="text-[var(--bv-ink-4)]">
               {phase.substeps.length} total
             </span>
@@ -411,9 +485,11 @@ function PhaseCard({
                 <div className="flex items-center justify-between">
                   {effectiveState === "locked" ? (
                     <span className="text-[10px] text-[var(--bv-ink-4)]">
-                      {isLocked
-                        ? `Unlocks after Phase ${String(phase.phase - 1).padStart(2, "0")}`
-                        : "Coming soon"}
+                      {getLockedStepCopy({
+                        phase,
+                        substep: s,
+                        phaseLocked: isLocked,
+                      })}
                     </span>
                   ) : <span />}
                   <StatePill progress={s.progress} state={effectiveState} />
@@ -647,7 +723,12 @@ export function BrandBuildView({
   intakeSessionId?: string | null;
   intakeCanApprove?: boolean;
 }) {
-  const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({});
+  const searchParams = useSearchParams();
+  const openBrandResearch = searchParams.get("open") === "brand-research";
+  const initialOpenPhases: Record<string, boolean> = {};
+  if (openBrandResearch) initialOpenPhases.questionnaires = true;
+  const [openPhases, setOpenPhases] =
+    useState<Record<string, boolean>>(initialOpenPhases);
   const [detail, setDetail] = useState<{
     phase: PhaseProgress;
     substep: SubstepProgress;
@@ -836,25 +917,23 @@ export function BrandBuildView({
         {/* Hub */}
           <div className="mb-16 pl-14 max-sm:pl-9">
             <div className="flex w-full max-w-[600px] items-center justify-center">
-            <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 text-center">
-              <span className="text-[14px] font-medium text-[var(--bv-ink)]">
-                {activePhase ? (
-                  <>
-                    Building{" "}
-                    <span className="text-[var(--bv-accent)]">
-                      {activePhase.title}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[var(--bv-accent)]">All phases</span>{" "}
-                    complete
-                  </>
-                )}
-              </span>
-              <span className="font-mono text-[10.5px] uppercase tracking-[0.07em] text-[var(--bv-ink-3)]">
-                {activePhase ? activePhase.percent : 100}% complete
-              </span>
+            <div className="flex flex-wrap items-baseline justify-center gap-x-1.5 gap-y-1 text-center text-[14px] font-medium text-[var(--bv-ink)]">
+              {activePhase ? (
+                <>
+                  <span>Current phase:</span>
+                  <span className="text-[var(--bv-accent)]">
+                    {activePhase.title}
+                  </span>
+                  <span className="text-[var(--bv-ink-3)]">·</span>
+                  <span>{activePhase.percent}% complete</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[var(--bv-accent)]">All phases</span>
+                  <span className="text-[var(--bv-ink-3)]">·</span>
+                  <span>100% complete</span>
+                </>
+              )}
             </div>
             </div>
           </div>
@@ -864,9 +943,8 @@ export function BrandBuildView({
             <div
               className="absolute left-[19px] bottom-[18px] top-[27px] w-0.5 rounded-sm max-sm:left-[11px]"
               style={{
-                backgroundImage: `linear-gradient(to bottom, var(--bv-line-dashed) 0 6px, transparent 6px 12px)`,
-                backgroundSize: "2px 12px",
-                backgroundRepeat: "repeat-y",
+                background:
+                  "linear-gradient(180deg, rgba(6, 182, 212, 0.22) 0%, rgba(156, 163, 175, 0.42) 38%, rgba(156, 163, 175, 0.28) 72%, rgba(156, 163, 175, 0.06) 100%)",
               }}
             >
               <div
@@ -876,8 +954,9 @@ export function BrandBuildView({
                     spineFillPx !== null
                       ? `${spineFillPx}px`
                       : `${spineFillPct}%`,
-                  background: `linear-gradient(to bottom, var(--bv-brand), var(--bv-brand-mid))`,
-                  boxShadow: "0 0 16px var(--bv-brand-tint-32)",
+                  background:
+                    "linear-gradient(180deg, transparent, var(--bv-accent), transparent)",
+                  boxShadow: "0 0 16px var(--bv-accent-tint)",
                   transitionTimingFunction: "var(--bv-ease)",
                 }}
               />
@@ -945,11 +1024,16 @@ export function BrandBuildView({
                     style={{
                       backgroundImage:
                         info.phaseState === "active" || info.phaseState === "complete"
-                          ? `linear-gradient(to right, var(--bv-brand-deep) 0 4px, transparent 4px 8px)`
+                          ? "linear-gradient(90deg, transparent, var(--bv-accent), transparent)"
                           : info.nextUp
-                            ? `linear-gradient(to right, var(--bv-brand-mid) 0 4px, transparent 4px 8px)`
+                            ? "linear-gradient(90deg, transparent, var(--bv-accent), transparent)"
                             : `linear-gradient(to right, var(--bv-line-dashed) 0 4px, transparent 4px 8px)`,
-                      backgroundSize: "8px 2px",
+                      backgroundSize:
+                        info.phaseState === "active" ||
+                        info.phaseState === "complete" ||
+                        info.nextUp
+                          ? "100% 2px"
+                          : "8px 2px",
                     }}
                   />
                   <PhaseCard

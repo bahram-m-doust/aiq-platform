@@ -243,6 +243,10 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(1.5); }
 }
+@keyframes bv-phase-dot-ping {
+  0%, 100% { opacity: 1; transform: scale(0.82); }
+  50% { opacity: 0.58; transform: scale(1.55); }
+}
 @keyframes bv-live-pulse {
   0%, 100% { box-shadow: 0 0 0 4px rgba(43, 199, 138, 0.18); }
   50% { box-shadow: 0 0 0 8px rgba(43, 199, 138, 0.04); }

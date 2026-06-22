@@ -200,6 +200,7 @@ export function QuestionRenderer({
   // never triggers a save; we resync from the committed value only when the
   // field is not being edited (a restored draft or a completed save).
   const isFocusedRef = useRef(false);
+  const focusOnNextEditRef = useRef(false);
   const focusTimeoutRef = useRef<number | null>(null);
   const kind = resolveQuestionInputKind(question.inputType);
   const options = useMemo(
@@ -231,7 +232,13 @@ export function QuestionRenderer({
   }, [value]);
 
   useEffect(() => {
-    if (!isEditing) return;
+    if (!isEditing) {
+      focusOnNextEditRef.current = true;
+      return;
+    }
+
+    // Draft fields mount open; autofocus only when a completed card is reopened.
+    if (!focusOnNextEditRef.current) return;
 
     focusTimeoutRef.current = window.setTimeout(() => {
       const card = document.getElementById(`question-card-${question.id}`);

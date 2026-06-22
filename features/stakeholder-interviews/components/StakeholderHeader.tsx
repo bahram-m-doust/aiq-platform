@@ -11,7 +11,7 @@ export function StakeholderHeader({ status }: { status: string }) {
       </div>
 
       <h1 className="text-xl font-semibold leading-7 tracking-[-0.01em] text-foreground">
-        Stakeholder Interviews
+        Stakeholder Interviews Report
       </h1>
 
       <p className="max-w-[545px] text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">

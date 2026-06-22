@@ -98,7 +98,7 @@ describe("change request review delivery", () => {
       eq: vi.fn(() => profileBuilder),
       maybeSingle: vi.fn(() =>
         Promise.resolve({
-          data: { email: "owner@example.com" },
+          data: { auth_user_id: "auth-user-1", email: null },
           error: null,
         }),
       ),
@@ -159,7 +159,16 @@ describe("change request review delivery", () => {
       if (table === "intake_sessions") return intakeBuilder;
       throw new Error(`Unexpected table: ${table}`);
     });
-    mockedCreateAdminClient.mockReturnValue({ from } as never);
+    const getUserById = vi.fn(() =>
+      Promise.resolve({
+        data: { user: { email: "owner@example.com" } },
+        error: null,
+      }),
+    );
+    mockedCreateAdminClient.mockReturnValue({
+      auth: { admin: { getUserById } },
+      from,
+    } as never);
 
     const result = await reviewChangeRequest({
       input: {
@@ -180,7 +189,7 @@ describe("change request review delivery", () => {
       title: "Change request approved",
       body: expect.stringContaining("Your change request for Helio is now approved."),
       linkPath: "/integrated-brand-brain/roadmap/questionnaire",
-      subjectType: "change_request",
+      subjectType: "CHANGE_REQUEST",
       subjectId: "request-1",
       actorId: "reviewer-1",
     });
@@ -190,6 +199,7 @@ describe("change request review delivery", () => {
       text: expect.stringContaining("Your change request for Helio is now approved."),
       html: expect.stringContaining("Open your dashboard"),
     });
+    expect(getUserById).toHaveBeenCalledWith("auth-user-1");
     expect(
       JSON.stringify(mockedCreateNotification.mock.calls[0]?.[0]),
     ).toContain("Your questionnaire has been reopened for editing.");
