@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { PageShell } from "@/components/ds/PageShell";
 import { BrainChat } from "@/features/agents/brain/components/BrainChat";
 import { BrainLockedState } from "@/features/agents/brain/components/BrainLockedState";
+import { getBrandBrainModel } from "@/features/agents/brain/llm";
 import {
   getBrandBrainConversation,
   getBrandBrainRunSummaries,
@@ -54,6 +55,7 @@ export default async function BrandBrainPage() {
     <BrainChat
       access={workspace.access}
       initialMessages={initialMessages}
+      model={getBrandBrainModel()}
       runSummaries={runSummaries}
     />
   );

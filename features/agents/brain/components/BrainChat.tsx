@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   AlertCircleIcon,
-  BrainIcon,
+  CheckIcon,
+  ClipboardIcon,
   ClockIcon,
   ImageIcon,
   LoaderIcon,
@@ -13,12 +14,16 @@ import {
   RefreshCwIcon,
   SendIcon,
   SparklesIcon,
+  Trash2Icon,
   XIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { generateBrandBrainImageAction } from "@/features/agents/brain/actions";
+import {
+  deleteBrainSessionAction,
+  generateBrandBrainImageAction,
+} from "@/features/agents/brain/actions";
 import { brandBrainPromptMaxLength } from "@/features/agents/brain/schema";
 import type {
   BrandBrainAccess,
@@ -71,6 +76,36 @@ function TypingDots() {
   );
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard access denied; silently ignore
+    }
+  }
+
+  return (
+    <button
+      aria-label="Copy message"
+      className="mt-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/50 opacity-0 transition hover:bg-muted hover:text-muted-foreground group-hover:opacity-100"
+      onClick={handleCopy}
+      type="button"
+    >
+      {copied ? (
+        <CheckIcon className="size-3 text-green-500" />
+      ) : (
+        <ClipboardIcon className="size-3" />
+      )}
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
+
 function MessageBubble({
   message,
   isStreaming,
@@ -86,21 +121,23 @@ function MessageBubble({
     !hasImages &&
     isStreaming &&
     message.content.length === 0;
-  const rtl = !isUser && !message.pending && message.content ? isRtlText(message.content) : false;
+  const rtl = !isUser && !message.pending && message.content
+    ? isRtlText(message.content)
+    : isUser && message.content
+    ? isRtlText(message.content)
+    : false;
 
   return (
     <article
       className={cn(
-        "flex w-full",
-        isUser ? "justify-end" : "justify-start",
+        "group flex w-full flex-col",
+        isUser ? "items-end" : "items-start",
       )}
     >
       <div
         className={cn(
-          "max-w-[min(42rem,100%)]",
-          isUser
-            ? "rounded-2xl bg-[#f1eadf] px-4 py-3 text-[15px] leading-relaxed text-foreground shadow-sm"
-            : "text-[15px] leading-relaxed text-foreground",
+          "max-w-[min(42rem,100%)] text-[15px] leading-relaxed text-foreground",
+          isUser ? "px-4 py-3" : "",
         )}
         dir={rtl ? "rtl" : "ltr"}
       >
@@ -112,7 +149,14 @@ function MessageBubble({
         ) : showTyping ? (
           <TypingDots />
         ) : message.content ? (
-          <p className={cn("whitespace-pre-wrap", rtl && "text-right")}>{message.content}</p>
+          <p
+            className={cn(
+              "whitespace-pre-wrap text-justify",
+              rtl && "text-right",
+            )}
+          >
+            {message.content}
+          </p>
         ) : null}
 
         {hasImages ? (
@@ -129,6 +173,10 @@ function MessageBubble({
           </div>
         ) : null}
       </div>
+
+      {message.content && !message.pending && !showTyping ? (
+        <CopyButton text={message.content} />
+      ) : null}
     </article>
   );
 }
@@ -145,28 +193,36 @@ function formatRunDate(iso: string): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function groupRunsByDate(runs: BrandBrainRunSummary[]): { label: string; runs: BrandBrainRunSummary[] }[] {
+function groupSessionsByDate(
+  sessions: BrandBrainRunSummary[],
+): { label: string; sessions: BrandBrainRunSummary[] }[] {
   const groups = new Map<string, BrandBrainRunSummary[]>();
-  for (const run of runs) {
-    const label = formatRunDate(run.createdAt);
+  for (const session of sessions) {
+    const label = formatRunDate(session.createdAt);
     const existing = groups.get(label);
     if (existing) {
-      existing.push(run);
+      existing.push(session);
     } else {
-      groups.set(label, [run]);
+      groups.set(label, [session]);
     }
   }
-  return Array.from(groups.entries()).map(([label, runs]) => ({ label, runs }));
+  return Array.from(groups.entries()).map(([label, sessions]) => ({ label, sessions }));
+}
+
+function modelDisplayName(model: string): string {
+  return model.split("/").pop() ?? model;
 }
 
 export function BrainChat({
   access,
   initialMessages = [],
   runSummaries = [],
+  model = "openai/gpt-4o-mini",
 }: {
   access: BrandBrainAccess;
   initialMessages?: BrandBrainConversationMessage[];
   runSummaries?: BrandBrainRunSummary[];
+  model?: string;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     initialMessages.map((message) => ({
@@ -184,6 +240,8 @@ export function BrainChat({
   const [isImagePending, setIsImagePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
+  const [sessions, setSessions] = useState<BrandBrainRunSummary[]>(runSummaries);
+  const sessionIdRef = useRef<string>(crypto.randomUUID());
 
   const isBusy = isStreaming || isImagePending;
   const isImageMode = mode === "image";
@@ -226,7 +284,7 @@ export function BrainChat({
     const response = await fetch(STREAM_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, history }),
+      body: JSON.stringify({ prompt, history, sessionId: sessionIdRef.current }),
     });
 
     if (!response.ok || !response.body) {
@@ -284,7 +342,7 @@ export function BrainChat({
     }
   }
 
-  async function sendText(prompt: string, history: HistoryTurn[]) {
+  async function sendText(prompt: string, history: HistoryTurn[], isFirstInSession: boolean, shortPrompt: string) {
     const assistantId = nextId();
     setError(null);
     setIsStreaming(true);
@@ -293,6 +351,17 @@ export function BrainChat({
       { id: nextId(), role: "user", content: prompt, sources: null },
       { id: assistantId, role: "assistant", content: "", sources: null },
     ]);
+
+    // Optimistically add this session to the sidebar if it's the first message
+    if (isFirstInSession) {
+      const newSession: BrandBrainRunSummary = {
+        id: sessionIdRef.current,
+        prompt: shortPrompt.slice(0, 120),
+        createdAt: new Date().toISOString(),
+        isSession: true,
+      };
+      setSessions((prev) => [newSession, ...prev]);
+    }
 
     try {
       await runStream(prompt, history, assistantId);
@@ -358,12 +427,14 @@ export function BrainChat({
     requestMode: ChatMode,
     prompt: string,
     history: HistoryTurn[],
+    isFirstInSession: boolean,
+    shortPrompt: string,
   ) {
     lastRequestRef.current = { mode: requestMode, prompt, history };
     if (requestMode === "image") {
       void sendImage(prompt);
     } else {
-      void sendText(prompt, history);
+      void sendText(prompt, history, isFirstInSession, shortPrompt);
     }
   }
 
@@ -378,6 +449,9 @@ export function BrainChat({
     if (!prompt && !attachedFile) return;
     if (isBusy) return;
 
+    const isFirstInSession = messages.length === 0;
+    const shortPrompt = prompt || attachedFile?.name || "";
+
     if (attachedFile) {
       const fileBlock = attachedFile.content
         ? `[Attached file: ${attachedFile.name}]\n${attachedFile.content}\n\n`
@@ -388,7 +462,7 @@ export function BrainChat({
 
     const history = mode === "text" ? snapshotHistory() : [];
     setInput("");
-    dispatch(mode, prompt, history);
+    dispatch(mode, prompt, history, isFirstInSession, shortPrompt);
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -399,7 +473,7 @@ export function BrainChat({
   function handleRetry() {
     if (!lastRequestRef.current || isBusy) return;
     const { mode: lastMode, prompt, history } = lastRequestRef.current;
-    dispatch(lastMode, prompt, history);
+    dispatch(lastMode, prompt, history, false, "");
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -417,6 +491,7 @@ export function BrainChat({
     setError(null);
     setAttachedFile(null);
     lastRequestRef.current = null;
+    sessionIdRef.current = crypto.randomUUID();
   }
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -431,37 +506,26 @@ export function BrainChat({
     event.target.value = "";
   }
 
+  async function handleDeleteSession(session: BrandBrainRunSummary) {
+    setSessions((prev) => prev.filter((s) => s.id !== session.id));
+    await deleteBrainSessionAction(session.id, session.isSession);
+  }
+
   const isEmpty = messages.length === 0 && !isBusy && !error;
-  const groupedHistory = groupRunsByDate(runSummaries);
+  const groupedSessions = groupSessionsByDate(sessions);
 
   return (
     <div className="flex min-h-[calc(100svh-3.5rem)] bg-[#fbf8f4] text-foreground">
       {/* ── Main chat column ── */}
       <main className="flex min-w-0 flex-1 flex-col">
-        {/* Header */}
-        <header className="sticky top-0 z-10 border-b border-black/5 bg-[#fbf8f4]/85 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 py-3 sm:px-8">
-            <span className="flex size-7 items-center justify-center rounded-lg border border-black/5 bg-white shadow-sm">
-              <BrainIcon className="size-4 text-primary" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-sm font-semibold text-foreground">Brand Brain</p>
-              <p className="text-[11px] text-muted-foreground">{access.brandName}</p>
-            </div>
-          </div>
-        </header>
-
         {/* Thread */}
         <div
           ref={threadRef}
-          className="flex-1 overflow-y-auto px-4 pb-8 pt-12 sm:px-8"
+          className="flex-1 overflow-y-auto px-4 pb-8 pt-8 sm:px-8"
         >
           <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
             {isEmpty ? (
               <section className="flex flex-1 flex-col items-center justify-center pb-20 text-center">
-                <div className="mb-7 flex size-12 items-center justify-center rounded-2xl border border-black/5 bg-white shadow-sm">
-                  <BrainIcon className="size-5 text-primary" />
-                </div>
                 <h1 className="text-2xl font-semibold tracking-normal text-foreground">
                   What should we dive into for {access.brandName}?
                 </h1>
@@ -569,6 +633,11 @@ export function BrainChat({
                       <MessageSquareIcon className="size-3.5" />
                     )}
                     {isImageMode ? "Image" : "Smart"}
+                    {!isImageMode ? (
+                      <span className="text-[10px] text-muted-foreground">
+                        · {modelDisplayName(model)}
+                      </span>
+                    ) : null}
                   </Button>
                 </div>
                 <Button
@@ -622,7 +691,7 @@ export function BrainChat({
       <aside className="hidden w-64 shrink-0 flex-col border-l border-black/5 bg-white md:flex xl:w-72">
         <div className="border-b border-black/5 p-3">
           <Button
-            className="w-full gap-1.5 justify-start"
+            className="w-full justify-start gap-1.5"
             disabled={isBusy}
             onClick={handleNewChat}
             size="sm"
@@ -635,7 +704,7 @@ export function BrainChat({
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
-          {groupedHistory.length === 0 ? (
+          {groupedSessions.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-10 text-center">
               <ClockIcon className="size-5 text-muted-foreground/40" />
               <p className="text-[12px] text-muted-foreground">
@@ -644,23 +713,40 @@ export function BrainChat({
             </div>
           ) : (
             <div className="space-y-4">
-              {groupedHistory.map(({ label, runs }) => (
+              {groupedSessions.map(({ label, sessions: group }) => (
                 <div key={label}>
                   <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
                     {label}
                   </p>
                   <div className="space-y-0.5">
-                    {runs.map((run) => (
-                      <div
-                        className="group flex cursor-default rounded-lg px-2 py-1.5 hover:bg-muted/60"
-                        key={run.id}
-                        title={run.prompt}
-                      >
-                        <p className="line-clamp-2 text-[12px] text-muted-foreground group-hover:text-foreground">
-                          {run.prompt || "…"}
-                        </p>
-                      </div>
-                    ))}
+                    {group.map((session) => {
+                      const rtl = isRtlText(session.prompt);
+                      return (
+                        <div
+                          className="group flex cursor-default items-start gap-1 rounded-lg px-2 py-1.5 hover:bg-muted/60"
+                          dir={rtl ? "rtl" : "ltr"}
+                          key={session.id}
+                          title={session.prompt}
+                        >
+                          <p
+                            className={cn(
+                              "flex-1 line-clamp-2 text-[12px] text-muted-foreground group-hover:text-foreground",
+                              rtl ? "text-right" : "text-left",
+                            )}
+                          >
+                            {session.prompt || "…"}
+                          </p>
+                          <button
+                            aria-label="Delete session"
+                            className="mt-0.5 shrink-0 rounded p-0.5 text-muted-foreground/0 transition hover:text-destructive group-hover:text-muted-foreground/40"
+                            onClick={() => void handleDeleteSession(session)}
+                            type="button"
+                          >
+                            <Trash2Icon className="size-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

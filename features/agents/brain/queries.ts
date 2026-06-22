@@ -296,6 +296,7 @@ export async function getBrandBrainConversation({
 
 type RunSummaryRow = {
   id: string;
+  session_id: string | null;
   input: unknown;
   created_at: string | null;
 };
@@ -304,7 +305,7 @@ export async function getBrandBrainRunSummaries({
   brandId,
   agentId,
   userId,
-  limit = 30,
+  limit = 60,
 }: {
   brandId: string;
   agentId: string;
@@ -314,7 +315,7 @@ export async function getBrandBrainRunSummaries({
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("agent_runs")
-    .select("id, input, created_at")
+    .select("id, session_id, input, created_at")
     .eq("brand_id", brandId)
     .eq("agent_id", agentId)
     .eq("user_id", userId)
@@ -325,9 +326,35 @@ export async function getBrandBrainRunSummaries({
     throw error;
   }
 
-  return ((data ?? []) as RunSummaryRow[]).map((row) => ({
-    id: row.id,
-    prompt: isRecord(row.input) ? readString(row.input.prompt).slice(0, 120) : "",
-    createdAt: row.created_at ?? new Date().toISOString(),
-  }));
+  const rows = (data ?? []) as RunSummaryRow[];
+
+  // Group runs by session_id. Legacy runs (null session_id) each become their
+  // own pseudo-session keyed by the run id. We want the first (oldest) prompt
+  // as the session title and the most-recent run's timestamp as the sort key.
+  const sessionMap = new Map<string, BrandBrainRunSummary>();
+
+  // Rows arrive newest-first; iterate reversed so the oldest prompt wins.
+  for (const row of [...rows].reverse()) {
+    const key = row.session_id ?? row.id;
+    const prompt = isRecord(row.input) ? readString(row.input.prompt).slice(0, 120) : "";
+    const createdAt = row.created_at ?? new Date().toISOString();
+
+    if (!sessionMap.has(key)) {
+      sessionMap.set(key, {
+        id: key,
+        prompt,
+        createdAt,
+        isSession: row.session_id !== null,
+      });
+    } else {
+      // Update createdAt to the newest run in this session (rows are reversed,
+      // so the last time we see this key the row is the most recent one).
+      sessionMap.get(key)!.createdAt = createdAt;
+    }
+  }
+
+  // Return sessions sorted newest-first.
+  return Array.from(sessionMap.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
 }

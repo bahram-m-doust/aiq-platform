@@ -2,6 +2,7 @@
 
 import { requireUserProfile } from "@/features/auth/queries";
 import { isLLMBrainConfigError } from "@/features/agents/brain/llm";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   isBrandBrainImageServiceError,
   runBrandBrainImage,
@@ -29,6 +30,32 @@ import { ROUTES } from "@/lib/routes";
 
 function errorState(message: string): BrandBrainChatFormState {
   return { status: "error", message };
+}
+
+// Delete all agent_runs that belong to a chat session. When isSession is false
+// the id is a single run id (legacy run before session support was added).
+export async function deleteBrainSessionAction(
+  id: string,
+  isSession: boolean,
+): Promise<{ error?: string }> {
+  try {
+    const { profile } = await requireUserProfile(ROUTES.brain);
+    const admin = createAdminClient();
+
+    const query = admin
+      .from("agent_runs")
+      .delete()
+      .eq("user_id", profile.id);
+
+    const { error } = isSession
+      ? await query.eq("session_id", id)
+      : await query.eq("id", id);
+
+    if (error) throw error;
+    return {};
+  } catch {
+    return { error: "Could not delete this chat session." };
+  }
 }
 
 export async function askBrandBrainAction(

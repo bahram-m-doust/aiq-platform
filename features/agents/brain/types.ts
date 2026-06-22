@@ -98,6 +98,7 @@ export type BrandBrainRunSummary = {
   id: string;
   prompt: string;
   createdAt: string;
+  isSession: boolean;
 };
 
 // NDJSON protocol streamed from the Brand Brain route to the chat client: token
