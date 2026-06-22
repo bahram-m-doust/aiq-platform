@@ -166,7 +166,7 @@ function CopyIconButton({ text, compact = false }: { text: string; compact?: boo
 
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
   return (
-    <div className="my-3 overflow-hidden rounded-lg border border-border bg-muted/60">
+    <div className="my-3 overflow-hidden rounded-lg border border-border bg-muted/60" dir="ltr">
       <div className="flex items-center justify-between border-b border-border/60 bg-muted px-3 py-1.5">
         <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
           {lang === "code" ? "Prompt" : lang}

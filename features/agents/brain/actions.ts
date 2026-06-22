@@ -190,9 +190,14 @@ export async function generateBrandBrainImageAction(
       metadata: { profileId: profile.id },
     });
 
+    // Surface the upstream API error message when available (e.g. OpenRouter
+    // model not found, quota exceeded, invalid parameters) so users and
+    // developers can diagnose failures without digging into server logs.
+    const upstream =
+      error instanceof Error && error.message ? `: ${error.message}` : "";
     return {
       status: "error",
-      message: "Brand Brain could not generate an image.",
+      message: `Brand Brain could not generate an image${upstream}`,
     };
   }
 }
