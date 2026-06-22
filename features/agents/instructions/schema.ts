@@ -1,8 +1,8 @@
 import type { BrandAgentInstruction } from "@/features/agents/instructions/types";
 
-// ~2k tokens: enough for a full brand-voice document without diluting context
-// or inflating per-message cost.
-export const brandInstructionMaxLength = 8000;
+// ~4k tokens: enough room for a full brand instruction document (role, routing,
+// tone, prompt rules) without diluting context or inflating per-message cost.
+export const brandInstructionMaxLength = 16000;
 
 // Sentinel form value for the brand-wide default slot (agent_id NULL), since an
 // HTML form cannot submit a real null.
