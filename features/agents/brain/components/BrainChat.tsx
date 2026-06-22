@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   AlertCircleIcon,
   CheckIcon,
@@ -71,7 +71,9 @@ const promptChips = [
 function isRtlText(text: string): boolean {
   const rtl = (text.match(/[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/g) ?? []).length;
   const ltr = (text.match(/[a-zA-Z]/g) ?? []).length;
-  return rtl > 0 && rtl > ltr;
+  // Allow up to 3× more Latin chars before calling it LTR — Persian text often
+  // mixes in English brand names, technical terms, and ** bold markers.
+  return rtl > 0 && rtl * 3 >= ltr;
 }
 
 function parseContent(raw: string): ContentPart[] {
@@ -95,6 +97,18 @@ function parseContent(raw: string): ContentPart[] {
   }
 
   return parts;
+}
+
+function renderBoldText(text: string): React.ReactNode {
+  const segments = text.split(/(\*\*[^*\n]+\*\*)/g);
+  if (segments.length === 1) return text;
+  return segments.map((seg, i) =>
+    seg.startsWith("**") && seg.endsWith("**") ? (
+      <strong key={i}>{seg.slice(2, -2)}</strong>
+    ) : (
+      seg
+    ),
+  );
 }
 
 function CopyIconButton({ text, compact = false }: { text: string; compact?: boolean }) {
@@ -223,7 +237,7 @@ function MessageBubble({
                 // element's `dir` is set; we must NOT add text-right, which
                 // would override the justification for Persian.
                 <p key={i} className="whitespace-pre-wrap text-justify">
-                  {part.text}
+                  {renderBoldText(part.text)}
                 </p>
               ),
             )}
@@ -248,14 +262,25 @@ function MessageBubble({
       {!message.pending && !showTyping && message.content ? (
         <div
           className={cn(
-            "flex items-center gap-2",
-            isUser ? "flex-row-reverse" : "flex-row",
+            "mt-0.5 flex w-full items-center gap-1",
+            rtl ? "justify-end" : "justify-start",
           )}
         >
-          <CopyIconButton text={message.content} />
-          <span className="text-[10px] text-muted-foreground/50">
-            {formatTime(message.createdAt)}
-          </span>
+          {rtl ? (
+            <>
+              <CopyIconButton text={message.content} />
+              <span className="text-[10px] text-muted-foreground/50">
+                {formatTime(message.createdAt)}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-[10px] text-muted-foreground/50">
+                {formatTime(message.createdAt)}
+              </span>
+              <CopyIconButton text={message.content} />
+            </>
+          )}
         </div>
       ) : null}
     </article>
