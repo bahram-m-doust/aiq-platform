@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { saveBrandAgentInstructionAction } from "@/features/agents/instructions/actions";
 import {
   brandInstructionMaxLength,
-  brandInstructionStarterTemplate,
+  buildBrandInstructionTemplate,
   brandWideAgentValue,
 } from "@/features/agents/instructions/schema";
 import type {
@@ -28,9 +28,11 @@ const initialState: InstructionFormState = { status: "idle", message: "" };
 
 export function BrandInstructionForm({
   brandId,
+  brandName,
   slot,
 }: {
   brandId: string;
+  brandName: string;
   slot: BrandAgentInstructionSlot;
 }) {
   const [state, action, isPending] = useActionState(
@@ -75,7 +77,15 @@ export function BrandInstructionForm({
               <Label htmlFor={fieldId}>Brand instruction (system prompt)</Label>
               <Button
                 className="gap-1.5"
-                onClick={() => setInstruction(brandInstructionStarterTemplate)}
+                onClick={() =>
+                  setInstruction(
+                    buildBrandInstructionTemplate({
+                      brandName,
+                      agentName: slot.agentName,
+                      agentKey: slot.agentKey,
+                    }),
+                  )
+                }
                 size="sm"
                 type="button"
                 variant="ghost"

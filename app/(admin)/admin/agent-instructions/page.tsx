@@ -86,6 +86,7 @@ export default async function AdminAgentInstructionsPage({
               {slots.map((slot) => (
                 <BrandInstructionForm
                   brandId={selectedBrand.id}
+                  brandName={selectedBrand.name}
                   key={slot.agentId ?? "brand-wide"}
                   slot={slot}
                 />
