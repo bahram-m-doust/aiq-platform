@@ -219,6 +219,10 @@ function MessageBubble({
       <div
         className={cn(
           "max-w-[min(42rem,100%)] text-[15px] leading-relaxed text-foreground",
+          // AI messages are full-width so a short RTL line (e.g. "سلام. …") has
+          // room to be pushed right by dir="rtl". User bubbles stay auto-width
+          // because they have a visible bordered background.
+          !isUser && "w-full",
           isUser
             ? "rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-sm"
             : "",
@@ -265,13 +269,16 @@ function MessageBubble({
       </div>
 
       {!message.pending && !showTyping && message.content ? (
+        // User messages are on the right → [copy][time] right-aligned.
+        // AI messages are on the left  → [time][copy] left-aligned.
+        // Layout is role-based, not content-direction-based.
         <div
           className={cn(
             "mt-0.5 flex w-full items-center gap-1",
-            rtl ? "justify-end" : "justify-start",
+            isUser ? "justify-end" : "justify-start",
           )}
         >
-          {rtl ? (
+          {isUser ? (
             <>
               <CopyIconButton text={message.content} />
               <span className="text-[10px] text-muted-foreground/50">
