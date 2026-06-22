@@ -49,6 +49,9 @@ vi.mock("@/lib/audit/logAudit", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
+vi.mock("@/features/admin/brand-icons/storage", () => ({
+  brandIconPublicUrl: vi.fn(() => null),
+}));
 
 import { runBrandBrainImage } from "@/features/agents/brain/image";
 import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
@@ -152,9 +155,18 @@ describe("runBrandBrainImage", () => {
         Promise.resolve({ data: { id: "img-agent" }, error: null }),
       ),
     };
-    const from = vi.fn((table: string) =>
-      table === "agents" ? agentsBuilder : agentRunsBuilder,
-    );
+    const brandsBuilder = {
+      select: vi.fn(() => brandsBuilder),
+      eq: vi.fn(() => brandsBuilder),
+      maybeSingle: vi.fn(() =>
+        Promise.resolve({ data: { icon_path: null }, error: null }),
+      ),
+    };
+    const from = vi.fn((table: string) => {
+      if (table === "agents") return agentsBuilder;
+      if (table === "brands") return brandsBuilder;
+      return agentRunsBuilder;
+    });
     mockedAdmin.mockReturnValue({ from } as never);
   });
 

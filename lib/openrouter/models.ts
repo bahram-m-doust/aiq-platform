@@ -49,10 +49,15 @@ export const TEXT_MODELS: readonly ModelOption<TextModelId>[] = [
 
 export const IMAGE_MODELS: readonly ModelOption<ImageModelId>[] = [
   {
+    id: "bytedance/seedream-4.0",
+    name: "Seedream 4.0",
+    blurb: "ByteDance's flagship — strong aesthetics, cost-effective default.",
+    isDefault: true,
+  },
+  {
     id: "google/gemini-2.5-flash-image",
     name: "Nano Banana 2",
-    blurb: "Google's fast image model — versatile default.",
-    isDefault: true,
+    blurb: "Google's fast image model — versatile.",
   },
   {
     id: "openai/gpt-image-1",
@@ -65,16 +70,10 @@ export const IMAGE_MODELS: readonly ModelOption<ImageModelId>[] = [
     blurb:
       "OpenAI's latest — GPT-5.4 reasoning + GPT Image 2 rendering. Strongest text rendering and edits.",
   },
-  {
-    id: "bytedance/seedream-4.0",
-    name: "Seedream 4.0",
-    blurb: "ByteDance's flagship — strong aesthetics.",
-  },
 ] as const;
 
 export const DEFAULT_TEXT_MODEL: TextModelId = "openai/gpt-4o-mini";
-export const DEFAULT_IMAGE_MODEL: ImageModelId =
-  "google/gemini-2.5-flash-image";
+export const DEFAULT_IMAGE_MODEL: ImageModelId = "bytedance/seedream-4.0";
 
 // Prices in cents per 1M tokens (text) or cents per image (image).
 // These approximate published OpenRouter prices as of 2026-01.

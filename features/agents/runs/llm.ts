@@ -122,18 +122,30 @@ const IMAGE_REWRITE_VISUAL_GUARD =
   "If the brand instruction specifies a photography or image style rule, embed it directly in the output prompt. " +
   `${untrustedKnowledgeInstruction}`;
 
+// Multimodal message type for the vision-capable art-director step.
+// The OpenAI SDK types only expose the text variant; we bypass with a cast.
+type VisionMessage = {
+  role: "user";
+  content: Array<
+    | { type: "text"; text: string }
+    | { type: "image_url"; image_url: { url: string; detail: "low" } }
+  >;
+};
+
 export async function rewritePromptForImage({
   brandId,
   brandPrompt,
   model,
   brandContext,
   instruction = "",
+  logoUrl,
 }: {
   brandId: string;
   brandPrompt: string;
   model: string;
   brandContext: string;
   instruction?: string;
+  logoUrl?: string | null;
 }) {
   // Mirror the chat 3-layer assembly: neutral task → brand instruction → visual guard.
   const systemContent = joinPromptLayers([
@@ -141,6 +153,21 @@ export async function rewritePromptForImage({
     instruction,
     IMAGE_REWRITE_VISUAL_GUARD,
   ]);
+
+  // If a brand logo URL is available, include it as a vision message so the
+  // art director can factor the logo's colors and shapes into the output prompt.
+  const logoMessage: VisionMessage | null = logoUrl
+    ? {
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: logoUrl, detail: "low" } },
+          {
+            type: "text",
+            text: "This is the brand logo. Factor its colors, shapes, and visual style into the image prompt.",
+          },
+        ],
+      }
+    : null;
 
   const client = await getOpenRouterClientForBrand(brandId);
   const completion = await client.chat.completions.create({
@@ -150,6 +177,7 @@ export async function rewritePromptForImage({
       ...(brandContext
         ? [{ role: "user" as const, content: brandContext }]
         : []),
+      ...(logoMessage ? [logoMessage as unknown as { role: "user"; content: string }] : []),
       { role: "user", content: brandPrompt },
     ],
     max_tokens: MAX_IMAGE_PROMPT_TOKENS,

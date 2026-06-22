@@ -12,6 +12,7 @@ import {
 } from "@/features/agents/runs/image-storage";
 import { rewritePromptForImage } from "@/features/agents/runs/llm";
 import { getBrandModelDefaults } from "@/features/agents/runs/services";
+import { brandIconPublicUrl } from "@/features/admin/brand-icons/storage";
 import {
   attachRunUsage,
   recordRunUsage,
@@ -68,18 +69,27 @@ export async function runBrandBrainImage({
   }
 
   const brandId = access.brandId;
+
+  // Fetch brand icon path and derive its public URL for the art-director step.
+  const brandAdmin = createAdminClient();
+  const { data: brandRow } = await brandAdmin
+    .from("brands")
+    .select("icon_path")
+    .eq("id", brandId)
+    .maybeSingle<{ icon_path: string | null }>();
+  const logoUrl = brandIconPublicUrl(brandRow?.icon_path ?? null);
+
   const instructionAgentId = await resolveImageInstructionAgentId(agent.id);
-  const instruction = await getBrandAgentInstruction({
-    brandId,
-    agentId: instructionAgentId,
-  });
+  const [instruction, defaults] = await Promise.all([
+    getBrandAgentInstruction({ brandId, agentId: instructionAgentId }),
+    getBrandModelDefaults(brandId),
+  ]);
 
   // Bias retrieval toward visual-system chunks (colors, photography, composition)
   // so the image rewrite step gets the most relevant brand style rules.
   const visualQuery = `visual system color palette photography composition style ${prompt}`;
   const { context, retrievedSources, displaySources } =
     await retrieveBrandBrainContext({ prompt: visualQuery, brandId });
-  const defaults = await getBrandModelDefaults(brandId);
 
   const startedAt = Date.now();
   const textStage = await withRunUsageReservation({
@@ -92,6 +102,7 @@ export async function runBrandBrainImage({
         model: defaults.text,
         brandContext: context,
         instruction,
+        logoUrl,
       });
       const usageId = await recordRunUsage({
         reservation,
