@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   AlertCircleIcon,
   CheckIcon,
+  ChevronRightIcon,
   ClipboardIcon,
   ClockIcon,
   ImageIcon,
@@ -23,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   deleteBrainSessionAction,
   generateBrandBrainImageAction,
+  loadBrainSessionAction,
 } from "@/features/agents/brain/actions";
 import { brandBrainPromptMaxLength } from "@/features/agents/brain/schema";
 import type {
@@ -49,6 +51,10 @@ type ChatMessage = {
 
 type HistoryTurn = { role: BrandBrainChatRole; content: string };
 
+type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "code"; text: string; lang: string };
+
 const STREAM_ENDPOINT = "/api/brain/stream";
 
 const promptChips = [
@@ -66,17 +72,30 @@ function isRtlText(text: string): boolean {
   return rtl > 0 && rtl > ltr;
 }
 
-function TypingDots() {
-  return (
-    <div className="flex gap-1 py-1">
-      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/45 [animation-delay:-0.3s]" />
-      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/45 [animation-delay:-0.15s]" />
-      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/45" />
-    </div>
-  );
+function parseContent(raw: string): ContentPart[] {
+  const parts: ContentPart[] = [];
+  const regex = /```(\w*)\n?([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(raw)) !== null) {
+    if (match.index > lastIndex) {
+      const text = raw.slice(lastIndex, match.index);
+      if (text.trim()) parts.push({ type: "text", text });
+    }
+    parts.push({ type: "code", text: match[2].trimEnd(), lang: match[1] || "code" });
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < raw.length) {
+    const text = raw.slice(lastIndex);
+    if (text.trim()) parts.push({ type: "text", text });
+  }
+
+  return parts;
 }
 
-function CopyButton({ text }: { text: string }) {
+function CopyIconButton({ text, compact = false }: { text: string; compact?: boolean }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -85,14 +104,32 @@ function CopyButton({ text }: { text: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // clipboard access denied; silently ignore
+      /* clipboard denied */
     }
+  }
+
+  if (compact) {
+    return (
+      <button
+        aria-label="Copy code"
+        className="flex items-center gap-1 rounded px-2 py-0.5 text-[11px] text-muted-foreground transition hover:bg-background/60 hover:text-foreground"
+        onClick={handleCopy}
+        type="button"
+      >
+        {copied ? (
+          <CheckIcon className="size-3 text-green-500" />
+        ) : (
+          <ClipboardIcon className="size-3" />
+        )}
+        {copied ? "Copied" : "Copy"}
+      </button>
+    );
   }
 
   return (
     <button
       aria-label="Copy message"
-      className="mt-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/50 opacity-0 transition hover:bg-muted hover:text-muted-foreground group-hover:opacity-100"
+      className="mt-1 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/50 opacity-0 transition hover:bg-muted hover:text-muted-foreground group-hover/msg:opacity-100"
       onClick={handleCopy}
       type="button"
     >
@@ -103,6 +140,30 @@ function CopyButton({ text }: { text: string }) {
       )}
       {copied ? "Copied" : "Copy"}
     </button>
+  );
+}
+
+function CodeBlock({ code, lang }: { code: string; lang: string }) {
+  return (
+    <div className="my-3 overflow-hidden rounded-lg border border-border bg-muted/60">
+      <div className="flex items-center justify-between border-b border-border/60 bg-muted px-3 py-1.5">
+        <span className="font-mono text-[11px] text-muted-foreground">{lang}</span>
+        <CopyIconButton compact text={code} />
+      </div>
+      <pre className="overflow-x-auto p-3 text-[13px] leading-relaxed">
+        <code className="font-mono text-foreground">{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+function TypingDots() {
+  return (
+    <div className="flex gap-1 py-1">
+      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/45 [animation-delay:-0.3s]" />
+      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/45 [animation-delay:-0.15s]" />
+      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/45" />
+    </div>
   );
 }
 
@@ -121,23 +182,21 @@ function MessageBubble({
     !hasImages &&
     isStreaming &&
     message.content.length === 0;
-  const rtl = !isUser && !message.pending && message.content
-    ? isRtlText(message.content)
-    : isUser && message.content
-    ? isRtlText(message.content)
-    : false;
+  const rtl =
+    !message.pending && message.content ? isRtlText(message.content) : false;
+  const parts = message.content ? parseContent(message.content) : [];
 
   return (
     <article
       className={cn(
-        "group flex w-full flex-col",
+        "group/msg flex w-full flex-col",
         isUser ? "items-end" : "items-start",
       )}
     >
       <div
         className={cn(
           "max-w-[min(42rem,100%)] text-[15px] leading-relaxed text-foreground",
-          isUser ? "px-4 py-3" : "",
+          isUser ? "rounded-2xl bg-muted/60 px-4 py-3" : "",
         )}
         dir={rtl ? "rtl" : "ltr"}
       >
@@ -148,15 +207,24 @@ function MessageBubble({
           </p>
         ) : showTyping ? (
           <TypingDots />
-        ) : message.content ? (
-          <p
-            className={cn(
-              "whitespace-pre-wrap text-justify",
-              rtl && "text-right",
+        ) : parts.length > 0 ? (
+          <>
+            {parts.map((part, i) =>
+              part.type === "code" ? (
+                <CodeBlock key={i} code={part.text} lang={part.lang} />
+              ) : (
+                <p
+                  key={i}
+                  className={cn(
+                    "whitespace-pre-wrap text-justify",
+                    rtl && "text-right",
+                  )}
+                >
+                  {part.text}
+                </p>
+              ),
             )}
-          >
-            {message.content}
-          </p>
+          </>
         ) : null}
 
         {hasImages ? (
@@ -175,7 +243,7 @@ function MessageBubble({
       </div>
 
       {message.content && !message.pending && !showTyping ? (
-        <CopyButton text={message.content} />
+        <CopyIconButton text={message.content} />
       ) : null}
     </article>
   );
@@ -206,7 +274,10 @@ function groupSessionsByDate(
       groups.set(label, [session]);
     }
   }
-  return Array.from(groups.entries()).map(([label, sessions]) => ({ label, sessions }));
+  return Array.from(groups.entries()).map(([label, sessions]) => ({
+    label,
+    sessions,
+  }));
 }
 
 function modelDisplayName(model: string): string {
@@ -239,11 +310,16 @@ export function BrainChat({
   const [isStreaming, setIsStreaming] = useState(false);
   const [isImagePending, setIsImagePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
+  const [attachedFile, setAttachedFile] = useState<{
+    name: string;
+    content: string;
+  } | null>(null);
   const [sessions, setSessions] = useState<BrandBrainRunSummary[]>(runSummaries);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [loadingSession, setLoadingSession] = useState(false);
   const sessionIdRef = useRef<string>(crypto.randomUUID());
 
-  const isBusy = isStreaming || isImagePending;
+  const isBusy = isStreaming || isImagePending || loadingSession;
   const isImageMode = mode === "image";
 
   const idRef = useRef(0);
@@ -284,7 +360,11 @@ export function BrainChat({
     const response = await fetch(STREAM_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, history, sessionId: sessionIdRef.current }),
+      body: JSON.stringify({
+        prompt,
+        history,
+        sessionId: sessionIdRef.current,
+      }),
     });
 
     if (!response.ok || !response.body) {
@@ -295,7 +375,7 @@ export function BrainChat({
           message = payload.message;
         }
       } catch {
-        // Non-JSON error body; keep the generic message.
+        /* non-JSON body */
       }
       throw new Error(message);
     }
@@ -310,8 +390,6 @@ export function BrainChat({
           ...message,
           content: message.content + event.text,
         }));
-      } else if (event.type === "done") {
-        // Sources are intentionally not surfaced to the UI.
       } else if (event.type === "error") {
         throw new Error(event.message);
       }
@@ -321,12 +399,9 @@ export function BrainChat({
       buffer += chunk;
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
-
       for (const line of lines) {
         const trimmed = line.trim();
-        if (trimmed) {
-          handleEvent(JSON.parse(trimmed) as BrandBrainStreamEvent);
-        }
+        if (trimmed) handleEvent(JSON.parse(trimmed) as BrandBrainStreamEvent);
       }
     };
 
@@ -335,14 +410,16 @@ export function BrainChat({
       if (done) break;
       drain(decoder.decode(value, { stream: true }));
     }
-
     const tail = buffer.trim();
-    if (tail) {
-      handleEvent(JSON.parse(tail) as BrandBrainStreamEvent);
-    }
+    if (tail) handleEvent(JSON.parse(tail) as BrandBrainStreamEvent);
   }
 
-  async function sendText(prompt: string, history: HistoryTurn[], isFirstInSession: boolean, shortPrompt: string) {
+  async function sendText(
+    prompt: string,
+    history: HistoryTurn[],
+    isFirstInSession: boolean,
+    shortPrompt: string,
+  ) {
     const assistantId = nextId();
     setError(null);
     setIsStreaming(true);
@@ -352,7 +429,6 @@ export function BrainChat({
       { id: assistantId, role: "assistant", content: "", sources: null },
     ]);
 
-    // Optimistically add this session to the sidebar if it's the first message
     if (isFirstInSession) {
       const newSession: BrandBrainRunSummary = {
         id: sessionIdRef.current,
@@ -368,7 +444,8 @@ export function BrainChat({
     } catch (caught) {
       setMessages((prev) =>
         prev.filter(
-          (message) => message.id !== assistantId || message.content.length > 0,
+          (message) =>
+            message.id !== assistantId || message.content.length > 0,
         ),
       );
       setError(
@@ -400,9 +477,7 @@ export function BrainChat({
 
     try {
       const result = await generateBrandBrainImageAction(prompt);
-      if (result.status === "error") {
-        throw new Error(result.message);
-      }
+      if (result.status === "error") throw new Error(result.message);
       updateMessage(assistantId, (message) => ({
         ...message,
         pending: false,
@@ -412,7 +487,9 @@ export function BrainChat({
         sources: null,
       }));
     } catch (caught) {
-      setMessages((prev) => prev.filter((message) => message.id !== assistantId));
+      setMessages((prev) =>
+        prev.filter((message) => message.id !== assistantId),
+      );
       setError(
         caught instanceof Error
           ? caught.message
@@ -456,7 +533,9 @@ export function BrainChat({
       const fileBlock = attachedFile.content
         ? `[Attached file: ${attachedFile.name}]\n${attachedFile.content}\n\n`
         : `[Attached file: ${attachedFile.name}]\n\n`;
-      prompt = fileBlock + (prompt || "Please summarize or answer questions about this file.");
+      prompt =
+        fileBlock +
+        (prompt || "Please summarize or answer questions about this file.");
       setAttachedFile(null);
     }
 
@@ -494,7 +573,9 @@ export function BrainChat({
     sessionIdRef.current = crypto.randomUUID();
   }
 
-  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
@@ -511,11 +592,41 @@ export function BrainChat({
     await deleteBrainSessionAction(session.id, session.isSession);
   }
 
+  async function handleLoadSession(session: BrandBrainRunSummary) {
+    if (isBusy) return;
+    setLoadingSession(true);
+    setError(null);
+    try {
+      const result = await loadBrainSessionAction(session.id, session.isSession);
+      if (result.messages) {
+        setMessages(
+          result.messages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            sources: m.sources,
+            images: m.images ?? null,
+            imagePrompt: m.imagePrompt ?? null,
+          })),
+        );
+        sessionIdRef.current = session.isSession
+          ? session.id
+          : crypto.randomUUID();
+        setInput("");
+        setAttachedFile(null);
+        lastRequestRef.current = null;
+      }
+    } finally {
+      setLoadingSession(false);
+    }
+  }
+
   const isEmpty = messages.length === 0 && !isBusy && !error;
   const groupedSessions = groupSessionsByDate(sessions);
 
   return (
-    <div className="flex min-h-[calc(100svh-3.5rem)] bg-[#fbf8f4] text-foreground">
+    // -m-4 cancels the app layout's p-4 wrapper so BrainChat fills edge-to-edge
+    <div className="-m-4 flex min-h-[calc(100svh-68px)] bg-[#fbf8f4] text-foreground">
       {/* ── Main chat column ── */}
       <main className="flex min-w-0 flex-1 flex-col">
         {/* Thread */}
@@ -524,7 +635,11 @@ export function BrainChat({
           className="flex-1 overflow-y-auto px-4 pb-8 pt-8 sm:px-8"
         >
           <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
-            {isEmpty ? (
+            {loadingSession ? (
+              <div className="flex flex-1 items-center justify-center">
+                <LoaderIcon className="size-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : isEmpty ? (
               <section className="flex flex-1 flex-col items-center justify-center pb-20 text-center">
                 <h1 className="text-2xl font-semibold tracking-normal text-foreground">
                   What should we dive into for {access.brandName}?
@@ -579,7 +694,9 @@ export function BrainChat({
                 <div className="mb-1 flex items-center gap-1.5 px-3 pt-1">
                   <span className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[12px] text-muted-foreground">
                     <PaperclipIcon className="size-3" />
-                    <span className="max-w-[200px] truncate">{attachedFile.name}</span>
+                    <span className="max-w-[200px] truncate">
+                      {attachedFile.name}
+                    </span>
                     <button
                       className="ml-0.5 hover:text-foreground"
                       onClick={() => setAttachedFile(null)}
@@ -640,19 +757,38 @@ export function BrainChat({
                     ) : null}
                   </Button>
                 </div>
-                <Button
-                  aria-label="Send message"
-                  className="rounded-full"
-                  disabled={isBusy || (input.trim().length === 0 && !attachedFile)}
-                  size="icon-sm"
-                  type="submit"
-                >
-                  {isBusy ? (
-                    <LoaderIcon className="size-4 animate-spin" />
-                  ) : (
-                    <SendIcon className="size-4" />
-                  )}
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    aria-label={sidebarOpen ? "Hide history" : "Show history"}
+                    className="text-muted-foreground"
+                    onClick={() => setSidebarOpen((v) => !v)}
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <ChevronRightIcon
+                      className={cn(
+                        "size-4 transition-transform duration-200",
+                        sidebarOpen ? "rotate-0" : "rotate-180",
+                      )}
+                    />
+                  </Button>
+                  <Button
+                    aria-label="Send message"
+                    className="rounded-full"
+                    disabled={
+                      isBusy || (input.trim().length === 0 && !attachedFile)
+                    }
+                    size="icon-sm"
+                    type="submit"
+                  >
+                    {isStreaming || isImagePending ? (
+                      <LoaderIcon className="size-4 animate-spin" />
+                    ) : (
+                      <SendIcon className="size-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
 
@@ -681,79 +817,86 @@ export function BrainChat({
             ) : null}
 
             <p className="mt-3 text-center text-[11px] text-muted-foreground">
-              Brand Brain can make mistakes. Review important answers before use.
+              Brand Brain can make mistakes. Review important answers before
+              use.
             </p>
           </div>
         </div>
       </main>
 
       {/* ── Right history sidebar ── */}
-      <aside className="hidden w-64 shrink-0 flex-col border-l border-black/5 bg-white md:flex xl:w-72">
-        <div className="border-b border-black/5 p-3">
-          <Button
-            className="w-full justify-start gap-1.5"
-            disabled={isBusy}
-            onClick={handleNewChat}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            <PlusIcon className="size-4" />
-            New chat
-          </Button>
-        </div>
+      {sidebarOpen ? (
+        <aside className="hidden w-64 shrink-0 flex-col border-l border-black/5 bg-white md:flex xl:w-72">
+          <div className="border-b border-black/5 p-3">
+            <Button
+              className="w-full justify-start gap-1.5"
+              disabled={isBusy}
+              onClick={handleNewChat}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <PlusIcon className="size-4" />
+              New chat
+            </Button>
+          </div>
 
-        <div className="flex-1 overflow-y-auto p-2">
-          {groupedSessions.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-10 text-center">
-              <ClockIcon className="size-5 text-muted-foreground/40" />
-              <p className="text-[12px] text-muted-foreground">
-                Past conversations will appear here.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {groupedSessions.map(({ label, sessions: group }) => (
-                <div key={label}>
-                  <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                    {label}
-                  </p>
-                  <div className="space-y-0.5">
-                    {group.map((session) => {
-                      const rtl = isRtlText(session.prompt);
-                      return (
-                        <div
-                          className="group flex cursor-default items-start gap-1 rounded-lg px-2 py-1.5 hover:bg-muted/60"
-                          dir={rtl ? "rtl" : "ltr"}
-                          key={session.id}
-                          title={session.prompt}
-                        >
-                          <p
-                            className={cn(
-                              "flex-1 line-clamp-2 text-[12px] text-muted-foreground group-hover:text-foreground",
-                              rtl ? "text-right" : "text-left",
-                            )}
+          <div className="flex-1 overflow-y-auto p-2">
+            {groupedSessions.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-10 text-center">
+                <ClockIcon className="size-5 text-muted-foreground/40" />
+                <p className="text-[12px] text-muted-foreground">
+                  Past conversations will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {groupedSessions.map(({ label, sessions: group }) => (
+                  <div key={label}>
+                    <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                      {label}
+                    </p>
+                    <div className="space-y-0.5">
+                      {group.map((session) => {
+                        const rtl = isRtlText(session.prompt);
+                        return (
+                          <div
+                            className="group flex cursor-pointer items-start gap-1 rounded-lg px-2 py-1.5 hover:bg-muted/60"
+                            dir={rtl ? "rtl" : "ltr"}
+                            key={session.id}
+                            onClick={() => void handleLoadSession(session)}
+                            title={session.prompt}
                           >
-                            {session.prompt || "…"}
-                          </p>
-                          <button
-                            aria-label="Delete session"
-                            className="mt-0.5 shrink-0 rounded p-0.5 text-muted-foreground/0 transition hover:text-destructive group-hover:text-muted-foreground/40"
-                            onClick={() => void handleDeleteSession(session)}
-                            type="button"
-                          >
-                            <Trash2Icon className="size-3" />
-                          </button>
-                        </div>
-                      );
-                    })}
+                            <p
+                              className={cn(
+                                "flex-1 line-clamp-2 text-[12px] text-muted-foreground group-hover:text-foreground",
+                                rtl ? "text-right" : "text-left",
+                              )}
+                            >
+                              {session.prompt || "…"}
+                            </p>
+                            <button
+                              aria-label="Delete session"
+                              className="mt-0.5 shrink-0 rounded p-0.5 text-transparent transition hover:text-destructive group-hover:text-muted-foreground/40"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleDeleteSession(session);
+                              }}
+                              type="button"
+                            >
+                              <Trash2Icon className="size-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </aside>
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
+      ) : null}
     </div>
   );
 }

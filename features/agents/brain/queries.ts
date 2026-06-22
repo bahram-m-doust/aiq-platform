@@ -358,3 +358,71 @@ export async function getBrandBrainRunSummaries({
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 }
+
+// Load a single chat session's conversation messages. Works for both proper
+// sessions (session_id UUID) and legacy single-run sessions (keyed by run id).
+export async function getBrainSessionConversation({
+  sessionId,
+  userId,
+  isSession,
+}: {
+  sessionId: string;
+  userId: string;
+  isSession: boolean;
+}): Promise<BrandBrainConversationMessage[]> {
+  const admin = createAdminClient();
+
+  const query = admin
+    .from("agent_runs")
+    .select("id, input, output, retrieved_sources, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(40);
+
+  const { data, error } = isSession
+    ? await query.eq("session_id", sessionId)
+    : await query.eq("id", sessionId);
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = ((data ?? []) as AgentRunConversationRow[]).slice().reverse();
+  const messages: BrandBrainConversationMessage[] = [];
+
+  for (const row of rows) {
+    const output = isRecord(row.output) ? row.output : null;
+    const prompt = isRecord(row.input) ? readString(row.input.prompt) : "";
+    const answer = output ? readString(output.answer) : "";
+    const imagePaths =
+      output && Array.isArray(output.image_paths)
+        ? output.image_paths.filter((p): p is string => typeof p === "string")
+        : [];
+
+    if (prompt) {
+      messages.push({ id: `${row.id}-q`, role: "user", content: prompt, sources: null });
+    }
+
+    if (imagePaths.length > 0) {
+      let images: string[] = [];
+      try { images = await createAgentImageSignedUrls(imagePaths); } catch { images = []; }
+      messages.push({
+        id: `${row.id}-a`,
+        role: "assistant",
+        content: answer || "Generated image.",
+        sources: toDisplaySources(row.retrieved_sources),
+        images,
+        imagePrompt: output ? readString(output.image_prompt) || null : null,
+      });
+    } else if (answer) {
+      messages.push({
+        id: `${row.id}-a`,
+        role: "assistant",
+        content: answer,
+        sources: toDisplaySources(row.retrieved_sources),
+      });
+    }
+  }
+
+  return messages;
+}

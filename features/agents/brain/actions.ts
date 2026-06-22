@@ -2,6 +2,7 @@
 
 import { requireUserProfile } from "@/features/auth/queries";
 import { isLLMBrainConfigError } from "@/features/agents/brain/llm";
+import { getBrainSessionConversation } from "@/features/agents/brain/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   isBrandBrainImageServiceError,
@@ -55,6 +56,23 @@ export async function deleteBrainSessionAction(
     return {};
   } catch {
     return { error: "Could not delete this chat session." };
+  }
+}
+
+export async function loadBrainSessionAction(
+  sessionId: string,
+  isSession: boolean,
+): Promise<{ messages?: import("@/features/agents/brain/types").BrandBrainConversationMessage[]; error?: string }> {
+  try {
+    const { profile } = await requireUserProfile(ROUTES.brain);
+    const messages = await getBrainSessionConversation({
+      sessionId,
+      userId: profile.id,
+      isSession,
+    });
+    return { messages };
+  } catch {
+    return { error: "Could not load this session." };
   }
 }
 
