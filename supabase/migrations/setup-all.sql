@@ -1,6 +1,6 @@
 -- GENERATED FILE. DO NOT EDIT DIRECTLY.
 -- Source: numbered SQL files in supabase/migrations.
--- Latest migration: 0054_brain_build_schedule.sql
+-- Latest migration: 0056_agent_runs_session_id.sql
 -- Regenerate with: npm run db:generate-bundles
 
 -- BEGIN 0001_initial_schema.sql
@@ -5318,6 +5318,43 @@ alter table public.brain_build_schedule enable row level security;
 
 notify pgrst, 'reload schema';
 -- END 0054_brain_build_schedule.sql
+
+-- BEGIN 0055_seed_agents_catalog.sql
+-- Seed the agents catalog (reference data).
+--
+-- The Brand Brain page and the Phase 04 "Agent Deployment" substep both depend
+-- on the BRAND_INTEGRATOR_BRAIN row existing in public.agents with
+-- is_active = true. That row was previously only created by the separate
+-- seeds-all.sql script, so any environment that ran migrations but not the seed
+-- ended up with getBrandBrainAgent() returning null ("Agent unavailable") and
+-- activateBrandBrainAgent() silently no-op'ing (Brain Build stuck at 3/4).
+--
+-- Folding the catalog into a migration makes the agent reliably present in every
+-- environment. Idempotent: re-running re-activates and refreshes the name.
+
+insert into public.agents (key, name, is_active)
+values
+  ('BRAND_INTEGRATOR_BRAIN', 'Brand Integrator Brain', true),
+  ('STORY_TELLER', 'Story Teller', true),
+  ('IMAGE_GENERATOR', 'Image Generator', true),
+  ('VIDEO_GENERATOR', 'Video Generator', true),
+  ('CAMPAIGN_MAKER', 'Campaign Maker', true),
+  ('BRAND_DIGITAL_ACTIVATION', 'Brand Digital Activation', true)
+on conflict (key) do update
+  set name = excluded.name,
+      is_active = true;
+
+notify pgrst, 'reload schema';
+-- END 0055_seed_agents_catalog.sql
+
+-- BEGIN 0056_agent_runs_session_id.sql
+-- Add session_id to agent_runs so chat turns can be grouped into sessions.
+-- Existing rows are left NULL (treated as individual legacy sessions in the UI).
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS session_id uuid;
+
+CREATE INDEX IF NOT EXISTS agent_runs_session_id_idx ON agent_runs (session_id)
+  WHERE session_id IS NOT NULL;
+-- END 0056_agent_runs_session_id.sql
 
 -- Keep server-side Supabase access explicit after fresh schema creation.
 grant all on all tables in schema public to service_role;
