@@ -10,6 +10,7 @@ import type {
   BrandBrainAgent,
   BrandBrainConversationMessage,
   BrandBrainDisplaySource,
+  BrandBrainRunSummary,
   BrandBrainWorkspace,
 } from "@/features/agents/brain/types";
 import { createAgentImageSignedUrls } from "@/features/agents/runs/image-storage";
@@ -260,6 +261,7 @@ export async function getBrandBrainConversation({
         role: "user",
         content: prompt,
         sources: null,
+        createdAt: row.created_at,
       });
     }
 
@@ -279,6 +281,7 @@ export async function getBrandBrainConversation({
         sources: toDisplaySources(row.retrieved_sources),
         images,
         imagePrompt: output ? readString(output.image_prompt) || null : null,
+        createdAt: row.created_at,
       });
     } else if (answer) {
       messages.push({
@@ -286,6 +289,148 @@ export async function getBrandBrainConversation({
         role: "assistant",
         content: answer,
         sources: toDisplaySources(row.retrieved_sources),
+        createdAt: row.created_at,
+      });
+    }
+  }
+
+  return messages;
+}
+
+type RunSummaryRow = {
+  id: string;
+  session_id: string | null;
+  input: unknown;
+  created_at: string | null;
+};
+
+export async function getBrandBrainRunSummaries({
+  brandId,
+  agentId,
+  userId,
+  limit = 60,
+}: {
+  brandId: string;
+  agentId: string;
+  userId: string;
+  limit?: number;
+}): Promise<BrandBrainRunSummary[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("agent_runs")
+    .select("id, session_id, input, created_at")
+    .eq("brand_id", brandId)
+    .eq("agent_id", agentId)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data ?? []) as RunSummaryRow[];
+
+  // Group runs by session_id. Legacy runs (null session_id) each become their
+  // own pseudo-session keyed by the run id. We want the first (oldest) prompt
+  // as the session title and the most-recent run's timestamp as the sort key.
+  const sessionMap = new Map<string, BrandBrainRunSummary>();
+
+  // Rows arrive newest-first; iterate reversed so the oldest prompt wins.
+  for (const row of [...rows].reverse()) {
+    const key = row.session_id ?? row.id;
+    const prompt = isRecord(row.input) ? readString(row.input.prompt).slice(0, 120) : "";
+    const createdAt = row.created_at ?? new Date().toISOString();
+
+    if (!sessionMap.has(key)) {
+      sessionMap.set(key, {
+        id: key,
+        prompt,
+        createdAt,
+        isSession: row.session_id !== null,
+      });
+    } else {
+      // Update createdAt to the newest run in this session (rows are reversed,
+      // so the last time we see this key the row is the most recent one).
+      sessionMap.get(key)!.createdAt = createdAt;
+    }
+  }
+
+  // Return sessions sorted newest-first.
+  return Array.from(sessionMap.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
+// Load a single chat session's conversation messages. Works for both proper
+// sessions (session_id UUID) and legacy single-run sessions (keyed by run id).
+export async function getBrainSessionConversation({
+  sessionId,
+  userId,
+  isSession,
+}: {
+  sessionId: string;
+  userId: string;
+  isSession: boolean;
+}): Promise<BrandBrainConversationMessage[]> {
+  const admin = createAdminClient();
+
+  const query = admin
+    .from("agent_runs")
+    .select("id, input, output, retrieved_sources, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(40);
+
+  const { data, error } = isSession
+    ? await query.eq("session_id", sessionId)
+    : await query.eq("id", sessionId);
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = ((data ?? []) as AgentRunConversationRow[]).slice().reverse();
+  const messages: BrandBrainConversationMessage[] = [];
+
+  for (const row of rows) {
+    const output = isRecord(row.output) ? row.output : null;
+    const prompt = isRecord(row.input) ? readString(row.input.prompt) : "";
+    const answer = output ? readString(output.answer) : "";
+    const imagePaths =
+      output && Array.isArray(output.image_paths)
+        ? output.image_paths.filter((p): p is string => typeof p === "string")
+        : [];
+
+    if (prompt) {
+      messages.push({
+        id: `${row.id}-q`,
+        role: "user",
+        content: prompt,
+        sources: null,
+        createdAt: row.created_at,
+      });
+    }
+
+    if (imagePaths.length > 0) {
+      let images: string[] = [];
+      try { images = await createAgentImageSignedUrls(imagePaths); } catch { images = []; }
+      messages.push({
+        id: `${row.id}-a`,
+        role: "assistant",
+        content: answer || "Generated image.",
+        sources: toDisplaySources(row.retrieved_sources),
+        images,
+        imagePrompt: output ? readString(output.image_prompt) || null : null,
+        createdAt: row.created_at,
+      });
+    } else if (answer) {
+      messages.push({
+        id: `${row.id}-a`,
+        role: "assistant",
+        content: answer,
+        sources: toDisplaySources(row.retrieved_sources),
+        createdAt: row.created_at,
       });
     }
   }

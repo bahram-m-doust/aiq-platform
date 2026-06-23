@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { PageShell } from "@/components/ds/PageShell";
 import { BrainChat } from "@/features/agents/brain/components/BrainChat";
 import { BrainLockedState } from "@/features/agents/brain/components/BrainLockedState";
+import { getBrandBrainModel } from "@/features/agents/brain/llm";
 import {
-  getBrandBrainConversation,
+  getBrandBrainRunSummaries,
   getBrandBrainWorkspace,
 } from "@/features/agents/brain/queries";
 import { requireUserProfile } from "@/features/auth/queries";
@@ -36,13 +37,20 @@ export default async function BrandBrainPage() {
     );
   }
 
-  const initialMessages = await getBrandBrainConversation({
+  // Fresh visits always open a clean New Chat. Past conversations live in the
+  // sidebar and are loaded on demand when a session is clicked, so we only need
+  // the session summaries here — not a merged dump of every run.
+  const runSummaries = await getBrandBrainRunSummaries({
     brandId: workspace.access.brandId,
     agentId: workspace.agent.id,
     userId: profile.id,
   });
 
   return (
-    <BrainChat access={workspace.access} initialMessages={initialMessages} />
+    <BrainChat
+      access={workspace.access}
+      model={getBrandBrainModel()}
+      runSummaries={runSummaries}
+    />
   );
 }

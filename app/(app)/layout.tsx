@@ -14,6 +14,7 @@ import {
   getUnreadNotificationCount,
   listNotificationsForProfile,
 } from "@/features/notifications/queries";
+import { getBrandAiBudgetSummary } from "@/features/openrouter/usage";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const getBrandIconUrl = cache(async (brandId: string) => {
@@ -43,7 +44,7 @@ export default async function AppLayout({
     return <>{children}</>;
   }
 
-  const [catalogWorkspace, brandIconUrl, notifications, unreadCount] =
+  const [catalogWorkspace, brandIconUrl, notifications, unreadCount, aiBudget] =
     await Promise.all([
       catalogWorkspacePromise,
       accessSummary.brandId ? getBrandIconUrl(accessSummary.brandId) : null,
@@ -62,6 +63,9 @@ export default async function AppLayout({
         brandId: accessSummary.brandId ?? null,
         includeInternalTeamInbox: false,
       }).catch(() => 0),
+      accessSummary.brandId
+        ? getBrandAiBudgetSummary(accessSummary.brandId).catch(() => null)
+        : null,
     ]);
   const defByKey = new Map(
     catalogAgentDefinitions.map((definition) => [
@@ -75,6 +79,7 @@ export default async function AppLayout({
     role: profile.global_role,
     planName: accessSummary.planName,
     credits: accessSummary.credits,
+    aiBudget: aiBudget ?? null,
     agents: (catalogWorkspace?.agents ?? []).map((agent) => ({
       key: agent.key,
       name: defByKey.get(agent.key)?.name ?? agent.name,

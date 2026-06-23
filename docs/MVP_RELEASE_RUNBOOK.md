@@ -43,7 +43,7 @@ Fresh project:
 Existing project:
 
 1. Run missing migrations in numeric order through
-   `0050_intake_answer_marked_done.sql`.
+   `0054_brain_build_schedule.sql`.
 2. Re-run seeds only if the environment is missing plan, agent, or intake
    configuration rows.
 3. Run `NOTIFY pgrst, 'reload schema';`.

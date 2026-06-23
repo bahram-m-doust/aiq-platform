@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { requireUserProfile } from "@/features/auth/queries";
-import { RagApprovalQueue } from "@/features/rag/components/RagApprovalQueue";
 import { RagSyncPanel } from "@/features/rag/components/RagSyncPanel";
 import {
-  getRagApprovalQueueItems,
   getRagSyncDashboard,
 } from "@/features/rag/queries";
 import { canSyncRagRole, canViewRagApprovalQueueRole } from "@/features/rag/schema";
@@ -23,12 +21,9 @@ export default async function AdminRagApprovalPage() {
     redirect("/home");
   }
 
-  const [items, syncGroups] = await Promise.all([
-    getRagApprovalQueueItems(),
-    canSyncRagRole(profile.global_role)
-      ? getRagSyncDashboard()
-      : Promise.resolve([]),
-  ]);
+  const syncGroups = canSyncRagRole(profile.global_role)
+    ? await getRagSyncDashboard()
+    : [];
   const email = user.email ?? profile.email;
 
   return (
@@ -45,8 +40,6 @@ export default async function AdminRagApprovalPage() {
             Signed in as {email} | {profile.global_role}
           </p>
         </div>
-
-        <RagApprovalQueue actorRole={profile.global_role} items={items} />
 
         {canSyncRagRole(profile.global_role) ? (
           <RagSyncPanel groups={syncGroups} />

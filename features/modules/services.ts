@@ -44,6 +44,7 @@ import type {
 } from "@/features/modules/types";
 import { resolveReviewSurface } from "@/features/review-content/surface";
 import { logAudit } from "@/lib/audit/logAudit";
+import { createNotification } from "@/features/notifications/mutation-service";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateSecureUpload } from "@/lib/security/file-upload";
@@ -643,6 +644,20 @@ export async function submitClientModuleDecision({
       review: toModuleReviewAuditMetadata(review),
     },
   });
+
+  if (decision === "APPROVE") {
+    createNotification({
+      brandId: detail.module.brandId,
+      audience: "ADMIN",
+      type: "MODULE_CLIENT_APPROVED",
+      title: "Strategy module approved",
+      body: `Client approved "${detail.module.title}" — Phase 02 progressing.`,
+      linkPath: "/admin/modules",
+      subjectType: "module",
+      subjectId: detail.module.id,
+      actorId: profile.id,
+    }).catch(() => {});
+  }
 
   return {
     module: updatedModule,

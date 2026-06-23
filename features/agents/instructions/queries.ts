@@ -1,6 +1,9 @@
 import "server-only";
 
-import { resolveEffectiveInstruction } from "@/features/agents/instructions/schema";
+import {
+  joinPromptLayers,
+  resolveEffectiveInstruction,
+} from "@/features/agents/instructions/schema";
 import type {
   BrandAgentInstruction,
   BrandAgentInstructionSlot,
@@ -59,6 +62,40 @@ export async function getBrandAgentInstruction({
 
   const rows = ((data ?? []) as SettingsRow[]).map(toInstruction);
   return resolveEffectiveInstruction(rows, agentId);
+}
+
+// Layered instruction for image generation. Unlike chat (which picks ONE
+// effective instruction), an image prompt must carry the brand's FULL identity —
+// strategy, voice, and visual — so the brand-wide default is always the base,
+// with any agent-specific override (e.g. IMAGE_GENERATOR visual rules) layered on
+// top rather than replacing it. Either layer may be empty.
+export async function getLayeredBrandInstruction({
+  brandId,
+  agentId,
+}: {
+  brandId: string;
+  agentId: string;
+}): Promise<string> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("brand_agent_settings")
+    .select("agent_id, instruction, is_enabled, updated_at")
+    .eq("brand_id", brandId)
+    .or(`agent_id.eq.${agentId},agent_id.is.null`);
+
+  if (error) {
+    throw error;
+  }
+
+  const rows = (data ?? []) as SettingsRow[];
+  const brandWide = rows.find((r) => r.agent_id === null && r.is_enabled);
+  const perAgent = rows.find((r) => r.agent_id === agentId && r.is_enabled);
+
+  // Full brand identity first, then the agent-specific refinement.
+  return joinPromptLayers([
+    brandWide?.instruction ?? "",
+    perAgent?.instruction ?? "",
+  ]);
 }
 
 export async function getBrandInstructionAdminBrands(): Promise<

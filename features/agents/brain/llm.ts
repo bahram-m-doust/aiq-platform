@@ -30,9 +30,12 @@ export function isLLMBrainConfigError(error: unknown): error is DomainError {
   return isDomainErrorWithCode(error, CODE);
 }
 
-// Layer [1] — role/identity, locked in code.
+// Layer [1] — neutral base identity, locked in code. Deliberately minimal so it
+// frames the assistant without fighting the brand instruction that follows
+// (which may define its own role, persona, and tone). Imposes no fixed tone of
+// its own. Also acts as a sensible fallback when a brand has no instruction yet.
 const BRAIN_ROLE_PROMPT =
-  "You are Bextudio's Brand Integrator Brain, a strategic assistant that answers in a formal executive tone.";
+  "You are this brand's dedicated AI Brand Brain — an expert, brand-side assistant. The brand instruction that follows is your primary operating guide: apply it fully and stay in character. Reply in the user's language, be precise and well-structured, and give expert brand judgment rather than generic advice.";
 
 // Layer [3] — safety/scope guard, locked in code and appended after the
 // admin-edited brand instruction so it can never be overridden.
@@ -69,14 +72,16 @@ export function getBrandBrainModel(): string {
 export async function retrieveBrandBrainContext({
   prompt,
   brandId,
+  topK = 5,
 }: {
   prompt: string;
   brandId: string;
+  topK?: number;
 }) {
   const chunks = await searchBrandKnowledge({
     brandId,
     query: prompt,
-    topK: 5,
+    topK,
   });
 
   const retrievedSources = toRetrievedSources(chunks);

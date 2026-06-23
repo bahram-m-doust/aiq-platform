@@ -162,6 +162,30 @@ function firstOfMonthUtc(now = new Date()): string {
 
 // Reporting only. Budget enforcement uses reserve_ai_budget, which locks the
 // brand row and accounts for concurrent reservations transactionally.
+export async function getBrandAiBudgetSummary(brandId: string): Promise<{
+  monthlyBudgetCents: number | null;
+  spentCents: number;
+  remainingCents: number | null;
+}> {
+  const admin = createAdminClient();
+  const { data: brandRow, error: brandError } = await admin
+    .from("brands")
+    .select("monthly_budget_cents")
+    .eq("id", brandId)
+    .maybeSingle<{ monthly_budget_cents: number | null }>();
+
+  if (brandError) throw wrapSupabaseError(brandError, "getBrandAiBudgetSummary brand fetch failed");
+
+  const monthlyBudgetCents = brandRow?.monthly_budget_cents ?? null;
+  const spentCents = await getMonthSpendCents(brandId);
+  const remainingCents =
+    monthlyBudgetCents !== null
+      ? Math.max(0, monthlyBudgetCents - spentCents)
+      : null;
+
+  return { monthlyBudgetCents, spentCents, remainingCents };
+}
+
 export async function getMonthSpendCents(brandId: string): Promise<number> {
   const admin = createAdminClient();
   const { data, error } = await admin

@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { PaginationControls } from "@/components/PaginationControls";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import { AdminDocumentsConsole } from "@/features/documents/components/AdminDocumentsConsole";
-import { hasBrandApiKey } from "@/features/brands/api-keys";
 import {
   getAdminBrandOptions,
   getDocumentsForBrand,
@@ -36,15 +35,12 @@ export default async function AdminDocumentsPage({
   const selectedBrandId = brands.some((brand) => brand.id === requestedBrandId)
     ? requestedBrandId
     : null;
-  const [documents, brandHasKey] = selectedBrandId
-    ? await Promise.all([
-        getDocumentsForBrand({
-          brandId: selectedBrandId,
-          pagination: paginationInputFromSearchParams(params),
-        }),
-        hasBrandApiKey(selectedBrandId),
-      ])
-    : [null, false];
+  const documents = selectedBrandId
+    ? await getDocumentsForBrand({
+        brandId: selectedBrandId,
+        pagination: paginationInputFromSearchParams(params),
+      })
+    : null;
   const files = documents?.files ?? [];
 
   return (
@@ -56,7 +52,7 @@ export default async function AdminDocumentsPage({
               Platform owner
             </p>
             <h1 className="mt-3 text-3xl font-semibold tracking-normal">
-              Brand Files
+              RAG Approval Queue
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Signed in as {profile.email}. All actions here are audited.
@@ -68,7 +64,6 @@ export default async function AdminDocumentsPage({
         <AdminDocumentsConsole
           brands={brands}
           files={files}
-          hasApiKey={brandHasKey}
           selectedBrandId={selectedBrandId}
         />
         {selectedBrandId && documents ? (

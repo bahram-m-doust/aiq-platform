@@ -21,6 +21,7 @@ type FileRowForBrand = {
   status: string;
   uploaded_by: string | null;
   created_at: string | null;
+  approved_at: string | null;
 };
 
 export type AdminBrandOption = {
@@ -38,7 +39,17 @@ type BrandOptionRow = {
 type ProfileRow = {
   id: string;
   email: string;
+  global_role: string;
 };
+
+// Platform staff uploads are branded "Bextudio"; everything else (a brand's
+// own user uploading their files) is attributed to the brand itself.
+const STAFF_ROLES = new Set([
+  "PLATFORM_OWNER",
+  "SUPERVISOR",
+  "INTERNAL_SPECIALIST",
+]);
+const PLATFORM_LABEL = "Bextudio";
 
 export async function getAdminBrandOptions(): Promise<AdminBrandOption[]> {
   const admin = createAdminClient();
@@ -68,9 +79,10 @@ export async function getDocumentsForBrand({
   const { data, error } = await admin
     .from("files")
     .select(
-      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at",
+      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at, approved_at",
     )
     .eq("brand_id", brandId)
+    .not("status", "eq", "CLIENT_REVIEW")
     .order("created_at", { ascending: false })
     .range(range.from, range.to + 1);
 
@@ -84,32 +96,46 @@ export async function getDocumentsForBrand({
   const uploaderIds = Array.from(
     new Set(rows.map((row) => row.uploaded_by).filter(Boolean) as string[]),
   );
-  const profileResult =
+  const [profileResult, brandResult] = await Promise.all([
     uploaderIds.length > 0
-      ? await admin
+      ? admin
           .from("users_profile")
-          .select("id, email")
+          .select("id, email, global_role")
           .in("id", uploaderIds)
-      : { data: [], error: null };
+      : Promise.resolve({ data: [], error: null }),
+    admin.from("brands").select("name").eq("id", brandId).maybeSingle(),
+  ]);
 
   if (profileResult.error) throw profileResult.error;
+  if (brandResult.error) throw brandResult.error;
 
-  const emailsById = new Map(
+  const brandName =
+    (brandResult.data as { name: string } | null)?.name ?? PLATFORM_LABEL;
+
+  const profilesById = new Map(
     ((profileResult.data ?? []) as ProfileRow[]).map((profile) => [
       profile.id,
-      profile.email,
+      profile,
     ]),
   );
 
   return {
-    files: rows.map((row) =>
-      toBrandDocumentRecord({
+    files: rows.map((row) => {
+      const uploader = row.uploaded_by
+        ? profilesById.get(row.uploaded_by) ?? null
+        : null;
+      // Staff (or unknown uploader) -> "Bextudio"; a brand's own user -> brand.
+      const uploaderLabel =
+        uploader && !STAFF_ROLES.has(uploader.global_role)
+          ? brandName
+          : PLATFORM_LABEL;
+
+      return toBrandDocumentRecord({
         row,
-        uploaderEmail: row.uploaded_by
-          ? emailsById.get(row.uploaded_by) ?? null
-          : null,
-      }),
-    ),
+        uploaderEmail: uploader?.email ?? null,
+        uploaderLabel,
+      });
+    }),
     pagination: paginationState,
   };
 }

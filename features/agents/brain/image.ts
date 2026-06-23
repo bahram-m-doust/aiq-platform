@@ -2,7 +2,7 @@ import "server-only";
 
 import { retrieveBrandBrainContext } from "@/features/agents/brain/llm";
 import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
-import { getBrandAgentInstruction } from "@/features/agents/instructions/queries";
+import { getLayeredBrandInstruction } from "@/features/agents/instructions/queries";
 import { brandBrainProvider } from "@/features/agents/brain/schema";
 import type { BrandBrainImageRunResult } from "@/features/agents/brain/types";
 import type { UserProfile } from "@/features/auth/types";
@@ -12,12 +12,14 @@ import {
 } from "@/features/agents/runs/image-storage";
 import { rewritePromptForImage } from "@/features/agents/runs/llm";
 import { getBrandModelDefaults } from "@/features/agents/runs/services";
+import { brandIconPublicUrl } from "@/features/admin/brand-icons/storage";
 import {
   attachRunUsage,
   recordRunUsage,
   withRunUsageReservation,
 } from "@/features/openrouter/usage";
 import { generateImage } from "@/lib/openrouter/image";
+import { coerceImageModel, isImageModelId } from "@/lib/openrouter/models";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -56,9 +58,13 @@ async function resolveImageInstructionAgentId(
 export async function runBrandBrainImage({
   profile,
   prompt,
+  imageModel,
 }: {
   profile: UserProfile;
   prompt: string;
+  // Optional user-selected image model. Falls back to the brand default when
+  // omitted or when the supplied id is not a recognised image model.
+  imageModel?: string;
 }): Promise<BrandBrainImageRunResult> {
   const workspace = await getBrandBrainWorkspace(profile.id);
   const { access, agent, readiness } = workspace;
@@ -68,15 +74,30 @@ export async function runBrandBrainImage({
   }
 
   const brandId = access.brandId;
-  const instructionAgentId = await resolveImageInstructionAgentId(agent.id);
-  const instruction = await getBrandAgentInstruction({
-    brandId,
-    agentId: instructionAgentId,
-  });
 
+  // Fetch brand icon path and derive its public URL for the art-director step.
+  const brandAdmin = createAdminClient();
+  const { data: brandRow } = await brandAdmin
+    .from("brands")
+    .select("icon_path")
+    .eq("id", brandId)
+    .maybeSingle<{ icon_path: string | null }>();
+  const logoUrl = brandIconPublicUrl(brandRow?.icon_path ?? null);
+
+  const instructionAgentId = await resolveImageInstructionAgentId(agent.id);
+  const [instruction, defaults] = await Promise.all([
+    // Full brand identity (brand-wide) plus any image-specific override, layered.
+    getLayeredBrandInstruction({ brandId, agentId: instructionAgentId }),
+    getBrandModelDefaults(brandId),
+  ]);
+
+  // Span the full brand identity in retrieval — strategy/positioning, verbal/tone,
+  // and the visual system — so the prompt reflects the whole brand, not just looks.
+  // A larger topK gives room for multiple facets to surface.
+  const identityQuery =
+    `brand identity strategy positioning voice tone visual system color palette photography composition ${prompt}`;
   const { context, retrievedSources, displaySources } =
-    await retrieveBrandBrainContext({ prompt, brandId });
-  const defaults = await getBrandModelDefaults(brandId);
+    await retrieveBrandBrainContext({ prompt: identityQuery, brandId, topK: 8 });
 
   const startedAt = Date.now();
   const textStage = await withRunUsageReservation({
@@ -89,6 +110,7 @@ export async function runBrandBrainImage({
         model: defaults.text,
         brandContext: context,
         instruction,
+        logoUrl,
       });
       const usageId = await recordRunUsage({
         reservation,
@@ -103,13 +125,20 @@ export async function runBrandBrainImage({
   });
   const { optimizedPrompt } = textStage;
 
+  // Honour the user's model choice from the chat composer; fall back to the
+  // brand default for an unknown or omitted id.
+  const selectedImageModel =
+    imageModel && isImageModelId(imageModel)
+      ? coerceImageModel(imageModel)
+      : defaults.image;
+
   const imageStage = await withRunUsageReservation({
     brandId,
     kind: "IMAGE",
     operation: async (reservation) => {
       const result = await generateImage({
         brandId,
-        model: defaults.image,
+        model: selectedImageModel,
         prompt: optimizedPrompt,
         n: 1,
       });
@@ -144,7 +173,7 @@ export async function runBrandBrainImage({
       input: { prompt, mode: "image" },
       output: { answer, response_id: responseId },
       provider: brandBrainProvider,
-      model: defaults.image,
+      model: selectedImageModel,
       retrieved_sources: retrievedSources,
       cost: null,
       latency_ms: latencyMs,
@@ -202,7 +231,7 @@ export async function runBrandBrainImage({
       agent_id: agent.id,
       run_id: runId,
       mode: "image",
-      model: defaults.image,
+      model: selectedImageModel,
     },
   });
 

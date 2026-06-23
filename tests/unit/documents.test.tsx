@@ -50,6 +50,8 @@ function brandFile(overrides: Partial<BrandDocumentRecord> = {}): BrandDocumentR
     status: "UPLOADED",
     uploadedBy: "owner-1",
     uploadedByEmail: "owner@example.com",
+    uploaderLabel: "Bextudio",
+    approvedAt: null,
     createdAt: "2026-05-17T10:00:00.000Z",
     ...overrides,
   };

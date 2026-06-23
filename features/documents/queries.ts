@@ -32,6 +32,7 @@ type FileRow = {
   status: string;
   uploaded_by: string | null;
   created_at: string | null;
+  approved_at: string | null;
 };
 
 type ProfileRow = {
@@ -63,9 +64,11 @@ function toSizeBytes(value: number | string | null) {
 export function toBrandDocumentRecord({
   row,
   uploaderEmail,
+  uploaderLabel,
 }: {
   row: FileRow;
   uploaderEmail?: string | null;
+  uploaderLabel?: string | null;
 }): BrandDocumentRecord {
   return {
     id: row.id,
@@ -78,7 +81,9 @@ export function toBrandDocumentRecord({
     status: safeStatus(row.status),
     uploadedBy: row.uploaded_by,
     uploadedByEmail: uploaderEmail ?? null,
+    uploaderLabel: uploaderLabel ?? null,
     createdAt: row.created_at,
+    approvedAt: row.approved_at ?? null,
   };
 }
 
@@ -109,7 +114,7 @@ export async function getBrandDocumentById(fileId: string) {
   const { data, error } = await admin
     .from("files")
     .select(
-      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at",
+      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at, approved_at",
     )
     .eq("id", fileId)
     .maybeSingle();
@@ -138,9 +143,10 @@ export async function getBrandDocumentsWorkspace(
   const { data, error } = await admin
     .from("files")
     .select(
-      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at",
+      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at, approved_at",
     )
     .eq("brand_id", access.brandId)
+    .neq("visibility", "OWNER_ONLY")
     .order("created_at", { ascending: false })
     .range(range.from, range.to + 1);
 

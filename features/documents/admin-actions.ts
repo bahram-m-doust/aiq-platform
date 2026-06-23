@@ -8,6 +8,7 @@ import {
   adminArchiveDocument,
   adminCreateSignedDownloadUrl,
   adminDeleteDocument,
+  adminDemoteDocumentFromRag,
   adminPromoteDocumentToRag,
   adminUnarchiveDocument,
   adminUploadDocumentForBrand,
@@ -54,11 +55,14 @@ export async function adminUploadDocumentAction(
     return { status: "error", message: RATE_LIMITED_MESSAGE };
   }
 
+  const sendToRag = formData.get("send_to_rag") === "true";
+
   try {
     const record = await adminUploadDocumentForBrand({
       brandId,
       formData,
       actor: profile,
+      sendToRag,
     });
     revalidatePath("/admin/documents");
     return {
@@ -193,6 +197,36 @@ export async function adminPromoteDocumentToRagAction(
       metadata: { profileId: profile.id, fileId },
     });
     return { status: "error", message: "Document could not be promoted to RAG." };
+  }
+}
+
+export async function adminDemoteDocumentFromRagAction(
+  _prev: AdminDocumentReviewState,
+  formData: FormData,
+): Promise<AdminDocumentReviewState> {
+  const { profile } = await requirePlatformOwner("/admin/documents");
+  const fileId = readString(formData, "file_id");
+
+  if (!fileId) {
+    return { status: "error", message: "Missing document identifier." };
+  }
+
+  try {
+    const after = await adminDemoteDocumentFromRag({ fileId, actor: profile });
+    revalidatePath("/admin/documents");
+    revalidatePath(adminDocumentsPathFor(after.brandId));
+    revalidatePath("/admin/rag");
+    return { status: "success", message: "Document removed from RAG." };
+  } catch (error) {
+    if (isAdminDocumentError(error)) {
+      return { status: "error", message: error.message };
+    }
+    logServerError({
+      label: "[admin-files] RAG demotion failed",
+      error,
+      metadata: { profileId: profile.id, fileId },
+    });
+    return { status: "error", message: "Document could not be removed from RAG." };
   }
 }
 

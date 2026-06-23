@@ -54,6 +54,7 @@ async function insertAgentRun({
   model,
   retrievedSources,
   latencyMs,
+  sessionId,
 }: {
   brandId: string;
   agentId: string;
@@ -64,6 +65,7 @@ async function insertAgentRun({
   model: string;
   retrievedSources: unknown[];
   latencyMs: number;
+  sessionId?: string | null;
 }) {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -79,6 +81,7 @@ async function insertAgentRun({
       retrieved_sources: retrievedSources,
       cost: null,
       latency_ms: latencyMs,
+      ...(sessionId ? { session_id: sessionId } : {}),
     })
     .select("id")
     .single();
@@ -136,6 +139,7 @@ export async function finalizeBrandBrainRun({
   usage,
   reservation,
   latencyMs,
+  sessionId,
 }: {
   profile: UserProfile;
   brandId: string;
@@ -148,6 +152,7 @@ export async function finalizeBrandBrainRun({
   usage: { promptTokens: number; completionTokens: number; costCents: number };
   reservation: UsageReservation;
   latencyMs: number;
+  sessionId?: string | null;
 }): Promise<string> {
   const usageId = await recordRunUsage({
     reservation,
@@ -168,6 +173,7 @@ export async function finalizeBrandBrainRun({
     model,
     retrievedSources,
     latencyMs,
+    sessionId,
   });
 
   await attachRunUsage({ runId, usageIds: [usageId] });

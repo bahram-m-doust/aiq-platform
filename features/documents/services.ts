@@ -159,7 +159,7 @@ export async function uploadBrandDocumentFromFormData({
       uploaded_by: profileId,
     })
     .select(
-      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at",
+      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at, approved_at",
     )
     .single();
 
@@ -186,7 +186,9 @@ export async function uploadBrandDocumentFromFormData({
     status,
     uploadedBy: data.uploaded_by,
     uploadedByEmail: null,
+    uploaderLabel: null,
     createdAt: data.created_at,
+    approvedAt: null,
   } satisfies BrandDocumentRecord;
 
   await processPendingStorageCleanups(undefined, 3);
@@ -295,15 +297,18 @@ export async function reviewSpecialistDocument({
 
   const nextStatus =
     decision === "APPROVE" ? "OWNER_APPROVED" : "OWNER_REJECTED";
+  const approvedAt = decision === "APPROVE" ? new Date().toISOString() : null;
   const admin = createAdminClient();
+  const updatePayload: Record<string, unknown> = { status: nextStatus };
+  if (approvedAt) updatePayload.approved_at = approvedAt;
   const { data, error } = await admin
     .from("files")
-    .update({ status: nextStatus })
+    .update(updatePayload)
     .eq("id", file.id)
     .eq("brand_id", access.brandId)
     .eq("status", "PENDING_OWNER_APPROVAL")
     .select(
-      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at",
+      "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at, approved_at",
     )
     .maybeSingle();
 
@@ -318,6 +323,7 @@ export async function reviewSpecialistDocument({
   const reviewedFile = {
     ...file,
     status: nextStatus,
+    approvedAt: approvedAt ?? file.approvedAt,
   } satisfies BrandDocumentRecord;
 
   await insertFileAuditLog({

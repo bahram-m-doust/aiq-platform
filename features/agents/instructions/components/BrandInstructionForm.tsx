@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { saveBrandAgentInstructionAction } from "@/features/agents/instructions/actions";
 import {
   brandInstructionMaxLength,
-  brandInstructionStarterTemplate,
+  buildBrandInstructionTemplate,
   brandWideAgentValue,
 } from "@/features/agents/instructions/schema";
 import type {
@@ -28,9 +28,11 @@ const initialState: InstructionFormState = { status: "idle", message: "" };
 
 export function BrandInstructionForm({
   brandId,
+  brandName,
   slot,
 }: {
   brandId: string;
+  brandName: string;
   slot: BrandAgentInstructionSlot;
 }) {
   const [state, action, isPending] = useActionState(
@@ -72,10 +74,18 @@ export function BrandInstructionForm({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor={fieldId}>Instruction</Label>
+              <Label htmlFor={fieldId}>Brand instruction (system prompt)</Label>
               <Button
                 className="gap-1.5"
-                onClick={() => setInstruction(brandInstructionStarterTemplate)}
+                onClick={() =>
+                  setInstruction(
+                    buildBrandInstructionTemplate({
+                      brandName,
+                      agentName: slot.agentName,
+                      agentKey: slot.agentKey,
+                    }),
+                  )
+                }
                 size="sm"
                 type="button"
                 variant="ghost"
@@ -85,12 +95,13 @@ export function BrandInstructionForm({
               </Button>
             </div>
             <Textarea
+              className="font-mono text-[13px] leading-relaxed"
               id={fieldId}
               maxLength={brandInstructionMaxLength}
               name="instruction"
               onChange={(event) => setInstruction(event.target.value)}
-              placeholder="Brand voice, persona, do's and don'ts. Leave empty to use role + safety only."
-              rows={8}
+              placeholder="Full brand instruction: role, knowledge routing, tone, prompt rules, do's and don'ts. This becomes the brand's system prompt. Leave empty to use the neutral base role + safety guard only."
+              rows={18}
               value={instruction}
             />
             <p className="text-right text-xs text-muted-foreground">

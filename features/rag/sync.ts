@@ -2,6 +2,7 @@ import "server-only";
 
 import { isPlatformOwnerProfile } from "@/features/auth/roles";
 import type { UserProfile } from "@/features/auth/types";
+import { hasBrandApiKey } from "@/features/brands/api-keys";
 import { hasEmbeddingEnv } from "@/features/rag/embeddings";
 import { syncFileToChunks } from "@/features/rag/pgvector-sync";
 import { getRagApprovedFilesForSync } from "@/features/rag/queries";
@@ -256,8 +257,14 @@ export async function syncBrandKnowledgeBase({
     ragSyncError("No RAG_APPROVED files are ready to sync for this brand.");
   }
 
-  if (!hasEmbeddingEnv()) {
-    ragSyncError("OPENROUTER_API_KEY is required for generating embeddings.");
+  // Embeddings go through getOpenRouterClientForBrand, which falls back to the
+  // brand's own key when one is configured. So a per-brand key (set in AI
+  // Studio) is sufficient even without the global OPENROUTER_API_KEY.
+  const canEmbed = hasEmbeddingEnv() || (await hasBrandApiKey(brand.id));
+  if (!canEmbed) {
+    ragSyncError(
+      "OpenRouter access is required for embeddings — set a global OPENROUTER_API_KEY or add a per-brand key in AI Studio.",
+    );
   }
 
   const initialKnowledgeBase = await getOrCreateKnowledgeBase(brand.id);

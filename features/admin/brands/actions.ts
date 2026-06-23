@@ -181,6 +181,72 @@ export async function createBrandAction(
   }
 }
 
+export async function renameBrandAction(
+  _previousState: BrandAdminActionState,
+  formData: FormData,
+): Promise<BrandAdminActionState> {
+  const { profile } = await requirePlatformOwner("/admin/brands");
+
+  const brandId = formString(formData, "brand_id");
+  const name = formString(formData, "brand_name");
+
+  if (!brandId) {
+    return errorState("Brand reference is missing.");
+  }
+  if (!name) {
+    return errorState("Enter the brand name.");
+  }
+  if (name.length > 120) {
+    return errorState("Brand name must be 120 characters or fewer.");
+  }
+
+  const admin = createAdminClient();
+
+  try {
+    const { data: brandData, error: brandError } = await admin
+      .from("brands")
+      .select("id, name")
+      .eq("id", brandId)
+      .maybeSingle();
+    if (brandError) throw brandError;
+
+    const brand = brandData as { id: string; name: string } | null;
+    if (!brand) {
+      return errorState("Brand could not be found.");
+    }
+    if (brand.name === name) {
+      return successState("Brand name is unchanged.");
+    }
+
+    const { error: updateError } = await admin
+      .from("brands")
+      .update({ name })
+      .eq("id", brandId);
+    if (updateError) throw updateError;
+
+    await logAudit({
+      actorUserId: profile.id,
+      actorRole: profile.global_role,
+      brandId,
+      action: "brand_renamed",
+      entityType: "brand",
+      entityId: brandId,
+      before: { name: brand.name },
+      after: { name },
+    });
+
+    revalidatePath("/admin/brands");
+    return successState(`Brand renamed to "${name}".`);
+  } catch (error) {
+    logServerError({
+      label: "[admin-brands] rename failed",
+      error,
+      metadata: { brandId, actor: profile.id },
+    });
+    return errorState("Brand could not be renamed.");
+  }
+}
+
 export async function changeBrandMemberRoleAction(
   _previousState: BrandAdminActionState,
   formData: FormData,

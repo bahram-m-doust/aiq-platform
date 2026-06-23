@@ -74,6 +74,9 @@ export async function POST(request: Request) {
 
   const prompt = validation.prompt;
   const history = normalizeBrandBrainHistory(payload.history);
+  const sessionId = typeof payload.sessionId === "string" && payload.sessionId.length > 0
+    ? payload.sessionId
+    : null;
 
   // Gate, budget-check, and retrieve before opening the stream so access errors
   // surface as a normal HTTP status the client can show inline.
@@ -179,6 +182,7 @@ export async function POST(request: Request) {
           },
           reservation: plan.reservation,
           latencyMs: Math.max(0, Date.now() - plan.startedAt),
+          sessionId,
         });
 
         controller.enqueue(

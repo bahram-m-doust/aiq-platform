@@ -6,8 +6,8 @@ import {
   ArchiveRestoreIcon,
   BrainIcon,
   DownloadIcon,
-  KeyIcon,
   TrashIcon,
+  Undo2Icon,
 } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -35,24 +35,23 @@ import { SubmitButton } from "@/features/auth/components/SubmitButton";
 import {
   adminArchiveDocumentAction,
   adminDeleteDocumentAction,
+  adminDemoteDocumentFromRagAction,
   adminDownloadDocumentAction,
   adminPromoteDocumentToRagAction,
   adminUnarchiveDocumentAction,
   adminUploadDocumentAction,
 } from "@/features/documents/admin-actions";
-import {
-  adminDeleteBrandApiKeyAction,
-  adminSetBrandApiKeyAction,
-} from "@/features/brands/api-key-actions";
-import { initialApiKeyFormState } from "@/features/brands/api-key-form-state";
 import type { AdminBrandOption } from "@/features/documents/admin-queries";
 import {
   initialAdminDocumentReviewState,
   initialAdminDocumentUploadState,
 } from "@/features/documents/admin-types";
-import { documentStatusLabels, documentVisibilityLabels } from "@/features/documents/schema";
+import {
+  adminUploadVisibilities,
+  documentStatusLabels,
+  documentVisibilityLabels,
+} from "@/features/documents/schema";
 import type { BrandDocumentRecord, DocumentStatus } from "@/features/documents/types";
-import { documentVisibilities } from "@/features/documents/types";
 
 function formatSize(bytes: number | null) {
   if (!bytes) return "—";
@@ -165,12 +164,12 @@ function UploadForm({ brandId }: { brandId: string }) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="admin_upload_visibility">Visibility</Label>
-          <Select defaultValue="OWNER_ONLY" name="visibility">
+          <Select defaultValue="HELIO_INTERNAL" name="visibility">
             <SelectTrigger id="admin_upload_visibility">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {documentVisibilities.map((visibility) => (
+              {adminUploadVisibilities.map((visibility) => (
                 <SelectItem key={visibility} value={visibility}>
                   {documentVisibilityLabels[visibility]}
                 </SelectItem>
@@ -179,6 +178,18 @@ function UploadForm({ brandId }: { brandId: string }) {
           </Select>
         </div>
         <SubmitButton idleLabel="Upload" pendingLabel="Uploading" />
+      </div>
+      <div className="flex items-center gap-2 text-sm">
+        <input
+          className="size-4 cursor-pointer"
+          id="admin_send_to_rag"
+          name="send_to_rag"
+          type="checkbox"
+          value="true"
+        />
+        <label className="cursor-pointer text-muted-foreground" htmlFor="admin_send_to_rag">
+          Promote to RAG after upload (removes previous questionnaire versions)
+        </label>
       </div>
     </form>
   );
@@ -331,10 +342,51 @@ function PromoteToRagButton({ file }: { file: BrandDocumentRecord }) {
   );
 }
 
+function DemoteFromRagButton({ file }: { file: BrandDocumentRecord }) {
+  const { open, handleOpenChange, errorMessage, isPending, confirm } =
+    useConfirmAction({
+      action: adminDemoteDocumentFromRagAction,
+      initialState: initialAdminDocumentReviewState,
+      buildFormData: () => {
+        const fd = new FormData();
+        fd.append("file_id", file.id);
+        return fd;
+      },
+    });
+
+  return (
+    <ConfirmDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      trigger={
+        <Button
+          aria-label="Remove from RAG"
+          size="icon-sm"
+          title="Remove from RAG"
+          type="button"
+          variant="ghost"
+        >
+          <Undo2Icon className="size-4 text-amber-600" />
+        </Button>
+      }
+      title="Remove this document from RAG?"
+      description={`This will remove "${file.originalName}" from the Knowledge Brain. You can promote it again later.`}
+      errorMessage={errorMessage}
+      isPending={isPending}
+      onConfirm={confirm}
+      confirmLabel="Remove from RAG"
+      pendingLabel="Removing..."
+    />
+  );
+}
+
 function FileRowActions({ file }: { file: BrandDocumentRecord }) {
   return (
     <div className="flex items-center justify-end gap-1">
       <DownloadButton fileId={file.id} />
+      {file.status === "RAG_APPROVED" ? (
+        <DemoteFromRagButton file={file} />
+      ) : null}
       {ragPromotableStatuses.has(file.status) ? (
         <PromoteToRagButton file={file} />
       ) : null}
@@ -389,11 +441,9 @@ function FilesTable({ files }: { files: BrandDocumentRecord[] }) {
             >
               <td className="truncate px-3 py-2 font-medium" title={file.originalName}>
                 {file.originalName}
-                {file.uploadedByEmail ? (
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {file.uploadedByEmail}
-                  </span>
-                ) : null}
+                <span className="block truncate text-xs text-muted-foreground">
+                  by {file.uploaderLabel ?? "Bextudio"}
+                </span>
               </td>
               <td className="px-3 py-2 text-xs">
                 {documentVisibilityLabels[file.visibility]}
@@ -416,78 +466,14 @@ function FilesTable({ files }: { files: BrandDocumentRecord[] }) {
   );
 }
 
-function ApiKeyPanel({ brandId, hasApiKey }: { brandId: string; hasApiKey: boolean }) {
-  const [setState, setAction] = useActionState(
-    adminSetBrandApiKeyAction,
-    initialApiKeyFormState,
-  );
-  const [deleteState, deleteAction] = useActionState(
-    adminDeleteBrandApiKeyAction,
-    initialApiKeyFormState,
-  );
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm">
-        <KeyIcon className="size-4" />
-        <span className={hasApiKey ? "text-emerald-600 font-medium" : "text-muted-foreground"}>
-          {hasApiKey ? "Brand-specific key active" : "Using global key"}
-        </span>
-      </div>
-
-      {setState.status === "error" ? (
-        <Alert variant="destructive">
-          <AlertDescription>{setState.message}</AlertDescription>
-        </Alert>
-      ) : null}
-      {setState.status === "success" ? (
-        <Alert>
-          <AlertDescription>{setState.message}</AlertDescription>
-        </Alert>
-      ) : null}
-      {deleteState.status === "success" ? (
-        <Alert>
-          <AlertDescription>{deleteState.message}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <form action={setAction} className="flex items-end gap-3">
-        <input name="brand_id" type="hidden" value={brandId} />
-        <div className="flex-1 space-y-2">
-          <Label htmlFor="brand_api_key">OpenRouter API Key</Label>
-          <Input
-            id="brand_api_key"
-            name="api_key"
-            placeholder="sk-or-v1-..."
-            type="password"
-            required
-          />
-        </div>
-        <SubmitButton idleLabel="Save key" pendingLabel="Saving..." />
-      </form>
-
-      {hasApiKey ? (
-        <form action={deleteAction} className="inline-flex">
-          <input name="brand_id" type="hidden" value={brandId} />
-          <Button size="sm" type="submit" variant="outline">
-            Remove brand key
-          </Button>
-        </form>
-      ) : null}
-    </div>
-  );
-}
-
 export function AdminDocumentsConsole({
   brands,
   selectedBrandId,
   files,
-  hasApiKey = false,
 }: {
   brands: AdminBrandOption[];
   selectedBrandId: string | null;
   files: BrandDocumentRecord[];
-  hasApiKey?: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -505,18 +491,6 @@ export function AdminDocumentsConsole({
 
       {selectedBrandId ? (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle>OpenRouter API Key</CardTitle>
-              <CardDescription>
-                Set a brand-specific OpenRouter key for cost tracking, or use the global key.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ApiKeyPanel brandId={selectedBrandId} hasApiKey={hasApiKey} />
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Upload document</CardTitle>

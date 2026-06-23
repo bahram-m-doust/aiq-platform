@@ -1,3 +1,4 @@
+import type { BrainBuildSchedule } from "@/features/admin/brain-build/types";
 import type { PaginationState } from "@/lib/pagination";
 
 // Brand membership roles, ordered from least to most senior. Promote walks up
@@ -62,6 +63,7 @@ export type AdminBrandSummary = {
   memberCount: number;
   ownerCount: number;
   members: AdminBrandMember[];
+  brainBuild: BrainBuildSchedule | null;
 };
 
 export type AdminBrandsPage = {

@@ -80,6 +80,13 @@ describe("health status", () => {
         env: "ok",
         supabase: "ok",
       },
+      envDetail: {
+        NEXT_PUBLIC_SUPABASE: true,
+        SUPABASE_SERVICE_ROLE_KEY: true,
+        KEY_ENCRYPTION_KEY: true,
+        APP_BASE_URL: true,
+        ADMIN_BASE_URL: true,
+      },
     });
     expect(client.from).toHaveBeenCalledWith("plans");
     expect(client.builder.select).toHaveBeenCalledWith("id");

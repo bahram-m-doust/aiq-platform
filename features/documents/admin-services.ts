@@ -48,10 +48,11 @@ type FileRow = {
   status: string;
   uploaded_by: string | null;
   created_at: string | null;
+  approved_at: string | null;
 };
 
 const fileColumns =
-  "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at";
+  "id, brand_id, storage_path, original_name, mime_type, size_bytes, visibility, status, uploaded_by, created_at, approved_at";
 
 function readUploadFile(formData: FormData): File | null {
   const value = formData.get("file");
@@ -67,14 +68,20 @@ function readVisibility(formData: FormData): DocumentVisibility {
     : "OWNER_ONLY";
 }
 
+function isQuestionnaireFile(fileName: string): boolean {
+  return fileName.toLowerCase().includes("questionnaire");
+}
+
 export async function adminUploadDocumentForBrand({
   brandId,
   formData,
   actor,
+  sendToRag = false,
 }: {
   brandId: string;
   formData: FormData;
   actor: UserProfile;
+  sendToRag?: boolean;
 }): Promise<BrandDocumentRecord> {
   const file = readUploadFile(formData);
   if (!file) adminFileError("Choose a document to upload.");
@@ -146,6 +153,36 @@ export async function adminUploadDocumentForBrand({
     entityId: record.id,
     after: { file: toDocumentAuditMetadata(record) },
   });
+
+  // Dedup: if this is a questionnaire file, delete all previous questionnaire files for this brand
+  if (isQuestionnaireFile(file.name)) {
+    const admin2 = createAdminClient();
+    const { data: oldFiles } = await admin2
+      .from("files")
+      .select("id")
+      .eq("brand_id", brandId)
+      .ilike("original_name", "%questionnaire%")
+      .neq("id", record.id);
+
+    if (oldFiles && oldFiles.length > 0) {
+      for (const oldFile of oldFiles) {
+        await admin2.rpc("delete_file_and_queue_storage_cleanup", {
+          p_file_id: oldFile.id,
+          p_reason: "QUESTIONNAIRE_DEDUP",
+        });
+      }
+      await processPendingStorageCleanups(undefined, 5);
+    }
+  }
+
+  // Auto-promote to RAG if requested
+  if (sendToRag && record.status !== "ARCHIVED") {
+    const admin3 = createAdminClient();
+    await admin3.rpc("promote_document_to_rag", {
+      p_file_id: record.id,
+      p_actor_id: actor.id,
+    });
+  }
 
   return record;
 }
@@ -326,6 +363,45 @@ export async function adminPromoteDocumentToRag({
     actorRole: actor.global_role,
     brandId: after.brandId,
     action: "admin_file_rag_promoted",
+    entityType: "file",
+    entityId: after.id,
+    before: { file: toDocumentAuditMetadata(before) },
+    after: { file: toDocumentAuditMetadata(after) },
+  });
+
+  return after;
+}
+
+export async function adminDemoteDocumentFromRag({
+  fileId,
+  actor,
+}: {
+  fileId: string;
+  actor: UserProfile;
+}): Promise<BrandDocumentRecord> {
+  const before = await getFileById(fileId);
+  if (!before) adminFileError("Document could not be found.");
+
+  if (before.status !== "RAG_APPROVED") {
+    return before;
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("demote_document_from_rag", {
+    p_file_id: fileId,
+    p_actor_id: actor.id,
+  });
+  if (error) throw error;
+
+  const row = (data as FileRow[] | null)?.[0];
+  if (!row) adminFileError("Document demotion returned no result.");
+  const after = toBrandDocumentRecord({ row });
+
+  await logAudit({
+    actorUserId: actor.id,
+    actorRole: actor.global_role,
+    brandId: after.brandId,
+    action: "admin_file_rag_demoted",
     entityType: "file",
     entityId: after.id,
     before: { file: toDocumentAuditMetadata(before) },

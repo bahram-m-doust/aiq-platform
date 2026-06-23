@@ -7,9 +7,11 @@ export type TextModelId =
 
 export type ImageModelId =
   | "google/gemini-2.5-flash-image"
-  | "openai/gpt-image-1"
+  | "google/gemini-3.1-flash-image"
+  | "google/gemini-3-pro-image"
   | "openai/gpt-5.4-image-2"
-  | "bytedance/seedream-4.0";
+  | "black-forest-labs/flux-schnell"
+  | "black-forest-labs/flux-1.1-pro";
 
 export type ModelOption<TId extends string> = {
   id: TId;
@@ -47,17 +49,26 @@ export const TEXT_MODELS: readonly ModelOption<TextModelId>[] = [
   },
 ] as const;
 
+// All image models below generate via OpenRouter's /chat/completions endpoint
+// with modalities. IDs are the OpenRouter slugs — keep them in sync with
+// https://openrouter.ai/collections/image-models so the selector never offers
+// an invalid id (an unknown id returns a 400 from OpenRouter).
 export const IMAGE_MODELS: readonly ModelOption<ImageModelId>[] = [
   {
     id: "google/gemini-2.5-flash-image",
-    name: "Nano Banana 2",
-    blurb: "Google's fast image model — versatile default.",
+    name: "Nano Banana (Gemini 2.5 Flash Image)",
+    blurb: "Google's fast image model — cost-effective, versatile default.",
     isDefault: true,
   },
   {
-    id: "openai/gpt-image-1",
-    name: "GPT Image",
-    blurb: "OpenAI's image model — precise prompt adherence.",
+    id: "google/gemini-3.1-flash-image",
+    name: "Nano Banana 2 (Gemini 3.1 Flash Image)",
+    blurb: "Latest Flash image model — Pro-level quality at Flash speed.",
+  },
+  {
+    id: "google/gemini-3-pro-image",
+    name: "Nano Banana Pro (Gemini 3 Pro Image)",
+    blurb: "Google's most advanced image generation and editing model.",
   },
   {
     id: "openai/gpt-5.4-image-2",
@@ -66,15 +77,19 @@ export const IMAGE_MODELS: readonly ModelOption<ImageModelId>[] = [
       "OpenAI's latest — GPT-5.4 reasoning + GPT Image 2 rendering. Strongest text rendering and edits.",
   },
   {
-    id: "bytedance/seedream-4.0",
-    name: "Seedream 4.0",
-    blurb: "ByteDance's flagship — strong aesthetics.",
+    id: "black-forest-labs/flux-schnell",
+    name: "FLUX Schnell",
+    blurb: "Ultra-fast, ultra-cheap. Great for quick iterations.",
+  },
+  {
+    id: "black-forest-labs/flux-1.1-pro",
+    name: "FLUX 1.1 Pro",
+    blurb: "Black Forest Labs' flagship — high detail, photorealistic quality.",
   },
 ] as const;
 
 export const DEFAULT_TEXT_MODEL: TextModelId = "openai/gpt-4o-mini";
-export const DEFAULT_IMAGE_MODEL: ImageModelId =
-  "google/gemini-2.5-flash-image";
+export const DEFAULT_IMAGE_MODEL: ImageModelId = "google/gemini-2.5-flash-image";
 
 // Prices in cents per 1M tokens (text) or cents per image (image).
 // These approximate published OpenRouter prices as of 2026-01.
@@ -91,13 +106,15 @@ const TEXT_PRICES: Record<TextModelId, TextPrice> = {
 };
 
 const IMAGE_PRICES: Record<ImageModelId, ImagePrice> = {
-  "google/gemini-2.5-flash-image": { perImage: 3 },   // ~$0.03
-  "openai/gpt-image-1":            { perImage: 17 },  // ~$0.17 (high quality 1024x1024)
+  "google/gemini-2.5-flash-image":    { perImage: 3 },   // ~$0.03
+  "google/gemini-3.1-flash-image":    { perImage: 5 },   // ~$0.05 estimate
+  "google/gemini-3-pro-image":        { perImage: 12 },  // ~$0.12 estimate
   // gpt-5.4-image-2 is token-priced on OpenRouter ($8/M in, $15/M out) rather
   // than per-image, so this is a coarse per-image estimate for the usage
   // ledger. Refine once a real run logs actual token counts.
-  "openai/gpt-5.4-image-2":        { perImage: 20 },  // ~$0.20 estimate
-  "bytedance/seedream-4.0":        { perImage: 6 },   // ~$0.06
+  "openai/gpt-5.4-image-2":          { perImage: 20 },  // ~$0.20 estimate
+  "black-forest-labs/flux-schnell":   { perImage: 1 },   // ~$0.003–$0.01
+  "black-forest-labs/flux-1.1-pro":  { perImage: 4 },   // ~$0.04 estimate
 };
 
 export function computeTextCostCents({

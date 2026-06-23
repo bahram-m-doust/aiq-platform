@@ -34,6 +34,7 @@ import type {
   IntakeSession,
 } from "@/features/questionnaire/types";
 import { createIntakeKnowledgeFile } from "@/features/questionnaire/intake-knowledge";
+import { createNotification } from "@/features/notifications/mutation-service";
 import { loadUserProfileByAuthUserId } from "@/features/auth/profile";
 import { logAudit } from "@/lib/audit/logAudit";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
@@ -1005,6 +1006,19 @@ export async function finalSubmitIntake({
       notification,
     }),
   });
+
+  // Notify internal admin so they can begin Phase 2 strategy work.
+  createNotification({
+    brandId: session.brandId,
+    audience: "ADMIN",
+    type: "INTAKE_SUBMITTED",
+    title: "Questionnaire submitted",
+    body: "A brand has locked their questionnaire. Phase 01 is complete — ready to begin strategy.",
+    linkPath: "/admin/submissions",
+    subjectType: "intake_session",
+    subjectId: session.id,
+    actorId: profileId,
+  }).catch(() => {});
 
   try {
     await createIntakeKnowledgeFile({

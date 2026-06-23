@@ -2,6 +2,8 @@
 
 import { requireUserProfile } from "@/features/auth/queries";
 import { isLLMBrainConfigError } from "@/features/agents/brain/llm";
+import { getBrainSessionConversation } from "@/features/agents/brain/queries";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   isBrandBrainImageServiceError,
   runBrandBrainImage,
@@ -29,6 +31,49 @@ import { ROUTES } from "@/lib/routes";
 
 function errorState(message: string): BrandBrainChatFormState {
   return { status: "error", message };
+}
+
+// Delete all agent_runs that belong to a chat session. When isSession is false
+// the id is a single run id (legacy run before session support was added).
+export async function deleteBrainSessionAction(
+  id: string,
+  isSession: boolean,
+): Promise<{ error?: string }> {
+  try {
+    const { profile } = await requireUserProfile(ROUTES.brain);
+    const admin = createAdminClient();
+
+    const query = admin
+      .from("agent_runs")
+      .delete()
+      .eq("user_id", profile.id);
+
+    const { error } = isSession
+      ? await query.eq("session_id", id)
+      : await query.eq("id", id);
+
+    if (error) throw error;
+    return {};
+  } catch {
+    return { error: "Could not delete this chat session." };
+  }
+}
+
+export async function loadBrainSessionAction(
+  sessionId: string,
+  isSession: boolean,
+): Promise<{ messages?: import("@/features/agents/brain/types").BrandBrainConversationMessage[]; error?: string }> {
+  try {
+    const { profile } = await requireUserProfile(ROUTES.brain);
+    const messages = await getBrainSessionConversation({
+      sessionId,
+      userId: profile.id,
+      isSession,
+    });
+    return { messages };
+  } catch {
+    return { error: "Could not load this session." };
+  }
 }
 
 export async function askBrandBrainAction(
@@ -94,6 +139,7 @@ export async function askBrandBrainAction(
 // returns the generated images in one shot — image generation does not stream.
 export async function generateBrandBrainImageAction(
   prompt: string,
+  imageModel?: string,
 ): Promise<BrandBrainImageState> {
   const { profile } = await requireUserProfile(ROUTES.brain);
   const validation = validateBrandBrainPrompt(prompt);
@@ -121,6 +167,7 @@ export async function generateBrandBrainImageAction(
     const result = await runBrandBrainImage({
       profile,
       prompt: validation.prompt,
+      imageModel,
     });
 
     return {
@@ -145,9 +192,14 @@ export async function generateBrandBrainImageAction(
       metadata: { profileId: profile.id },
     });
 
+    // Surface the upstream API error message when available (e.g. OpenRouter
+    // model not found, quota exceeded, invalid parameters) so users and
+    // developers can diagnose failures without digging into server logs.
+    const upstream =
+      error instanceof Error && error.message ? `: ${error.message}` : "";
     return {
       status: "error",
-      message: "Brand Brain could not generate an image.",
+      message: `Brand Brain could not generate an image${upstream}`,
     };
   }
 }

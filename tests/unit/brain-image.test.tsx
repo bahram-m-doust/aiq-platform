@@ -7,7 +7,7 @@ vi.mock("@/features/agents/brain/llm", () => ({
   retrieveBrandBrainContext: vi.fn(),
 }));
 vi.mock("@/features/agents/instructions/queries", () => ({
-  getBrandAgentInstruction: vi.fn(),
+  getLayeredBrandInstruction: vi.fn(),
 }));
 vi.mock("@/features/agents/runs/llm", () => ({
   rewritePromptForImage: vi.fn(),
@@ -49,11 +49,14 @@ vi.mock("@/lib/audit/logAudit", () => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(),
 }));
+vi.mock("@/features/admin/brand-icons/storage", () => ({
+  brandIconPublicUrl: vi.fn(() => null),
+}));
 
 import { runBrandBrainImage } from "@/features/agents/brain/image";
 import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
 import { retrieveBrandBrainContext } from "@/features/agents/brain/llm";
-import { getBrandAgentInstruction } from "@/features/agents/instructions/queries";
+import { getLayeredBrandInstruction } from "@/features/agents/instructions/queries";
 import { rewritePromptForImage } from "@/features/agents/runs/llm";
 import { getBrandModelDefaults } from "@/features/agents/runs/services";
 import {
@@ -67,7 +70,7 @@ import type { UserProfile } from "@/features/auth/types";
 
 const mockedWorkspace = vi.mocked(getBrandBrainWorkspace);
 const mockedRetrieve = vi.mocked(retrieveBrandBrainContext);
-const mockedInstruction = vi.mocked(getBrandAgentInstruction);
+const mockedInstruction = vi.mocked(getLayeredBrandInstruction);
 const mockedRewrite = vi.mocked(rewritePromptForImage);
 const mockedDefaults = vi.mocked(getBrandModelDefaults);
 const mockedGenerate = vi.mocked(generateImage);
@@ -122,7 +125,7 @@ describe("runBrandBrainImage", () => {
     mockedInstruction.mockResolvedValue("Use a teal palette.");
     mockedDefaults.mockResolvedValue({
       text: "openai/gpt-4o-mini",
-      image: "openai/gpt-image-1",
+      image: "google/gemini-2.5-flash-image",
     } as never);
     mockedRewrite.mockResolvedValue({
       optimizedPrompt: "Teal hero banner, minimal",
@@ -135,7 +138,7 @@ describe("runBrandBrainImage", () => {
     } as never);
     mockedGenerate.mockResolvedValue({
       b64Images: ["AAAA"],
-      usage: { imageCount: 1, costCents: 4, model: "openai/gpt-image-1" },
+      usage: { imageCount: 1, costCents: 4, model: "google/gemini-2.5-flash-image" },
     } as never);
 
     const agentRunsBuilder = {
@@ -152,9 +155,18 @@ describe("runBrandBrainImage", () => {
         Promise.resolve({ data: { id: "img-agent" }, error: null }),
       ),
     };
-    const from = vi.fn((table: string) =>
-      table === "agents" ? agentsBuilder : agentRunsBuilder,
-    );
+    const brandsBuilder = {
+      select: vi.fn(() => brandsBuilder),
+      eq: vi.fn(() => brandsBuilder),
+      maybeSingle: vi.fn(() =>
+        Promise.resolve({ data: { icon_path: null }, error: null }),
+      ),
+    };
+    const from = vi.fn((table: string) => {
+      if (table === "agents") return agentsBuilder;
+      if (table === "brands") return brandsBuilder;
+      return agentRunsBuilder;
+    });
     mockedAdmin.mockReturnValue({ from } as never);
   });
 
