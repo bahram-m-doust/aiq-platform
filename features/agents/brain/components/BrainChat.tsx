@@ -613,13 +613,14 @@ export function BrainChat({
     isFirstInSession: boolean,
     shortPrompt: string,
   ) {
+    const userId = nextId();
     const assistantId = nextId();
     setError(null);
     setIsStreaming(true);
     const now = new Date().toISOString();
     setMessages((prev) => [
       ...prev,
-      { id: nextId(), role: "user", content: prompt, sources: null, createdAt: now },
+      { id: userId, role: "user", content: prompt, sources: null, createdAt: now },
       { id: assistantId, role: "assistant", content: "", sources: null, createdAt: now },
     ]);
 
@@ -653,13 +654,14 @@ export function BrainChat({
   }
 
   async function sendImage(prompt: string) {
+    const userId = nextId();
     const assistantId = nextId();
     setError(null);
     setIsImagePending(true);
     const now = new Date().toISOString();
     setMessages((prev) => [
       ...prev,
-      { id: nextId(), role: "user", content: prompt, sources: null, createdAt: now },
+      { id: userId, role: "user", content: prompt, sources: null, createdAt: now },
       {
         id: assistantId,
         role: "assistant",
