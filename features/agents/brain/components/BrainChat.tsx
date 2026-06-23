@@ -507,7 +507,22 @@ export function BrainChat({
           messages?: ChatMessage[];
         };
         if (parsed.messages && parsed.messages.length > 0) {
-          setMessages(parsed.messages);
+          // Deduplicate: old buggy code could write duplicate live-N IDs.
+          const seen = new Set<string>();
+          const unique = parsed.messages.filter((m) => {
+            if (seen.has(m.id)) return false;
+            seen.add(m.id);
+            return true;
+          });
+          // Bump idRef past the highest live-N so new sends don't collide.
+          let maxN = 0;
+          for (const m of unique) {
+            const match = /^live-(\d+)$/.exec(m.id);
+            if (match) maxN = Math.max(maxN, parseInt(match[1], 10));
+          }
+          if (maxN > 0) idRef.current = maxN;
+
+          setMessages(unique);
           if (parsed.sessionId) sessionIdRef.current = parsed.sessionId;
         }
       } else {
