@@ -7,6 +7,7 @@ import {
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { ROADMAP_PHASE_LABELS } from "@/features/app/roadmap-phase-labels";
 import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalSubmitReadiness";
 import { ProgressSidePanel } from "@/features/questionnaire/components/ProgressSidePanel";
 import { QuestionnaireProgressSummary } from "@/features/questionnaire/components/QuestionnaireProgressSummary";
@@ -124,7 +125,7 @@ export function QuestionnaireLanding({
           {/* Page header */}
           <div className="mb-9">
             <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
-              Brand Research · Phase 01
+              {ROADMAP_PHASE_LABELS.questionnaires}
             </span>
             <h1 className="mt-1.5 text-2xl font-semibold tracking-[-0.02em]">
               Questionnaires
@@ -234,17 +235,16 @@ export function QuestionnaireLanding({
         </div>
 
         {/* Collapsible side panel */}
-        {!locked && (
-          <ProgressSidePanel
-            completionPercent={completion.completionPercent}
-            sections={sectionSummaries}
-            sessionId={session.id}
-            showReview={showSubmitReview}
-            showReadyReviewAction={false}
-            totalCompleted={completion.answeredQuestions}
-            totalQuestions={completion.totalQuestions}
-          />
-        )}
+        <ProgressSidePanel
+          completionPercent={completion.completionPercent}
+          defaultOpen={!locked}
+          sections={sectionSummaries}
+          sessionId={session.id}
+          showReview={showSubmitReview}
+          showReadyReviewAction={false}
+          totalCompleted={completion.answeredQuestions}
+          totalQuestions={completion.totalQuestions}
+        />
       </div>
     </div>
   );

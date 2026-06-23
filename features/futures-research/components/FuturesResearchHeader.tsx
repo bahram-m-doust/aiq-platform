@@ -1,11 +1,12 @@
+import { ROADMAP_PHASE_LABELS } from "@/features/app/roadmap-phase-labels";
 import { DeliverableStatusBadge } from "@/features/review-deliverables/components/DeliverableStatusBadge";
 
 export function FuturesResearchHeader({ status }: { status: string }) {
   return (
     <div className="flex flex-col gap-[9px]">
       <div className="flex items-center gap-4">
-        <span className="text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
-          Brand Research · Step 03
+        <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
+          {ROADMAP_PHASE_LABELS.futuresResearch}
         </span>
         <DeliverableStatusBadge status={status} />
       </div>

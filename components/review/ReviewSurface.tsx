@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 
 import {
   ReviewableDocumentViewer,
@@ -36,7 +36,15 @@ export function ReviewSurface({
   subjectId,
   title,
   eyebrow,
+  eyebrowVariant = "default",
   description,
+  introCard,
+  contentCardClassName,
+  contentCardStyle,
+  contentFrameClassName,
+  emptyCommentsState,
+  enablePdfSearch = false,
+  showSelectionHint = true,
   statusBadge,
   markdown,
   comments,
@@ -47,12 +55,21 @@ export function ReviewSurface({
   contextBrandId,
   decision,
   emptyState,
+  showHeaderDownload = true,
 }: {
   subjectType: ReviewSubjectType;
   subjectId: string;
   title: string;
   eyebrow?: string | null;
+  eyebrowVariant?: "default" | "roadmap";
   description?: string | null;
+  introCard?: ReactNode;
+  contentCardClassName?: string;
+  contentCardStyle?: CSSProperties;
+  contentFrameClassName?: string;
+  emptyCommentsState?: ReactNode;
+  enablePdfSearch?: boolean;
+  showSelectionHint?: boolean;
   statusBadge?: ReactNode;
   markdown: string | null;
   comments: ReviewComment[];
@@ -64,6 +81,7 @@ export function ReviewSurface({
   contextBrandId?: string;
   decision?: ReviewDecision | null;
   emptyState: ReactNode;
+  showHeaderDownload?: boolean;
 }) {
   const blocks = useMemo(
     () => (markdown ? splitMarkdownIntoBlocks(markdown) : []),
@@ -86,8 +104,17 @@ export function ReviewSurface({
       description={description}
       downloadUrl={signedUrl ?? inlineUrl}
       eyebrow={eyebrow}
+      eyebrowVariant={eyebrowVariant}
       fileUrl={inlineUrl}
+      contentCardClassName={contentCardClassName}
+      contentCardStyle={contentCardStyle}
+      contentFrameClassName={contentFrameClassName}
+      emptyCommentsState={emptyCommentsState}
+      enablePdfSearch={enablePdfSearch}
+      introCard={introCard}
       initialComments={comments}
+      showSelectionHint={showSelectionHint}
+      showHeaderDownload={showHeaderDownload}
       statusBadge={statusBadge}
       subjectId={subjectId}
       subjectType={subjectType}

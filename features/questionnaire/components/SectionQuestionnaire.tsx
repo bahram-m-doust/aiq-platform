@@ -9,14 +9,8 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import {
-  ArrowLeftIcon,
-  CircleCheckIcon,
-  DownloadIcon,
-  LockIcon,
-} from "lucide-react";
+import { ArrowLeftIcon, CircleCheckIcon } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Pagination,
@@ -36,7 +30,6 @@ import {
 } from "@/features/questionnaire/schemas";
 import { QuestionRenderer } from "@/features/questionnaire/components/QuestionRenderer";
 import { ProgressSidePanel } from "@/features/questionnaire/components/ProgressSidePanel";
-import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import { useIntakeAutosaveQueue } from "@/features/questionnaire/components/useIntakeAutosaveQueue";
 import type {
   IntakeAnswerMap,
@@ -63,7 +56,6 @@ export function SectionQuestionnaire({
   session,
   answers: initialAnswers,
   allSections,
-  latestSnapshotId = null,
   autoValidate = false,
   markedDoneQuestionIds = null,
 }: {
@@ -73,7 +65,6 @@ export function SectionQuestionnaire({
   completion: IntakeCompletion;
   brandName: string;
   allSections: IntakeSectionWithQuestions[];
-  latestSnapshotId?: string | null;
   autoValidate?: boolean;
   // Question ids the user has explicitly "Save & mark done"-ed. null when the
   // marked_done column isn't available — then we fall back to value-based.
@@ -322,10 +313,6 @@ export function SectionQuestionnaire({
         </div>
 
         <div className="mb-5">
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
-            Brand Research - Phase 01
-          </span>
-
           <div className="mt-1.5 flex items-baseline gap-2.5">
             <span className="shrink-0 text-2xl font-semibold tracking-[-0.02em] text-[var(--bv-ink-4)]">
               {sectionIndex}
@@ -341,31 +328,6 @@ export function SectionQuestionnaire({
             </p>
           )}
 
-          {locked && (
-            <Alert className="mt-4" variant="success">
-              <LockIcon />
-              <AlertDescription>
-                This questionnaire is submitted and locked - answers are shown
-                for reference only.
-              </AlertDescription>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <QuestionnaireChangeRequestDialog
-                  sectionKey={activeSection.key}
-                  triggerClassName="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-                />
-                {latestSnapshotId && (
-                  <a
-                    className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--bv-line)] bg-white px-3 py-1 text-[12px] font-medium text-[var(--bv-ink-2)] shadow-sm transition-all hover:border-[var(--bv-line-2)] hover:text-[var(--bv-ink)]"
-                    download
-                    href={`/api/questionnaire/${latestSnapshotId}/docx`}
-                  >
-                    <DownloadIcon className="size-3.5" />
-                    Download answers
-                  </a>
-                )}
-              </div>
-            </Alert>
-          )}
         </div>
 
         {/* Sentinel marks where the tab bar begins; when it scrolls past the

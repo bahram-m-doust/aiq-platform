@@ -1,10 +1,10 @@
 import Link from "next/link";
 
-import { Eyebrow } from "@/components/ds/Eyebrow";
 import {
   CITY_MODEL_DISTRICTS,
   cityModelDistrictPath,
 } from "@/features/app/city-model";
+import { ROADMAP_PHASE_LABELS } from "@/features/app/roadmap-phase-labels";
 
 // Pointy-top hexagon outline.
 const HEX_CLIP = "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)";
@@ -197,7 +197,9 @@ export function CityModelGrid({
         style={{ animation: "ds-fade-in 600ms var(--bv-ease)" }}
       >
         <header className="space-y-2">
-          <Eyebrow>Brand OS · City Model</Eyebrow>
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]">
+            {ROADMAP_PHASE_LABELS.cityModel}
+          </span>
           <h1 className="ds-h1">City Model</h1>
           <p className="ds-body max-w-xl">
             The brand-as-city model — districts built around a central core. Lit

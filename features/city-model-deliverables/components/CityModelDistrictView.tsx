@@ -2,6 +2,7 @@
 
 import { DeliverablePendingState } from "@/components/review/DeliverablePendingState";
 import { ReviewSurface } from "@/components/review/ReviewSurface";
+import { ROADMAP_PHASE_LABELS } from "@/features/app/roadmap-phase-labels";
 import { approveCityModelDistrictAction } from "@/features/city-model-deliverables/actions";
 import type { CityModelDistrictWorkspace } from "@/features/city-model-deliverables/types";
 import { DeliverableStatusBadge } from "@/features/review-deliverables/components/DeliverableStatusBadge";
@@ -21,10 +22,11 @@ export function CityModelDistrictView({
 
   const emptyState = (
     <main className="min-h-svh px-4 py-6 sm:px-6 sm:py-10">
-      <section className="mx-auto w-full max-w-[860px]">
+      <section className="mx-auto w-full max-w-[1057px]">
         <DeliverablePendingState
           body="The Bextudio team will upload it here for your review and approval."
-          eyebrow="City Model · District"
+          eyebrow={ROADMAP_PHASE_LABELS.cityModelDistrict}
+          eyebrowVariant="roadmap"
           headline="This district's deliverable is being prepared."
           title={district.name}
         />
@@ -44,7 +46,8 @@ export function CityModelDistrictView({
       }}
       description={district.description}
       emptyState={emptyState}
-      eyebrow="City Model · District"
+      eyebrow={ROADMAP_PHASE_LABELS.cityModelDistrict}
+      eyebrowVariant="roadmap"
       inlineUrl={signedUrl}
       markdown={markdown}
       signedUrl={downloadUrl}

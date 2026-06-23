@@ -50,6 +50,32 @@ export function PdfTextLayerViewer({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [state, setState] = useState<RenderState>("loading");
   const [error, setError] = useState<string | null>(null);
+  const [availableWidth, setAvailableWidth] = useState(0);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    const measure = () => {
+      const styles = window.getComputedStyle(host);
+      const paddingX =
+        Number.parseFloat(styles.paddingLeft || "0") +
+        Number.parseFloat(styles.paddingRight || "0");
+      const width = Math.max(320, Math.floor((host.clientWidth || 800) - paddingX));
+      setAvailableWidth((prev) => (prev === width ? prev : width));
+    };
+
+    measure();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
+    }
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +97,7 @@ export function PdfTextLayerViewer({
 
         // Fit the page to the available width (retina-crisp via devicePixelRatio),
         // measured once at render time.
-        const available = Math.max(320, host.clientWidth || 800);
+        const available = availableWidth || 800;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
         const root = document.createElement("div");
@@ -148,7 +174,7 @@ export function PdfTextLayerViewer({
         // Ignore teardown races.
       }
     };
-  }, [fileUrl, onRendered]);
+  }, [availableWidth, fileUrl, onRendered]);
 
   return (
     <div className="relative">
@@ -173,7 +199,7 @@ export function PdfTextLayerViewer({
           </a>
         </div>
       ) : null}
-      <div className="p-3 sm:p-4" ref={hostRef} />
+      <div ref={hostRef} />
     </div>
   );
 }

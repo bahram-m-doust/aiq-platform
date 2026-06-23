@@ -33,6 +33,7 @@ export function ProgressSidePanel({
   sessionId,
   showReview,
   showReadyReviewAction = true,
+  defaultOpen = true,
 }: {
   totalQuestions: number;
   totalCompleted: number;
@@ -41,8 +42,9 @@ export function ProgressSidePanel({
   sessionId: string;
   showReview: boolean;
   showReadyReviewAction?: boolean;
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(defaultOpen);
 
   const incompleteSections = sections.filter(
     (s) => s.completedQuestions < s.totalQuestions,
@@ -51,6 +53,24 @@ export function ProgressSidePanel({
 
   return (
     <>
+      {!open && (
+        <button
+          className="mx-auto mt-8 flex w-full max-w-[480px] items-center justify-between rounded-[12px] border border-[var(--bv-line)] bg-card px-4 py-3 text-left shadow-xs transition-colors hover:bg-gray-50 xl:hidden"
+          onClick={() => setOpen(true)}
+          type="button"
+        >
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--bv-ink-4)]">
+              Progress
+            </span>
+            <span className="text-[12px] font-medium text-[var(--bv-ink-2)]">
+              {totalCompleted}/{totalQuestions} completed questions
+            </span>
+          </div>
+          <PanelRightOpenIcon className="size-4 text-[var(--bv-ink-3)]" />
+        </button>
+      )}
+
       {/* Collapsed-rail toggle — only relevant on xl, where the panel docks as
           a fixed rail. Below xl the panel lives inline, so there's nothing to
           expand. */}

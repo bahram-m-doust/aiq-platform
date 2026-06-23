@@ -2,6 +2,7 @@
 
 import { DeliverablePendingState } from "@/components/review/DeliverablePendingState";
 import { ReviewSurface } from "@/components/review/ReviewSurface";
+import { ROADMAP_PHASE_LABELS } from "@/features/app/roadmap-phase-labels";
 import { approveFuturesResearchReportAction } from "@/features/futures-research/actions";
 import type { FuturesResearchWorkspace } from "@/features/futures-research/types";
 import { DeliverableStatusBadge } from "@/features/review-deliverables/components/DeliverableStatusBadge";
@@ -9,8 +10,10 @@ import { DeliverableStatusBadge } from "@/features/review-deliverables/component
 function PreparingState() {
   return (
     <div className="px-2 pt-[15px]">
-      <div className="mx-auto w-full max-w-[756px]">
+      <div className="mx-auto w-full max-w-[1057px]">
         <DeliverablePendingState
+          eyebrow={ROADMAP_PHASE_LABELS.futuresResearch}
+          eyebrowVariant="roadmap"
           body="The Bextudio team is finalising the report. You will be able to review and approve it here once it is uploaded."
           headline="Your futures research analysis is being prepared."
           title="Futures Research"
@@ -45,7 +48,8 @@ export function FuturesResearchReportView({
         onApprove: approveFuturesResearchReportAction,
       }}
       emptyState={<PreparingState />}
-      eyebrow="Brand Research · Futures Research"
+      eyebrow={ROADMAP_PHASE_LABELS.futuresResearch}
+      eyebrowVariant="roadmap"
       inlineUrl={inlineUrl}
       markdown={markdown}
       signedUrl={signedUrl}

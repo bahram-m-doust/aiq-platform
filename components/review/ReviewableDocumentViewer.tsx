@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   useCallback,
@@ -11,6 +12,8 @@ import {
   useTransition,
 } from "react";
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   CheckCircle2Icon,
   CheckIcon,
   ChevronsUpDownIcon,
@@ -20,6 +23,7 @@ import {
   MessageSquarePlusIcon,
   PencilIcon,
   ReplyIcon,
+  SearchIcon,
   RotateCcwIcon,
   Trash2Icon,
   XIcon,
@@ -34,6 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   AddReviewCommentInput,
@@ -127,6 +132,16 @@ type HighlightRect = {
 const HIGHLIGHT_FILL = "rgba(250,204,21,0.18)";
 const HIGHLIGHT_FILL_ACTIVE = "rgba(250,204,21,0.32)";
 const SELECTION_FILL = "rgba(37,99,235,0.28)";
+const SEARCH_FILL = "rgba(8,145,178,0.14)";
+const SEARCH_FILL_ACTIVE = "rgba(8,145,178,0.28)";
+
+type SearchMatch = {
+  anchorId: string;
+  end: number;
+  key: string;
+  rects: Array<{ top: number; left: number; width: number; height: number }>;
+  start: number;
+};
 
 // The line-height of the text a range sits in, so a content-box-tall client rect
 // can be grown to fill the whole line and meet the line above/below it.
@@ -232,15 +247,24 @@ export function ReviewableDocumentViewer({
   description,
   statusBadge,
   eyebrow,
+  eyebrowVariant = "default",
   blocks,
   initialComments,
   currentUserId,
   canComment,
   downloadUrl,
   fileUrl,
+  introCard,
+  contentCardClassName,
+  contentCardStyle,
+  contentFrameClassName,
+  emptyCommentsState,
+  enablePdfSearch = false,
   contextBrandId,
   decision,
   actions,
+  showSelectionHint = true,
+  showHeaderDownload = true,
 }: {
   subjectType: ReviewSubjectType;
   subjectId: string;
@@ -248,6 +272,7 @@ export function ReviewableDocumentViewer({
   description?: string | null;
   statusBadge?: ReactNode;
   eyebrow?: string | null;
+  eyebrowVariant?: "default" | "roadmap";
   blocks: MarkdownBlock[];
   initialComments: ReviewComment[];
   currentUserId: string;
@@ -259,13 +284,22 @@ export function ReviewableDocumentViewer({
   // extracted markdown to show — e.g. an image/scanned PDF — so an uploaded
   // deliverable is never hidden and whole-document comments still work.
   fileUrl?: string | null;
+  introCard?: ReactNode;
+  contentCardClassName?: string;
+  contentCardStyle?: CSSProperties;
+  contentFrameClassName?: string;
+  emptyCommentsState?: ReactNode;
+  enablePdfSearch?: boolean;
   // Set only on the internal admin review surface, where the staff member has
   // no brand membership; threaded into every comment mutation so the server can
   // resolve (and re-verify) the brand. Undefined for client-membership callers.
   contextBrandId?: string;
   decision?: ReviewDecision | null;
   actions: ReviewCommentActions;
+  showSelectionHint?: boolean;
+  showHeaderDownload?: boolean;
 }) {
+  const isRoadmap = eyebrowVariant === "roadmap";
   const [comments, setComments] = useState<ReviewComment[]>(initialComments);
   const [target, setTarget] = useState<Target>({ anchorId: null, label: null });
   const [showComments, setShowComments] = useState(true);
@@ -280,6 +314,9 @@ export function ReviewableDocumentViewer({
   // selection so they fill the full line.
   const [highlightRects, setHighlightRects] = useState<HighlightRect[]>([]);
   const [selectionRects, setSelectionRects] = useState<HighlightRect[]>([]);
+  const [pdfSearchQuery, setPdfSearchQuery] = useState("");
+  const [pdfSearchMatches, setPdfSearchMatches] = useState<SearchMatch[]>([]);
+  const [activePdfSearchIndex, setActivePdfSearchIndex] = useState(0);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const commentCardRefs = useRef(new Map<string, HTMLDivElement>());
   // Bumped when the PDF viewer finishes laying out its pages, so the highlight
@@ -625,6 +662,247 @@ export function ReviewableDocumentViewer({
   );
 
   const isPdfOnly = blocks.length === 0 && Boolean(fileUrl);
+  const pdfSearchRects = useMemo(() => {
+    if (!enablePdfSearch || !isPdfOnly || pdfSearchMatches.length === 0) {
+      return [];
+    }
+
+    return pdfSearchMatches.flatMap((match, matchIndex) =>
+      match.rects.map((rect, rectIndex) => ({
+        key: `${match.key}-${rectIndex}`,
+        color:
+          matchIndex === activePdfSearchIndex
+            ? SEARCH_FILL_ACTIVE
+            : SEARCH_FILL,
+        ...rect,
+      })),
+    );
+  }, [
+    activePdfSearchIndex,
+    enablePdfSearch,
+    isPdfOnly,
+    pdfSearchMatches,
+  ]);
+
+  useEffect(() => {
+    const root = contentRef.current;
+    const query = pdfSearchQuery.trim().toLocaleLowerCase();
+    if (!root || !enablePdfSearch || !isPdfOnly || query.length === 0) {
+      setPdfSearchMatches([]);
+      setActivePdfSearchIndex(0);
+      return;
+    }
+
+    const nextMatches: SearchMatch[] = [];
+    const blocks = root.querySelectorAll<HTMLElement>("[data-block-content]");
+
+    blocks.forEach((block) => {
+      const rawText = block.textContent ?? "";
+      const text = rawText.toLocaleLowerCase();
+      let cursor = 0;
+
+      while (cursor <= text.length - query.length) {
+        const start = text.indexOf(query, cursor);
+        if (start === -1) break;
+        const end = start + query.length;
+        const range = createRangeFromOffsets(block, start, end);
+        const anchorId = block.dataset.blockContent;
+        if (range && anchorId) {
+          const rects = rangeToMergedLineRects(range, root);
+          if (rects.length > 0) {
+            nextMatches.push({
+              anchorId,
+              end,
+              key: `${anchorId}-${start}-${end}`,
+              rects,
+              start,
+            });
+          }
+        }
+        cursor = end;
+      }
+    });
+
+    setPdfSearchMatches(nextMatches);
+    setActivePdfSearchIndex((current) => {
+      if (nextMatches.length === 0) return 0;
+      return Math.min(current, nextMatches.length - 1);
+    });
+  }, [enablePdfSearch, isPdfOnly, pdfRenderNonce, pdfSearchQuery]);
+
+  useEffect(() => {
+    if (!enablePdfSearch || !isPdfOnly || pdfSearchMatches.length === 0) return;
+    const root = contentRef.current;
+    const activeMatch = pdfSearchMatches[activePdfSearchIndex];
+    if (!root || !activeMatch) return;
+
+    const firstRect = activeMatch.rects[0];
+    root.scrollTo({
+      behavior: "smooth",
+      top: Math.max(firstRect.top - 32, 0),
+    });
+  }, [
+    activePdfSearchIndex,
+    enablePdfSearch,
+    isPdfOnly,
+    pdfSearchMatches,
+  ]);
+
+  const cyclePdfSearchMatch = useCallback(
+    (direction: "next" | "prev") => {
+      if (pdfSearchMatches.length === 0) return;
+      setActivePdfSearchIndex((current) => {
+        if (direction === "next") {
+          return current === pdfSearchMatches.length - 1 ? 0 : current + 1;
+        }
+        return current === 0 ? pdfSearchMatches.length - 1 : current - 1;
+      });
+    },
+    [pdfSearchMatches.length],
+  );
+
+  const pdfSearchToolbar =
+    enablePdfSearch && isPdfOnly ? (
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {downloadUrl && !showHeaderDownload ? (
+            <Button asChild className="h-9 gap-2 whitespace-nowrap" size="sm" variant="outline">
+              <a download href={downloadUrl} rel="noreferrer" target="_blank">
+                <DownloadIcon className="size-4" />
+                Download
+              </a>
+            </Button>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end lg:flex-1">
+          <div className="flex flex-1 items-center gap-2 sm:max-w-[440px] sm:flex-none">
+            <div className="relative min-w-0 flex-1">
+              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="h-9 pl-8"
+                onChange={(event) => {
+                  setPdfSearchQuery(event.target.value);
+                  setActivePdfSearchIndex(0);
+                }}
+                placeholder="Search in report"
+                type="search"
+                value={pdfSearchQuery}
+              />
+            </div>
+            <Button
+              className="h-9 px-2.5"
+              disabled={pdfSearchMatches.length === 0}
+              onClick={() => cyclePdfSearchMatch("prev")}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <ArrowUpIcon className="size-4" />
+            </Button>
+            <Button
+              className="h-9 px-2.5"
+              disabled={pdfSearchMatches.length === 0}
+              onClick={() => cyclePdfSearchMatch("next")}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <ArrowDownIcon className="size-4" />
+            </Button>
+          </div>
+          <span className="text-[12px] text-muted-foreground sm:text-right">
+            {pdfSearchQuery.trim().length === 0
+              ? ""
+              : pdfSearchMatches.length === 0
+                ? "No matches"
+                : `${activePdfSearchIndex + 1} of ${pdfSearchMatches.length}`}
+          </span>
+        </div>
+      </div>
+    ) : null;
+
+  const documentFrame = (
+    <div
+      className={cn(
+        "w-full overflow-hidden rounded-[10px] border border-border bg-card shadow-xs",
+        contentFrameClassName,
+      )}
+    >
+      {isPdfOnly ? (
+        <div
+          className="review-doc-surface relative max-h-[70vh] min-h-[479px] overflow-auto bg-white"
+          onClick={handleContentClick}
+          onMouseUp={captureSelection}
+          ref={contentRef}
+        >
+          <HighlightLayer rects={pdfSearchRects} />
+          <PdfTextLayerViewer
+            fileUrl={fileUrl ?? ""}
+            onRendered={handlePdfRendered}
+          />
+          <HighlightLayer
+            onActivate={activateCommentById}
+            rects={highlightRects}
+          />
+          <HighlightLayer rects={selectionRects} />
+        </div>
+      ) : (
+        <div
+          className="review-doc-surface relative flex min-h-[479px] flex-col gap-4 p-4 sm:p-6"
+          onClick={handleContentClick}
+          onMouseUp={captureSelection}
+          ref={contentRef}
+        >
+          <HighlightLayer
+            onActivate={activateCommentById}
+            rects={highlightRects}
+          />
+          <HighlightLayer rects={selectionRects} />
+          {blocks.map((block) => {
+            const count = countByAnchor.get(anchorKey(block.anchorId)) ?? 0;
+            const isActive = target.anchorId === block.anchorId;
+            return (
+              <section
+                className={cn(
+                  "group relative scroll-mt-24 rounded-lg px-3 py-1 transition-colors",
+                  isActive && ACTIVE_SECTION_CLASS,
+                )}
+                id={block.anchorId}
+                key={block.anchorId}
+              >
+                <Button
+                  aria-label="Comment on this section"
+                  className={cn(
+                    "absolute end-0 top-2 z-10 h-7 rounded-full px-2 text-[11px] text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+                    count > 0 && "opacity-100",
+                    isActive && ACTIVE_MARKER_CLASS,
+                  )}
+                  onClick={() =>
+                    setTarget({
+                      anchorId: block.anchorId,
+                      label: block.label,
+                    })
+                  }
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <MessageSquarePlusIcon className="size-3.5" />
+                  {count > 0 ? count : "Comment"}
+                </Button>
+                <div
+                  data-block-content={block.anchorId}
+                  data-block-label={block.label ?? undefined}
+                >
+                  <MarkdownContent markdown={block.markdown} />
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <main className="w-full pt-[15px]">
@@ -641,30 +919,66 @@ export function ReviewableDocumentViewer({
       <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-start">
         {/* Left column — header, hint, the framed document/PDF area, and the
             centred Approve action. Centred in the space beside the rail. */}
-        <div className="flex min-w-0 flex-1 flex-col items-center gap-6 px-2 sm:px-6">
-          <div className="flex w-full max-w-[900px] flex-col gap-4">
+        <div
+          className={
+            isRoadmap
+              ? "flex min-w-0 flex-1 flex-col items-center gap-6"
+              : "flex min-w-0 flex-1 flex-col items-center gap-6 px-2 sm:px-6"
+          }
+        >
+          <div
+            className={
+              isRoadmap
+                ? "flex w-full max-w-[1057px] flex-col gap-4"
+                : "flex w-full max-w-[900px] flex-col gap-4"
+            }
+          >
             {/* Report header */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex min-w-0 flex-col gap-[9px]">
+            <div
+              className={
+                isRoadmap
+                  ? "flex flex-col gap-3"
+                  : "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+              }
+            >
+              <div className={isRoadmap ? "flex min-w-0 flex-col" : "flex min-w-0 flex-col gap-[9px]"}>
                 <div className="flex flex-wrap items-center gap-4">
                   {eyebrow ? (
-                    <span className="text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
+                    <span
+                      className={
+                        isRoadmap
+                          ? "font-mono text-[10.5px] uppercase tracking-[0.16em] text-[var(--bv-ink-3)]"
+                          : "text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground"
+                      }
+                    >
                       {eyebrow}
                     </span>
                   ) : null}
                   {statusBadge}
                 </div>
-                <h1 className="text-[20px] font-semibold leading-7 text-foreground">
+                <h1
+                  className={
+                    isRoadmap
+                      ? "mt-1.5 text-2xl font-semibold tracking-[-0.02em] text-[var(--bv-ink)]"
+                      : "text-[20px] font-semibold leading-7 text-foreground"
+                  }
+                >
                   {title}
                 </h1>
                 {description ? (
-                  <p className="max-w-[545px] text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
+                  <p
+                    className={
+                      isRoadmap
+                        ? "mt-2 max-w-[640px] text-sm leading-relaxed text-[var(--bv-ink-3)]"
+                        : "max-w-[545px] text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground"
+                    }
+                  >
                     {description}
                   </p>
                 ) : null}
               </div>
 
-              {downloadUrl ? (
+              {downloadUrl && showHeaderDownload ? (
                 <Button
                   asChild
                   className="h-8 gap-2 self-start whitespace-nowrap shadow-xs"
@@ -679,91 +993,33 @@ export function ReviewableDocumentViewer({
               ) : null}
             </div>
 
-            <div className="flex">
-              <p className="flex max-w-full items-center gap-1.5 text-[12px] font-medium leading-4 text-muted-foreground">
-                <MessageSquarePlusIcon className="size-3.5 shrink-0 text-primary" />
-                Highlight any text to add a comment
-              </p>
-            </div>
+            {showSelectionHint ? (
+              <div className="flex">
+                <p className="flex max-w-full items-center gap-1.5 text-[12px] font-medium leading-4 text-muted-foreground">
+                  <MessageSquarePlusIcon className="size-3.5 shrink-0 text-primary" />
+                  Highlight any text to add a comment
+                </p>
+              </div>
+            ) : null}
 
-            {/* Pdf area — the framed document. Holds either the original file
-                (image-based PDFs) or the extracted markdown, with inline
-                text-selection commenting. */}
-            <div className="w-full overflow-hidden rounded-[10px] border border-border bg-card shadow-xs">
-              {isPdfOnly ? (
-                <div
-                  className="review-doc-surface relative max-h-[70vh] min-h-[479px] overflow-auto bg-muted/30"
-                  onClick={handleContentClick}
-                  onMouseUp={captureSelection}
-                  ref={contentRef}
-                >
-                  <PdfTextLayerViewer
-                    fileUrl={fileUrl ?? ""}
-                    onRendered={handlePdfRendered}
-                  />
-                  <HighlightLayer
-                    onActivate={activateCommentById}
-                    rects={highlightRects}
-                  />
-                  <HighlightLayer rects={selectionRects} />
+            {contentCardClassName || contentCardStyle ? (
+              <div
+                className={cn("rounded-[12px] border p-6", contentCardClassName)}
+                style={contentCardStyle}
+              >
+                <div className="flex flex-col gap-5">
+                  {introCard ? introCard : null}
+                  {pdfSearchToolbar}
+                  {documentFrame}
                 </div>
-              ) : (
-                <div
-                  className="review-doc-surface relative flex min-h-[479px] flex-col gap-4 p-4 sm:p-6"
-                  onClick={handleContentClick}
-                  onMouseUp={captureSelection}
-                  ref={contentRef}
-                >
-                  <HighlightLayer
-                    onActivate={activateCommentById}
-                    rects={highlightRects}
-                  />
-                  <HighlightLayer rects={selectionRects} />
-                  {blocks.map((block) => {
-                    const count =
-                      countByAnchor.get(anchorKey(block.anchorId)) ?? 0;
-                    const isActive = target.anchorId === block.anchorId;
-                    return (
-                      <section
-                        className={cn(
-                          "group relative scroll-mt-24 rounded-lg px-3 py-1 transition-colors",
-                          isActive && ACTIVE_SECTION_CLASS,
-                        )}
-                        id={block.anchorId}
-                        key={block.anchorId}
-                      >
-                        <Button
-                          aria-label="Comment on this section"
-                          className={cn(
-                            "absolute end-0 top-2 z-10 h-7 rounded-full px-2 text-[11px] text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
-                            count > 0 && "opacity-100",
-                            isActive && ACTIVE_MARKER_CLASS,
-                          )}
-                          onClick={() =>
-                            setTarget({
-                              anchorId: block.anchorId,
-                              label: block.label,
-                            })
-                          }
-                          size="sm"
-                          type="button"
-                          variant="outline"
-                        >
-                          <MessageSquarePlusIcon className="size-3.5" />
-                          {count > 0 ? count : "Comment"}
-                        </Button>
-                        <div
-                          data-block-content={block.anchorId}
-                          data-block-label={block.label ?? undefined}
-                        >
-                          <MarkdownContent markdown={block.markdown} />
-                        </div>
-                      </section>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <>
+                {introCard ? introCard : null}
+                {pdfSearchToolbar}
+                {documentFrame}
+              </>
+            )}
           </div>
 
           {/* Centred Approve action */}
@@ -797,9 +1053,13 @@ export function ReviewableDocumentViewer({
           {showComments ? (
             <div className="flex flex-col gap-3">
               {rootComments.length === 0 ? (
-                <p className="rounded-[10px] border border-border bg-card px-3 py-6 text-center text-[12px] text-muted-foreground shadow-xs">
-                  No comments yet.
-                </p>
+                emptyCommentsState ? (
+                  emptyCommentsState
+                ) : (
+                  <p className="rounded-[10px] border border-border bg-card px-3 py-6 text-center text-[12px] text-muted-foreground shadow-xs">
+                    No comments yet.
+                  </p>
+                )
               ) : (
                 rootComments.map((root) => (
                   <CommentThread
@@ -937,14 +1197,13 @@ function SelectionPopover({
     return (
       <div className="fixed z-50" style={{ top, left }}>
         <Button
-          className="text-primary shadow-md hover:text-primary"
+          className="h-10 rounded-lg px-4 text-[13px] font-medium text-primary shadow-md hover:text-primary"
           onClick={onStartComposing}
           onMouseDown={(e) => e.preventDefault()}
-          size="sm"
           type="button"
           variant="secondary"
         >
-          <MessageSquarePlusIcon className="size-4" /> Add Comment
+          <MessageSquarePlusIcon className="size-[17px]" /> Add Comment
         </Button>
       </div>
     );
