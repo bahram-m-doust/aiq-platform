@@ -49,6 +49,7 @@ function TooltipContent({
       : "bg-primary text-primary-foreground"
   const arrow =
     variant === "success" ? "bg-[#d3fde5] fill-[#d3fde5]" : "bg-primary fill-primary"
+  const arrowSize = variant === "success" ? "size-4 rounded-[3px]" : "size-2.5 rounded-[2px]"
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
@@ -65,7 +66,8 @@ function TooltipContent({
         <TooltipPrimitive.Arrow
           className={cn(
             arrow,
-            "z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]"
+            arrowSize,
+            "z-50 translate-y-[calc(-50%_-_2px)] rotate-45"
           )}
         />
       </TooltipPrimitive.Content>

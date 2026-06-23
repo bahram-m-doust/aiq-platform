@@ -94,7 +94,9 @@ export async function reviewChangeRequestAction(
     revalidatePath("/admin/change-requests");
     revalidatePath("/change-requests");
     revalidatePath(ROUTES.home);
+    revalidatePath(ROUTES.brainRoadmap);
     revalidatePath(ROUTES.questionnaire);
+    revalidatePath("/", "layout");
 
     // An approved intake change request reopens the questionnaire, so refresh the
     // brand's questionnaire surfaces (and each section) to reflect the unlock.

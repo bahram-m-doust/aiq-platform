@@ -87,6 +87,7 @@ async function reopenIntakeForBrand(
 }
 
 type ChangeRequestReviewRecipientRow = {
+  auth_user_id: string | null;
   email: string | null;
 };
 
@@ -128,18 +129,51 @@ function buildChangeRequestReviewLink(origin: string) {
   ).toString();
 }
 
-async function loadChangeRequestReviewRecipient(request: ChangeRequestRecord) {
-  if (!request.requestedBy) {
+async function resolveChangeRequestRequesterEmail({
+  admin,
+  brandId,
+  recipient,
+  requestId,
+}: {
+  admin: ReturnType<typeof createAdminClient>;
+  brandId: string;
+  recipient: ChangeRequestReviewRecipientRow | null;
+  requestId: string;
+}) {
+  if (recipient?.email) {
+    return recipient.email;
+  }
+
+  if (!recipient?.auth_user_id) {
     return null;
   }
 
+  const { data, error } = await admin.auth.admin.getUserById(
+    recipient.auth_user_id,
+  );
+
+  if (error) {
+    logServerError({
+      label: "[change-requests] review requester auth email lookup failed",
+      error,
+      metadata: { requestId, brandId, authUserId: recipient.auth_user_id },
+    });
+    return null;
+  }
+
+  return data.user?.email ?? null;
+}
+
+async function loadChangeRequestReviewRecipient(request: ChangeRequestRecord) {
   const admin = createAdminClient();
   const [recipientResult, brandResult] = await Promise.all([
-    admin
-      .from("users_profile")
-      .select("email")
-      .eq("id", request.requestedBy)
-      .maybeSingle(),
+    request.requestedBy
+      ? admin
+          .from("users_profile")
+          .select("auth_user_id, email")
+          .eq("id", request.requestedBy)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
     admin.from("brands").select("name").eq("id", request.brandId).maybeSingle(),
   ]);
 
@@ -155,13 +189,21 @@ async function loadChangeRequestReviewRecipient(request: ChangeRequestRecord) {
     recipientResult.data as ChangeRequestReviewRecipientRow | null;
   const brand = brandResult.data as BrandRow | null;
 
-  if (!recipient?.email || !brand?.name) {
+  if (!brand?.name) {
     return null;
   }
 
+  const requesterEmail = await resolveChangeRequestRequesterEmail({
+    admin,
+    brandId: request.brandId,
+    recipient,
+    requestId: request.id,
+  });
+
   return {
     brandName: brand.name,
-    requesterEmail: recipient.email,
+    requesterEmail,
+    requesterId: request.requestedBy,
   };
 }
 
@@ -210,21 +252,23 @@ async function notifyChangeRequestReviewed({
     createNotification({
       brandId: request.brandId,
       audience: "CLIENT",
-      recipientId: request.requestedBy,
+      recipientId: recipient.requesterId,
       type: "change_request_reviewed",
       title: notificationTitle,
       body: notificationBody,
       linkPath: "/integrated-brand-brain/roadmap/questionnaire",
-      subjectType: "change_request",
+      subjectType: "CHANGE_REQUEST",
       subjectId: request.id,
       actorId: reviewerId,
     }),
-    sendEmailWithResend({
-      to: recipient.requesterEmail,
-      subject: email.subject,
-      text: email.text,
-      html: email.html,
-    }),
+    recipient.requesterEmail
+      ? sendEmailWithResend({
+          to: recipient.requesterEmail,
+          subject: email.subject,
+          text: email.text,
+          html: email.html,
+        })
+      : Promise.resolve(null),
   ]);
 
   if (notificationResult.status === "rejected") {
@@ -233,6 +277,15 @@ async function notifyChangeRequestReviewed({
       error: notificationResult.reason,
       metadata: { requestId: request.id, brandId: request.brandId },
     });
+  }
+
+  if (!recipient.requesterEmail) {
+    logServerError({
+      label: "[change-requests] review email skipped",
+      error: new Error("Change request requester email could not be resolved."),
+      metadata: { requestId: request.id, brandId: request.brandId },
+    });
+    return;
   }
 
   if (emailResult.status === "rejected") {
@@ -244,7 +297,7 @@ async function notifyChangeRequestReviewed({
     return;
   }
 
-  if (!emailResult.value.ok) {
+  if (emailResult.value && !emailResult.value.ok) {
     logServerError({
       label: "[change-requests] review email delivery warning",
       error: new Error(emailResult.value.message),

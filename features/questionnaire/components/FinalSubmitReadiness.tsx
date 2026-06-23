@@ -25,13 +25,14 @@ import {
   initialFinalSubmitIntakeFormState,
 } from "@/features/questionnaire/schemas";
 import type { IntakeCompletion } from "@/features/questionnaire/types";
+import { ROUTES } from "@/lib/routes";
 
 function ConfirmSubmitButton() {
   const { pending } = useFormStatus();
 
   return (
     <Button disabled={pending} type="submit">
-      {pending ? "Submitting..." : "Confirm"}
+      {pending ? "Submitting..." : "Approve & go to Roadmap"}
     </Button>
   );
 }
@@ -61,17 +62,17 @@ export function FinalSubmitReadiness({
 
   useEffect(() => {
     if (state.status === "success") {
-      router.refresh();
+      router.push(`${ROUTES.brainRoadmap}?open=brand-research`);
     }
   }, [router, state.status]);
 
-  // Always render the Approve & Lock control. Until every question is
+  // Always render the approve control. Until every question is
   // complete, keep it disabled (and non-clickable) so the pending action is
   // visible from the start.
   if (!isReady) {
     return (
       <Button disabled size="lg" type="button">
-        Approve &amp; Lock
+        Approve questionnaire
       </Button>
     );
   }
@@ -94,34 +95,43 @@ export function FinalSubmitReadiness({
   }
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button disabled={disabled} size="lg" type="button">
-          Approve &amp; Lock
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Approve &amp; lock questionnaire</DialogTitle>
-          <DialogDescription>{finalSubmitConfirmationCopy}</DialogDescription>
-        </DialogHeader>
-        <form action={formAction} className="space-y-4">
-          <input name="session_id" type="hidden" value={sessionId} />
-          {state.status === "error" ? (
-            <Alert variant="destructive">
-              <AlertDescription>{state.message}</AlertDescription>
-            </Alert>
-          ) : null}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </DialogClose>
-            <ConfirmSubmitButton />
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <div className="space-y-3">
+      <div className="max-w-[520px] text-sm leading-5 text-[var(--bv-ink-3)]">
+        <p className="font-medium text-[var(--bv-ink-2)]">Ready to approve?</p>
+        <p>
+          Once approved, direct editing will be disabled. Future updates must be
+          submitted as a Change Request.
+        </p>
+      </div>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button disabled={disabled} size="lg" type="button">
+            Approve questionnaire
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve final questionnaire</DialogTitle>
+            <DialogDescription>{finalSubmitConfirmationCopy}</DialogDescription>
+          </DialogHeader>
+          <form action={formAction} className="space-y-4">
+            <input name="session_id" type="hidden" value={sessionId} />
+            {state.status === "error" ? (
+              <Alert variant="destructive">
+                <AlertDescription>{state.message}</AlertDescription>
+              </Alert>
+            ) : null}
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
+              </DialogClose>
+              <ConfirmSubmitButton />
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

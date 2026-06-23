@@ -7,7 +7,7 @@ import { getStakeholderInterviewWorkspace } from "@/features/stakeholder-intervi
 import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Stakeholder Interviews | Bextudio Platform",
+  title: "Stakeholder Interviews Report | Bextudio Platform",
 };
 
 export const dynamic = "force-dynamic";

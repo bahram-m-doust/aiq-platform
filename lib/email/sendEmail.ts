@@ -34,9 +34,36 @@ type ResendResponse = {
   name?: string;
 };
 
+const emailFromEnvNames = [
+  "EMAIL_FROM",
+  "RESEND_EMAIL_FROM",
+  "RESEND_FROM_EMAIL",
+  "FROM_EMAIL",
+] as const;
+
+function readFirstRuntimeEnv(names: readonly string[]) {
+  for (const name of names) {
+    const value = readRuntimeEnv(name)?.trim();
+    if (value) {
+      return value;
+    }
+  }
+  return "";
+}
+
+function timeoutSignal(ms: number) {
+  if ("timeout" in AbortSignal) {
+    return AbortSignal.timeout(ms);
+  }
+
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
+
 export function getResendEmailConfig(): ResendEmailConfigResult {
   const apiKey = readRuntimeEnv("RESEND_API_KEY");
-  const from = process.env.EMAIL_FROM;
+  const from = readFirstRuntimeEnv(emailFromEnvNames);
 
   if (!apiKey) {
     return {
@@ -50,7 +77,8 @@ export function getResendEmailConfig(): ResendEmailConfigResult {
     return {
       ok: false,
       code: "MISSING_EMAIL_FROM",
-      message: "Email sending is not configured. Add EMAIL_FROM.",
+      message:
+        "Email sending is not configured. Add EMAIL_FROM or RESEND_FROM_EMAIL.",
     };
   }
 
@@ -92,7 +120,7 @@ export async function sendEmailWithResend(
       // A hung/slow Resend connection must not tie up the invite / access-key
       // request indefinitely. Degrade to RESEND_SEND_FAILED after 10s — callers
       // already treat that as a non-fatal delivery warning.
-      signal: AbortSignal.timeout(10_000),
+      signal: timeoutSignal(10_000),
     });
   } catch {
     return {

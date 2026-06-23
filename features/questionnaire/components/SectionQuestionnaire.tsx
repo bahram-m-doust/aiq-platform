@@ -182,6 +182,11 @@ export function SectionQuestionnaire({
       return;
     }
     event.preventDefault();
+
+    if (targetId === activeSectionId) {
+      return;
+    }
+
     switchToSection(targetId, targetKey);
   };
 
@@ -209,7 +214,9 @@ export function SectionQuestionnaire({
     if (!sentinel || typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver(
       ([entry]) => setTabBarStuck(!entry.isIntersecting),
-      { threshold: 0 },
+      // Offset by the sticky app header (h-68px) so "stuck" styling flips on
+      // exactly when the tab bar pins beneath it, not 68px later.
+      { threshold: 0, rootMargin: "-68px 0px 0px 0px" },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -277,16 +284,23 @@ export function SectionQuestionnaire({
     };
   }, [allSections.length, activeSectionId]);
 
-  // Arrived here from the overview's "fix this" link — highlight the gaps and
-  // jump to the first unanswered question.
+  // Arrived here from the overview's "fix this" link — jump to the first
+  // question that still needs finishing. "Uncompleted" mirrors the side panel:
+  // a question is done only once it has a value AND is marked done, so an
+  // answered-but-unconfirmed "Draft saved" card counts too (not just empty
+  // ones) — otherwise the deep link would land at the top of the page.
   useEffect(() => {
     if (!autoValidate) return;
-    const firstEmpty = activeSection.questions.find(
-      (question) => !isIntakeAnswerComplete(displayedAnswers[question.id] ?? null),
-    );
-    if (firstEmpty) {
+    const firstIncomplete = activeSection.questions.find((question) => {
+      const hasValue = isIntakeAnswerComplete(displayedAnswers[question.id] ?? null);
+      const completed = markedDoneIds
+        ? hasValue && markedDoneIds.has(question.id)
+        : hasValue;
+      return !completed;
+    });
+    if (firstIncomplete) {
       document
-        .getElementById(`question-card-${firstEmpty.id}`)
+        .getElementById(`question-card-${firstIncomplete.id}`)
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -360,7 +374,7 @@ export function SectionQuestionnaire({
 
         {/* Sticky section tabs — stay pinned while scrolling a long section so
             the user always knows where they are and can jump sections fast. */}
-        <div className="sticky top-0 z-30 mb-9">
+        <div className="sticky top-[68px] z-30 mb-9">
           <div
             className={cn(
               // While stuck, fade in only a white backdrop + drop shadow (no box
@@ -538,7 +552,7 @@ export function SectionQuestionnaire({
             </PaginationContent>
           </Pagination>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <Button asChild className="text-[var(--bv-ink-3)] hover:text-[var(--bv-ink)]" variant="ghost">
               <Link href={ROUTES.questionnaire}>
                 <ArrowLeftIcon className="size-3.5" />
@@ -579,9 +593,6 @@ export function SectionQuestionnaire({
       {!locked && (() => {
         const allQuestions = allSections.flatMap((s) => s.questions);
         const panelTotalQuestions = allQuestions.length;
-        const panelTotalAnswered = allQuestions.filter((q) =>
-          isIntakeAnswerComplete(displayedAnswers[q.id] ?? null),
-        ).length;
         const panelTotalCompleted = allQuestions.filter((q) => {
           const hasValue = isIntakeAnswerComplete(displayedAnswers[q.id] ?? null);
           return markedDoneIds
@@ -618,7 +629,6 @@ export function SectionQuestionnaire({
             sections={panelSections}
             sessionId={session.id}
             showReview={false}
-            totalAnswered={panelTotalAnswered}
             totalCompleted={panelTotalCompleted}
             totalQuestions={panelTotalQuestions}
           />

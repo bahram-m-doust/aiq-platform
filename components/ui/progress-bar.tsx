@@ -3,9 +3,17 @@ import { cn } from "@/lib/utils";
 const colorClasses = {
   orange: "bg-orange-500",
   blue: "bg-blue-500",
-  green: "bg-emerald-500",
-  "green-soft": "bg-[#2bc78a]/45",
+  green: "bg-[linear-gradient(90deg,#06B6D4_0%,#2DD4BF_52%,#7CFF6B_100%)]",
+  "green-soft": "bg-[#10B981]/45",
   muted: "bg-muted-foreground/30",
+};
+
+const trackClasses: Record<keyof typeof colorClasses, string> = {
+  orange: "bg-orange-500/20",
+  blue: "bg-blue-500/20",
+  green: "bg-[#CFF1E6]",
+  "green-soft": "bg-[#10B981]/15",
+  muted: "bg-muted",
 };
 
 export function ProgressBar({
@@ -22,7 +30,8 @@ export function ProgressBar({
   return (
     <div
       className={cn(
-        "h-2 w-full overflow-hidden rounded-full bg-muted",
+        "h-2 w-full overflow-hidden rounded-full",
+        trackClasses[color],
         className,
       )}
     >

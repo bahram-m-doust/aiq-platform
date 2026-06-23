@@ -16,7 +16,7 @@ export type ReviewSubjectType = (typeof reviewSubjectTypes)[number];
 
 // Human-readable label per surface, used in notification titles.
 export const reviewSubjectLabels: Record<ReviewSubjectType, string> = {
-  STAKEHOLDER_INTERVIEWS: "Stakeholder Interviews",
+  STAKEHOLDER_INTERVIEWS: "Stakeholder Interviews Report",
   FUTURES_RESEARCH: "Futures Research",
   CITY_MODEL_DISTRICT: "City Model",
   VISUAL_DIRECTION: "Visual Direction",

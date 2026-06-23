@@ -10,7 +10,7 @@ import { getStakeholderAdminOverview } from "@/features/stakeholder-interviews/q
 import { stakeholderReportStatusLabels } from "@/features/stakeholder-interviews/schema";
 
 export const metadata: Metadata = {
-  title: "Stakeholder Interviews | Bextudio Platform",
+  title: "Stakeholder Interviews Report | Bextudio Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export default async function AdminStakeholderInterviewsPage() {
             Brand Research · Step 02
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-normal">
-            Stakeholder Interviews
+            Stakeholder Interviews Report
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Upload the interview-analysis PDF for a brand. Uploading sends it to

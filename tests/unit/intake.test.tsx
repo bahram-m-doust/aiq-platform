@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -575,13 +575,13 @@ describe("intake UI components", () => {
     });
   });
 
-  it("disables Approve & Lock below 100 percent and enables at 100", () => {
+  it("disables Approve questionnaire below 100 percent and enables at 100", () => {
     const { rerender } = render(
       <FinalSubmitReadiness completion={completion()} sessionId="session-1" />,
     );
 
     expect(
-      screen.getByRole("button", { name: /Approve & Lock/ }),
+      screen.getByRole("button", { name: /Approve questionnaire/ }),
     ).toBeDisabled();
 
     rerender(
@@ -605,8 +605,12 @@ describe("intake UI components", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /Approve & Lock/ }),
+      screen.getByRole("button", { name: /Approve questionnaire/ }),
     ).toBeEnabled();
+    expect(screen.getByText("Ready to approve?")).toBeVisible();
+    expect(
+      screen.getByText(/Once approved, direct editing will be disabled/i),
+    ).toBeVisible();
   });
 
   it("shows the final submit confirmation copy in the modal", async () => {
@@ -631,11 +635,13 @@ describe("intake UI components", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Approve & Lock/ }));
+    await user.click(
+      screen.getByRole("button", { name: /Approve questionnaire/ }),
+    );
 
     expect(screen.getByText(finalSubmitConfirmationCopy)).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Confirm" }),
+      screen.getByRole("button", { name: "Approve & go to Roadmap" }),
     ).toBeVisible();
   });
 
@@ -662,7 +668,7 @@ describe("intake UI components", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: /Approve & Lock/ }),
+      screen.queryByRole("button", { name: /Approve questionnaire/ }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/awaiting your brand/i)).toBeVisible();
   });
@@ -681,6 +687,64 @@ describe("intake UI components", () => {
     expect(
       screen.queryByRole("button", { name: "Final Submit" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows approved and locked copy on the questionnaire overview", () => {
+    render(
+      <QuestionnaireLanding
+        data={intakeData({ latestSnapshotId: "snapshot-1" })}
+      />,
+    );
+
+    expect(screen.getByText("100%")).toBeVisible();
+    expect(screen.getByText("2/2 questions completed")).toBeVisible();
+    expect(
+      screen.getByText(/has been approved and locked/i),
+    ).toBeVisible();
+    expect(
+      screen.getByText("Questionnaire approved and locked"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/Your responses are now finalized/i),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Request a Change" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: /Download Responses/ }),
+    ).toHaveAttribute("href", "/api/questionnaire/snapshot-1/docx");
+  });
+
+  it("uses the same progress summary format before review", () => {
+    render(
+      <QuestionnaireLanding
+        data={intakeData({
+          session: session(),
+          completion: completion(),
+        })}
+      />,
+    );
+
+    expect(screen.getByText("50%")).toBeVisible();
+    expect(screen.getByText("1/2 questions completed")).toBeVisible();
+  });
+
+  it("uses the same progress summary format during review", () => {
+    render(
+      <QuestionnaireLanding
+        data={intakeData({
+          session: session({ completionPercent: 100 }),
+          completion: completion({
+            answeredQuestions: 2,
+            completionPercent: 100,
+          }),
+        })}
+        showSubmitReview
+      />,
+    );
+
+    expect(screen.getByText("100%")).toBeVisible();
+    expect(screen.getByText("2/2 questions completed")).toBeVisible();
   });
 
   it("hides the uncompleted warning until the user reaches the review step", () => {
@@ -787,7 +851,7 @@ describe("intake UI components", () => {
     expect(screen.queryByText(/uncompleted/i)).not.toBeInTheDocument();
   });
 
-  it("swaps the warning for a Review & submit button with a success tooltip once complete", async () => {
+  it("does not show the Review & submit button or tooltip on the questionnaire overview once complete", () => {
     const data = intakeData({
       session: session(),
       answers: {
@@ -815,22 +879,16 @@ describe("intake UI components", () => {
     // No gaps remain, so the uncompleted warning never shows.
     expect(screen.queryByText(/uncompleted/i)).not.toBeInTheDocument();
 
-    // The panel reveals the final Review & submit affordance, routing into
-    // review mode like the last section's button.
-    const reviewLink = await screen.findByRole("link", {
-      name: /Review & submit/,
-    });
-    expect(reviewLink).toHaveAttribute(
-      "href",
-      "/integrated-brand-brain/roadmap/questionnaire?review=1",
-    );
+    // The overview is already the final review destination, so it does not
+    // render the extra section-page affordance.
+    expect(
+      screen.queryByRole("link", { name: /Review & submit/ }),
+    ).not.toBeInTheDocument();
 
-    // …alongside a success tooltip that names the answered total.
-    const tooltip = await screen.findByRole("tooltip");
-    expect(tooltip).toHaveTextContent(/answered all 2 questions/i);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
-  it("swaps the warning for the button as the final answers land after review", async () => {
+  it("clears the warning without showing the Review & submit affordance on the overview", async () => {
     const incomplete = intakeData({
       session: session(),
       answers: {
@@ -863,7 +921,8 @@ describe("intake UI components", () => {
       screen.queryByRole("link", { name: /Review & submit/ }),
     ).not.toBeInTheDocument();
 
-    // The last answer lands — the warning gives way to the button + tooltip.
+    // The last answer lands, so the overview clears the warning without
+    // showing another Review & submit entry point.
     const complete = intakeData({
       session: session(),
       answers: {
@@ -887,12 +946,13 @@ describe("intake UI components", () => {
     });
     rerender(<QuestionnaireLanding data={complete} showSubmitReview />);
 
+    await waitFor(() => {
+      expect(screen.queryByText(/uncompleted question/i)).not.toBeInTheDocument();
+    });
     expect(
-      await screen.findByRole("link", { name: /Review & submit/ }),
-    ).toBeInTheDocument();
-    expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      /answered all 2 questions/i,
-    );
+      screen.queryByRole("link", { name: /Review & submit/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 
   it("does not reveal the Review & submit button before the review step", () => {
@@ -927,7 +987,7 @@ describe("intake UI components", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("always shows Approve & Lock, enabled once complete", () => {
+  it("always shows Approve questionnaire, enabled once complete", () => {
     const data = intakeData({
       session: session(),
       answers: {
@@ -953,13 +1013,13 @@ describe("intake UI components", () => {
 
     // Always present and enabled when complete, even before the review step.
     expect(
-      screen.getByRole("button", { name: /Approve & Lock/ }),
+      screen.getByRole("button", { name: /Approve questionnaire/ }),
     ).toBeEnabled();
 
     rerender(<QuestionnaireLanding data={data} showSubmitReview />);
 
     expect(
-      screen.getByRole("button", { name: /Approve & Lock/ }),
+      screen.getByRole("button", { name: /Approve questionnaire/ }),
     ).toBeEnabled();
   });
 
@@ -1005,6 +1065,68 @@ describe("intake UI components", () => {
         'a[href="/integrated-brand-brain/roadmap/questionnaire/audience?validate=1"]',
       ),
     ).toBeNull();
+  });
+
+  it("does not autofocus draft fields when a section mounts", async () => {
+    document.body.focus();
+
+    render(
+      <SectionQuestionnaire
+        allSections={[section]}
+        answers={{
+          "question-1": null,
+          "question-2": null,
+        }}
+        brandName="Helio"
+        completion={completion({
+          answeredQuestions: 0,
+          completionPercent: 0,
+        })}
+        markedDoneQuestionIds={[]}
+        section={section}
+        session={session()}
+      />,
+    );
+
+    await new Promise((resolve) => window.setTimeout(resolve, 10));
+
+    expect(
+      screen.getByLabelText("What is the strategic role of the company?"),
+    ).not.toHaveFocus();
+    expect(
+      screen.getByLabelText("What is the company website?"),
+    ).not.toHaveFocus();
+  });
+
+  it("scrolls answered-but-unconfirmed (Draft saved) questions into view on validate", () => {
+    const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView");
+    const getById = vi.spyOn(document, "getElementById");
+
+    render(
+      <SectionQuestionnaire
+        allSections={[section]}
+        answers={{
+          // Both answered (have a value) but neither marked done — i.e. the
+          // "Draft saved" state the side panel still counts as uncompleted.
+          "question-1": "A drafted answer",
+          "question-2": "Another draft",
+        }}
+        autoValidate
+        brandName="Helio"
+        completion={completion()}
+        markedDoneQuestionIds={[]}
+        section={section}
+        session={session()}
+      />,
+    );
+
+    // The deep link must land on the first uncompleted card (the draft), not
+    // fall back to the top of the page because it happens to hold a value.
+    expect(getById).toHaveBeenCalledWith("question-card-question-1");
+    expect(scrollSpy).toHaveBeenCalled();
+
+    scrollSpy.mockRestore();
+    getById.mockRestore();
   });
 
   it("renders questionnaire tabs as section titles without progress counts", () => {

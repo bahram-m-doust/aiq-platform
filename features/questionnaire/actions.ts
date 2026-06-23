@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { requireUser, requireUserProfile, requirePlatformOwner } from "@/features/auth/queries";
 import {
@@ -23,24 +24,65 @@ import type {
 import { logServerError } from "@/lib/logging/server";
 import { ROUTES, questionnaireSectionPath } from "@/lib/routes";
 
+async function revalidateIntakeViews(questionIds: string[] = []) {
+  revalidatePath(ROUTES.brainRoadmap);
+  revalidatePath(ROUTES.questionnaire);
+
+  if (questionIds.length === 0) {
+    return;
+  }
+
+  try {
+    const { getIntakeSectionsWithQuestions } = await import(
+      "@/features/questionnaire/queries"
+    );
+    const questionIdSet = new Set(questionIds);
+    const sections = await getIntakeSectionsWithQuestions();
+
+    sections
+      .filter((section) =>
+        section.questions.some((question) => questionIdSet.has(question.id)),
+      )
+      .forEach((section) => {
+        revalidatePath(questionnaireSectionPath(section.key));
+      });
+  } catch (error) {
+    logServerError({
+      label: "[intake] revalidate views failed",
+      error,
+      metadata: { questionIds },
+    });
+  }
+}
+
 export async function autosaveIntakeAnswerAction(
   input: AutosaveIntakeAnswerInput,
 ): Promise<AutosaveIntakeAnswerResult> {
   const user = await requireUser(ROUTES.questionnaire);
-  return autosaveIntakeAnswer({
+  const result = await autosaveIntakeAnswer({
     input,
     authUserId: user.id,
   });
+  if (result.ok) {
+    await revalidateIntakeViews([result.questionId]);
+  }
+  return result;
 }
 
 export async function autosaveIntakeAnswersAction(
   input: AutosaveIntakeAnswersInput,
 ): Promise<AutosaveIntakeAnswersResult> {
   const user = await requireUser(ROUTES.questionnaire);
-  return autosaveIntakeAnswers({
+  const result = await autosaveIntakeAnswers({
     input,
     authUserId: user.id,
   });
+  if (result.ok) {
+    await revalidateIntakeViews(
+      result.answers.map((answer) => answer.questionId),
+    );
+  }
+  return result;
 }
 
 // "Save & mark done": saves the answer value (same path as autosave) AND flags it
@@ -60,6 +102,7 @@ export async function markIntakeAnswerDoneAction(
       sessionId: input.sessionId,
       questionId: input.questionId,
     });
+    await revalidateIntakeViews([input.questionId]);
   } catch (error) {
     logServerError({
       label: "[intake] mark done failed",
@@ -83,6 +126,7 @@ export async function clearIntakeAnswerDoneAction(input: {
       sessionId: input.sessionId,
       questionId: input.questionId,
     });
+    await revalidateIntakeViews([input.questionId]);
   } catch (error) {
     logServerError({
       label: "[intake] clear mark done failed",
@@ -120,16 +164,11 @@ export async function finalSubmitIntakeAction(
     });
 
     revalidatePath("/home");
+    revalidatePath(ROUTES.brainRoadmap);
     revalidatePath(ROUTES.questionnaire);
     result.sectionKeys.forEach((sectionKey) => {
       revalidatePath(questionnaireSectionPath(sectionKey));
     });
-
-    return {
-      status: "success",
-      message: "Questionnaire has been submitted and locked.",
-      snapshotId: result.snapshotId,
-    };
   } catch (error) {
     if (isFinalSubmitIntakeError(error)) {
       return finalSubmitErrorState(error.message);
@@ -139,6 +178,8 @@ export async function finalSubmitIntakeAction(
       "Questionnaire could not be submitted. Please try again.",
     );
   }
+
+  redirect(`${ROUTES.brainRoadmap}?open=brand-research`);
 }
 
 // Admin (platform owner) sends a locked questionnaire back to the brand owner

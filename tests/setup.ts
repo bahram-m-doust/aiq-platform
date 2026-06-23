@@ -11,3 +11,13 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   }
   globalThis.ResizeObserver = ResizeObserver as unknown as typeof globalThis.ResizeObserver;
 }
+
+// jsdom doesn't implement scrollIntoView; components that scroll a target into
+// view (e.g. the questionnaire's "fix this" deep link) call it directly. A
+// no-op keeps those code paths from throwing under test.
+if (
+  typeof Element !== "undefined" &&
+  typeof Element.prototype.scrollIntoView !== "function"
+) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}

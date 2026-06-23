@@ -29,7 +29,7 @@ const multiSelectInputTypes = new Set([
 ]);
 
 export const finalSubmitConfirmationCopy =
-  "Final submission will lock your answers and initiate the strategic development process. After this point, direct editing will be disabled. Any required correction must be submitted as a Change Request.";
+  "Approving will finalize your responses and move your brand roadmap into development. After submission, direct editing will be disabled. Any future updates must be requested through a Change Request.";
 
 export const initialFinalSubmitIntakeFormState: FinalSubmitIntakeFormState = {
   status: "idle",

@@ -221,7 +221,7 @@ export default async function AdminPage() {
               >
                 <Link href="/admin/stakeholder-interviews">
                   <UsersIcon className="size-4" />
-                  Stakeholder Interviews
+                  Stakeholder Interviews Report
                 </Link>
               </Button>
               <Button

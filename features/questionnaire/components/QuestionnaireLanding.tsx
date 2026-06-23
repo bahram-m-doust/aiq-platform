@@ -5,29 +5,38 @@ import {
   LockIcon,
 } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { FinalSubmitReadiness } from "@/features/questionnaire/components/FinalSubmitReadiness";
 import { ProgressSidePanel } from "@/features/questionnaire/components/ProgressSidePanel";
+import { QuestionnaireProgressSummary } from "@/features/questionnaire/components/QuestionnaireProgressSummary";
 import { QuestionnaireChangeRequestDialog } from "@/features/questionnaire/components/QuestionnaireChangeRequestDialog";
 import {
   canApproveIntakeRole,
   isIntakeAnswerComplete,
   isIntakeSessionLocked,
 } from "@/features/questionnaire/schemas";
-import type {
-  IntakePageData,
-  IntakeSectionProgress,
-} from "@/features/questionnaire/types";
+import type { IntakePageData } from "@/features/questionnaire/types";
 import { questionnaireSectionPath } from "@/lib/routes";
 
 type SectionState = "done" | "in-progress" | "not-started";
 
-function sectionState(progress: IntakeSectionProgress | undefined): SectionState {
-  if (!progress || progress.totalQuestions === 0) return "not-started";
-  if (progress.completionPercent === 100) return "done";
-  if (progress.answeredQuestions > 0) return "in-progress";
+function sectionState({
+  completedQuestions,
+  completionPercent,
+  draftAnsweredQuestions,
+  totalQuestions,
+}: {
+  completedQuestions: number;
+  completionPercent: number;
+  draftAnsweredQuestions: number;
+  totalQuestions: number;
+}): SectionState {
+  if (totalQuestions === 0) return "not-started";
+  if (completionPercent === 100) return "done";
+  if (completedQuestions > 0 || draftAnsweredQuestions > 0) {
+    return "in-progress";
+  }
   return "not-started";
 }
 
@@ -68,17 +77,19 @@ export function QuestionnaireLanding({
   const progressByKey = new Map(
     completion.sections.map((s) => [s.sectionKey, s]),
   );
-  const overallColor = "green" as const;
-
-  // Value-based "answered" count (any question with a value, even drafts)
-  const totalAnswered = sections.reduce(
-    (sum, section) =>
-      sum +
-      section.questions.filter((q) =>
-        isIntakeAnswerComplete(answers[q.id] ?? null),
-      ).length,
+  const completionPercent = Math.max(
     0,
+    Math.min(100, completion.completionPercent),
   );
+  const questionnaireComplete =
+    completion.totalQuestions > 0 &&
+    completionPercent === 100 &&
+    completion.answeredQuestions === completion.totalQuestions;
+  const pageDescription = locked
+    ? "Your brand questionnaire has been approved and locked. These responses are now being used to develop your brand roadmap. You can still review or download your answers at any time."
+    : questionnaireComplete
+    ? "Your brand questionnaire is complete. Review each section carefully, then approve your responses to move your brand roadmap into development."
+    : "Six short sections capture the raw signal behind your brand — voice, audience, market and ambition. Pick any section to start; your answers save automatically as you go.";
 
   // Per-section summary for the side panel
   const sectionSummaries = sections.map((section) => {
@@ -103,15 +114,12 @@ export function QuestionnaireLanding({
       <div className="mx-auto max-w-[1057px]">
         <div>
           {/* Summary */}
-          <div className="mb-6 flex items-center gap-4">
-            <div className="min-w-0 flex-1">
-              <ProgressBar color={overallColor} value={completion.completionPercent} />
-            </div>
-            <span className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--bv-ink-3)]">
-              {completion.answeredQuestions}/{completion.totalQuestions} completed ·{" "}
-              {completion.completionPercent}%
-            </span>
-          </div>
+          <QuestionnaireProgressSummary
+            answeredQuestions={completion.answeredQuestions}
+            className="mb-6"
+            completionPercent={completionPercent}
+            totalQuestions={completion.totalQuestions}
+          />
 
           {/* Page header */}
           <div className="mb-9">
@@ -122,19 +130,19 @@ export function QuestionnaireLanding({
               Questionnaires
             </h1>
             <p className="mt-2 max-w-[640px] text-sm leading-relaxed text-[var(--bv-ink-3)]">
-              Six short sections capture the raw signal behind your brand —
-              voice, audience, market and ambition. Pick any section to start;
-              your answers save automatically as you go.
+              {pageDescription}
             </p>
 
             {locked && (
               <Alert className="mt-4" variant="success">
                 <LockIcon />
+                <AlertTitle>Questionnaire approved and locked</AlertTitle>
                 <AlertDescription>
-                  This questionnaire has been submitted and locked. Sections are
-                  read-only — open one to review your answers.
+                  Your responses are now finalized and being used to develop
+                  your brand roadmap. Sections are read-only, but you can open
+                  any section to review your answers.
                 </AlertDescription>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="col-start-2 mt-2 flex flex-wrap items-center gap-2">
                   {sections[0] ? (
                     <QuestionnaireChangeRequestDialog
                       sectionKey={sections[0].key}
@@ -148,7 +156,7 @@ export function QuestionnaireLanding({
                       href={`/api/questionnaire/${data.latestSnapshotId}/docx`}
                     >
                       <DownloadIcon className="size-3.5" />
-                      Download answers
+                      Download Responses
                     </a>
                   )}
                 </div>
@@ -171,7 +179,15 @@ export function QuestionnaireLanding({
               const progress = progressByKey.get(section.key);
               const total = progress?.totalQuestions ?? section.questions.length;
               const answered = progress?.answeredQuestions ?? 0;
-              const state = sectionState(progress);
+              const draftAnswered = section.questions.filter((q) =>
+                isIntakeAnswerComplete(answers[q.id] ?? null),
+              ).length;
+              const state = sectionState({
+                completedQuestions: answered,
+                completionPercent: progress?.completionPercent ?? 0,
+                draftAnsweredQuestions: draftAnswered,
+                totalQuestions: total,
+              });
 
               return (
                 <Link
@@ -205,7 +221,7 @@ export function QuestionnaireLanding({
             })}
           </div>
 
-          {/* Approve & Lock — always present, disabled until complete. */}
+          {/* Approve control — always present, disabled until complete. */}
           {!locked && (
             <div className="mt-8">
               <FinalSubmitReadiness
@@ -224,7 +240,7 @@ export function QuestionnaireLanding({
             sections={sectionSummaries}
             sessionId={session.id}
             showReview={showSubmitReview}
-            totalAnswered={totalAnswered}
+            showReadyReviewAction={false}
             totalCompleted={completion.answeredQuestions}
             totalQuestions={completion.totalQuestions}
           />

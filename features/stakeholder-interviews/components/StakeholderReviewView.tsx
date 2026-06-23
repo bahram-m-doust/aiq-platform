@@ -13,7 +13,7 @@ function PreparingState() {
         <DeliverablePendingState
           body="The Bextudio team is finalising the report. You will be able to review and approve it here once it is uploaded."
           headline="Your interview analysis is being prepared."
-          title="Stakeholder Interviews"
+          title="Stakeholder Interviews Report"
         />
       </div>
     </div>
@@ -45,14 +45,14 @@ export function StakeholderReviewView({
         onApprove: approveStakeholderReportAction,
       }}
       emptyState={<PreparingState />}
-      eyebrow="Brand Research · Stakeholder Interviews"
+      eyebrow="Brand Research · Stakeholder Interviews Report"
       inlineUrl={inlineUrl}
       markdown={markdown}
       signedUrl={signedUrl}
       statusBadge={<DeliverableStatusBadge status={status} />}
       subjectId={report?.id ?? ""}
       subjectType="STAKEHOLDER_INTERVIEWS"
-      title="Stakeholder Interviews"
+      title="Stakeholder Interviews Report"
     />
   );
 }
