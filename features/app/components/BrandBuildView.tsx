@@ -7,7 +7,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/routes";
 import type {
-  BrainBuildScheduleView,
   BrandBuildProgress,
   PhaseProgress,
   PhaseStatus,
@@ -209,257 +208,6 @@ function StatePill({
   );
 }
 
-/* ── Brain Build (Phase 04) special states ── */
-
-function formatLongDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-// Cosmetic schedule progress: linear interpolation from when the build was
-// scheduled to its target date, capped just shy of full until Bextudio ships
-// the brain — so the bar reads "almost there" rather than implying it's done.
-function scheduleProgressPercent(schedule: BrainBuildScheduleView): number {
-  const start = schedule.scheduledAt
-    ? new Date(schedule.scheduledAt).getTime()
-    : Date.now();
-  // Target lands at the end of the chosen day.
-  const end = new Date(`${schedule.targetDate}T23:59:59`).getTime();
-  const now = Date.now();
-  if (!Number.isFinite(end) || end <= start) return 95;
-  const ratio = (now - start) / (end - start);
-  return Math.max(4, Math.min(95, Math.round(ratio * 100)));
-}
-
-function daysRemaining(targetDate: string): number {
-  const end = new Date(`${targetDate}T23:59:59`).getTime();
-  if (!Number.isFinite(end)) return 0;
-  const diff = end - Date.now();
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-}
-
-// The Phase 04 body when the phase is reachable (aesthetics approved) but the
-// brain hasn't shipped: a "waiting for Bextudio" notice, or — once a target
-// date is set — an animated, milestone-marked progress bar. When built, an
-// "Open Brand Brain" call to action.
-function BrainBuildPanel({
-  phase,
-  schedule,
-  built,
-}: {
-  phase: PhaseProgress;
-  schedule: BrainBuildScheduleView | null;
-  built: boolean;
-}) {
-  const [fill, setFill] = useState(0);
-  const targetPct = built
-    ? 100
-    : schedule
-      ? scheduleProgressPercent(schedule)
-      : 0;
-
-  // Animate the bar from 0 to its target on mount so it feels alive.
-  useEffect(() => {
-    const id = window.requestAnimationFrame(() => setFill(targetPct));
-    return () => window.cancelAnimationFrame(id);
-  }, [targetPct]);
-
-  if (built) {
-    return (
-      <div
-        className="rounded-[14px] border bg-[var(--bv-card-soft)] p-4"
-        style={{ borderColor: "var(--bv-line)" }}
-      >
-        <div className="mb-2 flex items-center gap-2">
-          <span
-            className="inline-block size-[7px] rounded-full"
-            style={{ background: "#2bc78a" }}
-          />
-          <h3 className="text-[13.5px] font-semibold tracking-[-0.005em] text-[var(--bv-ink)]">
-            Your Brand Brain is live
-          </h3>
-        </div>
-        <p className="mb-3.5 text-xs leading-relaxed text-[var(--bv-ink-3)]">
-          The Bextudio team has finished building your brand-aware brain. Start a
-          conversation grounded in everything we&apos;ve assembled together.
-        </p>
-        <Link
-          className="inline-flex items-center gap-2 rounded-[10px] px-3.5 py-2 text-[13px] font-medium text-white transition-transform duration-200 hover:-translate-y-0.5"
-          href={ROUTES.brainBrand}
-          style={{ background: PHASE_GRADIENTS[4] }}
-        >
-          Open Brand Brain
-          <svg
-            aria-hidden="true"
-            fill="none"
-            height="14"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            width="14"
-          >
-            <line x1="5" x2="19" y1="12" y2="12" />
-            <polyline points="12 5 19 12 12 19" />
-          </svg>
-        </Link>
-      </div>
-    );
-  }
-
-  if (!schedule) {
-    return (
-      <div
-        className="flex gap-3.5 rounded-[14px] border border-dashed bg-[var(--bv-card-soft)] p-4"
-        style={{ borderColor: "var(--bv-line-2)" }}
-      >
-        <span
-          className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full"
-          style={{ background: "var(--bv-brand-tint-16)" }}
-        >
-          <svg
-            aria-hidden="true"
-            fill="none"
-            height="15"
-            stroke="var(--bv-brand-deep)"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="1.9"
-            viewBox="0 0 24 24"
-            width="15"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <polyline points="12 7 12 12 15 14" />
-          </svg>
-        </span>
-        <div>
-          <h3 className="mb-1 text-[13.5px] font-semibold tracking-[-0.005em] text-[var(--bv-ink)]">
-            Waiting for Bextudio
-          </h3>
-          <p className="text-xs leading-relaxed text-[var(--bv-ink-3)]">
-            Your aesthetics are approved — the foundation is complete. The
-            Bextudio team is now preparing your Brand Brain build and will share a
-            ready date shortly.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const remaining = daysRemaining(schedule.targetDate);
-  const milestoneCount = phase.substeps.length;
-  // Map the cosmetic time-progress onto discrete steps. Steps before the active
-  // index read as done; the active index is the one currently "in build". The
-  // last step never auto-completes — it only flips to done once Bextudio ships
-  // the brain (the `built` branch above), so the stepper never implies it's
-  // finished ahead of time.
-  const reached = Math.round((fill / 100) * milestoneCount);
-  const activeStep = Math.min(reached, milestoneCount - 1);
-
-  return (
-    <div
-      className="rounded-[14px] border bg-[var(--bv-card-soft)] p-4"
-      style={{ borderColor: "var(--bv-line)" }}
-    >
-      <div className="mb-3 flex items-baseline justify-between gap-2">
-        <h3 className="text-[13.5px] font-semibold tracking-[-0.005em] text-[var(--bv-ink)]">
-          Building your Brand Brain
-        </h3>
-        <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-[var(--bv-ink-3)]">
-          {remaining === 0 ? "Arriving soon" : `~${remaining} day${remaining === 1 ? "" : "s"} left`}
-        </span>
-      </div>
-
-      {/* Stepper indicator — numbered nodes joined by connectors */}
-      <ol className="mb-3 mt-5 flex items-start">
-        {phase.substeps.map((s, i) => {
-          const done = i < activeStep;
-          const active = i === activeStep;
-          return (
-            <li
-              className="relative flex flex-1 flex-col items-center text-center"
-              key={s.id}
-            >
-              {i > 0 ? (
-                <span
-                  className="absolute right-1/2 top-[10px] z-0 h-0.5 w-full transition-all duration-500"
-                  style={{
-                    background:
-                      i <= activeStep
-                        ? "var(--bv-brand-mid)"
-                        : "var(--bv-line-2)",
-                    transitionDelay: `${i * 100}ms`,
-                  }}
-                />
-              ) : null}
-              <span
-                className="relative z-[1] grid size-[21px] place-items-center rounded-full border-2 text-[10px] font-semibold transition-all duration-500"
-                style={{
-                  background: done ? "var(--bv-brand-mid)" : "#fff",
-                  borderColor:
-                    done || active
-                      ? "var(--bv-brand-deep)"
-                      : "var(--bv-line-2)",
-                  color: done
-                    ? "#fff"
-                    : active
-                      ? "var(--bv-brand-deep)"
-                      : "var(--bv-ink-4)",
-                  boxShadow: active
-                    ? "0 0 0 4px var(--bv-brand-tint-16)"
-                    : undefined,
-                  transitionDelay: `${i * 100}ms`,
-                }}
-              >
-                {done ? (
-                  <svg
-                    aria-hidden="true"
-                    fill="none"
-                    height="11"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="3"
-                    viewBox="0 0 24 24"
-                    width="11"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                ) : (
-                  i + 1
-                )}
-              </span>
-              <span
-                className="mt-2 px-0.5 text-[9.5px] leading-tight"
-                style={{
-                  color:
-                    done || active ? "var(--bv-ink-2)" : "var(--bv-ink-4)",
-                }}
-              >
-                {s.title}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-
-      <p className="border-t border-dashed pt-3 text-[11px] leading-relaxed text-[var(--bv-ink-3)]" style={{ borderColor: "var(--bv-line)" }}>
-        Estimated ready by{" "}
-        <strong className="font-medium text-[var(--bv-ink)]">
-          {formatLongDate(schedule.targetDate)}
-        </strong>
-        . We&apos;ll email you the moment it&apos;s live.
-      </p>
-    </div>
-  );
-}
-
 /* ── Phase Card ── */
 
 // Per-phase accent colour, used by the phase icon frame.
@@ -515,7 +263,6 @@ function PhaseCard({
   phaseState,
   submitSlot,
   justUnlocked,
-  brainBuild,
 }: {
   phase: PhaseProgress;
   open: boolean;
@@ -524,24 +271,8 @@ function PhaseCard({
   phaseState: PhaseStatus;
   submitSlot?: React.ReactNode;
   justUnlocked?: boolean;
-  brainBuild?: BrainBuildScheduleView | null;
 }) {
   const isLocked = phaseState === "locked";
-  // Phase 04 swaps its substep list for the Brain Build panel (waiting /
-  // progress / live) once the phase is reachable. When still locked, we show
-  // nothing at all — no sub-step cards — because the brain build process hasn't
-  // started and listing its internal steps before aesthetics is approved would
-  // be confusing and premature.
-  const isBrainBuildLocked = phase.key === "brain_build" && isLocked;
-  const showBrainBuildPanel = phase.key === "brain_build" && !isLocked;
-  const brainBuilt = Boolean(brainBuild?.builtAt);
-  const brainScheduled = Boolean(brainBuild);
-  // Until Bextudio schedules the build, the brain phase has no real progress to
-  // report — so hide the "0 / 4 complete" footer count and the empty headline
-  // progress bar. Once a target date is set, the cosmetic schedule progress and
-  // the in-panel stepper take over.
-  const hideBrainProgress = showBrainBuildPanel && !brainBuilt && !brainScheduled;
-  const hideStepCount = phase.key === "brain_build" && !brainBuilt;
   const isReadyToSubmit = phase.phase === 1 && submitSlot !== undefined;
   const iconFrameBackground =
     phaseState === "active" ? "var(--bv-brand-mid)" : "var(--bv-ink-4)";
@@ -651,56 +382,38 @@ function PhaseCard({
         </div>
 
         {/* card content — progress */}
-        {hideBrainProgress ? (
-          <div className="px-6 pb-5 pt-2">
-            <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[var(--bv-ink-3)]">
-              Awaiting schedule
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-4 px-6 pb-5 pt-2">
+        <div className="flex items-center justify-between gap-4 px-6 pb-5 pt-2">
+          <span
+            className="h-2 flex-1 overflow-hidden rounded-full"
+            style={{ background: "rgba(15,15,20,0.06)" }}
+          >
             <span
-              className="h-2 flex-1 overflow-hidden rounded-full"
-              style={{ background: "rgba(15,15,20,0.06)" }}
-            >
-              <span
-                className="block h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${phase.percent}%`,
-                  background: isLocked
-                    ? "var(--bv-ink-4)"
-                    : isReadyToSubmit
-                      ? "var(--bv-brand-mid)"
-                      : ACTIVE_PROGRESS_GRADIENT,
-                  transitionTimingFunction: "var(--bv-ease)",
-                }}
-              />
-            </span>
-            <span className="text-[12px] font-medium text-[var(--bv-ink-3)]">
-              {phase.percent}%
-            </span>
-          </div>
-        )}
+              className="block h-full rounded-full transition-all duration-700"
+              style={{
+                width: `${phase.percent}%`,
+                background: isLocked
+                  ? "var(--bv-ink-4)"
+                  : ACTIVE_PROGRESS_GRADIENT,
+                transitionTimingFunction: "var(--bv-ease)",
+              }}
+            />
+          </span>
+          <span className="text-[12px] font-medium text-[var(--bv-ink-3)]">
+            {phase.percent}%
+          </span>
+        </div>
 
         {/* card footer */}
         <div
           className="flex items-center justify-between gap-3 border-t border-dashed px-6 py-4"
           style={{ borderColor: "var(--bv-line-dashed)" }}
         >
-          {hideStepCount ? (
-            <span className="text-[12px] leading-4 text-[var(--bv-ink-3)]">
-              {brainScheduled ? "In build" : "Waiting for Bextudio"}
-            </span>
-          ) : (
-            <span className="text-[12px] leading-4">
-              <strong className="font-medium text-[var(--bv-ink)]">
-                {phase.stepsDone} / {phase.stepsTotal}
-              </strong>{" "}
-              <span className="text-[var(--bv-ink-3)]">
-                {isReadyToSubmit ? "answered" : "complete"}
-              </span>
-            </span>
-          )}
+          <span className="text-[12px] leading-4">
+            <strong className="font-medium text-[var(--bv-ink)]">
+              {phase.stepsDone} of {phase.stepsTotal}
+            </strong>{" "}
+            <span className="text-[var(--bv-ink-3)]">steps complete</span>
+          </span>
           <span className="inline-flex items-center gap-2.5 text-[12px] font-medium text-[var(--bv-ink-3)] transition-colors duration-200 group-hover/card:text-[var(--bv-ink)]">
             <span>{open ? "Hide steps" : "View steps"}</span>
             <span
@@ -739,26 +452,13 @@ function PhaseCard({
         }}
       >
         <div className="grid gap-2 p-3 pt-3" ref={panelContentRef}>
-          {!isBrainBuildLocked && (
-            <div className="mx-1 mb-1 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
-              <span>{showBrainBuildPanel ? "Status" : "Sub-steps"}</span>
-              <span className="text-[var(--bv-ink-4)]">
-                {showBrainBuildPanel
-                  ? brainBuilt
-                    ? "Ready"
-                    : "In build"
-                  : `${phase.substeps.length} total`}
-              </span>
-            </div>
-          )}
-          {showBrainBuildPanel ? (
-            <BrainBuildPanel
-              built={brainBuilt}
-              phase={phase}
-              schedule={brainBuild ?? null}
-            />
-          ) : null}
-          {showBrainBuildPanel || isBrainBuildLocked ? null : phase.substeps.map((s, i) => {
+          <div className="mx-1 mb-1 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--bv-ink-3)]">
+            <span>Phase steps</span>
+            <span className="text-[var(--bv-ink-4)]">
+              {phase.substeps.length} total
+            </span>
+          </div>
+          {phase.substeps.map((s, i) => {
             // href substeps (the City Model view) carry their own availability,
             // decided in build-progress (it can unlock ahead of the phase). All
             // other substeps are gated by the phase lock.
@@ -1139,14 +839,6 @@ export function BrandBuildView({
     };
   }, [spineProgressIndex, openPhases, progress.phases]);
 
-  // Once the final phase (Brain Build) is complete, the spine should stop at its
-  // node — no trailing dashed segment dangling below the last card.
-  const finalPhaseComplete = useMemo(() => {
-    const last = progress.phases[progress.phases.length - 1];
-    return last ? phaseInfo[last.key]?.phaseState === "complete" : false;
-  }, [progress.phases, phaseInfo]);
-  const spineEndsAtLastNode = finalPhaseComplete && spineFillPx !== null;
-
   const router = useRouter();
   const activePhase = progress.activePhase;
   const toggle = useCallback(
@@ -1249,14 +941,10 @@ export function BrandBuildView({
           {/* Spine Track */}
           <div className="relative pl-14 max-sm:pl-9" ref={spineRef}>
             <div
-              className={`absolute left-[19px] top-[27px] w-0.5 rounded-sm max-sm:left-[11px] ${
-                spineEndsAtLastNode ? "" : "bottom-[18px]"
-              }`}
+              className="absolute left-[19px] bottom-[18px] top-[27px] w-0.5 rounded-sm max-sm:left-[11px]"
               style={{
-                height: spineEndsAtLastNode ? `${spineFillPx}px` : undefined,
-                backgroundImage: `linear-gradient(to bottom, var(--bv-line-dashed) 0 6px, transparent 6px 12px)`,
-                backgroundSize: "2px 12px",
-                backgroundRepeat: "repeat-y",
+                background:
+                  "linear-gradient(180deg, rgba(6, 182, 212, 0.22) 0%, rgba(156, 163, 175, 0.42) 38%, rgba(156, 163, 175, 0.28) 72%, rgba(156, 163, 175, 0.06) 100%)",
               }}
             >
               <div
@@ -1349,7 +1037,6 @@ export function BrandBuildView({
                     }}
                   />
                   <PhaseCard
-                    brainBuild={progress.brainBuild}
                     justUnlocked={justUnlocked}
                     onOpenSub={openSub}
                     onToggle={() => toggle(p.key)}

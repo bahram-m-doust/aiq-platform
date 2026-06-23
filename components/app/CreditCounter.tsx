@@ -6,7 +6,7 @@ type AiBudget = {
 
 type CreditCounterProps = {
   credits: number;
-  aiBudget: AiBudget | null;
+  aiBudget?: AiBudget | null;
 };
 
 function formatDollars(cents: number): string {

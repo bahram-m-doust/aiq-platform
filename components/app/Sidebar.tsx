@@ -50,7 +50,6 @@ type SidebarProps = {
   planName: string | null;
   credits: number;
   agents: SidebarAgent[];
-  aiBudget: { monthlyBudgetCents: number | null; spentCents: number; remainingCents: number | null } | null;
 };
 
 const primaryNav = [
@@ -94,7 +93,7 @@ function BrainIcon() {
   );
 }
 
-export function Sidebar({ role, planName, credits, agents, aiBudget }: SidebarProps) {
+export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -320,7 +319,7 @@ export function Sidebar({ role, planName, credits, agents, aiBudget }: SidebarPr
               <ChevronRightIcon className="size-4" />
             </Button>
           </div>
-          <CreditCounter aiBudget={aiBudget} credits={credits} />
+          <CreditCounter credits={credits} />
         </div>
       </SidebarFooter>
     </SidebarRoot>

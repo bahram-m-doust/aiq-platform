@@ -64,7 +64,6 @@ function renderSidebar() {
     <SidebarProvider>
       <Sidebar
         agents={agents}
-        aiBudget={null}
         credits={0}
         email="parisa@example.com"
         fullName="Parisa"
