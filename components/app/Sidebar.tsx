@@ -43,12 +43,19 @@ type SidebarAgent = {
   state: string;
 };
 
+type AiBudget = {
+  monthlyBudgetCents: number | null;
+  spentCents: number;
+  remainingCents: number | null;
+};
+
 type SidebarProps = {
   email: string;
   fullName: string | null;
   role: string | null;
   planName: string | null;
   credits: number;
+  aiBudget?: AiBudget | null;
   agents: SidebarAgent[];
 };
 
@@ -93,7 +100,7 @@ function BrainIcon() {
   );
 }
 
-export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
+export function Sidebar({ role, planName, credits, aiBudget, agents }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -319,7 +326,7 @@ export function Sidebar({ role, planName, credits, agents }: SidebarProps) {
               <ChevronRightIcon className="size-4" />
             </Button>
           </div>
-          <CreditCounter credits={credits} />
+          <CreditCounter credits={credits} aiBudget={aiBudget} />
         </div>
       </SidebarFooter>
     </SidebarRoot>
