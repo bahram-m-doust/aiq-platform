@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -18,14 +19,15 @@ export default function NotFound() {
       <section className="relative w-full max-w-lg text-center">
         {/* Brand mark */}
         <div className="mb-8 flex justify-center">
-          <span
-            className="flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-semibold text-white"
-            style={{
-              background: "var(--bv-brand-mid)",
-              boxShadow: "0 8px 24px var(--bv-brand-glow)",
-            }}
-          >
-            B
+          <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-border bg-white shadow-xs">
+            <Image
+              alt="AIQ STUDIO"
+              className="size-full object-contain p-1"
+              height={48}
+              src="/aiq-sign.png"
+              unoptimized
+              width={48}
+            />
           </span>
         </div>
 
@@ -53,7 +55,7 @@ export default function NotFound() {
 
         <div className="mt-9 flex justify-center">
           <Button asChild size="lg">
-            <Link href="/home">Back to home</Link>
+            <Link href="/">Back to home</Link>
           </Button>
         </div>
       </section>

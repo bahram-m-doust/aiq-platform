@@ -1,8 +1,8 @@
-# Bextudio MVP — Project Overview v0.1
+# AIQ STUDIO MVP — Project Overview v0.1
 
 ## 1. تعریف پروژه
 
-**Bextudio Platform** یک پلتفرم امن برای تبدیل داده‌های برند به **Brand Brain** و فعال‌سازی Agentهای اختصاصی است. MVP قرار نیست یک marketplace کامل، agent builder یا custom RAG سنگین باشد؛ هدف MVP این است که تجربه فعلی GPTها به یک پلتفرم مالکیت‌دار، قابل پرداخت، قابل کنترل، قابل audit و قابل ارائه به مشتری تبدیل شود.
+**AIQ Platform** یک پلتفرم امن برای تبدیل داده‌های برند به **Brand Brain** و فعال‌سازی Agentهای اختصاصی است. MVP قرار نیست یک marketplace کامل، agent builder یا custom RAG سنگین باشد؛ هدف MVP این است که تجربه فعلی GPTها به یک پلتفرم مالکیت‌دار، قابل پرداخت، قابل کنترل، قابل audit و قابل ارائه به مشتری تبدیل شود.
 
 ### جریان اصلی محصول
 
@@ -272,7 +272,7 @@ Statusها:
 
 ## 9. Module System
 
-فایل‌های نمونه OPAL نشان می‌دهند خروجی‌های Bextudio چه جنس و ساختاری دارند. از title و مفهوم آن‌ها برای moduleها استفاده می‌شود.
+فایل‌های نمونه OPAL نشان می‌دهند خروجی‌های AIQ STUDIO چه جنس و ساختاری دارند. از title و مفهوم آن‌ها برای moduleها استفاده می‌شود.
 
 ### Module Types
 

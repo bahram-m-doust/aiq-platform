@@ -9,7 +9,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
-  title: "Change Request Review | Bextudio Platform",
+  title: "Change Request Review | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function AdminChangeRequestsPage({
   const { user, profile } = await requireUserProfile("/admin/change-requests");
 
   if (!canReviewChangeRequestRole(profile.global_role)) {
-    redirect("/home");
+    redirect("/");
   }
 
   const { requests, pagination } = await getAdminChangeRequests(

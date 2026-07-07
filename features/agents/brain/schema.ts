@@ -29,7 +29,7 @@ const readinessMessages: Record<BrandBrainReadinessStatus, string> = {
   ROLE_NOT_ALLOWED:
     "Brand Brain is available to Owners and Executive Managers only.",
   AGENT_UNAVAILABLE:
-    "Brand Brain configuration is not complete. Contact Bextudio support.",
+    "Brand Brain configuration is not complete. Contact AIQ STUDIO support.",
   KNOWLEDGE_BASE_NOT_SYNCED:
     "Brand Brain is locked until the current brand knowledge base has completed RAG sync.",
   NO_SYNCED_FILES:

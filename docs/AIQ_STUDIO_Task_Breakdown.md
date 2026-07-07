@@ -1,4 +1,4 @@
-# Bextudio MVP — Project Breakdown v0.1
+# AIQ STUDIO MVP — Project Breakdown v0.1
 
 ## 1. Build Philosophy
 

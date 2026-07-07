@@ -7,7 +7,7 @@ import { requireUserProfile } from "@/features/auth/queries";
 import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Questionnaires | Bextudio Platform",
+  title: "Questionnaires | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function QuestionnairePage({
   const data = await getIntakePageData({ profileId: profile.id });
 
   if (!data) {
-    redirect("/home");
+    redirect("/");
   }
 
   return <QuestionnaireLanding data={data} showSubmitReview={review === "1"} />;

@@ -23,7 +23,7 @@ function PreparingState() {
           </h1>
           <p className="mt-2 max-w-[640px] text-sm leading-relaxed text-[var(--bv-ink-3)]">
             Your questionnaire has been approved, and this phase is now being
-            prepared by the Bextudio team. Once the stakeholder interview
+            prepared by the AIQ STUDIO team. Once the stakeholder interview
             report is ready, you&apos;ll be able to review and approve it here.
           </p>
 
@@ -38,7 +38,7 @@ function PreparingState() {
             <div className="flex flex-col gap-5">
               <div className="flex flex-wrap items-center gap-3">
                 <span
-                  className="relative inline-flex h-8 items-center justify-center overflow-hidden rounded-full border px-3 shadow-[0_6px_18px_-8px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.45)] backdrop-blur-md"
+                  className="relative inline-flex h-8 items-center justify-center overflow-hidden rounded-full border px-3 backdrop-blur-md"
                   aria-hidden="true"
                   style={{
                     background:
@@ -64,7 +64,7 @@ function PreparingState() {
                   Stakeholder interview report in preparation
                 </h2>
                 <p className="mt-2 max-w-[700px] text-sm leading-relaxed text-[var(--bv-ink-3)]">
-                  Bextudio is reviewing stakeholder input and preparing the
+                  AIQ STUDIO is reviewing stakeholder input and preparing the
                   report for your approval. Once uploaded, the PDF will appear
                   here for review, and you will be notified by email and
                   in-app notification. No action is required from you at this
@@ -92,7 +92,7 @@ function ReviewReadyCard() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-3">
         <span
-          className="relative inline-flex h-8 items-center justify-center overflow-hidden rounded-full border px-3 shadow-[0_6px_18px_-8px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.45)] backdrop-blur-md"
+          className="relative inline-flex h-8 items-center justify-center overflow-hidden rounded-full border px-3 backdrop-blur-md"
           style={{
             background:
               "linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(226,232,240,0.58) 100%)",
@@ -154,7 +154,7 @@ export function StakeholderReviewView({
       canComment={canReview}
       comments={comments}
       currentUserId={currentUserId}
-      description="This report summarizes the stakeholder interviews conducted by the Bextudio team. We'll use these insights to build your Brand Brain. Read it through, comment on anything unclear, and approve it once it's accurate."
+      description="This report summarizes stakeholder interviews conducted by the AIQ STUDIO team during brand research. Once approved, it becomes a source document for the Brand Brain knowledge base. Read it through, comment on anything unclear, and approve it once it's accurate."
       decision={{
         canDecide,
         isApproved: status === "APPROVED",

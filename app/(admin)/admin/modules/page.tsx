@@ -9,7 +9,7 @@ import { ModuleStatusBadge } from "@/features/modules/components/ModuleStatusBad
 import { getAdminModuleBrandGroups } from "@/features/modules/queries";
 
 export const metadata: Metadata = {
-  title: "Module Board | Bextudio Platform",
+  title: "Module Board | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export default async function AdminModulesPage({
   const board = await getAdminModuleBrandGroups(profile, selectedBrandId);
 
   if (!board) {
-    redirect("/home");
+    redirect("/");
   }
 
   const selectedGroup = selectedBrandId

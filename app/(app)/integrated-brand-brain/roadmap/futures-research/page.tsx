@@ -7,7 +7,7 @@ import { getFuturesResearchWorkspace } from "@/features/futures-research/queries
 import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Futures Research | Bextudio Platform",
+  title: "Futures Research | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export default async function FuturesResearchPage() {
   });
 
   if (!workspace.access) {
-    redirect(ROUTES.brainRoadmap);
+    redirect(ROUTES.home);
   }
 
   // The Storyline tab is intentionally hidden on the client-facing review for

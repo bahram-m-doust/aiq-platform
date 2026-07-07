@@ -147,6 +147,9 @@ function PhaseGlyph({ kind }: { kind: string }) {
   return null;
 }
 
+const ICON_GLASS_BACKGROUND =
+  "linear-gradient(135deg, rgba(255,255,255,0.34), rgba(255,255,255,0.12))";
+
 function RoadmapFeaturedIcon({
   background,
   kind,
@@ -158,13 +161,15 @@ function RoadmapFeaturedIcon({
     <span aria-hidden="true" className="relative block size-8 shrink-0">
       <span className="absolute left-[0.4px] top-[-7.6px] flex size-[39.192px] items-center justify-center">
         <span
+          data-frame="icon-background"
           className="size-8 flex-none rotate-[15deg] rounded-md"
           style={{ background }}
         />
       </span>
       <span
+        data-frame="icon-glass"
         className="absolute inset-0 grid size-8 place-items-center overflow-hidden rounded-md border border-white/60 text-white shadow-[0_3px_10px_-3px_rgba(15,15,20,0.25),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-md"
-        style={{ background }}
+        style={{ background: ICON_GLASS_BACKGROUND }}
       >
         <span className="absolute inset-0 bg-white/20" />
         <span className="relative drop-shadow-[0_1px_1px_rgba(15,15,20,0.22)]">
@@ -901,7 +906,7 @@ export function BrandBuildView({
           brand would. It comes together as a partnership: you bring the raw
           signal and direction, and the{" "}
           <strong className="font-medium text-[var(--bv-ink)]">
-            Bextudio
+            AIQ STUDIO
           </strong>{" "}
           team turns it into strategy, aesthetics, and a trained brand model.
           Each phase below is completed hand in hand and unlocks the next, so

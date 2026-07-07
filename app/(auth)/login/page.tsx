@@ -5,7 +5,7 @@ import { LoginForm } from "@/features/auth/components/LoginForm";
 import { sanitizeRedirectPath } from "@/features/auth/redirects";
 
 export const metadata: Metadata = {
-  title: "Sign in | Bextudio Platform",
+  title: "Sign in | AIQ Platform",
 };
 
 export default async function LoginPage({

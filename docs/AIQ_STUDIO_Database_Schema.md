@@ -1,4 +1,4 @@
-# Bextudio MVP — Database Schema v0.1
+# AIQ STUDIO MVP — Database Schema v0.1
 
 ## 1. هدف
 

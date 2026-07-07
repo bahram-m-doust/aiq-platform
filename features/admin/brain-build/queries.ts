@@ -42,7 +42,7 @@ export async function getBrainBuildScheduleForBrand(
 
   if (error) {
     // Table not migrated yet, or a transient error — treat as unscheduled so
-    // the roadmap still renders (the "waiting for Bextudio" state).
+    // the roadmap still renders (the "waiting for AIQ STUDIO" state).
     return null;
   }
 

@@ -6,7 +6,7 @@ import { getCreateBrandAccessKeyContext } from "@/features/brands/create-brand/s
 import { requireUserProfile } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
-  title: "Create Brand | Bextudio Platform",
+  title: "Create Brand | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,7 @@ export default async function CreateBrandPage({
   const accessKeyId = readAccessKeyId(params.access_key_id);
 
   if (!accessKeyId) {
-    redirect("/home");
+    redirect("/");
   }
 
   const { user, profile } = await requireUserProfile("/create-brand");
@@ -41,7 +41,7 @@ export default async function CreateBrandPage({
   });
 
   if (!contextResult.ok) {
-    redirect("/home");
+    redirect("/");
   }
 
   const email = user.email ?? profile.email;

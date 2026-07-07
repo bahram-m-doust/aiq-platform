@@ -8,7 +8,7 @@ import {
 import { requirePlatformOwner } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
-  title: "Questionnaire Builder | Bextudio Admin",
+  title: "Questionnaire Builder | AIQ Admin",
 };
 
 export const dynamic = "force-dynamic";

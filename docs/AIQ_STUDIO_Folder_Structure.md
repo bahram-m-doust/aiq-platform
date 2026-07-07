@@ -1,4 +1,4 @@
-# Bextudio MVP — Folder Structure & Code Organization v0.1
+# AIQ STUDIO MVP — Folder Structure & Code Organization v0.1
 
 ## 1. هدف سند
 
@@ -28,7 +28,7 @@ audit
 ## 3. ساختار ریشه پروژه
 
 ```text
-bextudio-platform/
+aiq-platform/
 ├── app/
 ├── components/
 ├── features/

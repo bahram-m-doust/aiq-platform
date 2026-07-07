@@ -153,7 +153,7 @@ describe("invitation safe metadata and email", () => {
       "https://app.bextudio.test/invite/accept?key=bext_raw_secret_key",
     );
     expect(email.subject).toBe(
-      "You have been invited to a Bextudio Brand Workspace",
+      "You have been invited to an AIQ STUDIO Brand Workspace",
     );
     expect(email.subject).not.toContain(rawKey);
     expect(email.text).toContain(acceptUrl);

@@ -12,7 +12,7 @@ import { getCityModelDistrictWorkspace } from "@/features/city-model-deliverable
 import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "City Model · District | Bextudio Platform",
+  title: "City Model · District | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

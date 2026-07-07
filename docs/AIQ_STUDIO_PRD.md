@@ -1,8 +1,8 @@
-# Bextudio MVP — Product Requirements Document v0.1
+# AIQ STUDIO MVP — Product Requirements Document v0.1
 
 ## 1. خلاصه اجرایی
 
-Bextudio MVP پلتفرمی است که مشتریان executive پس از Login، برند خود را با Access Key یا فعال‌سازی دستی Admin فعال می‌کنند، به سوال‌های اجباری پاسخ می‌دهند، پاسخ‌ها را قفل می‌کنند، خروجی‌های انسانی تیم Bextudio را review می‌کنند، و پس از approval داخلی، Brand Brain و Agentهای اختصاصی دریافت می‌کنند.
+AIQ STUDIO MVP پلتفرمی است که مشتریان executive پس از Login، برند خود را با Access Key یا فعال‌سازی دستی Admin فعال می‌کنند، به سوال‌های اجباری پاسخ می‌دهند، پاسخ‌ها را قفل می‌کنند، خروجی‌های انسانی تیم AIQ STUDIO را review می‌کنند، و پس از approval داخلی، Brand Brain و Agentهای اختصاصی دریافت می‌کنند.
 
 ## 2. اهداف محصول
 
@@ -495,7 +495,7 @@ Rules:
 ## 6. Foldering
 
 ```text
-bextudio-platform/
+aiq-platform/
 ├── app/
 │   ├── (auth)/
 │   ├── (app)/

@@ -12,7 +12,7 @@ import { requireUserProfile } from "@/features/auth/queries";
 import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Brand Brain | Bextudio Platform",
+  title: "Brand Brain | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

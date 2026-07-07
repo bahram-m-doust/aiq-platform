@@ -542,7 +542,7 @@ function toClientReviewEntry(review: ModuleReviewRecord): ClientReviewEntry {
     reviewType: review.reviewType,
     decision: review.decision,
     reviewerLabel:
-      review.reviewType === "CLIENT" ? "Brand reviewer" : "Bextudio team",
+      review.reviewType === "CLIENT" ? "Brand reviewer" : "AIQ STUDIO team",
     comment: review.comment,
     createdAt: review.createdAt,
   };

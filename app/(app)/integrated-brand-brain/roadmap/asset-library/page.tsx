@@ -7,7 +7,7 @@ import { getAestheticsWorkspace } from "@/features/aesthetics/queries";
 import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Asset Library | Bextudio Platform",
+  title: "Asset Library | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function AssetLibraryPage() {
   });
 
   if (!workspace.access) {
-    redirect(ROUTES.brainRoadmap);
+    redirect(ROUTES.home);
   }
 
   return (

@@ -11,7 +11,7 @@ import { canViewAdminModulesRole } from "@/features/modules/schema";
 import type { AestheticsKind } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Aesthetics | Bextudio Platform",
+  title: "Aesthetics | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export default async function AdminAestheticsPage() {
   const { profile } = await requireUserProfile("/admin/aesthetics");
 
   if (!canViewAdminModulesRole(profile.global_role)) {
-    redirect("/home");
+    redirect("/");
   }
 
   const overview = await getAestheticsAdminOverview();
@@ -41,7 +41,7 @@ export default async function AdminAestheticsPage() {
       <section className="mx-auto w-full max-w-4xl space-y-8">
         <div>
           <p className="font-mono text-sm uppercase tracking-[0.2em] text-muted-foreground">
-            Build Roadmap · Phase 03
+            Brand Deliverables · Phase 03
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-normal">
             Aesthetics

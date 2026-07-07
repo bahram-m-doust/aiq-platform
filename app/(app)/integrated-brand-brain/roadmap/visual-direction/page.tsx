@@ -7,7 +7,7 @@ import { getAestheticsWorkspace } from "@/features/aesthetics/queries";
 import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Visual Direction | Bextudio Platform",
+  title: "Visual Direction | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function VisualDirectionPage() {
   });
 
   if (!workspace.access) {
-    redirect(ROUTES.brainRoadmap);
+    redirect(ROUTES.home);
   }
 
   return (

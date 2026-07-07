@@ -42,14 +42,14 @@ type ProfileRow = {
   global_role: string;
 };
 
-// Platform staff uploads are branded "Bextudio"; everything else (a brand's
+// Platform staff uploads are branded "AIQ STUDIO"; everything else (a brand's
 // own user uploading their files) is attributed to the brand itself.
 const STAFF_ROLES = new Set([
   "PLATFORM_OWNER",
   "SUPERVISOR",
   "INTERNAL_SPECIALIST",
 ]);
-const PLATFORM_LABEL = "Bextudio";
+const PLATFORM_LABEL = "AIQ STUDIO";
 
 export async function getAdminBrandOptions(): Promise<AdminBrandOption[]> {
   const admin = createAdminClient();
@@ -124,7 +124,7 @@ export async function getDocumentsForBrand({
       const uploader = row.uploaded_by
         ? profilesById.get(row.uploaded_by) ?? null
         : null;
-      // Staff (or unknown uploader) -> "Bextudio"; a brand's own user -> brand.
+      // Staff (or unknown uploader) -> "AIQ STUDIO"; a brand's own user -> brand.
       const uploaderLabel =
         uploader && !STAFF_ROLES.has(uploader.global_role)
           ? brandName

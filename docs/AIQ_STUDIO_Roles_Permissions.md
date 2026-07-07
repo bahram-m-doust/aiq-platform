@@ -1,4 +1,4 @@
-# Bextudio MVP — Roles & Permissions v0.1
+# AIQ STUDIO MVP — Roles & Permissions v0.1
 
 ## 1. Roles
 
@@ -82,7 +82,7 @@ Cannot:
 
 ### Internal Specialist
 
-عضو تیم داخلی Bextudio/Helio که روی moduleها کار می‌کند.
+عضو تیم داخلی AIQ STUDIO/Helio که روی moduleها کار می‌کند.
 
 Can:
 ```text

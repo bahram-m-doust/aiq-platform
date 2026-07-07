@@ -120,7 +120,7 @@ describe("admin access key email handling", () => {
 
   it("keeps the raw key out of the email subject", () => {
     const rawKey = "bext_raw_key_once";
-    const redeemUrl = "https://bextudio.test/home?key=bext_raw_key_once";
+    const redeemUrl = "https://bextudio.test/?key=bext_raw_key_once";
     const email = buildAccessKeyEmail({
       rawKey,
       redeemUrl,

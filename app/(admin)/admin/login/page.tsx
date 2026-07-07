@@ -3,16 +3,17 @@ import type { Metadata } from "next";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { AdminLoginForm } from "@/features/auth/components/AdminLoginForm";
 import { sanitizeRedirectPath } from "@/features/auth/redirects";
+import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Admin sign in | Bextudio Platform",
+  title: "Admin sign in | AIQ Platform",
 };
 
 const defaultAdminPath = "/admin";
 
 function sanitizeAdminNext(value: string | undefined) {
   const path = sanitizeRedirectPath(value ?? null);
-  if (path === "/home") {
+  if (path === ROUTES.home || path === "/home") {
     return defaultAdminPath;
   }
   return path;

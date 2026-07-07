@@ -10,7 +10,7 @@ import { getStakeholderAdminOverview } from "@/features/stakeholder-interviews/q
 import { stakeholderReportStatusLabels } from "@/features/stakeholder-interviews/schema";
 
 export const metadata: Metadata = {
-  title: "Stakeholder Interviews Report | Bextudio Platform",
+  title: "Stakeholder Interviews Report | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function AdminStakeholderInterviewsPage() {
   const { profile } = await requireUserProfile("/admin/stakeholder-interviews");
 
   if (!canViewAdminModulesRole(profile.global_role)) {
-    redirect("/home");
+    redirect("/");
   }
 
   const overview = await getStakeholderAdminOverview();

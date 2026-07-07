@@ -60,7 +60,7 @@ export async function createManualPlanGrantAction(
     });
 
     revalidatePath("/admin/entitlements");
-    revalidatePath("/home");
+    revalidatePath("/");
 
     return {
       status: "success",

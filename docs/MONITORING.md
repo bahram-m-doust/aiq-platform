@@ -15,7 +15,7 @@ Expected healthy response:
 
 ```json
 {
-  "service": "bextudio-platform",
+  "service": "aiq-platform",
   "status": "ok",
   "timestamp": "2026-05-22T00:00:00.000Z",
   "checks": {

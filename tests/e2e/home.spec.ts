@@ -11,7 +11,7 @@ test("loads the Epic 00 foundation page", async ({ page }) => {
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "Bextudio Platform" }),
+    page.getByRole("heading", { name: "AIQ Platform" }),
   ).toBeVisible();
   await expect(page.getByText("Epic 00")).toBeVisible();
   await expect(
@@ -57,7 +57,7 @@ test("health endpoint returns a non-sensitive readiness payload", async ({
 
   expect([200, 503]).toContain(response.status());
   expect(body).toMatchObject({
-    service: "bextudio-platform",
+    service: "aiq-platform",
     status: expect.stringMatching(/^(ok|error)$/),
     checks: {
       env: expect.stringMatching(/^(ok|error)$/),

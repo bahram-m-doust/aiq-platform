@@ -24,7 +24,7 @@ export function CityModelDistrictView({
     <main className="min-h-svh px-4 py-6 sm:px-6 sm:py-10">
       <section className="mx-auto w-full max-w-[1057px]">
         <DeliverablePendingState
-          body="The Bextudio team will upload it here for your review and approval."
+          body="The AIQ STUDIO team will upload it here for your review and approval."
           eyebrow={ROADMAP_PHASE_LABELS.cityModelDistrict}
           eyebrowVariant="roadmap"
           headline="This district's deliverable is being prepared."

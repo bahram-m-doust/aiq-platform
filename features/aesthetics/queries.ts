@@ -11,7 +11,7 @@ import { resolveReviewSurface } from "@/features/review-content/surface";
 import type { ReviewSubjectType } from "@/features/review-comments/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingTableError } from "@/lib/supabase/errors";
-import { type AestheticsKind, aestheticsKindSlugs } from "@/lib/routes";
+import { type AestheticsKind } from "@/lib/routes";
 
 type DeliverableRow = {
   id: string;

@@ -25,6 +25,19 @@ export default function GlobalError({
         }}
       >
         <div style={{ maxWidth: 420, padding: 24, textAlign: "center" }}>
+          <span
+            aria-hidden="true"
+            style={{
+              backgroundImage: "url('/aiq-sign.png')",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              backgroundSize: "contain",
+              display: "block",
+              height: 48,
+              margin: "0 auto 18px",
+              width: 48,
+            }}
+          />
           <p
             style={{
               fontSize: 11,
@@ -33,19 +46,19 @@ export default function GlobalError({
               color: "#82828d",
             }}
           >
-            Bextudio
+            AIQ STUDIO
           </p>
           <h1 style={{ fontSize: 22, fontWeight: 600, margin: "8px 0" }}>
             Something went wrong
           </h1>
           <p style={{ color: "#4a4a55", fontSize: 14, lineHeight: 1.55 }}>
             An unexpected error occurred. Your work is safe — try again, or
-            contact the Bextudio team if the problem persists.
+            contact the AIQ STUDIO team if the problem persists.
           </p>
           <Button
             onClick={() => reset()}
             style={{
-              background: "#0891b2",
+              background: "#09092B",
               border: "none",
               borderRadius: 8,
               color: "#ffffff",

@@ -20,7 +20,7 @@ import { getAdminModuleDetail } from "@/features/modules/queries";
 import { canViewAdminModulesRole } from "@/features/modules/schema";
 
 export const metadata: Metadata = {
-  title: "Module Detail | Bextudio Platform",
+  title: "Module Detail | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export default async function AdminModuleDetailPage({
   );
 
   if (!canViewAdminModulesRole(profile.global_role)) {
-    redirect("/home");
+    redirect("/");
   }
 
   const detail = await getAdminModuleDetail({ moduleId, profile });

@@ -8,7 +8,7 @@ import { hasPublicSupabaseEnv } from "@/lib/supabase/env";
 export type HealthCheckState = "ok" | "error";
 
 export type HealthStatus = {
-  service: "bextudio-platform";
+  service: "aiq-platform";
   status: HealthCheckState;
   timestamp: string;
   checks: {
@@ -68,7 +68,7 @@ export async function getHealthStatus(now = new Date()): Promise<HealthStatus> {
     env === "ok" && supabase === "ok" ? "ok" : "error";
 
   return {
-    service: "bextudio-platform",
+    service: "aiq-platform",
     status,
     timestamp: now.toISOString(),
     checks: {

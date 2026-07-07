@@ -73,7 +73,7 @@ export async function reviewChangeRequestAction(
   const { profile } = await requireUserProfile("/admin/change-requests");
 
   if (!canReviewChangeRequestRole(profile.global_role)) {
-    redirect("/home");
+    redirect("/");
   }
 
   const validation = validateReviewChangeRequestFormData(formData);

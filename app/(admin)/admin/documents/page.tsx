@@ -10,7 +10,7 @@ import {
 import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
-  title: "Admin Documents | Bextudio Platform",
+  title: "Admin Documents | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

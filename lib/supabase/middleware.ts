@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { ROUTES, APP_ROOT_SEGMENTS } from "@/lib/routes";
+import { isDevAuthBypassEnabled } from "@/lib/auth/dev-bypass";
 import { resolveAuthUser } from "@/lib/supabase/auth-user";
 import {
   getPublicSupabaseEnv,
@@ -28,6 +29,10 @@ function isAdminLogin(pathname: string) {
 // App pages live under the `(app)` route group, so they have no shared
 // URL prefix — their first path segment is the discriminator.
 function isAppPath(pathname: string) {
+  if (pathname === ROUTES.home) {
+    return true;
+  }
+
   const firstSegment = pathname.split("/").filter(Boolean)[0];
   return firstSegment !== undefined && APP_ROOT_SEGMENTS.has(firstSegment);
 }
@@ -60,6 +65,17 @@ function redirectToLogin(request: NextRequest) {
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const protectedPath = isProtectedPath(pathname);
+
+  if (isDevAuthBypassEnabled()) {
+    if (isAuthPath(pathname)) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = isAdminLogin(pathname) ? "/admin" : ROUTES.home;
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    return NextResponse.next();
+  }
 
   if (!hasPublicSupabaseEnv()) {
     return protectedPath ? redirectToLogin(request) : NextResponse.next();

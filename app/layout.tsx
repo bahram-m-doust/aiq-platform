@@ -19,8 +19,8 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-  title: "Bextudio Platform",
-  description: "Bextudio Platform MVP foundation",
+  title: "AIQ Platform",
+  description: "AIQ Platform MVP foundation",
 };
 
 export default function RootLayout({

@@ -2,7 +2,7 @@
 // `(app)` route group, so these slugs are top-level (no shared URL prefix) and
 // intentionally match each page's displayed name and on-disk folder.
 export const ROUTES = {
-  home: "/home",
+  home: "/",
   brain: "/integrated-brand-brain",
   brainBrand: "/integrated-brand-brain/brand-brain",
   brainRoadmap: "/integrated-brand-brain/roadmap",
@@ -10,6 +10,8 @@ export const ROUTES = {
     "/integrated-brand-brain/roadmap/futures-research",
   brainRoadmapStakeholderInterviews:
     "/integrated-brand-brain/roadmap/stakeholder-interviews",
+  brainRoadmapBrandCanvas: "/integrated-brand-brain/roadmap/brand-canvas",
+  brainRoadmapExperienceBook: "/integrated-brand-brain/roadmap/experience-book",
   brainRoadmapCityModel: "/integrated-brand-brain/roadmap/city-model",
   brainRoadmapVisualDirection:
     "/integrated-brand-brain/roadmap/visual-direction",
@@ -20,8 +22,8 @@ export const ROUTES = {
   documents: "/documents",
   settings: "/settings",
   modules: "/modules",
-  // Questionnaire is Phase 1 of the Build Roadmap, so it lives under the brain
-  // roadmap rather than at the top level — its URL mirrors the breadcrumb trail.
+  // Questionnaire lives under the brain deliverables path rather than at the
+  // top level, so its URL mirrors the breadcrumb trail.
   questionnaire: "/integrated-brand-brain/roadmap/questionnaire",
   changeRequests: "/change-requests",
   createBrand: "/create-brand",
@@ -59,14 +61,15 @@ export const aestheticsDeliverablePath = (slug: string): string => {
   const entry = Object.entries(aestheticsKindSlugs).find(
     ([, s]) => s === slug,
   );
-  if (!entry) return ROUTES.brainRoadmap;
+  if (!entry) return ROUTES.home;
   return aestheticsKindRoutes[entry[0] as keyof typeof aestheticsKindSlugs];
 };
 
 // First URL segment of every page rendered inside the `(app)` shell.
 // Route groups don't appear in the pathname, so this allowlist is how the
 // sidebar/breadcrumb and middleware recognize "an app page" without a shared
-// URL prefix. Keep in sync with the folders under app/(app)/.
+// URL prefix. "/" is handled separately in middleware as ROUTES.home.
+// Keep in sync with the folders under app/(app)/.
 export const APP_ROOT_SEGMENTS = new Set([
   "home",
   "integrated-brand-brain",

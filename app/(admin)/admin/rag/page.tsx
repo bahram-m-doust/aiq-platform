@@ -9,7 +9,7 @@ import {
 import { canSyncRagRole, canViewRagApprovalQueueRole } from "@/features/rag/schema";
 
 export const metadata: Metadata = {
-  title: "RAG Approval Queue | Bextudio Platform",
+  title: "RAG Approval Queue | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export default async function AdminRagApprovalPage() {
   const { user, profile } = await requireUserProfile("/admin/rag");
 
   if (!canViewRagApprovalQueueRole(profile.global_role)) {
-    redirect("/home");
+    redirect("/");
   }
 
   const syncGroups = canSyncRagRole(profile.global_role)

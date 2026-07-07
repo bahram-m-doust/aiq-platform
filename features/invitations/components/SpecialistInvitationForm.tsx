@@ -6,6 +6,7 @@ import { MailCheckIcon, MailWarningIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CopyButton } from "@/components/ui/copy-button";
 import { DSCard, DSCardBody, DSCardHeader } from "@/components/ds/Card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
@@ -18,6 +19,7 @@ export function SpecialistInvitationForm({
 }: {
   context: SpecialistInvitationContext;
 }) {
+  void context;
   const [state, formAction] = useActionState(
     createSpecialistInvitationAction,
     initialSpecialistInvitationFormState,
@@ -25,52 +27,63 @@ export function SpecialistInvitationForm({
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   return (
-    <div className="space-y-6">
-      <DSCard>
-        <DSCardHeader>
-          <h2 className="ds-h2">Invite Brand Specialist</h2>
-          <p className="ds-body mt-1">
-            Send a time-limited, email-bound invitation to join{" "}
-            {context.brandName} as a Brand Specialist.
-          </p>
-        </DSCardHeader>
-        <DSCardBody>
-          <form action={formAction} className="grid gap-5">
+    <div className="w-full max-w-[374px] space-y-6">
+      <DSCard className="p-6">
+        <DSCardBody className="p-0">
+          <form action={formAction} className="grid gap-6">
             {state.status === "error" ? (
               <Alert variant="destructive">
                 <AlertDescription>{state.message}</AlertDescription>
               </Alert>
             ) : null}
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-4">
               <div className="space-y-2">
-                <Label htmlFor="target_email">Specialist email</Label>
+                <Label
+                  className="text-sm font-medium leading-none"
+                  htmlFor="target_email"
+                >
+                  Specialist email
+                </Label>
                 <Input
+                  aria-describedby="target_email_description"
                   autoComplete="email"
+                  className="h-9 text-sm font-normal leading-5 shadow-xs"
                   id="target_email"
                   name="target_email"
                   placeholder="specialist@example.com"
                   required
                   type="email"
                 />
+                <p
+                  className="text-sm font-normal leading-5 text-muted-foreground"
+                  id="target_email_description"
+                >
+                  We will send the invitation link to this email address.
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="expires_at">Invitation expiry</Label>
-                <Input
+                <Label
+                  className="text-sm font-medium leading-none"
+                  htmlFor="expires_at"
+                >
+                  Invitation expiry
+                </Label>
+                <DatePicker
+                  ariaDescribedBy="expires_at_description"
                   id="expires_at"
                   min={today}
                   name="expires_at"
                   required
-                  type="date"
                 />
+                <p
+                  className="text-sm font-normal leading-5 text-muted-foreground"
+                  id="expires_at_description"
+                >
+                  After this date, the invitation can no longer be accepted.
+                </p>
               </div>
-            </div>
-
-            <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-              The invitation will create a JOIN_BRAND key for Brand Specialist
-              access only. The key is bound to the recipient email and can be
-              redeemed once before expiry.
             </div>
 
             <div className="flex justify-end">
@@ -84,8 +97,8 @@ export function SpecialistInvitationForm({
       </DSCard>
 
       {state.status === "success" ? (
-        <DSCard>
-          <DSCardHeader>
+        <DSCard className="space-y-6 p-6">
+          <DSCardHeader className="space-y-1.5 p-0">
             <h2 className="ds-h2 flex items-center gap-2">
               {state.warning ? (
                 <MailWarningIcon className="size-4" />
@@ -94,9 +107,9 @@ export function SpecialistInvitationForm({
               )}
               Invitation created
             </h2>
-            <p className="ds-body mt-1">{state.message}</p>
+            <p className="ds-body">{state.message}</p>
           </DSCardHeader>
-          <DSCardBody className="space-y-4">
+          <DSCardBody className="space-y-4 p-0">
             {state.warning ? (
               <Alert>
                 <MailWarningIcon className="size-4" />

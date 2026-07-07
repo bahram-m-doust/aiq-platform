@@ -15,7 +15,7 @@ describe("brand access summary", () => {
       memberships: [
         {
           brandId: "brand-1",
-          brandName: "Bextudio",
+          brandName: "AIQ STUDIO",
           role: "OWNER",
         },
       ],
@@ -34,7 +34,7 @@ describe("brand access summary", () => {
     expect(summary).toEqual({
       status: "ACTIVE_ACCESS",
       brandId: "brand-1",
-      brandName: "Bextudio",
+      brandName: "AIQ STUDIO",
       membershipRole: "OWNER",
       planName: "BASIC",
       credits: 1000,
@@ -47,7 +47,7 @@ describe("brand access summary", () => {
       memberships: [
         {
           brandId: "brand-1",
-          brandName: "Bextudio",
+          brandName: "AIQ STUDIO",
           role: "OWNER",
         },
       ],

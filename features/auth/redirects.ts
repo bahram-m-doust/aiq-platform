@@ -1,4 +1,6 @@
-const defaultRedirectPath = "/home";
+import { ROUTES } from "@/lib/routes";
+
+const defaultRedirectPath = ROUTES.home;
 const adminLoginPath = "/admin/login";
 const userLoginPath = "/login";
 const internalRedirectOrigin = "https://bextudio.internal";

@@ -51,14 +51,14 @@ export type PhaseProgress = {
 };
 
 // The brand-facing slice of the Brain Build schedule. Drives Phase 04's
-// "waiting for Bextudio" message, the animated progress bar, and (once builtAt
+// "waiting for AIQ STUDIO" message, the animated progress bar, and (once builtAt
 // is set) the unlocked Brand Brain chatbot.
 export type BrainBuildScheduleView = {
   // ISO date (YYYY-MM-DD) the brand is told its brain will be ready.
   targetDate: string;
   // ISO timestamp the schedule was first created — the progress bar's start.
   scheduledAt: string | null;
-  // null until Bextudio runs "Build Now".
+  // null until AIQ STUDIO runs "Build Now".
   builtAt: string | null;
 };
 
@@ -119,7 +119,7 @@ function stakeholderSubstep(
     case "CHANGES_REQUESTED":
       return { state: "in-progress", progress: 50 };
     default:
-      // PENDING_UPLOAD / no report — the Bextudio team is preparing it.
+      // PENDING_UPLOAD / no report — the AIQ STUDIO team is preparing it.
       return { state: "in-progress", progress: 0 };
   }
 }
@@ -160,7 +160,7 @@ function futuresResearchSubstep(
     case "CHANGES_REQUESTED":
       return { state: "in-progress", progress: 50 };
     default:
-      // PENDING_UPLOAD / no report — the Bextudio team is preparing it.
+      // PENDING_UPLOAD / no report — the AIQ STUDIO team is preparing it.
       return { state: "in-progress", progress: 0 };
   }
 }
@@ -602,7 +602,7 @@ export async function getBrandBuildProgress(
   const brainBuilt = Boolean(brainSchedule?.builtAt);
 
   if (brainBuilt) {
-    // Bextudio has shipped the brain (built_at stamped by "Build Now"). That is
+    // AIQ STUDIO has shipped the brain (built_at stamped by "Build Now"). That is
     // the single source of truth for "Phase 04 is done" — so the card jumps
     // straight to 100% / all sub-steps complete in one shot, regardless of the
     // finer-grained RAG checks. This keeps the roadmap from getting stuck at
@@ -619,7 +619,7 @@ export async function getBrandBuildProgress(
   } else if (aesthetics.status !== "complete") {
     brain.status = brain.stepsDone > 0 ? "active" : "locked";
   } else if (brain.status !== "complete") {
-    // Aesthetics are approved, so Phase 04 is handed to Bextudio. Until the
+    // Aesthetics are approved, so Phase 04 is handed to AIQ STUDIO. Until the
     // brain ships it reads as "active" (in build), and — once a target date is
     // scheduled — its headline percent mirrors the cosmetic schedule bar so the
     // phase card and the in-panel progress agree.

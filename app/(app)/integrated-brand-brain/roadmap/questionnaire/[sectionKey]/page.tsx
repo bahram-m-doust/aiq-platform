@@ -8,7 +8,7 @@ import { requireUserProfile } from "@/features/auth/queries";
 import { questionnaireSectionPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Questionnaire | Bextudio Platform",
+  title: "Questionnaire | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ export default async function QuestionnaireSectionPage({
   const data = await getIntakePageData({ profileId: profile.id });
 
   if (!data) {
-    redirect("/home");
+    redirect("/");
   }
 
   // URLs use the lowercased section key (questionnaireSectionPath), but the
@@ -39,7 +39,7 @@ export default async function QuestionnaireSectionPage({
   );
 
   if (!selectedSection) {
-    redirect("/home");
+    redirect("/");
   }
 
   return (

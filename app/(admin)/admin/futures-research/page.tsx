@@ -11,7 +11,7 @@ import { futuresResearchReportStatusLabels } from "@/features/futures-research/s
 import { canViewAdminModulesRole } from "@/features/modules/schema";
 
 export const metadata: Metadata = {
-  title: "Futures Research | Bextudio Platform",
+  title: "Futures Research | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function AdminFuturesResearchPage() {
   const { profile } = await requireUserProfile("/admin/futures-research");
 
   if (!canViewAdminModulesRole(profile.global_role)) {
-    redirect("/home");
+    redirect("/");
   }
 
   const overview = await getFuturesResearchAdminOverview();

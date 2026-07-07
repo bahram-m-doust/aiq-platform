@@ -1,4 +1,4 @@
-# Bextudio Platform — Architecture Map
+# AIQ Platform — Architecture Map
 
 A "what's where and how it works" inventory. Paths are relative to the platform
 root. `features/X` = domain logic; `app/(app)` = client area; `app/(admin)` =

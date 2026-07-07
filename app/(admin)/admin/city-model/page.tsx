@@ -13,7 +13,7 @@ import { canViewAdminModulesRole } from "@/features/modules/schema";
 import { DeliverableStatusBadge } from "@/features/review-deliverables/components/DeliverableStatusBadge";
 
 export const metadata: Metadata = {
-  title: "City Model | Bextudio Platform",
+  title: "City Model | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export default async function AdminCityModelPage({
 }) {
   const { profile } = await requireUserProfile("/admin/city-model");
   if (!canViewAdminModulesRole(profile.global_role)) {
-    redirect("/home");
+    redirect("/");
   }
 
   const brands = await getCityModelAdminBrands();

@@ -15,7 +15,7 @@ export const initialDocumentUploadFormState = {
 export const documentVisibilityLabels: Record<DocumentVisibility, string> = {
   OWNER_ONLY: "Owner only",
   BRAND_TEAM: "Brand team",
-  HELIO_INTERNAL: "Bextudio",
+  HELIO_INTERNAL: "AIQ STUDIO",
   CLIENT_REVIEW: "Client review",
   AGENT_VISIBLE: "Agent visible",
 };
@@ -45,7 +45,7 @@ const specialistUploadVisibilities = [
 
 // Platform-owner uploads on /admin/documents are intentionally limited to two
 // meaningful choices:
-//   - HELIO_INTERNAL ("Bextudio"): internal source files for RAG; the brand
+//   - HELIO_INTERNAL ("AIQ STUDIO"): internal source files for RAG; the brand
 //     never sees these on its own Documents page.
 //   - CLIENT_REVIEW: deliverables the brand can see and act on.
 // Other visibilities still exist for the specialist/owner workflow and for

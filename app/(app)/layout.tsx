@@ -15,6 +15,7 @@ import {
   listNotificationsForProfile,
 } from "@/features/notifications/queries";
 import { getBrandAiBudgetSummary } from "@/features/openrouter/usage";
+import { ROUTES } from "@/lib/routes";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const getBrandIconUrl = cache(async (brandId: string) => {
@@ -33,7 +34,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, profile } = await requireUserProfile("/home");
+  const { user, profile } = await requireUserProfile(ROUTES.home);
   const accessSummaryPromise = getBrandAccessSummaryForProfile(profile.id);
   const catalogWorkspacePromise = getAgentCatalogWorkspace(profile.id).catch(
     () => null,

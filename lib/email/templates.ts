@@ -22,7 +22,7 @@ export function buildAccessKeyRedeemPath({
   const encoded = encodeURIComponent(rawKey.trim());
   return type === "JOIN_BRAND"
     ? `/invite/accept?key=${encoded}`
-    : `/home?key=${encoded}`;
+    : `/?key=${encoded}`;
 }
 
 export function buildAccessKeyRedeemUrl({
@@ -55,9 +55,9 @@ export function buildAccessKeyEmail({
     timeZone: "UTC",
   }).format(new Date(expiresAt));
 
-  const subject = "Your Bextudio access key";
+  const subject = "Your AIQ STUDIO access key";
   const text = [
-    "Your Bextudio access key is ready.",
+    "Your AIQ STUDIO access key is ready.",
     "",
     `Type: ${type}`,
     `Expires: ${formattedExpiry} UTC`,
@@ -70,7 +70,7 @@ export function buildAccessKeyEmail({
   ].join("\n");
 
   const html = [
-    "<p>Your Bextudio access key is ready.</p>",
+    "<p>Your AIQ STUDIO access key is ready.</p>",
     `<p><strong>Type:</strong> ${escapeHtml(type)}</p>`,
     `<p><strong>Expires:</strong> ${escapeHtml(formattedExpiry)} UTC</p>`,
     `<p><a href="${escapeHtml(redeemUrl)}">Activate your access</a></p>`,
@@ -98,9 +98,9 @@ export function buildSpecialistInvitationEmail({
     timeZone: "UTC",
   }).format(new Date(expiresAt));
 
-  const subject = "You have been invited to a Bextudio Brand Workspace";
+  const subject = "You have been invited to an AIQ STUDIO Brand Workspace";
   const text = [
-    `You have been invited to join ${brandName} on the Bextudio Platform as a Brand Specialist.`,
+    `You have been invited to join ${brandName} on the AIQ Platform as a Brand Specialist.`,
     `Invited by: ${inviterEmail}`,
     `Expires: ${formattedExpiry} UTC`,
     "",
@@ -111,7 +111,7 @@ export function buildSpecialistInvitationEmail({
   const html = [
     `<p>You have been invited to join <strong>${escapeHtml(
       brandName,
-    )}</strong> on the Bextudio Platform as a Brand Specialist.</p>`,
+    )}</strong> on the AIQ Platform as a Brand Specialist.</p>`,
     `<p><strong>Invited by:</strong> ${escapeHtml(inviterEmail)}</p>`,
     `<p><strong>Expires:</strong> ${escapeHtml(formattedExpiry)} UTC</p>`,
     `<p><a href="${escapeHtml(acceptUrl)}">Accept the invitation</a></p>`,

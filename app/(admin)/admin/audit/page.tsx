@@ -7,7 +7,7 @@ import { requirePlatformOwner } from "@/features/auth/queries";
 import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
-  title: "Audit Logs | Bextudio Platform",
+  title: "Audit Logs | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

@@ -11,7 +11,7 @@ import { ModuleStatusBadge } from "@/features/modules/components/ModuleStatusBad
 import { getClientModuleReviewPageData } from "@/features/modules/services";
 
 export const metadata: Metadata = {
-  title: "Module Review | Bextudio Platform",
+  title: "Module Review | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

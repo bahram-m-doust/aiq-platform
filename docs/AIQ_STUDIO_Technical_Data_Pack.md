@@ -1,4 +1,4 @@
-# Bextudio MVP — Technical Data Pack, Prompt Pack & Test Pack v0.1
+# AIQ STUDIO MVP — Technical Data Pack, Prompt Pack & Test Pack v0.1
 
 ## 1. Status Types
 
@@ -109,7 +109,7 @@ logAudit({ actorUserId, actorRole, brandId, action, entityType, entityId, before
 ## 5. Foldering
 
 ```text
-bextudio-platform/
+aiq-platform/
 ├── app/
 │   ├── (auth)/login
 │   ├── (auth)/register
@@ -236,7 +236,7 @@ Brain ready → Activate Story Teller → Run → Log created
 ## 7.1 Master Prompt
 
 ```text
-You are coding the Bextudio MVP.
+You are coding the AIQ STUDIO MVP.
 Read and follow PROJECT_CONTEXT.md, PRD.md, TECHNICAL_DATA_PACK.md, SECURITY_RULES.md.
 Build only the requested feature.
 Do not invent product logic.
@@ -251,7 +251,7 @@ Output: files changed, summary, security notes, manual test steps, assumptions.
 ## 7.2 Prompt: Supabase Schema
 
 ```text
-Create the initial Supabase SQL schema for Bextudio MVP.
+Create the initial Supabase SQL schema for AIQ STUDIO MVP.
 Tables: users_profile, brands, brand_memberships, access_keys, plans, brand_entitlements, question_sections, questions, intake_sessions, intake_answers, intake_snapshots, change_requests, brand_modules, module_artifacts, module_reviews, files, knowledge_bases, knowledge_files, agents, agent_entitlements, agent_runs, audit_logs.
 Use uuid primary keys, created_at timestamps, indexes on brand_id/user_id/status/email.
 Never store raw access keys.

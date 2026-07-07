@@ -9,7 +9,7 @@ import { isReviewSubjectType } from "@/features/review-comments/schema";
 import { getAdminReviewSurface } from "@/features/review-content/admin-surface";
 
 export const metadata: Metadata = {
-  title: "Internal Review | Bextudio Platform",
+  title: "Internal Review | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -38,7 +38,7 @@ export default async function AdminReviewPage({
 }) {
   const { profile } = await requireUserProfile("/admin/review");
   if (!canViewAdminModulesRole(profile.global_role)) {
-    redirect("/home");
+    redirect("/");
   }
 
   const sp = await searchParams;

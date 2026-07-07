@@ -11,7 +11,6 @@ import {
   HomeIcon,
   PlusIcon,
   Settings2Icon,
-  SquareUserIcon,
 } from "lucide-react";
 
 import { CreditCounter } from "@/components/app/CreditCounter";
@@ -67,11 +66,6 @@ const primaryNav = [
   },
 ];
 
-const brainNav = [
-  { href: ROUTES.brainRoadmap, label: "Build Roadmap" },
-  { href: ROUTES.brainBrand, label: "Brand Brain" },
-];
-
 const secondaryNav = [
   { href: ROUTES.documents, label: "Documents", icon: BookOpenIcon },
   { href: ROUTES.settings, label: "Settings", icon: Settings2Icon },
@@ -100,7 +94,7 @@ function BrainIcon() {
   );
 }
 
-export function Sidebar({ role, planName, credits, aiBudget, agents }: SidebarProps) {
+export function Sidebar({ planName, credits, aiBudget, agents }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -109,15 +103,9 @@ export function Sidebar({ role, planName, credits, aiBudget, agents }: SidebarPr
       : pathname.startsWith(href);
 
   const agentsOpen = pathname.startsWith(ROUTES.agents);
-  const brainOpen = pathname.startsWith(ROUTES.brain);
-  const adminOpen =
-    pathname.startsWith(ROUTES.invitations) || pathname.startsWith("/admin");
   const agentsActive = agents.some(
     (agent) => pathname === agentPath(agent.slug),
   );
-  const brainActive = brainNav.some((item) => isActive(item.href));
-  const adminActive =
-    isActive(ROUTES.invitations) || (role === "ADMIN" && isActive("/admin"));
 
   return (
     <SidebarRoot collapsible="offcanvas">
@@ -127,17 +115,17 @@ export function Sidebar({ role, planName, credits, aiBudget, agents }: SidebarPr
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" className="gap-2">
               <Link href="/">
-                <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-white">
+                <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
                   <Image
-                    alt="Bextudio"
+                    alt="AIQ STUDIO"
                     className="size-full object-contain p-0.5"
                     height={32}
-                    src="/square-sign.png"
+                    src="/aiq-sign.png"
                     unoptimized
                     width={32}
                   />
                 </span>
-                <span className="truncate text-sm font-semibold">Bextudio</span>
+                <span className="truncate text-sm font-semibold">AIQ STUDIO</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -164,42 +152,18 @@ export function Sidebar({ role, planName, credits, aiBudget, agents }: SidebarPr
               </SidebarMenuItem>
             ))}
 
-            {/* Integrated Brand Brain */}
-            <Collapsible
-              asChild
-              defaultOpen={brainOpen}
-              className="group/collapsible"
-            >
-              <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton
-                    className={collapsibleTriggerClassName}
-                    isActive={brainActive}
-                    tooltip="Integrated Brand Brain"
-                  >
-                    <BrainIcon />
-                    <span>Integrated Brand Brain</span>
-                    <ChevronDownIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarMenuSub className="border-l-0">
-                    {brainNav.map((item) => (
-                      <SidebarMenuSubItem key={item.href}>
-                        <SidebarMenuSubButton
-                          asChild
-                          isActive={isActive(item.href)}
-                        >
-                          <Link href={item.href}>
-                            <span>{item.label}</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </SidebarMenuItem>
-            </Collapsible>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith(ROUTES.brain)}
+                tooltip="Integrated Brand Brain"
+              >
+                <Link href={ROUTES.brainBrand}>
+                  <BrainIcon />
+                  <span>Integrated Brand Brain</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
 
             {/* Agents (collapsible) */}
             {agents.length > 0 && (
@@ -243,53 +207,18 @@ export function Sidebar({ role, planName, credits, aiBudget, agents }: SidebarPr
               </Collapsible>
             )}
 
-            {/* Administration (collapsible) */}
-            <Collapsible
-              asChild
-              defaultOpen={adminOpen}
-              className="group/collapsible"
-            >
-              <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton
-                    className={collapsibleTriggerClassName}
-                    isActive={adminActive}
-                    tooltip="Administration"
-                  >
-                    <SquareUserIcon />
-                    <span>Administration</span>
-                    <ChevronDownIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
-                  </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarMenuSub className="border-l-0">
-                    <SidebarMenuSubItem>
-                      <SidebarMenuSubButton
-                        asChild
-                        isActive={isActive(ROUTES.invitations)}
-                      >
-                        <Link href={ROUTES.invitations}>
-                          <PlusIcon />
-                          <span>Invite Member</span>
-                        </Link>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                    {role === "ADMIN" && (
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton
-                          asChild
-                          isActive={isActive("/admin")}
-                        >
-                          <Link href="/admin">
-                            <span>Admin Panel</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    )}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </SidebarMenuItem>
-            </Collapsible>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={isActive(ROUTES.invitations)}
+                tooltip="Invite Member"
+              >
+                <Link href={ROUTES.invitations}>
+                  <PlusIcon />
+                  <span>Invite Member</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
 
             {/* Secondary single links */}
             {secondaryNav.map((item) => (

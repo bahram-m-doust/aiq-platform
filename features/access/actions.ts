@@ -35,7 +35,7 @@ function readAccessKey(formData: FormData) {
 export async function redeemAccessKeyAction(
   formData: FormData,
 ): Promise<RedeemAccessKeyResult> {
-  const { profile } = await requireUserProfile("/home");
+  const { profile } = await requireUserProfile("/");
   const rawKey = readAccessKey(formData);
   const rateLimit = await checkRequestRateLimit({
     bucket: "access.redeem",
@@ -64,7 +64,7 @@ export async function redeemDashboardAccessKeyAction(
   _previousState: AccessKeyRedemptionFormState,
   formData: FormData,
 ): Promise<AccessKeyRedemptionFormState> {
-  const { profile } = await requireUserProfile("/home");
+  const { profile } = await requireUserProfile("/");
   const rawKey = readAccessKey(formData);
   const rateLimit = await checkRequestRateLimit({
     bucket: "access.redeem",
@@ -152,8 +152,8 @@ export async function redeemDashboardAccessKeyAction(
       };
     }
 
-    revalidatePath("/home");
-    redirect("/home");
+    revalidatePath("/");
+    redirect("/");
   } else if (result.nextAction.kind === "DEMO_ACCESS_CONTINUE") {
     const { targetBrandId, planId } = result.nextAction;
 
@@ -206,8 +206,8 @@ export async function redeemDashboardAccessKeyAction(
       };
     }
 
-    revalidatePath("/home");
-    redirect("/home");
+    revalidatePath("/");
+    redirect("/");
   }
 
   return {

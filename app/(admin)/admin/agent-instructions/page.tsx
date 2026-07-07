@@ -10,7 +10,7 @@ import {
 } from "@/features/agents/instructions/queries";
 
 export const metadata: Metadata = {
-  title: "Agent Instructions | Bextudio Platform",
+  title: "Agent Instructions | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

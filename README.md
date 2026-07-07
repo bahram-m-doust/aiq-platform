@@ -1,6 +1,6 @@
-﻿# Bextudio Platform
+# AIQ Platform
 
-Bextudio Platform is a private Next.js application for managing brand strategy workflows. It combines Supabase-backed authentication, role-based workspaces, the brand questionnaire, private file handling, deliverable review flows (stakeholder interviews, futures research, city model), module review flows, RAG approval, and AI-assisted brand/agent workflows.
+AIQ Platform is a private Next.js application for managing brand strategy workflows. It combines Supabase-backed authentication, role-based workspaces, the brand questionnaire, private file handling, deliverable review flows (stakeholder interviews, futures research, city model), module review flows, RAG approval, and AI-assisted brand/agent workflows.
 
 ## Stack
 
@@ -13,7 +13,7 @@ Bextudio Platform is a private Next.js application for managing brand strategy w
 
 ## Main Areas
 
-- `app/` - Next.js routes for auth, the app (home, integrated-brand-brain, agents, …), admin, and public invitation flows.
+- `app/` - Next.js routes for auth, the app (home, integrated-brand-brain, agents, �), admin, and public invitation flows.
 - `features/` - Product workflows grouped by domain: auth, access keys, brands, questionnaire, files, modules, change requests, invitations, RAG, agents, and admin. (Note: the questionnaire's database tables remain named `intake_*`.)
 - `lib/` - Shared platform utilities for Supabase, audit logging, email, security helpers, and common utilities.
 - `supabase/` - Database migrations, seed data, and Supabase setup notes.
@@ -60,11 +60,11 @@ npm run test:smoke
 
 Start with:
 
-- `docs/Bextudio_Project_Overview.md`
-- `docs/Bextudio_PRD.md`
-- `docs/Bextudio_Roles_Permissions.md`
-- `docs/Bextudio_Security_Rules.md`
-- `docs/Bextudio_Database_Schema.md`
+- `docs/AIQ_STUDIO_Project_Overview.md`
+- `docs/AIQ_STUDIO_PRD.md`
+- `docs/AIQ_STUDIO_Roles_Permissions.md`
+- `docs/AIQ_STUDIO_Security_Rules.md`
+- `docs/AIQ_STUDIO_Database_Schema.md`
 - `docs/MVP_RELEASE_RUNBOOK.md`
 - `docs/MVP_QA_CHECKLIST.md`
 - `docs/MONITORING.md`

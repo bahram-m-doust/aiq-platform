@@ -9,19 +9,20 @@ import {
   DownloadIcon,
   ImageIcon,
   LoaderIcon,
-  MessageSquareIcon,
-  PanelRightCloseIcon,
-  PanelRightOpenIcon,
-  PaperclipIcon,
-  PlusIcon,
   RefreshCwIcon,
-  SendIcon,
   SparklesIcon,
   Trash2Icon,
   XIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import {
   deleteBrainSessionAction,
@@ -30,7 +31,6 @@ import {
 } from "@/features/agents/brain/actions";
 import { brandBrainPromptMaxLength } from "@/features/agents/brain/schema";
 import {
-  DEFAULT_IMAGE_MODEL,
   IMAGE_MODELS,
   type ImageModelId,
 } from "@/lib/openrouter/models";
@@ -78,6 +78,101 @@ const promptChips = [
   "Generate campaign ideas",
   "Create an image",
 ] as const;
+
+function PanelBottomCloseIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M2 10H14M10 5.33333L8 7.33333L6 5.33333M3.33333 2H12.6667C13.403 2 14 2.59695 14 3.33333V12.6667C14 13.403 13.403 14 12.6667 14H3.33333C2.59695 14 2 13.403 2 12.6667V3.33333C2 2.59695 2.59695 2 3.33333 2Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.33"
+      />
+    </svg>
+  );
+}
+
+function FigmaPlusIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M3.33333 8H12.6667M8 3.33333V12.6667"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.33"
+      />
+    </svg>
+  );
+}
+
+function ChatArrowUpIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M12.6667 8L8 3.33333L3.33333 8M8 3.33333V12.6667"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.33"
+      />
+    </svg>
+  );
+}
+
+function ChatChevronDownIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M4 6L8 10L12 6"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.33"
+      />
+    </svg>
+  );
+}
+
+function ChatPaperclipIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      fill="none"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M14.2933 7.36667L8.16667 13.4933C7.4161 14.2439 6.39812 14.6656 5.33667 14.6656C4.27521 14.6656 3.25723 14.2439 2.50667 13.4933C1.7561 12.7428 1.33444 11.7248 1.33444 10.6633C1.33444 9.60188 1.7561 8.5839 2.50667 7.83333L8.22 2.12C8.72038 1.61874 9.39938 1.33679 10.1076 1.33616C10.8159 1.33553 11.4954 1.61629 11.9967 2.11667C12.4979 2.61704 12.7799 3.29605 12.7805 4.00431C12.7811 4.71257 12.5004 5.39207 12 5.89333L6.27333 11.6067C6.02315 11.8569 5.68382 11.9974 5.33 11.9974C4.97618 11.9974 4.63685 11.8569 4.38667 11.6067C4.13648 11.3565 3.99593 11.0172 3.99593 10.6633C3.99593 10.3095 4.13648 9.97019 4.38667 9.72L10.0467 4.06667"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.33"
+      />
+    </svg>
+  );
+}
 
 function isRtlText(text: string): boolean {
   const rtl = (text.match(/[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/g) ?? []).length;
@@ -298,9 +393,7 @@ function MessageBubble({
           // room to be pushed right by dir="rtl". User bubbles stay auto-width
           // because they have a visible bordered background.
           !isUser && "w-full",
-          isUser
-            ? "rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-sm"
-            : "",
+          isUser ? "rounded-2xl bg-[#F0F0F0] px-4 py-3" : "",
         )}
         dir={rtl ? "rtl" : "ltr"}
       >
@@ -411,10 +504,6 @@ function groupSessionsByDate(
   }));
 }
 
-function modelDisplayName(model: string): string {
-  return model.split("/").pop() ?? model;
-}
-
 function formatTime(iso?: string | null): string {
   const date = iso ? new Date(iso) : new Date();
   return date.toLocaleTimeString(undefined, {
@@ -427,7 +516,6 @@ export function BrainChat({
   access,
   initialMessages = [],
   runSummaries = [],
-  model = "openai/gpt-4o-mini",
 }: {
   access: BrandBrainAccess;
   initialMessages?: BrandBrainConversationMessage[];
@@ -447,9 +535,7 @@ export function BrainChat({
   );
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<ChatMode>("text");
-  const [imageModel, setImageModel] = useState<ImageModelId>(
-    DEFAULT_IMAGE_MODEL,
-  );
+  const [imageModel, setImageModel] = useState<ImageModelId | "">("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [isImagePending, setIsImagePending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -458,7 +544,7 @@ export function BrainChat({
     content: string;
   } | null>(null);
   const [sessions, setSessions] = useState<BrandBrainRunSummary[]>(runSummaries);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [loadingSession, setLoadingSession] = useState(false);
   const sessionIdRef = useRef<string>(crypto.randomUUID());
 
@@ -522,8 +608,12 @@ export function BrainChat({
           }
           if (maxN > 0) idRef.current = maxN;
 
-          setMessages(unique);
-          if (parsed.sessionId) sessionIdRef.current = parsed.sessionId;
+          queueMicrotask(() => {
+            setMessages(unique);
+            if (parsed.sessionId) sessionIdRef.current = parsed.sessionId;
+            hydratedRef.current = true;
+          });
+          return;
         }
       } else {
         sessionStorage.removeItem(SESSION_STORAGE_KEY);
@@ -532,7 +622,6 @@ export function BrainChat({
       /* sessionStorage unavailable or corrupt stash */
     }
     hydratedRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist the current chat so a refresh can restore it. Skip while a turn is
@@ -689,7 +778,10 @@ export function BrainChat({
     ]);
 
     try {
-      const result = await generateBrandBrainImageAction(prompt, imageModel);
+      const result = await generateBrandBrainImageAction(
+        prompt,
+        imageModel || undefined,
+      );
       if (result.status === "error") throw new Error(result.message);
       updateMessage(assistantId, (message) => ({
         ...message,
@@ -782,6 +874,7 @@ export function BrainChat({
     setMode("text");
     setError(null);
     setAttachedFile(null);
+    setHistoryOpen(false);
     lastRequestRef.current = null;
     sessionIdRef.current = crypto.randomUUID();
   }
@@ -828,6 +921,7 @@ export function BrainChat({
           : crypto.randomUUID();
         setInput("");
         setAttachedFile(null);
+        setHistoryOpen(false);
         lastRequestRef.current = null;
       }
     } finally {
@@ -840,29 +934,120 @@ export function BrainChat({
 
   return (
     // -m-4 cancels the app layout's p-4 wrapper so BrainChat fills edge-to-edge.
-    // Fixed height + overflow-hidden makes the thread and the sidebar each own
-    // their own scroll, independent of the document/page scroll.
-    <div className="-m-4 flex h-[calc(100svh-68px)] overflow-hidden bg-[#fbf8f4] text-foreground">
+    // Fixed height + overflow-hidden keeps the chat thread as the only
+    // scrolling area inside this view.
+    <div className="-m-4 flex h-[calc(100svh-68px)] overflow-hidden bg-white text-foreground">
       {/* ── Main chat column ── */}
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="pointer-events-none absolute right-4 top-4 z-30 flex flex-col items-end gap-2 sm:right-8">
+          <div className="pointer-events-auto flex items-center gap-2">
+            <Button
+              className="h-9 gap-0 rounded-md bg-transparent p-0 text-sm font-medium leading-5 tracking-normal text-[#0A0A0A] shadow-none hover:bg-transparent hover:text-[#0A0A0A]"
+              disabled={isBusy}
+              onClick={handleNewChat}
+              type="button"
+              variant="ghost"
+            >
+              <span className="flex size-9 items-center justify-center rounded-[39px] bg-[#F5F5F5] shadow-xs">
+                <FigmaPlusIcon className="size-4" />
+              </span>
+              <span className="flex h-9 items-center rounded-md bg-transparent pl-[5px] pr-4">
+                New Chat
+              </span>
+            </Button>
+
+            <div className="relative">
+              <Button
+                aria-expanded={historyOpen}
+                className="rounded-md bg-[#F5F5F5] text-sm font-medium leading-5 tracking-normal text-[#171717] shadow-xs hover:bg-[#EEEEEE] aria-expanded:bg-[#F5F5F5] aria-expanded:text-[#171717]"
+                onClick={() => setHistoryOpen((open) => !open)}
+                type="button"
+                variant="secondary"
+              >
+                History
+                <PanelBottomCloseIcon className="size-4" />
+              </Button>
+
+              {historyOpen ? (
+                <div className="absolute right-0 top-[calc(100%+8px)] max-h-[min(420px,calc(100svh-144px))] w-[min(20rem,calc(100vw-2rem))] animate-in overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_18px_45px_rgba(9,9,43,0.12)] fade-in-0 slide-in-from-top-2">
+                  <div className="border-b border-black/5 px-3 py-2">
+                    <p className="text-sm font-medium text-foreground">
+                      History
+                    </p>
+                  </div>
+                  <div className="scrollbar-hide max-h-[min(360px,calc(100svh-228px))] overflow-y-auto p-2">
+                    {groupedSessions.length === 0 ? (
+                      <div className="flex flex-col items-center gap-2 py-10 text-center">
+                        <ClockIcon className="size-5 text-muted-foreground/40" />
+                        <p className="text-[12px] text-muted-foreground">
+                          Past conversations will appear here.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {groupedSessions.map(({ label, sessions: group }) => (
+                          <div key={label}>
+                            <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                              {label}
+                            </p>
+                            <div className="space-y-0.5">
+                              {group.map((session) => {
+                                const rtl = isRtlText(session.prompt);
+                                return (
+                                  <div
+                                    className="group flex cursor-pointer items-start gap-1 rounded-lg px-2 py-1.5 hover:bg-muted/60"
+                                    dir={rtl ? "rtl" : "ltr"}
+                                    key={session.id}
+                                    onClick={() =>
+                                      void handleLoadSession(session)
+                                    }
+                                    title={session.prompt}
+                                  >
+                                    <p
+                                      className={cn(
+                                        "flex-1 line-clamp-2 text-[12px] text-muted-foreground group-hover:text-foreground",
+                                        rtl ? "text-right" : "text-left",
+                                      )}
+                                    >
+                                      {session.prompt || "..."}
+                                    </p>
+                                    <button
+                                      aria-label="Delete session"
+                                      className="mt-0.5 shrink-0 rounded p-0.5 text-transparent transition hover:text-destructive group-hover:text-muted-foreground/40"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        void handleDeleteSession(session);
+                                      }}
+                                      type="button"
+                                    >
+                                      <Trash2Icon className="size-3" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
         {/* Thread */}
         <div
           ref={threadRef}
-          className="flex-1 overflow-y-auto px-4 pb-8 pt-8 sm:px-8"
+          className="scrollbar-hide flex-1 overflow-y-auto px-4 pb-8 pt-20 sm:px-8"
         >
           <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col">
             {loadingSession ? (
               <div className="flex flex-1 items-center justify-center">
                 <LoaderIcon className="size-6 animate-spin text-muted-foreground" />
               </div>
-            ) : isEmpty ? (
-              <section className="flex flex-1 flex-col items-center justify-center pb-20 text-center">
-                <h1 className="text-2xl font-semibold tracking-normal text-foreground">
-                  What should we dive into for {access.brandName}?
-                </h1>
-              </section>
-            ) : (
-              <div className="flex flex-1 flex-col justify-end gap-8">
+            ) : isEmpty ? null : (
+              <div className="flex w-full max-w-[652px] flex-1 flex-col justify-end gap-8">
                 {messages.map((message) => (
                   <MessageBubble
                     key={message.id}
@@ -900,16 +1085,35 @@ export function BrainChat({
         </div>
 
         {/* Input area */}
-        <div className="sticky bottom-0 bg-linear-to-t from-[#fbf8f4] via-[#fbf8f4] to-[#fbf8f4]/0 px-4 pb-4 pt-8 sm:px-8">
-          <div className="mx-auto w-full max-w-3xl">
-            <form
-              className="rounded-3xl border border-black/10 bg-white p-2 shadow-[0_18px_60px_-28px_rgba(15,15,20,0.45)]"
-              onSubmit={handleSubmit}
-            >
+        <div
+          className={cn(
+            "px-4 sm:px-8",
+            isEmpty
+              ? "absolute inset-x-0 top-1/2 -translate-y-1/2"
+              : "sticky bottom-0 bg-linear-to-t from-white via-white to-white/0 pb-4 pt-8",
+          )}
+        >
+          <div
+            className={cn(
+              "mx-auto flex w-full flex-col",
+              isEmpty ? "max-w-[652px]" : "max-w-3xl",
+            )}
+          >
+            {isEmpty ? (
+              <h1 className="mb-12 text-center text-2xl font-semibold tracking-normal text-foreground">
+                What should we dive into for {access.brandName}?
+              </h1>
+            ) : null}
+
+            <div className="w-full max-w-[652px] rounded-[24px] bg-[rgba(0,31,189,0.03)] p-[4px] shadow-[0_0_20px_rgba(16,16,89,0.04),0_16px_50px_rgba(16,16,89,0.17)] outline outline-1 outline-white/90 backdrop-blur-[24px]">
+              <form
+                className="flex min-h-[88px] flex-col justify-between rounded-[20px] bg-white px-2 py-2"
+                onSubmit={handleSubmit}
+              >
               {attachedFile ? (
                 <div className="mb-1 flex items-center gap-1.5 px-3 pt-1">
                   <span className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[12px] text-muted-foreground">
-                    <PaperclipIcon className="size-3" />
+                    <ChatPaperclipIcon className="size-3" />
                     <span className="max-w-[200px] truncate">
                       {attachedFile.name}
                     </span>
@@ -925,7 +1129,7 @@ export function BrainChat({
               ) : null}
               <Textarea
                 aria-label="Message Brand Brain"
-                className="max-h-40 min-h-11 resize-none border-0 bg-transparent px-3 py-2 shadow-none focus-visible:ring-0"
+                className="max-h-40 min-h-8 resize-none border-0 bg-transparent px-3 py-1.5 text-[13px] shadow-none focus-visible:ring-0"
                 id="brand-brain-prompt"
                 maxLength={brandBrainPromptMaxLength}
                 name="prompt"
@@ -935,8 +1139,8 @@ export function BrainChat({
                 rows={1}
                 value={input}
               />
-              <div className="flex items-center justify-between gap-2 px-1 pb-1">
-                <div className="flex items-center gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
                   <input
                     accept="text/*,.pdf,.doc,.docx,.csv,.json,.md"
                     className="hidden"
@@ -946,72 +1150,95 @@ export function BrainChat({
                   />
                   <Button
                     aria-label="Attach file"
+                    className="size-[30px] rounded-full bg-transparent p-0 text-[#0A0A0A] opacity-50 shadow-none hover:bg-muted hover:opacity-100"
                     onClick={() => fileInputRef.current?.click()}
-                    size="icon-sm"
                     type="button"
                     variant="ghost"
                   >
-                    <PaperclipIcon className="size-4" />
+                    <ChatPaperclipIcon className="size-4" />
                   </Button>
-                  <Button
-                    className="gap-1.5 rounded-full"
-                    onClick={() => setMode(isImageMode ? "text" : "image")}
-                    size="sm"
-                    type="button"
-                    variant={isImageMode ? "secondary" : "ghost"}
-                  >
-                    {isImageMode ? (
-                      <ImageIcon className="size-3.5" />
-                    ) : (
-                      <MessageSquareIcon className="size-3.5" />
-                    )}
-                    {isImageMode ? "Image" : "Smart"}
-                    {!isImageMode ? (
-                      <span className="text-[10px] text-muted-foreground">
-                        · {modelDisplayName(model)}
-                      </span>
-                    ) : null}
-                  </Button>
-                  {isImageMode ? (
-                    <label className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[11px] text-muted-foreground">
-                      <span className="sr-only">Image model</span>
-                      <select
-                        aria-label="Image model"
-                        className="cursor-pointer border-0 bg-transparent pr-1 text-[11px] text-foreground focus:outline-none"
-                        onChange={(event) =>
-                          setImageModel(event.target.value as ImageModelId)
-                        }
-                        value={imageModel}
-                      >
-                        {IMAGE_MODELS.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : null}
+                  <div className="flex h-[30px] cursor-pointer items-center rounded-[60px] bg-[#F5F5F5]">
+                    <button
+                      className={cn(
+                        "flex h-full items-center justify-center rounded-md px-2 py-1 text-center text-xs font-medium leading-none text-[#0A0A0A] transition",
+                        isImageMode
+                          ? "rounded-[32px] border border-[rgba(163,163,163,0.1)] bg-white"
+                          : "bg-transparent hover:bg-white/60",
+                      )}
+                      onClick={() => setMode("image")}
+                      type="button"
+                    >
+                      Image
+                    </button>
+                    <button
+                      className={cn(
+                        "flex h-full items-center justify-center rounded-md px-2 py-1 text-center text-xs font-medium leading-none text-[#0A0A0A] transition",
+                        !isImageMode
+                          ? "rounded-[32px] border border-[rgba(163,163,163,0.1)] bg-white"
+                          : "bg-transparent hover:bg-white/60",
+                      )}
+                      onClick={() => setMode("text")}
+                      type="button"
+                    >
+                      Smart
+                    </button>
+                  </div>
                 </div>
-                <Button
-                  aria-label="Send message"
-                  className="rounded-full"
-                  disabled={
-                    isBusy || (input.trim().length === 0 && !attachedFile)
-                  }
-                  size="icon-sm"
-                  type="submit"
-                >
-                  {isStreaming || isImagePending ? (
-                    <LoaderIcon className="size-4 animate-spin" />
-                  ) : (
-                    <SendIcon className="size-4" />
-                  )}
-                </Button>
+                <div className="flex items-center gap-1">
+                  {isImageMode ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          aria-label="Choose image model"
+                          className="h-[30px] gap-1 rounded-full bg-transparent px-4 py-2 text-sm font-medium text-[#0A0A0A] opacity-50 shadow-none hover:bg-muted hover:opacity-100"
+                          type="button"
+                          variant="ghost"
+                        >
+                          Model
+                          <ChatChevronDownIcon className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-72">
+                        <DropdownMenuRadioGroup
+                          onValueChange={(value) =>
+                            setImageModel(value as ImageModelId)
+                          }
+                          value={imageModel}
+                        >
+                          {IMAGE_MODELS.map((model) => (
+                            <DropdownMenuRadioItem
+                              className="text-xs"
+                              key={model.id}
+                              value={model.id}
+                            >
+                              {model.name}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
+                  <Button
+                    aria-label="Send message"
+                    className="size-[30px] rounded-full bg-[#0A0A2E] p-0 text-[#FAFAFA] opacity-100 shadow-xs hover:bg-[#0A0A2E]/90 disabled:opacity-50"
+                    disabled={
+                      isBusy || (input.trim().length === 0 && !attachedFile)
+                    }
+                    type="submit"
+                  >
+                    {isStreaming || isImagePending ? (
+                      <LoaderIcon className="size-4 animate-spin" />
+                    ) : (
+                      <ChatArrowUpIcon className="size-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
-            </form>
+              </form>
+            </div>
 
             {isEmpty ? (
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <div className="mt-12 flex flex-wrap justify-center gap-2">
                 {promptChips.map((chip) => (
                   <button
                     className="inline-flex h-8 items-center gap-1.5 rounded-full border border-black/10 bg-white px-3 text-xs text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
@@ -1034,114 +1261,13 @@ export function BrainChat({
               </div>
             ) : null}
 
-            <p className="mt-3 text-center text-[11px] text-muted-foreground">
+            <p className="mt-3 w-full max-w-[652px] text-center text-[11px] text-muted-foreground">
               Brand Brain can make mistakes. Review important answers before
               use.
             </p>
           </div>
         </div>
       </main>
-
-      {/* ── Right history sidebar ──
-          Collapsed state is a slim rail with just the expand button, so
-          toggling only changes the sidebar's own width (the chat reflows
-          minimally). The page itself never scrolls — each pane scrolls on
-          its own. */}
-      {!sidebarOpen ? (
-        <aside className="hidden w-12 shrink-0 flex-col items-center border-l border-black/5 bg-white py-3 md:flex">
-          <Button
-            aria-label="Show history"
-            className="text-muted-foreground"
-            onClick={() => setSidebarOpen(true)}
-            size="icon-sm"
-            type="button"
-            variant="ghost"
-          >
-            <PanelRightOpenIcon className="size-4" />
-          </Button>
-        </aside>
-      ) : (
-        <aside className="hidden w-64 shrink-0 flex-col overflow-hidden border-l border-black/5 bg-white md:flex xl:w-72">
-          <div className="flex items-center gap-2 border-b border-black/5 p-3">
-            <Button
-              className="flex-1 justify-start gap-1.5"
-              disabled={isBusy}
-              onClick={handleNewChat}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <PlusIcon className="size-4" />
-              New chat
-            </Button>
-            <Button
-              aria-label="Hide history"
-              className="text-muted-foreground"
-              onClick={() => setSidebarOpen(false)}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-            >
-              <PanelRightCloseIcon className="size-4" />
-            </Button>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto p-2">
-            {groupedSessions.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-10 text-center">
-                <ClockIcon className="size-5 text-muted-foreground/40" />
-                <p className="text-[12px] text-muted-foreground">
-                  Past conversations will appear here.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {groupedSessions.map(({ label, sessions: group }) => (
-                  <div key={label}>
-                    <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-                      {label}
-                    </p>
-                    <div className="space-y-0.5">
-                      {group.map((session) => {
-                        const rtl = isRtlText(session.prompt);
-                        return (
-                          <div
-                            className="group flex cursor-pointer items-start gap-1 rounded-lg px-2 py-1.5 hover:bg-muted/60"
-                            dir={rtl ? "rtl" : "ltr"}
-                            key={session.id}
-                            onClick={() => void handleLoadSession(session)}
-                            title={session.prompt}
-                          >
-                            <p
-                              className={cn(
-                                "flex-1 line-clamp-2 text-[12px] text-muted-foreground group-hover:text-foreground",
-                                rtl ? "text-right" : "text-left",
-                              )}
-                            >
-                              {session.prompt || "…"}
-                            </p>
-                            <button
-                              aria-label="Delete session"
-                              className="mt-0.5 shrink-0 rounded p-0.5 text-transparent transition hover:text-destructive group-hover:text-muted-foreground/40"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void handleDeleteSession(session);
-                              }}
-                              type="button"
-                            >
-                              <Trash2Icon className="size-3" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </aside>
-      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-# Bextudio MVP — Platform Setup Guide v0.1
+# AIQ STUDIO MVP — Platform Setup Guide v0.1
 
 ## 1. هدف سند
 
@@ -98,13 +98,13 @@ Templateها را formal کن:
 Subject:
 
 ```text
-Confirm your Bextudio account
+Confirm your AIQ STUDIO account
 ```
 
 Body:
 
 ```text
-Your Bextudio account has been created.
+Your AIQ STUDIO account has been created.
 Confirm your email to continue to your secure brand workspace.
 ```
 
@@ -362,7 +362,7 @@ DNS records:
 Subject:
 
 ```text
-Your Bextudio Brand Access Key
+Your AIQ STUDIO Brand Access Key
 ```
 
 ### Specialist Invite
@@ -370,7 +370,7 @@ Your Bextudio Brand Access Key
 Subject:
 
 ```text
-You have been invited to a Bextudio Brand Workspace
+You have been invited to an AIQ STUDIO Brand Workspace
 ```
 
 ### Module Review
@@ -454,7 +454,7 @@ ADMIN_BASE_URL
 ساختار پیشنهادی:
 
 ```text
-bextudio-platform/
+aiq-platform/
 ├── app/
 │   ├── (auth)/
 │   ├── (app)/

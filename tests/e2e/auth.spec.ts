@@ -43,9 +43,9 @@ test("register page renders", async ({ page }) => {
 });
 
 test("home redirects unauthenticated users to login", async ({ page }) => {
-  await page.goto("/home");
+  await page.goto("/");
 
-  await expect(page).toHaveURL(/\/login\?next=%2Fhome$/);
+  await expect(page).toHaveURL(/\/login\?next=%2F$/);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 

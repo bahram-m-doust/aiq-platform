@@ -4,6 +4,8 @@ export const ROADMAP_PHASE_LABELS = {
   questionnaires: "Brand Research · Phase 01",
   stakeholderInterviews: "Brand Research · Step 2",
   futuresResearch: "Brand Research · Step 3",
+  brandCanvas: "Brand Strategy · Canvas",
+  experienceBook: "Brand Experience · Book",
   cityModel: "Brand Strategy · Step 1",
   cityModelDistrict: "Brand Strategy · Step 1",
 } as const;

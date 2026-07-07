@@ -1,4 +1,4 @@
-# Bextudio MVP — Test Plan v0.1
+# AIQ STUDIO MVP — Test Plan v0.1
 
 ## 1. هدف
 

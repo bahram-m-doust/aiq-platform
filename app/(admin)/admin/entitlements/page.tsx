@@ -5,7 +5,7 @@ import { getManualGrantFormOptions } from "@/features/admin/queries";
 import { requirePlatformOwner } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
-  title: "Manual Plan Grant | Bextudio Admin",
+  title: "Manual Plan Grant | AIQ Admin",
 };
 
 export const dynamic = "force-dynamic";

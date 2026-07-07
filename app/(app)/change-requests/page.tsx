@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Change Requests | Bextudio Platform",
+  title: "Change Requests | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

@@ -9,13 +9,14 @@ import {
   resolveLoginPathForNext,
   sanitizeRedirectPath,
 } from "@/features/auth/redirects";
+import { ROUTES } from "@/lib/routes";
 import { hasPublicSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 function loginRedirect(
   request: NextRequest,
   message: string,
-  nextPath = "/home",
+  nextPath: string = ROUTES.home,
 ) {
   const redirectUrl = request.nextUrl.clone();
   redirectUrl.pathname = resolveLoginPathForNext(nextPath);

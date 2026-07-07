@@ -55,7 +55,7 @@ export function CreateBrandForm({
                 autoComplete="organization"
                 id="brand_name"
                 name="brand_name"
-                placeholder="Bextudio"
+                placeholder="AIQ STUDIO"
                 required
               />
             </div>

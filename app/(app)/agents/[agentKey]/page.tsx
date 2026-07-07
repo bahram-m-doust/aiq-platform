@@ -11,7 +11,7 @@ import { getBrandModelDefaults } from "@/features/agents/runs/services";
 import { requireUserProfile } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
-  title: "Agent Detail | Bextudio Platform",
+  title: "Agent Detail | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

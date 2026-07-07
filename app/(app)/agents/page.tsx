@@ -8,7 +8,7 @@ import { getAgentCatalogWorkspace } from "@/features/agents/catalog/queries";
 import { requireUserProfile } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
-  title: "Agents | Bextudio Platform",
+  title: "Agents | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export default async function AgentCatalogPage() {
   const workspace = await getAgentCatalogWorkspace(profile.id);
 
   if (!workspace || !canActivateAgentRole(workspace.access.membershipRole)) {
-    redirect("/home");
+    redirect("/");
   }
 
   return (

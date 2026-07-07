@@ -442,7 +442,7 @@ function FilesTable({ files }: { files: BrandDocumentRecord[] }) {
               <td className="truncate px-3 py-2 font-medium" title={file.originalName}>
                 {file.originalName}
                 <span className="block truncate text-xs text-muted-foreground">
-                  by {file.uploaderLabel ?? "Bextudio"}
+                  by {file.uploaderLabel ?? "AIQ STUDIO"}
                 </span>
               </td>
               <td className="px-3 py-2 text-xs">

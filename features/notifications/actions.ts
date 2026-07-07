@@ -19,7 +19,7 @@ async function callerAudienceFilter(): Promise<{
   profileId: string;
   audienceFilter: string;
 }> {
-  const { profile } = await requireUserProfile("/home");
+  const { profile } = await requireUserProfile("/");
   const access = await getBrandAccessSummaryForProfile(profile.id);
   const brandId =
     access.status === "ACTIVE_ACCESS" ? (access.brandId ?? null) : null;

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { PageShell } from "@/components/ds/PageShell";
 import { PaginationControls } from "@/components/PaginationControls";
 import { requireUserProfile } from "@/features/auth/queries";
 import { DocumentList } from "@/features/documents/components/DocumentList";
@@ -10,7 +9,7 @@ import { getBrandDocumentsWorkspace } from "@/features/documents/queries";
 import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
-  title: "Documents | Bextudio Platform",
+  title: "Documents | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -27,25 +26,33 @@ export default async function DocumentsPage({
   );
 
   if (!workspace) {
-    redirect("/home");
+    redirect("/");
   }
 
   return (
-    <PageShell
-      eyebrow="Secure Documents"
-      subtitle="Upload, review and share documents for your brand workspace. All transfers use signed URLs."
-      title="Brand Document Workspace"
-    >
-      <DocumentUploader access={workspace.access} />
-      <DocumentList
-        access={workspace.access}
-        files={workspace.files}
-        profileId={profile.id}
-      />
-      <PaginationControls
-        basePath="/documents"
-        pagination={workspace.pagination}
-      />
-    </PageShell>
+    <main className="min-h-svh bg-background px-4 py-6 text-foreground sm:px-6 sm:py-10">
+      <section className="mx-auto w-full max-w-6xl space-y-8">
+        <header className="space-y-2">
+          <h1 className="text-3xl font-semibold leading-tight tracking-normal text-foreground sm:text-4xl">
+            Files and assets
+          </h1>
+          <p className="max-w-2xl text-base font-normal leading-6 text-muted-foreground">
+            Documents and attachments that have been uploaded as part of your
+            brand workspace.
+          </p>
+        </header>
+
+        <DocumentUploader access={workspace.access} />
+        <DocumentList
+          access={workspace.access}
+          files={workspace.files}
+          profileId={profile.id}
+        />
+        <PaginationControls
+          basePath="/documents"
+          pagination={workspace.pagination}
+        />
+      </section>
+    </main>
   );
 }

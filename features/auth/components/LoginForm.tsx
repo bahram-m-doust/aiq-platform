@@ -12,6 +12,7 @@ import { login } from "@/features/auth/actions";
 import { initialAuthFormState } from "@/features/auth/schemas";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
+import { ROUTES } from "@/lib/routes";
 
 export function LoginForm({
   nextPath,
@@ -22,7 +23,7 @@ export function LoginForm({
 }) {
   const [state, formAction] = useActionState(login, initialAuthFormState);
   const registerHref =
-    nextPath === "/home"
+    nextPath === ROUTES.home
       ? "/register"
       : `/register?next=${encodeURIComponent(nextPath)}`;
 
@@ -32,16 +33,13 @@ export function LoginForm({
         <div className="flex flex-col gap-10">
           <div className="flex items-center justify-center">
             <Image
-              alt="Bextudio"
-              height={16}
-              src="/square-sign.png"
+              alt="AIQ STUDIO"
+              className="h-10 w-auto object-contain"
+              height={52}
+              src="/aiq-logo.png"
               unoptimized
-              width={16}
-              className="mr-1.5 size-5"
+              width={132}
             />
-            <span className="text-sm font-semibold tracking-wider">
-              BEXTUDIO
-            </span>
           </div>
 
           <div className="flex flex-col gap-4">

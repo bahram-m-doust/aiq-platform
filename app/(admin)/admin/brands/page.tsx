@@ -8,7 +8,7 @@ import { getAdminBrandsWithMembers } from "@/features/admin/brands/queries";
 import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
-  title: "Brands & Members | Bextudio Platform",
+  title: "Brands & Members | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

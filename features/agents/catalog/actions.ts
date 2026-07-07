@@ -50,7 +50,7 @@ export async function activateAgentAction(
       agentKey: validation.agentKey,
     });
 
-    revalidatePath("/home");
+    revalidatePath("/");
     revalidatePath("/agents");
     revalidatePath(
       `/agents/${catalogAgentSlugForKey(validation.agentKey)}`,

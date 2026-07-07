@@ -5,7 +5,7 @@ import { ReopenSubmissionButton } from "@/features/questionnaire/components/Reop
 import { getIntakeSubmissionsForAdmin } from "@/features/questionnaire/queries";
 
 export const metadata: Metadata = {
-  title: "Questionnaire Submissions | Bextudio Platform",
+  title: "Questionnaire Submissions | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

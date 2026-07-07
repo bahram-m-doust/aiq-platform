@@ -1,20 +1,20 @@
-# Bextudio MVP — Vibe Coding Prompt Pack v0.1
+# AIQ STUDIO MVP — Vibe Coding Prompt Pack v0.1
 
 ## 1. Master Prompt
 
 Use this at the beginning of a coding session:
 
 ```text
-You are a senior full-stack engineer building the Bextudio Platform MVP.
+You are a senior full-stack engineer building the AIQ Platform MVP.
 
 Read and follow these files as source of truth:
-- docs/Bextudio_Project_Overview.md
-- docs/Bextudio_PRD.md
-- docs/Bextudio_Roles_Permissions.md
-- docs/Bextudio_Security_Rules.md
-- docs/Bextudio_Database_Schema.md
-- docs/Bextudio_Task_Breakdown.md
-- docs/Bextudio_Folder_Structure.md
+- docs/AIQ_STUDIO_Project_Overview.md
+- docs/AIQ_STUDIO_PRD.md
+- docs/AIQ_STUDIO_Roles_Permissions.md
+- docs/AIQ_STUDIO_Security_Rules.md
+- docs/AIQ_STUDIO_Database_Schema.md
+- docs/AIQ_STUDIO_Task_Breakdown.md
+- docs/AIQ_STUDIO_Folder_Structure.md
 
 Core stack:
 - Next.js App Router
@@ -47,7 +47,7 @@ After coding, provide manual test steps.
 
 ```text
 Task:
-[write task name from Bextudio_Task_Breakdown.md]
+[write task name from AIQ_STUDIO_Task_Breakdown.md]
 
 Context:
 Use docs as source of truth. Build only this feature.
@@ -75,10 +75,10 @@ Output:
 
 ```text
 Task:
-Initialize the Bextudio MVP project structure.
+Initialize the AIQ STUDIO MVP project structure.
 
 Requirements:
-- Create folder structure according to docs/Bextudio_Folder_Structure.md.
+- Create folder structure according to docs/AIQ_STUDIO_Folder_Structure.md.
 - Use Next.js App Router and TypeScript.
 - Create /features folders for auth, access, brands, intake, modules, files, rag, agents, admin, audit.
 - Create /lib folders for supabase, permissions, audit, email, security, constants, utils.
@@ -97,10 +97,10 @@ Output:
 
 ```text
 Task:
-Create Supabase SQL migration for Bextudio MVP schema.
+Create Supabase SQL migration for AIQ STUDIO MVP schema.
 
 Requirements:
-- Use docs/Bextudio_Database_Schema.md as source of truth.
+- Use docs/AIQ_STUDIO_Database_Schema.md as source of truth.
 - Create tables:
   users_profile, brands, brand_memberships, access_keys, plans, brand_entitlements, question_sections, questions, intake_sessions, intake_answers, intake_snapshots, change_requests, brand_modules, module_artifacts, module_reviews, files, knowledge_bases, knowledge_files, agents, agent_entitlements, agent_runs, audit_logs.
 - Use uuid primary keys.
@@ -159,7 +159,7 @@ Output:
 
 ```text
 Task:
-Implement Supabase Auth for Bextudio MVP.
+Implement Supabase Auth for AIQ STUDIO MVP.
 
 Requirements:
 - Create login page.
@@ -193,7 +193,7 @@ Requirements:
 - Show formal executive copy.
 - Include Access Key form placeholder.
 - Include Request Demo Access CTA.
-- Include Contact Bextudio CTA.
+- Include Contact AIQ STUDIO CTA.
 - Do not show intake/modules/agents.
 
 Suggested copy:

@@ -314,7 +314,7 @@ export function toChangeRequestStatusAfterAudit({
 }
 
 export function reviewAccessDeniedRedirectPath(role: GlobalRole) {
-  return canReviewChangeRequestRole(role) ? null : "/home";
+  return canReviewChangeRequestRole(role) ? null : "/";
 }
 
 export function sortChangeRequestsByCreatedAt(

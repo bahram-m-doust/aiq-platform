@@ -16,7 +16,7 @@ export function StakeholderHeader({ status }: { status: string }) {
       </h1>
 
       <p className="max-w-[545px] text-[12px] leading-4 tracking-[-0.072px] text-muted-foreground">
-        The Bextudio team has analysed the interviews with your brand team.
+        The AIQ STUDIO team has analysed the interviews with your brand team.
         Review the report below, leave comments anywhere on the document, and
         approve it when you are happy — that unlocks Futures Research.
       </p>

@@ -172,6 +172,6 @@ export async function acceptSpecialistInvitationAction(
     return acceptErrorState("Invitation could not be accepted.");
   }
 
-  revalidatePath("/home");
-  redirect("/home");
+  revalidatePath("/");
+  redirect("/");
 }

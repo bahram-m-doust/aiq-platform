@@ -9,7 +9,7 @@ import { getClientModulesWorkspace } from "@/features/modules/queries";
 import { paginationInputFromSearchParams } from "@/lib/pagination";
 
 export const metadata: Metadata = {
-  title: "Strategies | Bextudio Platform",
+  title: "Strategies | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -26,14 +26,14 @@ export default async function ModulesPage({
   );
 
   if (!workspace) {
-    redirect("/home");
+    redirect("/");
   }
 
   return (
     <PageShell
       eyebrow="Strategy Review"
       maxWidth="6xl"
-      subtitle={`Review and approve strategy modules drafted by the Bextudio team for ${workspace.access.brandName}.`}
+      subtitle={`Review and approve strategy modules drafted by the AIQ STUDIO team for ${workspace.access.brandName}.`}
       title="Brand Strategies"
     >
       <ClientModuleList workspace={workspace} />

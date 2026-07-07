@@ -7,7 +7,7 @@ import type { AdminAccessKeyType } from "@/features/admin/types";
 import { requirePlatformOwner } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
-  title: "Access Keys | Bextudio Admin",
+  title: "Access Keys | AIQ Admin",
 };
 
 export const dynamic = "force-dynamic";

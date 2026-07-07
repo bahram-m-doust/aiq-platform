@@ -7,7 +7,7 @@ import { SpecialistInvitationForm } from "@/features/invitations/components/Spec
 import { getSpecialistInvitationContext } from "@/features/invitations/queries";
 
 export const metadata: Metadata = {
-  title: "Invite Specialist | Bextudio Platform",
+  title: "Invite Specialist | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -17,13 +17,20 @@ export default async function InvitationsPage() {
   const context = await getSpecialistInvitationContext(profile.id);
 
   if (!context) {
-    redirect("/home");
+    redirect("/");
   }
 
   return (
     <PageShell
       eyebrow="Team Invitation"
-      subtitle="Send a one-time invitation link to a Brand Specialist. Links expire after first use."
+      subtitle={
+        <>
+          <span className="block">
+            Send a one-time invitation link to a Brand Specialist.
+          </span>
+          <span className="block">Links expire after first use.</span>
+        </>
+      }
       title="Invite a Specialist"
     >
       <SpecialistInvitationForm context={context} />

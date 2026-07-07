@@ -7,7 +7,7 @@ import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
 import { requireUserProfile } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
-  title: "Settings | Bextudio Platform",
+  title: "Settings | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export default async function SettingsPage() {
   const summary = await getBrandAccessSummaryForProfile(profile.id);
 
   if (summary.status !== "ACTIVE_ACCESS") {
-    redirect("/home");
+    redirect("/");
   }
 
   return (

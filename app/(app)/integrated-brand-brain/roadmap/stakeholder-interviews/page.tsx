@@ -7,7 +7,7 @@ import { getStakeholderInterviewWorkspace } from "@/features/stakeholder-intervi
 import { ROUTES } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Stakeholder Interviews Report | Bextudio Platform",
+  title: "Stakeholder Interviews Report | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export default async function StakeholderInterviewsPage() {
   });
 
   if (!workspace.access) {
-    redirect(ROUTES.brainRoadmap);
+    redirect(ROUTES.home);
   }
 
   return (

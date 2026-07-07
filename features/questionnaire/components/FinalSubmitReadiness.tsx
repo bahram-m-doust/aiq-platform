@@ -62,7 +62,7 @@ export function FinalSubmitReadiness({
 
   useEffect(() => {
     if (state.status === "success") {
-      router.push(`${ROUTES.brainRoadmap}?open=brand-research`);
+      router.push(ROUTES.home);
     }
   }, [router, state.status]);
 

@@ -37,7 +37,7 @@ function PreparingState({ kind }: { kind: AestheticsKind }) {
         <DeliverablePendingState
           eyebrow={AESTHETICS_PHASE_LABELS[kind]}
           eyebrowVariant="roadmap"
-          body="The Bextudio team is finalising this deliverable. You will be able to review and approve it here once it is uploaded."
+          body="The AIQ STUDIO team is finalising this deliverable. You will be able to review and approve it here once it is uploaded."
           headline={`Your ${title.toLowerCase()} is being prepared.`}
           title={title}
         />

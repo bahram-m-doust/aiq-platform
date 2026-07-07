@@ -18,7 +18,7 @@ import { AcceptInvitationForm } from "@/features/invitations/components/AcceptIn
 import { AcceptInvitationPrompt } from "@/features/invitations/components/AcceptInvitationPrompt";
 
 export const metadata: Metadata = {
-  title: "Accept Invitation | Bextudio Platform",
+  title: "Accept Invitation | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

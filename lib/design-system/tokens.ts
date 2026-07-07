@@ -1,5 +1,5 @@
 /**
- * Bextudio Design System — Token Constants
+ * AIQ STUDIO Design System — Token Constants
  *
  * Single source of truth for spacing, radius, shadow, motion.
  * Use these instead of inline values to ensure consistency across the app.

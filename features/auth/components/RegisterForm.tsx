@@ -17,11 +17,12 @@ import { register } from "@/features/auth/actions";
 import { initialAuthFormState } from "@/features/auth/schemas";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { SubmitButton } from "@/features/auth/components/SubmitButton";
+import { ROUTES } from "@/lib/routes";
 
-export function RegisterForm({ nextPath = "/home" }: { nextPath?: string }) {
+export function RegisterForm({ nextPath = ROUTES.home }: { nextPath?: string }) {
   const [state, formAction] = useActionState(register, initialAuthFormState);
   const loginHref =
-    nextPath === "/home"
+    nextPath === ROUTES.home
       ? "/login"
       : `/login?next=${encodeURIComponent(nextPath)}`;
 

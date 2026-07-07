@@ -21,7 +21,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   agents: "Agents",
   "integrated-brand-brain": "Integrated Brand Brain",
   "brand-brain": "Brand Brain",
-  roadmap: "Build Roadmap",
+  roadmap: "Deliverables",
   "city-model": "City Model",
   documents: "Documents",
   questionnaire: "Questionnaires",

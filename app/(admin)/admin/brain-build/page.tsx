@@ -5,7 +5,7 @@ import { getAdminBrandsForBrainBuild } from "@/features/admin/brain-build/querie
 import { BrainBuildAdminPanel } from "@/features/admin/brain-build/components/BrainBuildAdminPanel";
 
 export const metadata: Metadata = {
-  title: "Brain Build | Bextudio Platform",
+  title: "Brain Build | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

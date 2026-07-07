@@ -48,11 +48,11 @@ describe("auth validation", () => {
   });
 
   it("prevents external redirect targets", () => {
-    expect(sanitizeRedirectPath("https://example.com")).toBe("/home");
-    expect(sanitizeRedirectPath("//example.com")).toBe("/home");
-    expect(sanitizeRedirectPath("/\\evil.example")).toBe("/home");
-    expect(sanitizeRedirectPath("/dashboard\n/admin")).toBe("/home");
-    expect(sanitizeRedirectPath(" /dashboard")).toBe("/home");
+    expect(sanitizeRedirectPath("https://example.com")).toBe("/");
+    expect(sanitizeRedirectPath("//example.com")).toBe("/");
+    expect(sanitizeRedirectPath("/\\evil.example")).toBe("/");
+    expect(sanitizeRedirectPath("/dashboard\n/admin")).toBe("/");
+    expect(sanitizeRedirectPath(" /dashboard")).toBe("/");
     expect(sanitizeRedirectPath("/home")).toBe("/home");
     expect(sanitizeRedirectPath("/invite/accept?key=bext_example")).toBe(
       "/invite/accept?key=bext_example",
@@ -85,14 +85,14 @@ describe("auth validation", () => {
     expect(isAdminPath("/admin")).toBe(true);
     expect(isAdminPath("/admin/audit")).toBe(true);
     expect(isAdminPath("/admins")).toBe(false);
-    expect(isAdminPath("/home")).toBe(false);
+    expect(isAdminPath("/")).toBe(false);
   });
 
   it("routes admin destinations to the admin login page", () => {
     expect(resolveLoginPathForNext("/admin")).toBe("/admin/login");
     expect(resolveLoginPathForNext("/admin/audit")).toBe("/admin/login");
     expect(resolveLoginPathForNext("/admin/login")).toBe("/login");
-    expect(resolveLoginPathForNext("/home")).toBe("/login");
+    expect(resolveLoginPathForNext("/")).toBe("/login");
     expect(resolveLoginPathForNext("/intake")).toBe("/login");
   });
 });

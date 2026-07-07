@@ -13,7 +13,6 @@ import {
   PencilRulerIcon,
   ScrollTextIcon,
   ShieldCheckIcon,
-  BrainIcon,
   CpuIcon,
   MessageSquareTextIcon,
   TagIcon,
@@ -35,7 +34,7 @@ import { getPendingDemoRequestCount } from "@/features/demo-requests/queries";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = {
-  title: "Admin | Bextudio Platform",
+  title: "Admin | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -89,7 +88,7 @@ export default async function AdminPage() {
             Admin
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Operational tools for the Bextudio team — grouped by what you&apos;re
+            Operational tools for the AIQ STUDIO team — grouped by what you&apos;re
             doing. Every action is scoped to a brand and audited.
           </p>
         </div>

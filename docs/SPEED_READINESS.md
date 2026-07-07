@@ -1,4 +1,4 @@
-# Bextudio Speed Readiness
+# AIQ STUDIO Speed Readiness
 
 This pass keeps MVP behavior intact while reducing avoidable runtime work.
 

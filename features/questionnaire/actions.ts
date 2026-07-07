@@ -163,7 +163,7 @@ export async function finalSubmitIntakeAction(
       actorRole: profile.global_role,
     });
 
-    revalidatePath("/home");
+    revalidatePath("/");
     revalidatePath(ROUTES.brainRoadmap);
     revalidatePath(ROUTES.questionnaire);
     result.sectionKeys.forEach((sectionKey) => {
@@ -179,7 +179,7 @@ export async function finalSubmitIntakeAction(
     );
   }
 
-  redirect(`${ROUTES.brainRoadmap}?open=brand-research`);
+  redirect(ROUTES.home);
 }
 
 // Admin (platform owner) sends a locked questionnaire back to the brand owner

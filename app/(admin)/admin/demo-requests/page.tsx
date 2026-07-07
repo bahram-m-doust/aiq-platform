@@ -5,7 +5,7 @@ import { AdminDemoRequestsList } from "@/features/demo-requests/components/Admin
 import { getPendingDemoRequests } from "@/features/demo-requests/queries";
 
 export const metadata: Metadata = {
-  title: "Demo Requests | Bextudio Platform",
+  title: "Demo Requests | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";

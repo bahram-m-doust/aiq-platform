@@ -5,7 +5,7 @@ import { RegisterForm } from "@/features/auth/components/RegisterForm";
 import { sanitizeRedirectPath } from "@/features/auth/redirects";
 
 export const metadata: Metadata = {
-  title: "Register | Bextudio Platform",
+  title: "Register | AIQ Platform",
 };
 
 export default async function RegisterPage({

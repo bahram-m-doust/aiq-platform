@@ -37,6 +37,6 @@ export async function createBrandFromAccessKeyAction(
     return errorState("Brand workspace could not be created.");
   }
 
-  revalidatePath("/home");
-  redirect("/home");
+  revalidatePath("/");
+  redirect("/");
 }

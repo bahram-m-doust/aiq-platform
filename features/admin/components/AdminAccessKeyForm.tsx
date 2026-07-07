@@ -61,7 +61,7 @@ function buildRedeemUrl(rawKey: string, type: AccessKeyType) {
   const path =
     type === "JOIN_BRAND"
       ? `/invite/accept?key=${encoded}`
-      : `/home?key=${encoded}`;
+      : `/?key=${encoded}`;
   if (typeof window !== "undefined") {
     return `${window.location.origin}${path}`;
   }

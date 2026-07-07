@@ -1,8 +1,8 @@
-# Bextudio MVP — Security Rules v0.1
+# AIQ STUDIO MVP — Security Rules v0.1
 
 ## 1. اصل امنیتی محصول
 
-Bextudio با داده‌های محرمانه‌ی برند، فایل‌های استراتژیک، خروجی‌های انسانی، Agentها و RAG سروکار دارد. بنابراین اصل امنیتی محصول این است:
+AIQ STUDIO با داده‌های محرمانه‌ی برند، فایل‌های استراتژیک، خروجی‌های انسانی، Agentها و RAG سروکار دارد. بنابراین اصل امنیتی محصول این است:
 
 ```text
 Login is identity, not access.

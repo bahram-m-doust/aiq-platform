@@ -14,7 +14,7 @@ import { wrapSupabaseError } from "@/lib/errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = {
-  title: "AI Studio | Bextudio Admin",
+  title: "AI Studio | AIQ Admin",
 };
 
 export const dynamic = "force-dynamic";
