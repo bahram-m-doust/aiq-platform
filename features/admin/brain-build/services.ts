@@ -289,7 +289,7 @@ export async function buildBrainNow({
       );
       brainBuildError(
         needsApproval
-          ? `Brain could not be built: ${error.message} Approve at least one document into RAG first.`
+          ? `Brain could not be built: ${error.message} Approve at least one document into Brain Knowledge first.`
           : `Brain could not be built: ${error.message}`,
       );
     }
@@ -298,7 +298,7 @@ export async function buildBrainNow({
 
   if (syncedCount === 0) {
     brainBuildError(
-      "Brain could not be built: no documents synced. Approve documents into RAG, then try again.",
+      "Brain could not be built: no documents synced. Approve documents into Brain Knowledge, then try again.",
     );
   }
 

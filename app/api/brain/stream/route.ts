@@ -3,10 +3,13 @@ import { NextResponse } from "next/server";
 import { requireUserProfile } from "@/features/auth/queries";
 import {
   computeBrainUsage,
+  getUsageFromOpenAIResponse,
   isLLMBrainConfigError,
   openBrandBrainStream,
 } from "@/features/agents/brain/llm";
 import {
+  extractBrandBrainSources,
+  toBrandBrainDisplaySources,
   normalizeBrandBrainHistory,
   validateBrandBrainPrompt,
 } from "@/features/agents/brain/schema";
@@ -19,7 +22,7 @@ import type { BrandBrainStreamEvent } from "@/features/agents/brain/types";
 import { isBudgetExceededError } from "@/features/openrouter/usage";
 import { releaseRunUsageReservation } from "@/features/openrouter/usage";
 import { logServerError } from "@/lib/logging/server";
-import { providerCostCents } from "@/lib/openrouter/models";
+import { toOpenAIUserErrorMessage } from "@/lib/openai/errors";
 import {
   checkRequestRateLimit,
   RATE_LIMITED_MESSAGE,
@@ -114,31 +117,41 @@ export async function POST(request: Request) {
       let promptTokens = 0;
       let completionTokens = 0;
       let responseId = "";
-      let providerUsage: unknown = null;
+      let completedResponse: unknown = null;
 
       try {
         const completion = await openBrandBrainStream({
-          brandId: plan.brandId,
+          vectorStoreId: plan.vectorStoreId,
           model: plan.model,
           messages: plan.messages,
+          instruction: plan.instruction,
           signal: providerAbort.signal,
         });
 
-        for await (const chunk of completion) {
-          if (chunk.id) {
-            responseId = chunk.id;
+        for await (const event of completion) {
+          if (event.type === "response.output_text.delta" && event.delta) {
+            answer += event.delta;
+            controller.enqueue(encodeEvent({ type: "delta", text: event.delta }));
+            continue;
           }
 
-          const delta = chunk.choices?.[0]?.delta?.content;
-          if (delta) {
-            answer += delta;
-            controller.enqueue(encodeEvent({ type: "delta", text: delta }));
+          if (event.type === "response.completed") {
+            completedResponse = event.response;
+            responseId = event.response.id ?? responseId;
+            const usage = getUsageFromOpenAIResponse(event.response);
+            promptTokens = usage.promptTokens;
+            completionTokens = usage.completionTokens;
+            continue;
           }
 
-          if (chunk.usage) {
-            providerUsage = chunk.usage;
-            promptTokens = chunk.usage.prompt_tokens ?? promptTokens;
-            completionTokens = chunk.usage.completion_tokens ?? completionTokens;
+          if (event.type === "response.failed") {
+            throw new Error(
+              event.response.error?.message ?? "OpenAI response failed.",
+            );
+          }
+
+          if (event.type === "error") {
+            throw new Error(event.message);
           }
         }
 
@@ -164,6 +177,8 @@ export async function POST(request: Request) {
           promptTokens,
           completionTokens,
         });
+        const retrievedSources = extractBrandBrainSources(completedResponse);
+        const displaySources = toBrandBrainDisplaySources(retrievedSources);
         const runId = await finalizeBrandBrainRun({
           profile,
           brandId: plan.brandId,
@@ -171,15 +186,9 @@ export async function POST(request: Request) {
           model: plan.model,
           prompt,
           answer: trimmedAnswer,
-          responseId: responseId || `pgvector-${Date.now()}`,
-          retrievedSources: plan.retrievedSources,
-          usage: {
-            ...estimatedUsage,
-            costCents: providerCostCents(
-              providerUsage,
-              estimatedUsage.costCents,
-            ),
-          },
+          responseId: responseId || `openai-${Date.now()}`,
+          retrievedSources,
+          usage: estimatedUsage,
           reservation: plan.reservation,
           latencyMs: Math.max(0, Date.now() - plan.startedAt),
           sessionId,
@@ -189,7 +198,7 @@ export async function POST(request: Request) {
           encodeEvent({
             type: "done",
             runId,
-            sources: plan.displaySources,
+            sources: displaySources,
           }),
         );
         controller.close();
@@ -197,6 +206,7 @@ export async function POST(request: Request) {
         await releaseRunUsageReservation(plan.reservation).catch(
           () => undefined,
         );
+        const providerMessage = toOpenAIUserErrorMessage(error);
         logServerError({
           label: "[brand-brain] stream failed",
           error,
@@ -205,7 +215,8 @@ export async function POST(request: Request) {
         controller.enqueue(
           encodeEvent({
             type: "error",
-            message: "Brand Brain could not complete this request.",
+            message:
+              providerMessage ?? "Brand Brain could not complete this request.",
           }),
         );
         controller.close();

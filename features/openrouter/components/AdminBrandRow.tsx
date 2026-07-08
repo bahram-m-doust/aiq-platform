@@ -6,61 +6,14 @@ import { useFormStatus } from "react-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  adminDeleteBrandApiKeyAction,
-  adminSetBrandApiKeyAction,
-} from "@/features/brands/api-key-actions";
-import { initialApiKeyFormState } from "@/features/brands/api-key-form-state";
 import { setBrandBudgetAction } from "@/features/openrouter/budget-actions";
 import { initialBudgetFormState } from "@/features/openrouter/budget-form-state";
 
-function ApiKeyForm({ brandId }: { brandId: string }) {
-  const [state, formAction] = useActionState(
-    adminSetBrandApiKeyAction,
-    initialApiKeyFormState,
-  );
-  return (
-    <form action={formAction} className="flex flex-wrap items-center gap-2">
-      <input name="brand_id" type="hidden" value={brandId} />
-      <Input
-        className="max-w-xs"
-        name="api_key"
-        placeholder="sk-or-v1-..."
-        required
-        type="password"
-      />
-      <SubmitChip label="Save key" pendingLabel="Saving..." />
-      {state.status === "error" ? (
-        <p className="basis-full text-xs text-destructive">{state.message}</p>
-      ) : null}
-      {state.status === "success" ? (
-        <p className="basis-full text-xs text-emerald-500">{state.message}</p>
-      ) : null}
-    </form>
-  );
+function shortProviderId(providerVectorStoreId: string | null) {
+  if (!providerVectorStoreId) return "Not created";
+  if (providerVectorStoreId.length <= 18) return providerVectorStoreId;
+  return `${providerVectorStoreId.slice(0, 10)}...${providerVectorStoreId.slice(-6)}`;
 }
-
-function DeleteKeyForm({ brandId }: { brandId: string }) {
-  const [state, formAction] = useActionState(
-    adminDeleteBrandApiKeyAction,
-    initialApiKeyFormState,
-  );
-  return (
-    <form action={formAction}>
-      <input name="brand_id" type="hidden" value={brandId} />
-      <Button size="sm" type="submit" variant="outline">
-        Remove key
-      </Button>
-      {state.status === "error" ? (
-        <p className="mt-1 text-xs text-destructive">{state.message}</p>
-      ) : null}
-      {state.status === "success" ? (
-        <p className="mt-1 text-xs text-emerald-500">{state.message}</p>
-      ) : null}
-    </form>
-  );
-}
-
 function BudgetForm({
   brandId,
   initialDollars,
@@ -86,7 +39,7 @@ function BudgetForm({
           onChange={(e) =>
             setValue(e.target.value === "" ? "" : Number(e.target.value))
           }
-          placeholder="—"
+          placeholder="-"
           type="number"
           value={value}
         />
@@ -121,15 +74,27 @@ function SubmitChip({
 export function AdminBrandRow({
   brandId,
   brandName,
-  hasKey,
+  hasGlobalOpenAIKey,
   monthlyBudgetCents,
   monthSpendCents,
+  providerVectorStoreId,
+  knowledgeBaseStatus,
+  eligibleCount,
+  syncingCount,
+  syncedCount,
+  failedCount,
 }: {
   brandId: string;
   brandName: string;
-  hasKey: boolean;
+  hasGlobalOpenAIKey: boolean;
   monthlyBudgetCents: number | null;
   monthSpendCents: number;
+  providerVectorStoreId: string | null;
+  knowledgeBaseStatus: string;
+  eligibleCount: number;
+  syncingCount: number;
+  syncedCount: number;
+  failedCount: number;
 }) {
   const dollars: number | "" =
     monthlyBudgetCents !== null && monthlyBudgetCents >= 0
@@ -150,9 +115,13 @@ export function AdminBrandRow({
           </p>
         </div>
         <div className="text-xs text-muted-foreground">
-          Key:{" "}
-          <span className={hasKey ? "text-emerald-500" : "text-amber-500"}>
-            {hasKey ? "Active" : "Using global"}
+          OpenAI key:{" "}
+          <span
+            className={
+              hasGlobalOpenAIKey ? "text-emerald-500" : "text-amber-500"
+            }
+          >
+            {hasGlobalOpenAIKey ? "Configured globally" : "Missing"}
           </span>
         </div>
       </div>
@@ -160,10 +129,38 @@ export function AdminBrandRow({
       <div className="grid gap-4 md:grid-cols-[1fr_1fr]">
         <div className="space-y-2">
           <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-            API Key
+            OpenAI File Search
           </p>
-          <ApiKeyForm brandId={brandId} />
-          {hasKey ? <DeleteKeyForm brandId={brandId} /> : null}
+          <div className="grid gap-2 text-sm">
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground">Vector store</span>
+              <span className="font-mono text-xs">
+                {shortProviderId(providerVectorStoreId)}
+              </span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground">Knowledge status</span>
+              <span className="font-mono text-xs">{knowledgeBaseStatus}</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2 pt-2 text-center text-xs">
+              <div className="rounded-md border border-border p-2">
+                <div className="font-mono">{eligibleCount}</div>
+                <div className="text-muted-foreground">Ready</div>
+              </div>
+              <div className="rounded-md border border-border p-2">
+                <div className="font-mono">{syncingCount}</div>
+                <div className="text-muted-foreground">Syncing</div>
+              </div>
+              <div className="rounded-md border border-border p-2">
+                <div className="font-mono">{syncedCount}</div>
+                <div className="text-muted-foreground">Synced</div>
+              </div>
+              <div className="rounded-md border border-border p-2">
+                <div className="font-mono">{failedCount}</div>
+                <div className="text-muted-foreground">Failed</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -182,9 +179,7 @@ export function AdminBrandRow({
               </span>
             </div>
             {cap !== null ? (
-              <div
-                className="h-1.5 overflow-hidden rounded-full bg-muted"
-              >
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full"
                   style={{
@@ -201,7 +196,7 @@ export function AdminBrandRow({
       </div>
 
       <AlertDescription className="sr-only">
-        Manage OpenRouter access for {brandName}.
+        Manage OpenAI File Search status and AI budget for {brandName}.
       </AlertDescription>
     </Alert>
   );

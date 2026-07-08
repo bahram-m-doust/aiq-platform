@@ -36,9 +36,8 @@ function imageError(message: string): never {
   throw new DomainError(CODE, message);
 }
 
-// The IMAGE_GENERATOR catalog agent supplies the per-agent instruction slot for
-// image styling. If it is not configured we fall back to the brand agent id,
-// which still resolves the brand-wide default.
+// Kept for catalog compatibility. Prompt resolution now ignores per-agent
+// overrides and returns the single OpenAI-style brand prompt.
 async function resolveImageInstructionAgentId(
   fallbackAgentId: string,
 ): Promise<string> {

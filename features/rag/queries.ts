@@ -1,6 +1,9 @@
 import "server-only";
 
 import {
+  OPENAI_FILE_SEARCH_PROVIDER,
+} from "@/features/rag/openai-file-search";
+import {
   eligibleRagArtifactStatuses,
   eligibleRagModuleStatuses,
   isEligibleRagArtifactStatus,
@@ -8,6 +11,8 @@ import {
   isEligibleRagModuleStatus,
   isRagApprovedSyncEligible,
   isRagSyncDisplayEligible,
+  isLegacyOpenAISyncBackfillEligible,
+  ragOpenAISyncCandidateStatuses,
   ragRetryableSyncStatuses,
   safeRagStatus,
 } from "@/features/rag/schema";
@@ -60,6 +65,11 @@ type KnowledgeFileRow = {
   module_id: string | null;
   file_id: string | null;
   provider_file_id: string | null;
+  openai_file_id: string | null;
+  openai_vector_store_file_id: string | null;
+  openai_sync_status: string | null;
+  openai_synced_at: string | null;
+  openai_sync_error: string | null;
   rag_status: string;
   approved_by_supervisor: string | null;
   approved_by_platform_owner: string | null;
@@ -73,6 +83,8 @@ type KnowledgeBaseRow = {
   provider: string;
   provider_vector_store_id: string | null;
   status: string | null;
+  openai_vector_store_id: string | null;
+  openai_vector_store_status: string | null;
 };
 
 const moduleColumns = [
@@ -109,6 +121,11 @@ const knowledgeFileColumns = [
   "module_id",
   "file_id",
   "provider_file_id",
+  "openai_file_id",
+  "openai_vector_store_file_id",
+  "openai_sync_status",
+  "openai_synced_at",
+  "openai_sync_error",
   "rag_status",
   "approved_by_supervisor",
   "approved_by_platform_owner",
@@ -122,6 +139,8 @@ const knowledgeBaseColumns = [
   "provider",
   "provider_vector_store_id",
   "status",
+  "openai_vector_store_id",
+  "openai_vector_store_status",
 ].join(", ");
 
 function sortArtifacts(rows: ArtifactRow[]) {
@@ -283,7 +302,7 @@ async function fetchKnowledgeBases(brandIds: string[]) {
   const { data, error } = await admin
     .from("knowledge_bases")
     .select(knowledgeBaseColumns)
-    .eq("provider", "PGVECTOR")
+    .eq("provider", OPENAI_FILE_SEARCH_PROVIDER)
     .in("brand_id", brandIds);
 
   if (error) {
@@ -457,7 +476,7 @@ export async function getEligibleRagApprovalItemByArtifactId(
     : null;
 }
 
-async function fetchApprovedPdfArtifacts({
+async function fetchApprovedArtifacts({
   moduleIds,
   fileIds,
 }: {
@@ -472,7 +491,6 @@ async function fetchApprovedPdfArtifacts({
   const { data, error } = await admin
     .from("module_artifacts")
     .select(artifactColumns)
-    .eq("artifact_type", "PDF")
     .eq("status", "RAG_APPROVED")
     .in("module_id", moduleIds)
     .in("file_id", fileIds)
@@ -508,9 +526,16 @@ function isStandaloneEligible(
 
   if (approvedOnly) {
     return (
-      (ragRetryableSyncStatuses as readonly string[]).includes(
+      ((ragRetryableSyncStatuses as readonly string[]).includes(
         row.rag_status,
-      ) && file.status === "RAG_APPROVED"
+      ) ||
+        isLegacyOpenAISyncBackfillEligible({
+          ragStatus: row.rag_status,
+          openaiFileId: row.openai_file_id,
+          openaiVectorStoreFileId: row.openai_vector_store_file_id,
+          openaiSyncStatus: row.openai_sync_status,
+        })) &&
+      file.status === "RAG_APPROVED"
     );
   }
 
@@ -542,7 +567,7 @@ async function buildRagSyncFileItems(
   const [filesById, modulesById, artifactsByModuleFile] = await Promise.all([
     fetchFiles(fileIds),
     fetchModules(moduleIds),
-    fetchApprovedPdfArtifacts({ moduleIds, fileIds }),
+    fetchApprovedArtifacts({ moduleIds, fileIds }),
   ]);
 
   const moduleItems = moduleRows.flatMap((row) => {
@@ -564,8 +589,10 @@ async function buildRagSyncFileItems(
           file.brand_id === row.brand_id &&
           brandModule.brand_id === row.brand_id,
         moduleStatus: brandModule.status,
-        artifactType: artifact.artifact_type,
         artifactStatus: artifact.status,
+        openaiFileId: row.openai_file_id,
+        openaiVectorStoreFileId: row.openai_vector_store_file_id,
+        openaiSyncStatus: row.openai_sync_status,
       })
     ) {
       return [];
@@ -583,8 +610,8 @@ async function buildRagSyncFileItems(
         originalName: file.original_name,
         mimeType: file.mime_type,
         ragStatus: safeRagStatus(row.rag_status),
-        providerFileId: row.provider_file_id,
-        syncedAt: row.synced_at,
+        providerFileId: row.openai_file_id ?? row.provider_file_id,
+        syncedAt: row.openai_synced_at ?? row.synced_at,
       },
     ];
   });
@@ -607,8 +634,8 @@ async function buildRagSyncFileItems(
         originalName: file.original_name,
         mimeType: file.mime_type,
         ragStatus: safeRagStatus(row.rag_status),
-        providerFileId: row.provider_file_id,
-        syncedAt: row.synced_at,
+        providerFileId: row.openai_file_id ?? row.provider_file_id,
+        syncedAt: row.openai_synced_at ?? row.synced_at,
       },
     ];
   });
@@ -625,7 +652,7 @@ export async function getRagApprovedFilesForSync({
   let query = admin
     .from("knowledge_files")
     .select(knowledgeFileColumns)
-    .in("rag_status", [...ragRetryableSyncStatuses])
+    .in("rag_status", [...ragOpenAISyncCandidateStatuses])
     .not("file_id", "is", null);
 
   if (brandId) {
@@ -712,7 +739,9 @@ export async function getRagSyncDashboard(): Promise<RagSyncBrandGroup[]> {
         brandId: groupBrandId,
         brandName: brand?.name ?? "Unknown brand",
         providerVectorStoreId:
-          knowledgeBase?.provider_vector_store_id ?? null,
+          knowledgeBase?.openai_vector_store_id ??
+          knowledgeBase?.provider_vector_store_id ??
+          null,
         knowledgeBaseStatus: knowledgeBase?.status ?? "NOT_READY",
         eligibleCount: groupFiles.filter(
           (file) => file.ragStatus === "RAG_APPROVED",
@@ -720,10 +749,15 @@ export async function getRagSyncDashboard(): Promise<RagSyncBrandGroup[]> {
         syncingCount: groupFiles.filter((file) => file.ragStatus === "SYNCING")
           .length,
         syncedCount: groupFiles.filter(
-          (file) => file.ragStatus === "RAG_SYNCED",
+          (file) => file.ragStatus === "RAG_SYNCED" && file.providerFileId,
         ).length,
         failedCount: groupFiles.filter(
           (file) => file.ragStatus === "SYNC_FAILED",
+        ).length,
+        retryableCount: groupFiles.filter((file) =>
+          (ragRetryableSyncStatuses as readonly string[]).includes(
+            file.ragStatus,
+          ) || (file.ragStatus === "RAG_SYNCED" && !file.providerFileId),
         ).length,
         files: groupFiles,
       };

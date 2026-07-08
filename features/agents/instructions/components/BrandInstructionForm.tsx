@@ -17,7 +17,6 @@ import { saveBrandAgentInstructionAction } from "@/features/agents/instructions/
 import {
   brandInstructionMaxLength,
   buildBrandInstructionTemplate,
-  brandWideAgentValue,
 } from "@/features/agents/instructions/schema";
 import type {
   BrandAgentInstructionSlot,
@@ -39,52 +38,44 @@ export function BrandInstructionForm({
     saveBrandAgentInstructionAction,
     initialState,
   );
-  const [instruction, setInstruction] = useState(slot.instruction);
-  const [isEnabled, setIsEnabled] = useState(slot.isEnabled);
+  const [draft, setDraft] = useState({
+    brandId,
+    sourceInstruction: slot.instruction,
+    value: slot.instruction,
+  });
+  const isCurrentDraft =
+    draft.brandId === brandId && draft.sourceInstruction === slot.instruction;
+  const instruction = isCurrentDraft ? draft.value : slot.instruction;
 
-  const isBrandWide = slot.agentId === null;
   const remaining = brandInstructionMaxLength - instruction.length;
-  const fieldId = `instruction-${slot.agentId ?? "brand-wide"}`;
+  const fieldId = "brand-prompt-text";
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          {slot.agentName}
-          {isBrandWide ? (
-            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Default
-            </span>
-          ) : null}
-        </CardTitle>
+        <CardTitle className="text-base">{slot.agentName}</CardTitle>
         <CardDescription>
-          {isBrandWide
-            ? "Applies to every agent of this brand unless an agent has its own instruction below."
-            : `Overrides the brand-wide default for ${slot.agentName}.`}
+          This prompt is sent as the OpenAI developer input text for this
+          brand. File Search vector store routing is resolved by the server.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={action} className="space-y-3">
           <input name="brandId" type="hidden" value={brandId} />
-          <input
-            name="agentId"
-            type="hidden"
-            value={slot.agentId ?? brandWideAgentValue}
-          />
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor={fieldId}>Brand instruction (system prompt)</Label>
+              <Label htmlFor={fieldId}>Prompt text</Label>
               <Button
                 className="gap-1.5"
                 onClick={() =>
-                  setInstruction(
-                    buildBrandInstructionTemplate({
+                  setDraft({
+                    brandId,
+                    sourceInstruction: slot.instruction,
+                    value: buildBrandInstructionTemplate({
                       brandName,
-                      agentName: slot.agentName,
-                      agentKey: slot.agentKey,
                     }),
-                  )
+                  })
                 }
                 size="sm"
                 type="button"
@@ -99,8 +90,14 @@ export function BrandInstructionForm({
               id={fieldId}
               maxLength={brandInstructionMaxLength}
               name="instruction"
-              onChange={(event) => setInstruction(event.target.value)}
-              placeholder="Full brand instruction: role, knowledge routing, tone, prompt rules, do's and don'ts. This becomes the brand's system prompt. Leave empty to use the neutral base role + safety guard only."
+              onChange={(event) =>
+                setDraft({
+                  brandId,
+                  sourceInstruction: slot.instruction,
+                  value: event.target.value,
+                })
+              }
+              placeholder="Paste the same prompt text you would put in OpenAI Platform. This becomes the brand's developer input text."
               rows={18}
               value={instruction}
             />
@@ -108,17 +105,6 @@ export function BrandInstructionForm({
               {remaining} characters left
             </p>
           </div>
-
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              checked={isEnabled}
-              className="size-4"
-              name="isEnabled"
-              onChange={(event) => setIsEnabled(event.target.checked)}
-              type="checkbox"
-            />
-            Enabled
-          </label>
 
           {state.status === "success" ? (
             <p className="flex items-center gap-1.5 text-xs text-emerald-600">
@@ -134,7 +120,7 @@ export function BrandInstructionForm({
           ) : null}
 
           <Button disabled={isPending} type="submit">
-            {isPending ? "Saving..." : "Save"}
+            {isPending ? "Saving..." : "Save prompt"}
           </Button>
         </form>
       </CardContent>

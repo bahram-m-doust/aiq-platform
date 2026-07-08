@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/features/questionnaire/actions", () => ({
   autosaveIntakeAnswerAction: vi.fn(),
   autosaveIntakeAnswersAction: vi.fn(),
+  clearIntakeAnswerDoneAction: vi.fn(),
   finalSubmitIntakeAction: vi.fn(),
 }));
 
@@ -290,7 +291,7 @@ describe("intake autosave queue", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /Approve & Lock/ }),
+      screen.getByRole("button", { name: /Approve questionnaire/ }),
     ).toBeDisabled();
   });
 });

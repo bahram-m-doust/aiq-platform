@@ -1,74 +1,55 @@
 import "server-only";
 
 import {
+  extractBrandBrainSources,
   toBrandBrainDisplaySources,
 } from "@/features/agents/brain/schema";
 import { joinPromptLayers } from "@/features/agents/instructions/schema";
 import type {
   BrandBrainChatMessage,
-  BrandBrainRetrievedSource,
 } from "@/features/agents/brain/types";
-import { searchBrandKnowledge } from "@/features/rag/vector-search";
 import {
-  buildUntrustedKnowledgeContext,
-  untrustedKnowledgeInstruction,
-} from "@/features/rag/prompt-context";
+  getBrandOpenAIVectorStore,
+  searchOpenAIBrandKnowledge,
+} from "@/features/rag/openai-file-search";
+import { untrustedKnowledgeInstruction } from "@/features/rag/prompt-context";
 import { DomainError, isDomainErrorWithCode } from "@/lib/errors";
 import {
-  getOpenRouterClientForBrand,
-  getOpenRouterModel,
-} from "@/lib/openrouter/client";
-import {
-  computeTextCostCents,
-  providerCostCents,
-} from "@/lib/openrouter/models";
+  getOpenAIClient,
+  getOpenAIModel,
+  isOpenAIConfigError,
+} from "@/lib/openai/client";
+import { computeOpenAITextCostCents } from "@/lib/openai/models";
 
-const CODE = "openrouter_brain_config";
+const CODE = "openai_brain_config";
 const MAX_COMPLETION_TOKENS = 1200;
 
 export function isLLMBrainConfigError(error: unknown): error is DomainError {
-  return isDomainErrorWithCode(error, CODE);
+  return isDomainErrorWithCode(error, CODE) || isOpenAIConfigError(error);
 }
 
-// Layer [1] — neutral base identity, locked in code. Deliberately minimal so it
-// frames the assistant without fighting the brand instruction that follows
-// (which may define its own role, persona, and tone). Imposes no fixed tone of
-// its own. Also acts as a sensible fallback when a brand has no instruction yet.
 const BRAIN_ROLE_PROMPT =
-  "You are this brand's dedicated AI Brand Brain — an expert, brand-side assistant. The brand instruction that follows is your primary operating guide: apply it fully and stay in character. Reply in the user's language, be precise and well-structured, and give expert brand judgment rather than generic advice.";
+  "You are this brand's dedicated AI Brand Brain - an expert, brand-side assistant. The brand instruction that follows is your primary operating guide: apply it fully and stay in character. Reply in the user's language, be precise and well-structured, and give expert brand judgment rather than generic advice.";
 
-// Layer [3] — safety/scope guard, locked in code and appended after the
-// admin-edited brand instruction so it can never be overridden.
 const BRAIN_SAFETY_GUARD =
-  `Answer using only the provided brand knowledge context. If the context does not contain enough information to answer, say that the current Brand Brain knowledge base does not contain enough information. Never reference other brands, knowledge that was not provided, or internal system details. ${untrustedKnowledgeInstruction}`;
+  `Use OpenAI file_search over the current brand's vector store as the only external brand knowledge source. If file_search does not return enough information to answer, say that the current Brand Brain knowledge base does not contain enough information. Never reference other brands, knowledge that was not retrieved, or internal system details. ${untrustedKnowledgeInstruction}`;
 
-function buildContextBlock(
-  chunks: { chunkText: string; fileName: string; score: number }[],
-): string {
-  return buildUntrustedKnowledgeContext(chunks);
-}
+export type BrandBrainInputMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
 
-function toRetrievedSources(
-  chunks: { chunkId: string; knowledgeFileId: string; fileName: string; score: number }[],
-): BrandBrainRetrievedSource[] {
-  return chunks.map((c) => ({
-    fileName: c.fileName,
-    score: c.score,
-    providerFileId: c.knowledgeFileId,
-    attributes: {
-      chunk_id: c.chunkId,
-      knowledge_file_id: c.knowledgeFileId,
-    },
-  }));
-}
+export type BrandBrainDeveloperMessage = {
+  role: "developer";
+  content: Array<{ type: "input_text"; text: string }>;
+};
 
 export function getBrandBrainModel(): string {
-  return getOpenRouterModel();
+  return getOpenAIModel();
 }
 
-// Retrieval keys off the latest question only; prior turns are supplied to the
-// model purely as conversational memory so follow-ups stay grounded in the
-// freshly retrieved context rather than drifting onto earlier topics.
+// Image mode still needs a text context block for its prompt rewrite. This uses
+// OpenAI Vector Store search directly, not local pgvector.
 export async function retrieveBrandBrainContext({
   prompt,
   brandId,
@@ -78,52 +59,61 @@ export async function retrieveBrandBrainContext({
   brandId: string;
   topK?: number;
 }) {
-  const chunks = await searchBrandKnowledge({
-    brandId,
-    query: prompt,
-    topK,
-  });
-
-  const retrievedSources = toRetrievedSources(chunks);
-
-  return {
-    context: buildContextBlock(chunks),
-    retrievedSources,
-    displaySources: toBrandBrainDisplaySources(retrievedSources),
-  };
+  return searchOpenAIBrandKnowledge({ brandId, query: prompt, topK });
 }
 
-type ChatMessageParam = {
-  role: "system" | "user" | "assistant";
-  content: string;
-};
-
-export function buildBrandBrainMessages({
-  context,
-  history,
-  prompt,
+export function buildBrandBrainInstructions({
   instruction = "",
 }: {
-  context: string;
+  instruction?: string;
+} = {}) {
+  return joinPromptLayers([BRAIN_ROLE_PROMPT, instruction, BRAIN_SAFETY_GUARD]);
+}
+
+export function buildBrandBrainMessages({
+  history,
+  prompt,
+}: {
   history: BrandBrainChatMessage[];
   prompt: string;
-  instruction?: string;
-}): ChatMessageParam[] {
-  // Retrieved documents stay in a separate untrusted user message.
-  const systemContent = joinPromptLayers([
-    BRAIN_ROLE_PROMPT,
-    instruction,
-    BRAIN_SAFETY_GUARD,
-  ]);
-
+}): BrandBrainInputMessage[] {
   return [
-    { role: "system", content: systemContent },
     ...history.map((message) => ({
       role: message.role,
       content: message.content,
     })),
-    ...(context ? [{ role: "user" as const, content: context }] : []),
-    { role: "user", content: prompt },
+    { role: "user" as const, content: prompt },
+  ];
+}
+
+export function buildBrandBrainDeveloperMessage({
+  instruction = "",
+}: {
+  instruction?: string;
+} = {}): BrandBrainDeveloperMessage {
+  return {
+    role: "developer",
+    content: [
+      {
+        type: "input_text",
+        text: buildBrandBrainInstructions({ instruction }),
+      },
+    ],
+  };
+}
+
+export function buildBrandBrainInput({
+  history,
+  prompt,
+  instruction = "",
+}: {
+  history: BrandBrainChatMessage[];
+  prompt: string;
+  instruction?: string;
+}): Array<BrandBrainDeveloperMessage | BrandBrainInputMessage> {
+  return [
+    buildBrandBrainDeveloperMessage({ instruction }),
+    ...buildBrandBrainMessages({ history, prompt }),
   ];
 }
 
@@ -139,9 +129,44 @@ export function computeBrainUsage({
   return {
     promptTokens,
     completionTokens,
-    costCents: computeTextCostCents({ model, promptTokens, completionTokens }),
+    costCents: computeOpenAITextCostCents({
+      model,
+      promptTokens,
+      completionTokens,
+    }),
     model,
   };
+}
+
+function usageFromResponse(response: unknown) {
+  if (!response || typeof response !== "object") {
+    return { promptTokens: 0, completionTokens: 0 };
+  }
+
+  const usage = (response as { usage?: unknown }).usage;
+  if (!usage || typeof usage !== "object") {
+    return { promptTokens: 0, completionTokens: 0 };
+  }
+
+  const promptTokens = (usage as { input_tokens?: unknown }).input_tokens;
+  const completionTokens = (usage as { output_tokens?: unknown }).output_tokens;
+
+  return {
+    promptTokens:
+      typeof promptTokens === "number" && Number.isFinite(promptTokens)
+        ? promptTokens
+        : 0,
+    completionTokens:
+      typeof completionTokens === "number" && Number.isFinite(completionTokens)
+        ? completionTokens
+        : 0,
+  };
+}
+
+function outputTextFromResponse(response: unknown) {
+  if (!response || typeof response !== "object") return "";
+  const outputText = (response as { output_text?: unknown }).output_text;
+  return typeof outputText === "string" ? outputText.trim() : "";
 }
 
 export async function createBrandBrainResponse({
@@ -157,64 +182,85 @@ export async function createBrandBrainResponse({
   instruction?: string;
   model?: string;
 }) {
-  const { context, retrievedSources, displaySources } =
-    await retrieveBrandBrainContext({ prompt, brandId });
+  const vectorStore = await getBrandOpenAIVectorStore({ brandId });
+  if (!vectorStore?.vectorStoreId) {
+    throw new DomainError(
+      CODE,
+      "OpenAI vector store is not configured for this brand.",
+    );
+  }
 
-  const client = await getOpenRouterClientForBrand(brandId);
-  const completion = await client.chat.completions.create({
+  const client = await getOpenAIClient();
+  const response = await client.responses.create({
     model,
-    messages: buildBrandBrainMessages({ context, history, prompt, instruction }),
-    max_tokens: MAX_COMPLETION_TOKENS,
+    input: buildBrandBrainInput({ history, prompt, instruction }),
+    max_output_tokens: MAX_COMPLETION_TOKENS,
+    tools: [
+      {
+        type: "file_search",
+        vector_store_ids: [vectorStore.vectorStoreId],
+        max_num_results: 8,
+      },
+    ],
+    include: ["file_search_call.results"],
+    store: false,
   });
 
-  const answer = completion.choices[0]?.message?.content?.trim() ?? "";
-
-  const promptTokens = completion.usage?.prompt_tokens ?? 0;
-  const completionTokens = completion.usage?.completion_tokens ?? 0;
-  const estimatedCostCents = computeTextCostCents({
-    model,
-    promptTokens,
-    completionTokens,
-  });
+  const answer = outputTextFromResponse(response);
+  const retrievedSources = extractBrandBrainSources(response);
+  const { promptTokens, completionTokens } = usageFromResponse(response);
 
   return {
-    responseId: completion.id ?? `pgvector-${Date.now()}`,
+    responseId: response.id ?? `openai-${Date.now()}`,
     answer,
     retrievedSources,
-    displaySources,
-    usage: {
-      promptTokens,
-      completionTokens,
-      costCents: providerCostCents(completion.usage, estimatedCostCents),
-      model,
-    },
+    displaySources: toBrandBrainDisplaySources(retrievedSources),
+    usage: computeBrainUsage({ model, promptTokens, completionTokens }),
   };
 }
 
-// Opens a token stream against the brand-scoped client. `include_usage` asks
-// OpenRouter to append a final chunk carrying token counts so the caller can
-// price the run after the answer finishes streaming.
 export async function openBrandBrainStream({
-  brandId,
+  vectorStoreId,
   model,
   messages,
+  instruction = "",
   signal,
 }: {
-  brandId: string;
+  vectorStoreId: string;
   model: string;
-  messages: ChatMessageParam[];
+  messages: BrandBrainInputMessage[];
+  instruction?: string;
   signal?: AbortSignal;
 }) {
-  const client = await getOpenRouterClientForBrand(brandId);
+  const client = await getOpenAIClient();
 
-  return client.chat.completions.create(
+  return client.responses.create(
     {
       model,
-      messages,
-      max_tokens: MAX_COMPLETION_TOKENS,
+      input: [
+        buildBrandBrainDeveloperMessage({ instruction }),
+        ...messages,
+      ],
+      max_output_tokens: MAX_COMPLETION_TOKENS,
+      tools: [
+        {
+          type: "file_search",
+          vector_store_ids: [vectorStoreId],
+          max_num_results: 8,
+        },
+      ],
+      include: ["file_search_call.results"],
+      store: false,
       stream: true,
-      stream_options: { include_usage: true },
     },
     { signal },
   );
+}
+
+export function getUsageFromOpenAIResponse(response: unknown) {
+  return usageFromResponse(response);
+}
+
+export function getOpenAIResponseOutputText(response: unknown) {
+  return outputTextFromResponse(response);
 }

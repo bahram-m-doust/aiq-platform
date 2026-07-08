@@ -1,8 +1,7 @@
 # MVP Release Runbook
 
 This runbook prepares the app for final MVP QA and manual upload. It does not
-cover cPanel deployment steps, CI/CD, Docker, paid observability, or RAG
-refactors.
+cover cPanel deployment steps, CI/CD, Docker, or paid observability.
 
 ## 1. Environment Checklist
 
@@ -18,6 +17,9 @@ Required:
 
 Optional for enabled features:
 
+- `OPENAI_API_KEY` (server fallback; Platform Owners can store the global key in AI Studio)
+- `OPENAI_MODEL`
+- `OPENAI_RESPONSE_STORE`
 - `OPENROUTER_API_KEY`
 - `OPENROUTER_MODEL`
 - `RESEND_API_KEY`
@@ -43,7 +45,7 @@ Fresh project:
 Existing project:
 
 1. Run missing migrations in numeric order through
-   `0054_brain_build_schedule.sql`.
+   `0058_global_provider_api_keys.sql`.
 2. Re-run seeds only if the environment is missing plan, agent, or intake
    configuration rows.
 3. Run `NOTIFY pgrst, 'reload schema';`.
@@ -92,9 +94,10 @@ in the release commit.
 6. Invitation: create Specialist invite, accept with target email.
 7. Files: upload, approve/reject Specialist file, download via signed URL.
 8. Modules: upload artifact, send to client, approve, request change.
-9. Agents/Brain: run only when current brand knowledge is ready.
-10. Audit: confirm sensitive values are not visible in audit logs.
-11. Rate limits: repeat-submit login, access key, invite, upload, Brain, and
+9. AI Studio: save the global OpenAI key or confirm the env fallback is configured.
+10. Agents/Brain: run only when current brand knowledge is ready.
+11. Audit: confirm sensitive values are not visible in audit logs.
+12. Rate limits: repeat-submit login, access key, invite, upload, Brain, and
     agent run until the controlled rate-limit message appears.
 
 ## 5. Stop Conditions

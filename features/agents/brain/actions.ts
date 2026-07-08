@@ -23,6 +23,7 @@ import type {
 } from "@/features/agents/brain/types";
 import { isBudgetExceededError } from "@/features/openrouter/usage";
 import { logServerError } from "@/lib/logging/server";
+import { toOpenAIUserErrorMessage } from "@/lib/openai/errors";
 import {
   checkRequestRateLimit,
   RATE_LIMITED_MESSAGE,
@@ -123,6 +124,11 @@ export async function askBrandBrainAction(
       return errorState(error.message);
     }
 
+    const providerMessage = toOpenAIUserErrorMessage(error);
+    if (providerMessage) {
+      return errorState(providerMessage);
+    }
+
     logServerError({
       label: "[brand-brain] run failed",
       error,
@@ -192,8 +198,8 @@ export async function generateBrandBrainImageAction(
       metadata: { profileId: profile.id },
     });
 
-    // Surface the upstream API error message when available (e.g. OpenRouter
-    // model not found, quota exceeded, invalid parameters) so users and
+    // Surface the upstream API error message when available (e.g. model not
+    // found, quota exceeded, invalid parameters) so users and
     // developers can diagnose failures without digging into server logs.
     const upstream =
       error instanceof Error && error.message ? `: ${error.message}` : "";

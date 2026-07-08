@@ -5,9 +5,13 @@ import { revalidatePath } from "next/cache";
 import { requirePlatformOwner } from "@/features/auth/queries";
 import {
   deleteBrandApiKey,
+  deleteGlobalProviderApiKey,
+  OPENAI_PROVIDER,
   setBrandApiKey,
+  setGlobalProviderApiKey,
 } from "@/features/brands/api-keys";
 import { clearBrandClientCache } from "@/lib/openrouter/client";
+import { clearOpenAIClientCache } from "@/lib/openai/client";
 import type { ApiKeyFormState } from "@/features/brands/api-key-form-state";
 import { logServerError } from "@/lib/logging/server";
 
@@ -96,5 +100,75 @@ export async function adminDeleteBrandApiKeyAction(
       metadata: { profileId: profile.id, brandId },
     });
     return { status: "error", message: "Failed to remove API key." };
+  }
+}
+
+export async function adminSetGlobalOpenAIKeyAction(
+  _prev: ApiKeyFormState,
+  formData: FormData,
+): Promise<ApiKeyFormState> {
+  const { profile } = await requirePlatformOwner("/admin/ai-studio");
+  const apiKey = readString(formData, "api_key");
+
+  if (!apiKey) {
+    return { status: "error", message: "OpenAI API key is required." };
+  }
+
+  if (!apiKey.startsWith("sk-")) {
+    return { status: "error", message: "OpenAI API key should start with sk-." };
+  }
+
+  try {
+    await setGlobalProviderApiKey({
+      provider: OPENAI_PROVIDER,
+      apiKey,
+      label: "OpenAI Platform",
+      actorId: profile.id,
+    });
+    clearOpenAIClientCache();
+    revalidatePath("/admin/ai-studio");
+    return { status: "success", message: "OpenAI API key saved securely." };
+  } catch (error) {
+    logServerError({
+      label: "[admin] set global OpenAI API key failed",
+      error,
+      metadata: { profileId: profile.id },
+    });
+    return {
+      status: "error",
+      message: isEncryptionConfigError(error)
+        ? "Server can't encrypt keys - KEY_ENCRYPTION_KEY is missing or invalid. Set it to a base64-encoded 32-byte value and restart."
+        : "Failed to save OpenAI API key.",
+    };
+  }
+}
+
+export async function adminDeleteGlobalOpenAIKeyAction(
+  _prev: ApiKeyFormState,
+  _formData: FormData,
+): Promise<ApiKeyFormState> {
+  void _prev;
+  void _formData;
+
+  const { profile } = await requirePlatformOwner("/admin/ai-studio");
+
+  try {
+    await deleteGlobalProviderApiKey({
+      provider: OPENAI_PROVIDER,
+      actorId: profile.id,
+    });
+    clearOpenAIClientCache();
+    revalidatePath("/admin/ai-studio");
+    return {
+      status: "success",
+      message: "Stored OpenAI API key removed. Env fallback still works if configured.",
+    };
+  } catch (error) {
+    logServerError({
+      label: "[admin] delete global OpenAI API key failed",
+      error,
+      metadata: { profileId: profile.id },
+    });
+    return { status: "error", message: "Failed to remove OpenAI API key." };
   }
 }

@@ -16,6 +16,7 @@ import {
   processPendingStorageCleanups,
   removePrivateFileOrQueue,
 } from "@/features/documents/storage-cleanup";
+import { cleanupKnowledgeFileByFileId } from "@/features/rag/openai-file-search";
 import { toBrandDocumentRecord } from "@/features/documents/queries";
 import type {
   BrandDocumentRecord,
@@ -175,7 +176,7 @@ export async function adminUploadDocumentForBrand({
     }
   }
 
-  // Auto-promote to RAG if requested
+  // Auto-promote to Brain Knowledge if requested.
   if (sendToRag && record.status !== "ARCHIVED") {
     const admin3 = createAdminClient();
     await admin3.rpc("promote_document_to_rag", {
@@ -189,6 +190,7 @@ export async function adminUploadDocumentForBrand({
 
 async function getFileById(fileId: string): Promise<BrandDocumentRecord | null> {
   const admin = createAdminClient();
+
   const { data, error } = await admin
     .from("files")
     .select(fileColumns)
@@ -214,6 +216,8 @@ export async function adminArchiveDocument({
   }
 
   const admin = createAdminClient();
+  await cleanupKnowledgeFileByFileId(fileId, { deleteLedger: true });
+
   const { data, error } = await admin
     .from("files")
     .update({ status: "ARCHIVED" })
@@ -290,6 +294,8 @@ export async function adminDeleteDocument({
   if (!before) adminFileError("Document could not be found.");
 
   const admin = createAdminClient();
+  await cleanupKnowledgeFileByFileId(fileId);
+
   const { error: deleteError } = await admin.rpc(
     "delete_file_and_queue_storage_cleanup",
     {
@@ -340,7 +346,7 @@ export async function adminPromoteDocumentToRag({
   if (!before) adminFileError("Document could not be found.");
 
   if (before.status === "ARCHIVED") {
-    adminFileError("Cannot promote an archived document to RAG.");
+    adminFileError("Cannot promote an archived document to Brain Knowledge.");
   }
 
   if (before.status === "RAG_APPROVED") {
@@ -387,6 +393,8 @@ export async function adminDemoteDocumentFromRag({
   }
 
   const admin = createAdminClient();
+  await cleanupKnowledgeFileByFileId(fileId);
+
   const { data, error } = await admin.rpc("demote_document_from_rag", {
     p_file_id: fileId,
     p_actor_id: actor.id,

@@ -43,11 +43,11 @@ export function RagApprovalActionForm({
   const label =
     stage === "SUPERVISOR"
       ? "Supervisor approve"
-      : "Final RAG approve";
+      : "Final Brain approve";
   const confirmMessage =
     stage === "SUPERVISOR"
       ? "Are you sure you want to approve this artifact for supervisor review?"
-      : "Are you sure you want to give final RAG approval for this artifact?";
+      : "Are you sure you want to give final Brain approval for this artifact?";
 
   function handleConfirm() {
     setErrorMessage(null);

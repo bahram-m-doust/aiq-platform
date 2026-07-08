@@ -81,6 +81,7 @@ export type RagSyncBrandGroup = {
   providerVectorStoreId: string | null;
   knowledgeBaseStatus: string;
   eligibleCount: number;
+  retryableCount: number;
   syncingCount: number;
   syncedCount: number;
   failedCount: number;

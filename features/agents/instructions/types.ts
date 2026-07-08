@@ -1,13 +1,12 @@
 export type BrandAgentInstruction = {
-  // null agentId == brand-wide default applied to every agent of the brand.
+  // null agentId == the single OpenAI-style brand prompt.
   agentId: string | null;
   instruction: string;
   isEnabled: boolean;
   updatedAt: string | null;
 };
 
-// One editable slot in the admin panel: either the brand-wide default or a
-// specific agent override, with whatever value is currently stored (if any).
+// One editable prompt slot in the admin panel.
 export type BrandAgentInstructionSlot = {
   agentId: string | null;
   agentKey: string | null;

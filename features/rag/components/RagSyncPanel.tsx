@@ -28,7 +28,7 @@ export function RagSyncPanel({ groups }: { groups: RagSyncBrandGroup[] }) {
         <CardHeader>
           <CardTitle>OpenAI File Search sync</CardTitle>
           <CardDescription>
-            RAG-approved PDF files will appear here after final RAG approval.
+            Brain-approved files will appear here after final approval.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -42,13 +42,13 @@ export function RagSyncPanel({ groups }: { groups: RagSyncBrandGroup[] }) {
           OpenAI File Search sync
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Platform Owners can sync RAG-approved PDF files into each brand&apos;s
+          Platform Owners can sync Brain-approved files into each brand&apos;s
           isolated vector store.
         </p>
       </div>
 
       {groups.map((group) => {
-        const syncDisabled = group.eligibleCount === 0 || group.syncingCount > 0;
+        const syncDisabled = group.retryableCount === 0 || group.syncingCount > 0;
 
         return (
           <Card key={group.brandId}>

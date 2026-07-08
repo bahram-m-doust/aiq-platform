@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildBrandBrainMessages } from "@/features/agents/brain/llm";
+import {
+  buildBrandBrainInput,
+  buildBrandBrainInstructions,
+  buildBrandBrainMessages,
+} from "@/features/agents/brain/llm";
 import { buildBrandContextBlock } from "@/features/agents/runs/llm";
 import { buildUntrustedKnowledgeContext } from "@/features/rag/prompt-context";
 
@@ -11,23 +15,44 @@ const maliciousChunk = {
 };
 
 describe("AI prompt isolation", () => {
-  it("keeps retrieved content out of the Brand Brain system message", () => {
+  it("keeps retrieved content out of the Brand Brain instructions and input", () => {
     const context = buildUntrustedKnowledgeContext([maliciousChunk]);
+    const instructions = buildBrandBrainInstructions();
     const messages = buildBrandBrainMessages({
-      context,
       history: [],
       prompt: "Summarize the positioning.",
     });
+    const serialized = JSON.stringify({ instructions, messages });
 
-    expect(messages[0]?.role).toBe("system");
-    expect(messages[0]?.content).not.toContain(maliciousChunk.chunkText);
-    expect(messages[1]).toMatchObject({
-      role: "user",
-      content: expect.stringContaining("<untrusted_brand_knowledge>"),
-    });
+    expect(context).toContain(maliciousChunk.chunkText);
+    expect(serialized).not.toContain(maliciousChunk.chunkText);
+    expect(instructions).toContain("file_search");
     expect(messages.at(-1)).toEqual({
       role: "user",
       content: "Summarize the positioning.",
+    });
+  });
+
+  it("sends admin instructions as developer input text with file_search guidance", () => {
+    const input = buildBrandBrainInput({
+      history: [],
+      prompt: "What should we prioritize?",
+      instruction: "Use the approved brand voice.",
+    });
+
+    expect(input[0]).toEqual({
+      role: "developer",
+      content: [
+        {
+          type: "input_text",
+          text: expect.stringContaining("Use the approved brand voice."),
+        },
+      ],
+    });
+    expect(JSON.stringify(input[0])).toContain("file_search");
+    expect(input.at(-1)).toEqual({
+      role: "user",
+      content: "What should we prioritize?",
     });
   });
 

@@ -26,7 +26,7 @@ export default async function AdminBrainBuildPage() {
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Signed in as {profile.email}. Schedule and trigger brand brain
-            builds. Each build runs the RAG sync pipeline and activates the
+            builds. Each build runs the OpenAI File Search sync pipeline and activates the
             brand&apos;s AI agent.
           </p>
         </div>

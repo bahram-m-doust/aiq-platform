@@ -39,9 +39,9 @@ export const ragStatusLabels: Record<RagStatus, string> = {
   NOT_ELIGIBLE: "Not eligible",
   CLIENT_APPROVED: "Client approved",
   RAG_REVIEW_REQUIRED: "Supervisor approved",
-  RAG_APPROVED: "RAG approved",
+  RAG_APPROVED: "Brain approved",
   SYNCING: "Syncing",
-  RAG_SYNCED: "RAG synced",
+  RAG_SYNCED: "OpenAI synced",
   SYNC_FAILED: "Sync failed",
 };
 
@@ -108,7 +108,7 @@ export function validateRagApprovalTargetFormData(
   const artifactId = formString(formData, "artifact_id");
 
   if (!artifactId) {
-    return { artifactId: null, error: "RAG approval target is missing." };
+    return { artifactId: null, error: "Brain approval target is missing." };
   }
 
   return { artifactId, error: null };
@@ -177,27 +177,62 @@ export const ragRetryableSyncStatuses = [
   "SYNCING",
 ] as const;
 
+export const ragOpenAISyncCandidateStatuses = [
+  ...ragRetryableSyncStatuses,
+  "RAG_SYNCED",
+] as const;
+
+export function isLegacyOpenAISyncBackfillEligible({
+  ragStatus,
+  openaiFileId,
+  openaiVectorStoreFileId,
+  openaiSyncStatus,
+}: {
+  ragStatus: string | null | undefined;
+  openaiFileId?: string | null | undefined;
+  openaiVectorStoreFileId?: string | null | undefined;
+  openaiSyncStatus?: string | null | undefined;
+}) {
+  return (
+    ragStatus === "RAG_SYNCED" &&
+    (!openaiFileId ||
+      !openaiVectorStoreFileId ||
+      openaiSyncStatus !== "RAG_SYNCED")
+  );
+}
+
 export function isRagApprovedSyncEligible({
   ragStatus,
   fileStatus,
   brandMatches,
   moduleStatus = "RAG_APPROVED",
-  artifactType = "PDF",
   artifactStatus = "RAG_APPROVED",
+  openaiFileId = null,
+  openaiVectorStoreFileId = null,
+  openaiSyncStatus = null,
 }: {
   ragStatus: string | null | undefined;
   fileStatus: string | null | undefined;
   brandMatches: boolean;
   moduleStatus?: string | null | undefined;
-  artifactType?: string | null | undefined;
   artifactStatus?: string | null | undefined;
+  openaiFileId?: string | null | undefined;
+  openaiVectorStoreFileId?: string | null | undefined;
+  openaiSyncStatus?: string | null | undefined;
 }) {
   return (
     brandMatches &&
-    (ragRetryableSyncStatuses as readonly string[]).includes(ragStatus ?? "") &&
+    ((ragRetryableSyncStatuses as readonly string[]).includes(
+      ragStatus ?? "",
+    ) ||
+      isLegacyOpenAISyncBackfillEligible({
+        ragStatus,
+        openaiFileId,
+        openaiVectorStoreFileId,
+        openaiSyncStatus,
+      })) &&
     fileStatus === "RAG_APPROVED" &&
     moduleStatus === "RAG_APPROVED" &&
-    artifactType === "PDF" &&
     artifactStatus === "RAG_APPROVED"
   );
 }
@@ -207,14 +242,12 @@ export function isRagSyncDisplayEligible({
   fileStatus,
   brandMatches,
   moduleStatus,
-  artifactType,
   artifactStatus,
 }: {
   ragStatus: string | null | undefined;
   fileStatus: string | null | undefined;
   brandMatches: boolean;
   moduleStatus: string | null | undefined;
-  artifactType: string | null | undefined;
   artifactStatus: string | null | undefined;
 }) {
   return (
@@ -224,7 +257,6 @@ export function isRagSyncDisplayEligible({
     ) &&
     fileStatus === "RAG_APPROVED" &&
     moduleStatus === "RAG_APPROVED" &&
-    artifactType === "PDF" &&
     artifactStatus === "RAG_APPROVED"
   );
 }
@@ -235,7 +267,7 @@ export function validateRagSyncBrandFormData(
   const brandId = formString(formData, "brand_id");
 
   if (!brandId) {
-    return { brandId: null, error: "RAG sync brand is missing." };
+    return { brandId: null, error: "OpenAI sync brand is missing." };
   }
 
   return { brandId, error: null };

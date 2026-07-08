@@ -1,6 +1,7 @@
 import "server-only";
 
 import { removePrivateFileOrQueue } from "@/features/documents/storage-cleanup";
+import { cleanupKnowledgeFileByFileId } from "@/features/rag/openai-file-search";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type DeliverableTable =
@@ -15,12 +16,10 @@ type DeliverableTable =
 // vector search from serving content whose source file is gone.
 async function clearRagReferences(fileIds: string[]): Promise<void> {
   if (fileIds.length === 0) return;
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from("knowledge_files")
-    .delete()
-    .in("file_id", fileIds);
-  if (error) throw error;
+
+  for (const fileId of fileIds) {
+    await cleanupKnowledgeFileByFileId(fileId, { deleteLedger: true });
+  }
 }
 
 // Fully removes a file record: RAG references → files row → storage object

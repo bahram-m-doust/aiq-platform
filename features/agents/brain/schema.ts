@@ -9,7 +9,7 @@ import type {
 import type { BrandAccessSummary } from "@/features/access/types";
 
 export const brandBrainAgentKey = "BRAND_INTEGRATOR_BRAIN";
-export const brandBrainProvider = "OPENROUTER";
+export const brandBrainProvider = "OPENAI";
 export const brandBrainPromptMaxLength = 2000;
 
 // Conversation memory window. The client sends prior turns with each request so
@@ -204,6 +204,15 @@ export function resolveBrandBrainReadiness({
   if (syncedFileCount <= 0) {
     return readiness({
       status: "NO_SYNCED_FILES",
+      knowledgeBaseId,
+      providerVectorStoreId,
+      syncedFileCount,
+    });
+  }
+
+  if (!providerVectorStoreId) {
+    return readiness({
+      status: "KNOWLEDGE_BASE_NOT_SYNCED",
       knowledgeBaseId,
       providerVectorStoreId,
       syncedFileCount,

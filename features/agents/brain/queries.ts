@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getBrandAccessSummaryForProfile } from "@/features/access/queries";
+import { OPENAI_FILE_SEARCH_PROVIDER } from "@/features/rag/openai-file-search";
 import {
   brandBrainAgentKey,
   resolveBrandBrainReadiness,
@@ -22,6 +23,8 @@ type KnowledgeBaseRow = {
   id: string;
   status: string | null;
   provider_vector_store_id: string | null;
+  openai_vector_store_id: string | null;
+  openai_vector_store_status: string | null;
 };
 
 type KnowledgeFileRow = {
@@ -95,9 +98,11 @@ async function getKnowledgeBase(brandId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("knowledge_bases")
-    .select("id, status, provider_vector_store_id")
+    .select(
+      "id, status, provider_vector_store_id, openai_vector_store_id, openai_vector_store_status",
+    )
     .eq("brand_id", brandId)
-    .eq("provider", "PGVECTOR")
+    .eq("provider", OPENAI_FILE_SEARCH_PROVIDER)
     .maybeSingle();
 
   if (error) {
@@ -113,7 +118,8 @@ async function getSyncedKnowledgeFileCount(brandId: string) {
     .from("knowledge_files")
     .select("id")
     .eq("brand_id", brandId)
-    .eq("rag_status", "RAG_SYNCED");
+    .eq("rag_status", "RAG_SYNCED")
+    .not("openai_file_id", "is", null);
 
   if (error) {
     throw error;
@@ -166,7 +172,10 @@ export async function getBrandBrainWorkspace(
       hasAgent: Boolean(agent),
       knowledgeBaseId: knowledgeBase?.id ?? null,
       knowledgeBaseStatus: knowledgeBase?.status ?? null,
-      providerVectorStoreId: knowledgeBase?.provider_vector_store_id ?? null,
+      providerVectorStoreId:
+        knowledgeBase?.openai_vector_store_id ??
+        knowledgeBase?.provider_vector_store_id ??
+        null,
       syncedFileCount,
     }),
   };

@@ -195,7 +195,6 @@ describe("invitation components", () => {
       />,
     );
 
-    expect(screen.getByText("Invite Brand Specialist")).toBeVisible();
     expect(screen.getByLabelText("Specialist email")).toBeVisible();
     expect(screen.getByLabelText("Invitation expiry")).toBeVisible();
     expect(

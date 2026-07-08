@@ -10,6 +10,7 @@ import type { StakeholderReportStatus } from "@/features/stakeholder-interviews/
 import { getAestheticsRowsByBrand } from "@/features/aesthetics/queries";
 import type { AestheticsDeliverableStatus } from "@/features/aesthetics/types";
 import { getBrainBuildScheduleForBrand } from "@/features/admin/brain-build/queries";
+import { OPENAI_FILE_SEARCH_PROVIDER } from "@/features/rag/openai-file-search";
 import {
   ROUTES,
   aestheticsDeliverablePath,
@@ -317,12 +318,14 @@ async function getBrainProgress(brandId: string) {
       .from("knowledge_bases")
       .select("status")
       .eq("brand_id", brandId)
+      .eq("provider", OPENAI_FILE_SEARCH_PROVIDER)
       .maybeSingle(),
     admin
       .from("knowledge_files")
       .select("id")
       .eq("brand_id", brandId)
-      .eq("rag_status", "RAG_SYNCED"),
+      .eq("rag_status", "RAG_SYNCED")
+      .not("openai_file_id", "is", null),
     admin
       .from("agent_entitlements")
       .select("id")

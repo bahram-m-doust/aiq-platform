@@ -50,7 +50,7 @@ async function requireQueueItem(artifactId: string) {
   const item = await getEligibleRagApprovalItemByArtifactId(artifactId);
 
   if (!item) {
-    ragApprovalError("RAG approval item could not be found.");
+    ragApprovalError("Brain approval item could not be found.");
   }
 
   return item;
@@ -158,7 +158,7 @@ export async function approveRagAsSupervisor({
   actor: UserProfile;
 }): Promise<RagApprovalResult> {
   if (!canSupervisorApproveRag(actor.global_role)) {
-    ragApprovalError("Only Supervisors can perform Supervisor RAG approval.");
+    ragApprovalError("Only Supervisors can perform Supervisor Brain approval.");
   }
 
   const item = await requireQueueItem(artifactId);
@@ -194,11 +194,11 @@ export async function approveRagAsSupervisor({
   return {
     item: updatedItem,
     message: transition.changed && finalState
-      ? "RAG approval consistency repaired."
+      ? "Brain approval consistency repaired."
       : transition.changed
-        ? "Supervisor RAG approval recorded."
+        ? "Supervisor Brain approval recorded."
       : finalState
-        ? "This file is already RAG approved."
+        ? "This file is already Brain approved."
         : "Supervisor approval is already recorded.",
     alreadyApproved: !transition.changed && finalState,
   };
@@ -212,7 +212,7 @@ export async function approveRagAsPlatformOwner({
   actor: UserProfile;
 }): Promise<RagApprovalResult> {
   if (!canPlatformOwnerApproveRag(actor.global_role)) {
-    ragApprovalError("Only Platform Owners can perform final RAG approval.");
+    ragApprovalError("Only Platform Owners can perform final Brain approval.");
   }
 
   const item = await requireQueueItem(artifactId);
@@ -241,8 +241,8 @@ export async function approveRagAsPlatformOwner({
   return {
     item: updatedItem,
     message: transition.changed
-      ? "Final RAG approval recorded."
-      : "This file is already RAG approved.",
+      ? "Final Brain approval recorded."
+      : "This file is already Brain approved.",
     alreadyApproved: !transition.changed,
   };
 }

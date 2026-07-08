@@ -781,7 +781,7 @@ describe("intake UI components", () => {
         'a[href="/integrated-brand-brain/roadmap/questionnaire/company?validate=1"]',
       ),
     ).not.toBeNull();
-    expect(screen.getByText(/uncompleted question/i)).toBeVisible();
+    expect(screen.getByText(/unlock submission/i)).toBeVisible();
   });
 
   it("keeps the uncompleted warning visible after review even without the flag", () => {
@@ -796,13 +796,13 @@ describe("intake UI components", () => {
 
     // Reach the review step once — this records "review reached" for the session.
     const first = render(<QuestionnaireLanding data={data} showSubmitReview />);
-    expect(screen.getByText(/uncompleted question/i)).toBeVisible();
+    expect(screen.getByText(/unlock submission/i)).toBeVisible();
     first.unmount();
 
     // Returning to the plain overview (no ?review=1) still shows the box, so the
     // user can keep fixing gaps without losing it.
     render(<QuestionnaireLanding data={data} />);
-    expect(screen.getByText(/uncompleted question/i)).toBeVisible();
+    expect(screen.getByText(/unlock submission/i)).toBeVisible();
   });
 
   it("treats answered-but-not-marked-done questions as uncompleted", () => {
@@ -830,7 +830,7 @@ describe("intake UI components", () => {
     });
     render(<QuestionnaireLanding data={data} showSubmitReview />);
 
-    expect(screen.getByText(/uncompleted question/i)).toBeVisible();
+    expect(screen.getByText(/unlock submission/i)).toBeVisible();
   });
 
   it("clears the uncompleted warning once every question is marked done", () => {
@@ -916,7 +916,7 @@ describe("intake UI components", () => {
     );
 
     // Reaching review with a gap left shows the warning, not the button yet.
-    expect(screen.getByText(/uncompleted question/i)).toBeVisible();
+    expect(screen.getByText(/unlock submission/i)).toBeVisible();
     expect(
       screen.queryByRole("link", { name: /Review & submit/ }),
     ).not.toBeInTheDocument();
@@ -947,7 +947,7 @@ describe("intake UI components", () => {
     rerender(<QuestionnaireLanding data={complete} showSubmitReview />);
 
     await waitFor(() => {
-      expect(screen.queryByText(/uncompleted question/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/unlock submission/i)).not.toBeInTheDocument();
     });
     expect(
       screen.queryByRole("link", { name: /Review & submit/ }),

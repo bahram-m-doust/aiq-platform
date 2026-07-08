@@ -130,14 +130,14 @@ export function BrainBuildAdminPanel({
           <p className="text-sm text-muted-foreground">
             Brain was built on {formatDate(schedule?.builtAt ?? null)}. The Brand
             Brain chatbot is unlocked for this brand. Re-running a build re-syncs
-            the latest RAG-approved documents.
+            the latest Brain-approved documents.
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
             Set a target date to show {brandName}&apos;s team an animated
             progress bar in Phase 04. When ready, run{" "}
             <span className="font-medium text-foreground">Build Now</span> to
-            sync RAG documents, activate the brain, and notify the team.
+            sync Brain Knowledge documents, activate the brain, and notify the team.
           </p>
         )}
 
@@ -182,8 +182,8 @@ export function BrainBuildAdminPanel({
                 {built ? "Rebuild" : "Build"} brain for “{brandName}”?
               </DialogTitle>
               <DialogDescription>
-                This syncs every RAG-approved document into the knowledge base
-                (chunk + embed), activates the Brand Brain agent, marks the brain
+                This syncs every Brain-approved document into OpenAI File Search,
+                activates the Brand Brain agent, marks the brain
                 complete, and emails + notifies all brand members that their
                 Brand Brain is ready.
               </DialogDescription>

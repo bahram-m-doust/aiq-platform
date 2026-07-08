@@ -21,7 +21,7 @@ function formatQueueState(item: RagApprovalQueueItem) {
   const state = ragApprovalStateForItem(item);
 
   if (state === "APPROVED") {
-    return "RAG approval complete";
+    return "Brain approval complete";
   }
 
   if (state === "SYNCING") {
@@ -29,11 +29,11 @@ function formatQueueState(item: RagApprovalQueueItem) {
   }
 
   if (state === "SYNCED") {
-    return "RAG sync complete";
+    return "OpenAI File Search sync complete";
   }
 
   if (state === "SYNC_FAILED") {
-    return "RAG sync failed";
+    return "OpenAI File Search sync failed";
   }
 
   if (state === "PENDING_PLATFORM_OWNER") {
@@ -54,7 +54,7 @@ export function RagApprovalQueue({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>No RAG approval items</CardTitle>
+          <CardTitle>No Brain approval items</CardTitle>
           <CardDescription>
             Client-approved PDF module artifacts will appear here after client
             approval.

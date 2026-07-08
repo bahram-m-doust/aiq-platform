@@ -47,7 +47,7 @@ export async function reserveRunUsage({
     if (error.message?.includes("AI_BUDGET_EXCEEDED")) {
       throw new DomainError(
         BUDGET_ERROR_CODE,
-        "Monthly OpenRouter budget reached. Ask your admin to top up before generating more.",
+        "Monthly AI budget reached. Ask your admin to top up before generating more.",
       );
     }
     throw wrapSupabaseError(error, "reserve_ai_budget failed");

@@ -5,7 +5,7 @@ import {
   buildBrandBrainMessages,
   createBrandBrainResponse,
   getBrandBrainModel,
-  retrieveBrandBrainContext,
+  type BrandBrainInputMessage,
 } from "@/features/agents/brain/llm";
 import { getBrandBrainWorkspace } from "@/features/agents/brain/queries";
 import { getBrandAgentInstruction } from "@/features/agents/instructions/queries";
@@ -15,7 +15,6 @@ import {
 } from "@/features/agents/brain/schema";
 import type {
   BrandBrainChatMessage,
-  BrandBrainDisplaySource,
   BrandBrainRetrievedSource,
   BrandBrainRunResult,
 } from "@/features/agents/brain/types";
@@ -253,9 +252,9 @@ export type BrandBrainStreamPlan = {
   brandId: string;
   agentId: string;
   model: string;
-  messages: { role: "system" | "user" | "assistant"; content: string }[];
-  retrievedSources: BrandBrainRetrievedSource[];
-  displaySources: BrandBrainDisplaySource[];
+  vectorStoreId: string;
+  instruction: string;
+  messages: BrandBrainInputMessage[];
   startedAt: number;
   reservation: UsageReservation;
 };
@@ -284,8 +283,12 @@ export async function prepareBrandBrainStream({
     agentId: agent.id,
   });
   const model = getBrandBrainModel();
-  const { context, retrievedSources, displaySources } =
-    await retrieveBrandBrainContext({ prompt, brandId: access.brandId });
+  const vectorStoreId = readiness.providerVectorStoreId;
+
+  if (!vectorStoreId) {
+    brainError("OpenAI vector store is not configured for this brand.");
+  }
+
   const reservation = await reserveRunUsage({
     brandId: access.brandId,
     kind: "TEXT",
@@ -295,9 +298,9 @@ export async function prepareBrandBrainStream({
     brandId: access.brandId,
     agentId: agent.id,
     model,
-    messages: buildBrandBrainMessages({ context, history, prompt, instruction }),
-    retrievedSources,
-    displaySources,
+    vectorStoreId,
+    instruction,
+    messages: buildBrandBrainMessages({ history, prompt }),
     startedAt: Date.now(),
     reservation,
   };

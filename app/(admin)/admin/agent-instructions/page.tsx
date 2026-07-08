@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { requirePlatformOwner } from "@/features/auth/queries";
 import { BrandInstructionForm } from "@/features/agents/instructions/components/BrandInstructionForm";
 import {
   getBrandInstructionAdminBrands,
   listBrandInstructionSlots,
 } from "@/features/agents/instructions/queries";
+import { requirePlatformOwner } from "@/features/auth/queries";
 
 export const metadata: Metadata = {
-  title: "Agent Instructions | AIQ Platform",
+  title: "Brand Prompts | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,9 @@ export default async function AdminAgentInstructionsPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { user, profile } = await requirePlatformOwner("/admin/agent-instructions");
+  const { user, profile } = await requirePlatformOwner(
+    "/admin/agent-instructions",
+  );
 
   const resolved = (await searchParams) ?? {};
   const brandIdParam = resolved.brandId;
@@ -41,19 +43,18 @@ export default async function AdminAgentInstructionsPage({
       <section className="mx-auto w-full max-w-6xl space-y-6">
         <div>
           <p className="font-mono text-sm uppercase tracking-[0.2em] text-muted-foreground">
-            Brand agent configuration
+            OpenAI prompt configuration
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-normal">
-            Agent Instructions
+            Brand Prompts
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Signed in as {email} | {profile.global_role}
           </p>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Set the brand-wide system instruction and per-agent overrides. The
-            instruction is layered between the agent role and the safety guard —
-            it shapes voice and behavior but cannot override brand isolation or
-            safety rules.
+            Set one OpenAI-style prompt text per brand. The app sends it as
+            developer input text and resolves File Search vector stores
+            server-side.
           </p>
         </div>
 
@@ -82,12 +83,12 @@ export default async function AdminAgentInstructionsPage({
         {selectedBrand ? (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">{selectedBrand.name}</h2>
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="max-w-3xl">
               {slots.map((slot) => (
                 <BrandInstructionForm
                   brandId={selectedBrand.id}
                   brandName={selectedBrand.name}
-                  key={slot.agentId ?? "brand-wide"}
+                  key={`${selectedBrand.id}:${slot.agentId ?? "brand-prompt"}`}
                   slot={slot}
                 />
               ))}
@@ -95,11 +96,9 @@ export default async function AdminAgentInstructionsPage({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Select a brand to edit its agent instructions.
+            Select a brand to edit its OpenAI prompt.
           </p>
         )}
-
-        
       </section>
     </main>
   );

@@ -188,11 +188,13 @@ describe("file permissions and audit metadata", () => {
 
 describe("file components", () => {
   it("renders the uploader for an Owner", () => {
-    render(<DocumentUploader access={ownerAccess} />);
+    const { container } = render(<DocumentUploader access={ownerAccess} />);
 
-    expect(screen.getByRole("button", { name: "Upload document" })).toBeVisible();
-    expect(screen.getByLabelText("Document")).toBeVisible();
-    expect(screen.getByLabelText("Visibility")).toBeVisible();
+    expect(screen.getByLabelText(/Click to upload/i)).toBeInTheDocument();
+    expect(screen.getByText("PDF, DOCX, TXT, MD or CSV files")).toBeVisible();
+    expect(
+      container.querySelector('input[name="visibility"][value="OWNER_ONLY"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders file list actions for pending Specialist uploads", () => {

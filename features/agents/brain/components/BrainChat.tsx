@@ -23,6 +23,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MarkdownContent } from "@/components/markdown/MarkdownContent";
 import { Textarea } from "@/components/ui/textarea";
 import {
   deleteBrainSessionAction,
@@ -58,10 +59,6 @@ type ChatMessage = {
 };
 
 type HistoryTurn = { role: BrandBrainChatRole; content: string };
-
-type ContentPart =
-  | { type: "text"; text: string }
-  | { type: "code"; text: string; lang: string };
 
 const STREAM_ENDPOINT = "/api/brain/stream";
 
@@ -182,41 +179,6 @@ function isRtlText(text: string): boolean {
   return rtl > 0 && rtl * 3 >= ltr;
 }
 
-function parseContent(raw: string): ContentPart[] {
-  const parts: ContentPart[] = [];
-  const regex = /```(\w*)\n?([\s\S]*?)```/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(raw)) !== null) {
-    if (match.index > lastIndex) {
-      const text = raw.slice(lastIndex, match.index);
-      if (text.trim()) parts.push({ type: "text", text });
-    }
-    parts.push({ type: "code", text: match[2].trimEnd(), lang: match[1] || "code" });
-    lastIndex = regex.lastIndex;
-  }
-
-  if (lastIndex < raw.length) {
-    const text = raw.slice(lastIndex);
-    if (text.trim()) parts.push({ type: "text", text });
-  }
-
-  return parts;
-}
-
-function renderBoldText(text: string): React.ReactNode {
-  const segments = text.split(/(\*\*[^*\n]+\*\*)/g);
-  if (segments.length === 1) return text;
-  return segments.map((seg, i) =>
-    seg.startsWith("**") && seg.endsWith("**") ? (
-      <strong key={i}>{seg.slice(2, -2)}</strong>
-    ) : (
-      seg
-    ),
-  );
-}
-
 function CopyIconButton({ text, compact = false }: { text: string; compact?: boolean }) {
   const [copied, setCopied] = useState(false);
 
@@ -334,22 +296,6 @@ function ImageActionBar({
   );
 }
 
-function CodeBlock({ code, lang }: { code: string; lang: string }) {
-  return (
-    <div className="my-3 overflow-hidden rounded-lg border border-border bg-muted/60" dir="ltr">
-      <div className="flex items-center justify-between border-b border-border/60 bg-muted px-3 py-1.5">
-        <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-          {lang === "code" ? "Prompt" : lang}
-        </span>
-        <CopyIconButton compact text={code} />
-      </div>
-      <pre className="overflow-x-auto p-3 text-[13px] leading-relaxed">
-        <code className="font-mono text-foreground">{code}</code>
-      </pre>
-    </div>
-  );
-}
-
 function TypingDots() {
   return (
     <div className="flex gap-1 py-1">
@@ -377,7 +323,6 @@ function MessageBubble({
     message.content.length === 0;
   const rtl =
     !message.pending && message.content ? isRtlText(message.content) : false;
-  const parts = message.content ? parseContent(message.content) : [];
 
   return (
     <article
@@ -404,21 +349,17 @@ function MessageBubble({
           </p>
         ) : showTyping ? (
           <TypingDots />
-        ) : !hasImages && parts.length > 0 ? (
-          <>
-            {parts.map((part, i) =>
-              part.type === "code" ? (
-                <CodeBlock key={i} code={part.text} lang={part.lang} />
-              ) : (
-                // text-align: justify works for both LTR and RTL when the
-                // element's `dir` is set; we must NOT add text-right, which
-                // would override the justification for Persian.
-                <p key={i} className="whitespace-pre-wrap text-justify">
-                  {renderBoldText(part.text)}
-                </p>
-              ),
-            )}
-          </>
+        ) : !hasImages && message.content ? (
+          isUser ? (
+            <p className="whitespace-pre-wrap text-justify">
+              {message.content}
+            </p>
+          ) : (
+            <MarkdownContent
+              className="max-w-none text-[15px] [&_li]:text-justify [&_p]:text-justify"
+              markdown={message.content}
+            />
+          )
         ) : null}
 
         {hasImages ? (

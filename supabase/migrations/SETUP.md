@@ -9,7 +9,7 @@ fastest path is the Supabase Dashboard SQL Editor.
 2. Paste and run `supabase/migrations/setup-all.sql`.
    - This generated script is intended only for an empty project.
    - It includes every numbered migration through
-     `0050_intake_answer_marked_done.sql`.
+     `0058_global_provider_api_keys.sql`.
    - Regenerate it after adding a migration with
      `npm run db:generate-bundles`.
    - On Supabase Cloud the script intentionally does **not** run
@@ -30,8 +30,9 @@ NOTIFY pgrst, 'reload schema';
 5. Verify the latest tables exist, including `rate_limits`, `demo_requests`,
    `knowledge_chunks`, `brand_api_keys`, `agent_run_usage`,
    `ai_usage_reservations`, `stakeholder_interview_reports`,
-   `brand_agent_settings`, `futures_research_reports`, and
-   `storage_cleanup_jobs`.
+   `brand_agent_settings`, `futures_research_reports`,
+   `storage_cleanup_jobs`, and OpenAI File Search mapping columns on
+   `knowledge_bases` / `knowledge_files`.
 
 ## Existing Project
 
@@ -90,6 +91,10 @@ migrations in numeric order:
 - `0052_files_approved_at.sql`
 - `0053_demote_document_from_rag.sql`
 - `0054_brain_build_schedule.sql`
+- `0055_seed_agents_catalog.sql`
+- `0056_agent_runs_session_id.sql`
+- `0057_openai_file_search_mapping.sql`
+- `0058_global_provider_api_keys.sql`
 
 ## Required Supabase Dashboard Configuration
 

@@ -400,7 +400,7 @@ describe("adminPromoteDocumentToRag", () => {
 
     await expect(
       adminPromoteDocumentToRag({ fileId: "file-1", actor: actor() }),
-    ).rejects.toThrow("Cannot promote an archived document to RAG.");
+    ).rejects.toThrow("Cannot promote an archived document to Brain Knowledge.");
   });
 
   it("is idempotent for already-RAG_APPROVED files", async () => {
@@ -468,7 +468,6 @@ describe("standalone RAG sync eligibility", () => {
         fileStatus: "RAG_APPROVED",
         brandMatches: true,
         moduleStatus: "RAG_APPROVED",
-        artifactType: "PDF",
         artifactStatus: "RAG_APPROVED",
       }),
     ).toBe(true);
@@ -481,22 +480,20 @@ describe("standalone RAG sync eligibility", () => {
         fileStatus: "RAG_APPROVED",
         brandMatches: true,
         moduleStatus: "RAG_APPROVED",
-        artifactType: "PDF",
         artifactStatus: "RAG_APPROVED",
       }),
     ).toBe(true);
   });
 
-  it("module-based file requires PDF artifact type", () => {
+  it("module-based file allows OpenAI-supported document artifact types", () => {
     expect(
       isRagApprovedSyncEligible({
         ragStatus: "RAG_APPROVED",
         fileStatus: "RAG_APPROVED",
         brandMatches: true,
         moduleStatus: "RAG_APPROVED",
-        artifactType: "DOCX",
         artifactStatus: "RAG_APPROVED",
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 });

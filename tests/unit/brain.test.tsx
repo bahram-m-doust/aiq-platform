@@ -377,7 +377,8 @@ describe("Brand Brain service", () => {
     const instructionBuilder = {
       select: vi.fn(() => instructionBuilder),
       eq: vi.fn(() => instructionBuilder),
-      or: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      is: vi.fn(() => instructionBuilder),
+      maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
     };
     const from = vi.fn((table: string) => {
       if (table === "agent_runs") return agentRunBuilder;
@@ -415,7 +416,7 @@ describe("Brand Brain service", () => {
           answer: "The brand opportunity is clear.",
           response_id: "resp-1",
         },
-        provider: "OPENROUTER",
+        provider: "OPENAI",
         model: "gpt-test",
         cost: null,
       }),

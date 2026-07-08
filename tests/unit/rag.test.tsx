@@ -16,12 +16,18 @@ vi.mock("@/features/documents/storage", () => ({
   downloadPrivateFile: vi.fn(),
 }));
 
-vi.mock("@/features/rag/embeddings", () => ({
-  hasEmbeddingEnv: vi.fn(),
+vi.mock("@/lib/openai/client", () => ({
+  hasOpenAIKey: vi.fn(),
 }));
 
-vi.mock("@/features/rag/pgvector-sync", () => ({
-  syncFileToChunks: vi.fn(),
+vi.mock("@/features/rag/openai-file-search", () => ({
+  OPENAI_FILE_SEARCH_PROVIDER: "OPENAI_FILE_SEARCH",
+  getOrCreateOpenAIVectorStore: vi.fn(),
+  sanitizeOpenAIError: vi.fn((error: unknown) =>
+    error instanceof Error ? error.message : "OpenAI sync failed.",
+  ),
+  updateOpenAIKnowledgeBaseStatus: vi.fn(),
+  uploadFileToOpenAIFileSearch: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -40,8 +46,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logAudit } from "@/lib/audit/logAudit";
 import { RagApprovalQueue } from "@/features/rag/components/RagApprovalQueue";
 import { RagSyncPanel } from "@/features/rag/components/RagSyncPanel";
-import { hasEmbeddingEnv } from "@/features/rag/embeddings";
-import { syncFileToChunks } from "@/features/rag/pgvector-sync";
+import { hasOpenAIKey } from "@/lib/openai/client";
+import {
+  getOrCreateOpenAIVectorStore,
+  updateOpenAIKnowledgeBaseStatus,
+  uploadFileToOpenAIFileSearch,
+} from "@/features/rag/openai-file-search";
 import {
   canSyncRagRole,
   canPlatformOwnerApproveRag,
@@ -78,8 +88,10 @@ const mockedGetEligibleItem = vi.mocked(getEligibleRagApprovalItemByArtifactId);
 const mockedGetApprovedFilesForSync = vi.mocked(getRagApprovedFilesForSync);
 const mockedCreateAdminClient = vi.mocked(createAdminClient);
 const mockedLogAudit = vi.mocked(logAudit);
-const mockedHasEmbeddingEnv = vi.mocked(hasEmbeddingEnv);
-const mockedSyncFileToChunks = vi.mocked(syncFileToChunks);
+const mockedHasOpenAIKey = vi.mocked(hasOpenAIKey);
+const mockedGetOrCreateVectorStore = vi.mocked(getOrCreateOpenAIVectorStore);
+const mockedUpdateVectorStore = vi.mocked(updateOpenAIKnowledgeBaseStatus);
+const mockedUploadOpenAIFile = vi.mocked(uploadFileToOpenAIFileSearch);
 
 function profile(role: UserProfile["global_role"]): UserProfile {
   return {
@@ -142,7 +154,7 @@ describe("RAG approval rules", () => {
       ).artifactId,
     ).toBe("artifact-1");
     expect(validateRagApprovalTargetFormData(new FormData()).error).toBe(
-      "RAG approval target is missing.",
+      "Brain approval target is missing.",
     );
     expect(ragApprovalStateForItem(queueItem())).toBe("PENDING_SUPERVISOR");
     expect(
@@ -184,20 +196,42 @@ describe("RAG approval rules", () => {
         fileStatus: "RAG_APPROVED",
         brandMatches: true,
         moduleStatus: "RAG_APPROVED",
-        artifactType: "DOCX",
         artifactStatus: "RAG_APPROVED",
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isRagSyncDisplayEligible({
         ragStatus: "RAG_SYNCED",
         fileStatus: "RAG_APPROVED",
         brandMatches: true,
         moduleStatus: "RAG_APPROVED",
-        artifactType: "PDF",
         artifactStatus: "RAG_APPROVED",
       }),
     ).toBe(true);
+  });
+
+  it("allows legacy RAG_SYNCED rows without OpenAI file mapping to backfill", () => {
+    expect(
+      isRagApprovedSyncEligible({
+        ragStatus: "RAG_SYNCED",
+        fileStatus: "RAG_APPROVED",
+        brandMatches: true,
+        openaiFileId: null,
+        openaiVectorStoreFileId: null,
+        openaiSyncStatus: null,
+      }),
+    ).toBe(true);
+
+    expect(
+      isRagApprovedSyncEligible({
+        ragStatus: "RAG_SYNCED",
+        fileStatus: "RAG_APPROVED",
+        brandMatches: true,
+        openaiFileId: "file_openai_1",
+        openaiVectorStoreFileId: "vsf_1",
+        openaiSyncStatus: "RAG_SYNCED",
+      }),
+    ).toBe(false);
   });
 
   it("validates sync form input", () => {
@@ -207,7 +241,7 @@ describe("RAG approval rules", () => {
         error: null,
       });
     expect(validateRagSyncBrandFormData(new FormData()).error).toBe(
-      "RAG sync brand is missing.",
+      "OpenAI sync brand is missing.",
     );
   });
 
@@ -368,7 +402,7 @@ describe("RAG approval service guards", () => {
       artifactStatus: "RAG_APPROVED",
       fileStatus: "RAG_APPROVED",
     });
-    expect(result.message).toBe("RAG approval consistency repaired.");
+    expect(result.message).toBe("Brain approval consistency repaired.");
     expect(result.alreadyApproved).toBe(false);
     expect(mockedLogAudit).toHaveBeenCalledTimes(1);
   });
@@ -511,7 +545,7 @@ describe("RAG approval queue components", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "Final RAG approve" }),
+      screen.getByRole("button", { name: "Final Brain approve" }),
     ).toBeVisible();
   });
 
@@ -530,7 +564,7 @@ describe("RAG approval queue components", () => {
       />,
     );
 
-    expect(screen.getByText("RAG approval complete")).toBeVisible();
+    expect(screen.getByText("Brain approval complete")).toBeVisible();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
@@ -693,9 +727,36 @@ function setupSyncAdminClient({
 describe("RAG sync service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedHasEmbeddingEnv.mockReturnValue(true);
+    mockedHasOpenAIKey.mockResolvedValue(true);
     mockedGetApprovedFilesForSync.mockResolvedValue([syncFile()]);
-    mockedSyncFileToChunks.mockResolvedValue({ ok: true, chunkCount: 3 });
+    mockedGetOrCreateVectorStore.mockResolvedValue({
+      id: "kb-1",
+      brand_id: "brand-1",
+      provider: "OPENAI_FILE_SEARCH",
+      provider_vector_store_id: "vs_123",
+      status: "NOT_READY",
+      openai_vector_store_id: "vs_123",
+      openai_vector_store_status: "completed",
+      openai_vector_store_created_at: "2026-01-01T00:00:00.000Z",
+    } as never);
+    mockedUpdateVectorStore.mockImplementation(
+      async ({ status, openaiStatus }) =>
+        ({
+          id: "kb-1",
+          brand_id: "brand-1",
+          provider: "OPENAI_FILE_SEARCH",
+          provider_vector_store_id: "vs_123",
+          status,
+          openai_vector_store_id: "vs_123",
+          openai_vector_store_status: openaiStatus ?? status,
+          openai_vector_store_created_at: "2026-01-01T00:00:00.000Z",
+        }) as never,
+    );
+    mockedUploadOpenAIFile.mockResolvedValue({
+      openaiFileId: "file_openai_1",
+      vectorStoreFileId: "file_openai_1",
+      vectorStoreFileStatus: "completed",
+    });
   });
 
   it("blocks non-Platform Owner sync attempts", async () => {
@@ -708,8 +769,8 @@ describe("RAG sync service", () => {
     expect(mockedCreateAdminClient).not.toHaveBeenCalled();
   });
 
-  it("returns a controlled error when OPENROUTER_API_KEY is missing", async () => {
-    mockedHasEmbeddingEnv.mockReturnValue(false);
+  it("returns a controlled error when no OpenAI API key is configured", async () => {
+    mockedHasOpenAIKey.mockResolvedValue(false);
     setupSyncAdminClient();
 
     await expect(
@@ -736,9 +797,13 @@ describe("RAG sync service", () => {
     });
     expect(markFilesBuilder.update).toHaveBeenCalledWith({
       rag_status: "SYNCING",
+      openai_sync_error: null,
+      openai_sync_status: "SYNCING",
     });
     expect(fileResultBuilder.update).toHaveBeenCalledWith(
       expect.objectContaining({
+        openai_file_id: "file_openai_1",
+        openai_sync_status: "RAG_SYNCED",
         rag_status: "RAG_SYNCED",
       }),
     );
@@ -750,14 +815,10 @@ describe("RAG sync service", () => {
     );
   });
 
-  it("marks the file SYNC_FAILED when chunk embedding fails", async () => {
+  it("marks the file SYNC_FAILED when OpenAI upload or attach fails", async () => {
     const { fileResultBuilder } = setupSyncAdminClient();
 
-    mockedSyncFileToChunks.mockResolvedValue({
-      ok: false,
-      chunkCount: 0,
-      error: "No text extracted",
-    });
+    mockedUploadOpenAIFile.mockRejectedValue(new Error("Unsupported file"));
 
     const result = await syncBrandKnowledgeBase({
       brandId: "brand-1",
@@ -768,6 +829,8 @@ describe("RAG sync service", () => {
     expect(fileResultBuilder.update).toHaveBeenCalledWith(
       expect.objectContaining({
         rag_status: "SYNC_FAILED",
+        openai_sync_error: "Unsupported file",
+        openai_sync_status: "SYNC_FAILED",
       }),
     );
   });
@@ -783,6 +846,7 @@ describe("RAG sync panel components", () => {
       providerVectorStoreId: "vs_123456789",
       knowledgeBaseStatus: "NOT_READY",
       eligibleCount: 1,
+      retryableCount: 1,
       syncingCount: 0,
       syncedCount: 0,
       failedCount: 0,
@@ -798,23 +862,24 @@ describe("RAG sync panel components", () => {
     };
   }
 
-  it("renders Platform Owner sync controls for eligible RAG_APPROVED files", () => {
+  it("renders Platform Owner sync controls for eligible Brain-approved files", () => {
     render(<RagSyncPanel groups={[syncGroup()]} />);
 
     expect(screen.getByText("OpenAI File Search sync")).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Sync approved files" }),
+      screen.getByRole("button", { name: "Sync / retry files" }),
     ).toBeEnabled();
-    expect(screen.getByText("RAG approved")).toBeVisible();
+    expect(screen.getByText("Brain approved")).toBeVisible();
   });
 
-  it("disables sync when no RAG_APPROVED files remain eligible", () => {
+  it("allows retry when failed files remain retryable", () => {
     render(
       <RagSyncPanel
         groups={[
           syncGroup({
             eligibleCount: 0,
             failedCount: 1,
+            retryableCount: 1,
             files: [
               {
                 ...syncFile(),
@@ -829,8 +894,27 @@ describe("RAG sync panel components", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "Sync approved files" }),
-    ).toBeDisabled();
+      screen.getByRole("button", { name: "Sync / retry files" }),
+    ).toBeEnabled();
     expect(screen.getByText("Sync failed")).toBeVisible();
+  });
+
+  it("disables sync when no files are retryable", () => {
+    render(
+      <RagSyncPanel
+        groups={[
+          syncGroup({
+            eligibleCount: 0,
+            failedCount: 0,
+            retryableCount: 0,
+            files: [],
+          }),
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Sync / retry files" }),
+    ).toBeDisabled();
   });
 });

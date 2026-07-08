@@ -303,7 +303,7 @@ export default async function AdminPage() {
               >
                 <Link href="/admin/documents">
                   <FileTextIcon className="size-4" />
-                  RAG
+                  Brain Knowledge
                 </Link>
               </Button>
               <Button
@@ -325,7 +325,7 @@ export default async function AdminPage() {
               >
                 <Link href="/admin/agent-instructions">
                   <MessageSquareTextIcon className="size-4" />
-                  Agent Instructions
+                  Brand Prompts
                 </Link>
               </Button>
               <Button

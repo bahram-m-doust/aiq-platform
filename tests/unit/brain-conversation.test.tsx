@@ -73,24 +73,28 @@ describe("getBrandBrainConversation", () => {
         role: "user",
         content: "What is the positioning?",
         sources: null,
+        createdAt: "2026-01-01T00:00:00Z",
       },
       {
         id: "run-1-a",
         role: "assistant",
         content: "Premium and focused.",
         sources: [{ fileName: "brand.pdf", score: 0.9 }],
+        createdAt: "2026-01-01T00:00:00Z",
       },
       {
         id: "run-2-q",
         role: "user",
         content: "And the risks?",
         sources: null,
+        createdAt: "2026-01-02T00:00:00Z",
       },
       {
         id: "run-2-a",
         role: "assistant",
         content: "Three risks stand out.",
         sources: [{ fileName: "risks.pdf", score: 0.71 }],
+        createdAt: "2026-01-02T00:00:00Z",
       },
     ]);
   });
@@ -122,6 +126,7 @@ describe("getBrandBrainConversation", () => {
         role: "user",
         content: "A hero banner",
         sources: null,
+        createdAt: "2026-01-03T00:00:00Z",
       },
       {
         id: "run-img-a",
@@ -130,6 +135,7 @@ describe("getBrandBrainConversation", () => {
         sources: [{ fileName: "brand.pdf", score: 0.8 }],
         images: ["signed://brand-1/run-img/0.png"],
         imagePrompt: "On-brand hero banner, teal palette",
+        createdAt: "2026-01-03T00:00:00Z",
       },
     ]);
   });

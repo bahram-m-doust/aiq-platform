@@ -188,7 +188,7 @@ function UploadForm({ brandId }: { brandId: string }) {
           value="true"
         />
         <label className="cursor-pointer text-muted-foreground" htmlFor="admin_send_to_rag">
-          Promote to RAG after upload (removes previous questionnaire versions)
+          Promote to Brain Knowledge after upload (removes previous questionnaire versions)
         </label>
       </div>
     </form>
@@ -322,21 +322,21 @@ function PromoteToRagButton({ file }: { file: BrandDocumentRecord }) {
       onOpenChange={handleOpenChange}
       trigger={
         <Button
-          aria-label="Promote to RAG"
+          aria-label="Promote to Brain Knowledge"
           size="icon-sm"
-          title="Promote to RAG"
+          title="Promote to Brain Knowledge"
           type="button"
           variant="ghost"
         >
           <BrainIcon className="size-4 text-emerald-600" />
         </Button>
       }
-      title="Promote this document to RAG?"
-      description={`This will mark "${file.originalName}" as RAG-approved and make it eligible for Knowledge Brain sync.`}
+      title="Promote this document to Brain Knowledge?"
+      description={`This will mark "${file.originalName}" as Brain-approved and make it eligible for OpenAI File Search sync.`}
       errorMessage={errorMessage}
       isPending={isPending}
       onConfirm={confirm}
-      confirmLabel="Promote to RAG"
+      confirmLabel="Promote to Brain"
       pendingLabel="Promoting..."
     />
   );
@@ -360,21 +360,21 @@ function DemoteFromRagButton({ file }: { file: BrandDocumentRecord }) {
       onOpenChange={handleOpenChange}
       trigger={
         <Button
-          aria-label="Remove from RAG"
+          aria-label="Remove from Brain Knowledge"
           size="icon-sm"
-          title="Remove from RAG"
+          title="Remove from Brain Knowledge"
           type="button"
           variant="ghost"
         >
           <Undo2Icon className="size-4 text-amber-600" />
         </Button>
       }
-      title="Remove this document from RAG?"
+      title="Remove this document from Brain Knowledge?"
       description={`This will remove "${file.originalName}" from the Knowledge Brain. You can promote it again later.`}
       errorMessage={errorMessage}
       isPending={isPending}
       onConfirm={confirm}
-      confirmLabel="Remove from RAG"
+      confirmLabel="Remove from Brain"
       pendingLabel="Removing..."
     />
   );

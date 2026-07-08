@@ -1,6 +1,6 @@
 -- GENERATED FILE. DO NOT EDIT DIRECTLY.
 -- Source: numbered SQL files in supabase/migrations.
--- Latest migration: 0056_agent_runs_session_id.sql
+-- Latest migration: 0058_global_provider_api_keys.sql
 -- Regenerate with: npm run db:generate-bundles
 
 -- BEGIN 0001_initial_schema.sql
@@ -5355,6 +5355,47 @@ ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS session_id uuid;
 CREATE INDEX IF NOT EXISTS agent_runs_session_id_idx ON agent_runs (session_id)
   WHERE session_id IS NOT NULL;
 -- END 0056_agent_runs_session_id.sql
+
+-- BEGIN 0057_openai_file_search_mapping.sql
+-- OpenAI File Search mapping for Brand Brain.
+-- Existing RAG status labels remain for compatibility, but provider storage
+-- now points at OpenAI Vector Stores and OpenAI Files.
+
+alter table public.knowledge_bases
+  add column if not exists openai_vector_store_id text,
+  add column if not exists openai_vector_store_status text,
+  add column if not exists openai_vector_store_created_at timestamptz;
+
+alter table public.knowledge_files
+  add column if not exists openai_file_id text,
+  add column if not exists openai_vector_store_file_id text,
+  add column if not exists openai_sync_status text,
+  add column if not exists openai_synced_at timestamptz,
+  add column if not exists openai_sync_error text;
+
+create unique index if not exists idx_knowledge_bases_openai_vector_store_id_unique
+  on public.knowledge_bases(openai_vector_store_id)
+  where openai_vector_store_id is not null;
+
+create index if not exists idx_knowledge_bases_openai_status
+  on public.knowledge_bases(openai_vector_store_status);
+
+create index if not exists idx_knowledge_files_openai_file_id
+  on public.knowledge_files(openai_file_id)
+  where openai_file_id is not null;
+
+create index if not exists idx_knowledge_files_openai_sync_status
+  on public.knowledge_files(openai_sync_status);
+-- END 0057_openai_file_search_mapping.sql
+
+-- BEGIN 0058_global_provider_api_keys.sql
+alter table public.brand_api_keys
+  alter column brand_id drop not null;
+
+create unique index if not exists idx_brand_api_keys_global_provider_unique
+  on public.brand_api_keys(provider)
+  where brand_id is null;
+-- END 0058_global_provider_api_keys.sql
 
 -- Keep server-side Supabase access explicit after fresh schema creation.
 grant all on all tables in schema public to service_role;

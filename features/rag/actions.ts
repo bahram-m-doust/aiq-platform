@@ -37,7 +37,7 @@ export async function approveRagSupervisorAction(
   const validation = validateRagApprovalTargetFormData(formData);
 
   if (validation.error || !validation.artifactId) {
-    return errorState(validation.error ?? "RAG approval target is invalid.");
+    return errorState(validation.error ?? "Brain approval target is invalid.");
   }
 
   try {
@@ -59,7 +59,7 @@ export async function approveRagSupervisorAction(
       return errorState(error.message);
     }
 
-    return errorState("Supervisor RAG approval could not be recorded.");
+    return errorState("Supervisor Brain approval could not be recorded.");
   }
 }
 
@@ -71,7 +71,7 @@ export async function approveRagPlatformOwnerAction(
   const validation = validateRagApprovalTargetFormData(formData);
 
   if (validation.error || !validation.artifactId) {
-    return errorState(validation.error ?? "RAG approval target is invalid.");
+    return errorState(validation.error ?? "Brain approval target is invalid.");
   }
 
   try {
@@ -95,7 +95,7 @@ export async function approveRagPlatformOwnerAction(
       return errorState(error.message);
     }
 
-    return errorState("Final RAG approval could not be recorded.");
+    return errorState("Final Brain approval could not be recorded.");
   }
 }
 
@@ -107,7 +107,7 @@ export async function syncBrandKnowledgeBaseAction(
   const validation = validateRagSyncBrandFormData(formData);
 
   if (validation.error || !validation.brandId) {
-    return syncErrorState(validation.error ?? "RAG sync brand is invalid.");
+    return syncErrorState(validation.error ?? "OpenAI sync brand is invalid.");
   }
 
   try {
@@ -123,7 +123,7 @@ export async function syncBrandKnowledgeBaseAction(
       message:
         result.failedCount > 0
           ? `${result.syncedCount} file(s) synced; ${result.failedCount} file(s) failed.`
-          : `${result.syncedCount} file(s) synced to the brand knowledge base.`,
+          : `${result.syncedCount} file(s) synced to OpenAI File Search.`,
       brandId: result.brandId,
       syncedCount: result.syncedCount,
       failedCount: result.failedCount,
@@ -133,6 +133,6 @@ export async function syncBrandKnowledgeBaseAction(
       return syncErrorState(error.message);
     }
 
-    return syncErrorState("RAG sync could not be completed.");
+    return syncErrorState("OpenAI File Search sync could not be completed.");
   }
 }

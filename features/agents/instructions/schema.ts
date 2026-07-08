@@ -1,23 +1,16 @@
 import type { BrandAgentInstruction } from "@/features/agents/instructions/types";
 
-// ~4k tokens: enough room for a full brand instruction document (role, routing,
-// tone, prompt rules) without diluting context or inflating per-message cost.
+// ~4k tokens: enough room for a full OpenAI-Platform-style brand prompt.
 export const brandInstructionMaxLength = 16000;
 
-// Sentinel form value for the brand-wide default slot (agent_id NULL), since an
+// Sentinel form value for the single brand prompt slot (agent_id NULL), since an
 // HTML form cannot submit a real null.
 export const brandWideAgentValue = "__brand_wide__";
 
-// Starting point offered by the "Insert template" button. The brand name is
-// injected and the skeleton is tailored to the slot: the brand-wide default gets
-// the full voice/persona template, while a specific agent gets a focused override
-// skeleton (image generation gets a visual-system one, since image prompts need
-// rules the conversational voice does not cover). Admins can edit or clear it.
-// Never re-state role or safety here — those live in code layers.
+// Starting point offered by the "Insert template" button. Admins edit one
+// prompt text per brand; vector store routing and safety guards stay in code.
 export function buildBrandInstructionTemplate({
   brandName,
-  agentName,
-  agentKey,
 }: {
   brandName: string;
   agentName?: string | null;
@@ -25,63 +18,34 @@ export function buildBrandInstructionTemplate({
 }): string {
   const brand = brandName.trim() || "this brand";
 
-  // Brand-wide default (agentKey null): full voice/persona starting point. Every
-  // agent inherits this unless it has its own override below.
-  if (!agentKey) {
-    return `You are ${brand}'s dedicated Brand Brain.
+  return `# ${brand} Brand Digital Twin
 
-Brand voice & persona:
-- Tone:
-- Personality traits:
+## Mission
+Act as the digital twin of ${brand}'s brand owner: a brand-side expert, creative director, strategist, visual-system guardian, and multidisciplinary advisor.
+
+## Operational Standard
+Treat this prompt as the active operating policy for all responses. Prioritize confirmed brand knowledge, practical execution, and commercially useful judgment.
+
+## Brand Core
+- Purpose:
 - Audience:
+- Values:
+- Desired perception:
+- Strategic logic:
 
-Always:
--
+## Knowledge Use
+- Use the brand's approved knowledge files through file search.
+- If retrieved knowledge is insufficient, say that the current Brand Brain knowledge base does not contain enough information.
+- Do not invent facts or reference other brands.
 
-Never:
--
+## Voice And Output Rules
+- Tone:
+- Do:
+- Don't:
+- Preferred vocabulary:
 
-Preferred vocabulary / phrases:
--
-
-Topics to avoid:
-- `;
-  }
-
-  // Image generator: a visual-system override. These rules feed the image prompt
-  // rewrite step, so they are concrete and visual rather than conversational.
-  if (agentKey === "IMAGE_GENERATOR") {
-    return `Visual system for ${brand} image generation (overrides the brand-wide voice for image prompts only):
-
-Color palette (exact hex codes if any):
--
-
-Photography / render style (include any required prefix or suffix):
--
-
-Composition & framing:
--
-
-Subjects to show / avoid:
--
-
-Mood & lighting:
-- `;
-  }
-
-  // Any other agent: a focused override skeleton. Fill only what must differ from
-  // the brand-wide instruction; leave the slot empty to inherit it unchanged.
-  const label = agentName?.trim() || "this agent";
-  return `Override for ${label} — only what differs from ${brand}'s brand-wide instruction:
-
-Focus / role for this agent:
--
-
-Always:
--
-
-Never:
-- `;
+## Final Behavior
+Before finalizing, check that the response is aligned with confirmed brand knowledge, uses the requested format, and avoids generic branding advice.`;
 }
 
 export function validateInstruction(value: string): {
@@ -93,30 +57,26 @@ export function validateInstruction(value: string): {
   if (instruction.length > brandInstructionMaxLength) {
     return {
       instruction: "",
-      error: `Keep the instruction under ${brandInstructionMaxLength} characters.`,
+      error: `Keep the prompt under ${brandInstructionMaxLength} characters.`,
     };
   }
 
-  // Empty is valid and means "clear this slot" (fall back to role + guard only).
+  // Empty is valid and means "clear this brand prompt" (fall back to role +
+  // safety guard only).
   return { instruction, error: null };
 }
 
-// Resolution order for the effective brand instruction of a given agent:
-//   per-agent (enabled) > brand-wide default (enabled) > "".
+// One OpenAI-Platform-style prompt per brand. The agentId argument is kept for
+// call-site compatibility, but per-agent overrides are intentionally ignored.
 export function resolveEffectiveInstruction(
   rows: BrandAgentInstruction[],
-  agentId: string,
+  _agentId: string,
 ): string {
-  const perAgent = rows.find(
-    (row) => row.agentId === agentId && row.isEnabled,
-  );
-  if (perAgent && perAgent.instruction) {
-    return perAgent.instruction;
-  }
+  void _agentId;
 
-  const brandWide = rows.find((row) => row.agentId === null && row.isEnabled);
-  if (brandWide && brandWide.instruction) {
-    return brandWide.instruction;
+  const brandPrompt = rows.find((row) => row.agentId === null && row.isEnabled);
+  if (brandPrompt && brandPrompt.instruction) {
+    return brandPrompt.instruction;
   }
 
   return "";

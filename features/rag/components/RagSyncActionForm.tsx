@@ -35,7 +35,7 @@ export function RagSyncActionForm({
       ) : null}
       <Button disabled={disabled} type="submit">
         <RefreshCwIcon className="size-4" />
-        Sync approved files
+        Sync / retry files
       </Button>
     </form>
   );

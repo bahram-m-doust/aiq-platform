@@ -9,7 +9,7 @@ import {
 import { canSyncRagRole, canViewRagApprovalQueueRole } from "@/features/rag/schema";
 
 export const metadata: Metadata = {
-  title: "RAG Approval Queue | AIQ Platform",
+  title: "Brain Knowledge Sync | AIQ Platform",
 };
 
 export const dynamic = "force-dynamic";
@@ -31,10 +31,10 @@ export default async function AdminRagApprovalPage() {
       <section className="mx-auto w-full max-w-6xl space-y-6">
         <div>
           <p className="font-mono text-sm uppercase tracking-[0.2em] text-muted-foreground">
-            Internal RAG approval
+            Internal Brain Knowledge
           </p>
           <h1 className="mt-3 text-3xl font-semibold tracking-normal">
-            RAG Approval Queue
+            Brain Knowledge Sync
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Signed in as {email} | {profile.global_role}

@@ -186,17 +186,17 @@ export async function adminPromoteDocumentToRagAction(
     revalidatePath("/admin/documents");
     revalidatePath(adminDocumentsPathFor(after.brandId));
     revalidatePath("/admin/rag");
-    return { status: "success", message: "Document promoted to RAG." };
+    return { status: "success", message: "Document promoted to Brain Knowledge." };
   } catch (error) {
     if (isAdminDocumentError(error)) {
       return { status: "error", message: error.message };
     }
     logServerError({
-      label: "[admin-files] RAG promotion failed",
+      label: "[admin-files] Brain Knowledge promotion failed",
       error,
       metadata: { profileId: profile.id, fileId },
     });
-    return { status: "error", message: "Document could not be promoted to RAG." };
+    return { status: "error", message: "Document could not be promoted to Brain Knowledge." };
   }
 }
 
@@ -216,17 +216,17 @@ export async function adminDemoteDocumentFromRagAction(
     revalidatePath("/admin/documents");
     revalidatePath(adminDocumentsPathFor(after.brandId));
     revalidatePath("/admin/rag");
-    return { status: "success", message: "Document removed from RAG." };
+    return { status: "success", message: "Document removed from Brain Knowledge." };
   } catch (error) {
     if (isAdminDocumentError(error)) {
       return { status: "error", message: error.message };
     }
     logServerError({
-      label: "[admin-files] RAG demotion failed",
+      label: "[admin-files] Brain Knowledge demotion failed",
       error,
       metadata: { profileId: profile.id, fileId },
     });
-    return { status: "error", message: "Document could not be removed from RAG." };
+    return { status: "error", message: "Document could not be removed from Brain Knowledge." };
   }
 }
 

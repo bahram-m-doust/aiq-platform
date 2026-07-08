@@ -3,10 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requirePlatformOwner } from "@/features/auth/queries";
-import {
-  brandWideAgentValue,
-  validateInstruction,
-} from "@/features/agents/instructions/schema";
+import { validateInstruction } from "@/features/agents/instructions/schema";
 import {
   isBrandInstructionServiceError,
   upsertBrandAgentInstruction,
@@ -36,24 +33,18 @@ export async function saveBrandAgentInstructionAction(
     return errorState("Select a brand before saving.");
   }
 
-  const rawAgent = readString(formData, "agentId").trim();
-  const agentId =
-    rawAgent === "" || rawAgent === brandWideAgentValue ? null : rawAgent;
-
   const validation = validateInstruction(readString(formData, "instruction"));
   if (validation.error) {
     return errorState(validation.error);
   }
 
-  const isEnabled = formData.get("isEnabled") === "on";
-
   try {
     await upsertBrandAgentInstruction({
       profile,
       brandId,
-      agentId,
+      agentId: null,
       instruction: validation.instruction,
-      isEnabled,
+      isEnabled: true,
     });
   } catch (error) {
     if (isBrandInstructionServiceError(error)) {
@@ -72,8 +63,6 @@ export async function saveBrandAgentInstructionAction(
 
   return {
     status: "success",
-    message: agentId
-      ? "Agent instruction saved."
-      : "Brand-wide instruction saved.",
+    message: "Brand prompt saved.",
   };
 }
